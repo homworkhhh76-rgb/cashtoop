@@ -1,0 +1,40 @@
+{
+  "rules": {
+    "cashTopExchange": {
+      "cashTopAdmin": {
+        ".read": true,
+        ".write": true,
+        "companies": {
+          ".indexOn": [
+            "key",
+            "companyKey",
+            "tenantId",
+            "companyId"
+          ]
+        }
+      },
+      "cashTopPOS": {
+        "$companyId": {
+          ".read": true,
+          ".write": true,
+          ".validate": "newData.hasChild('meta') && (!newData.child('meta').hasChild('tenantId') || newData.child('meta/tenantId').val() == $companyId) && (!newData.child('meta').hasChild('companyId') || newData.child('meta/companyId').val() == $companyId) && (newData.child('meta/tenantId').val() == $companyId || newData.child('meta/companyId').val() == $companyId)"
+        }
+      }
+    },
+    "cashTopPOS": {
+      "v6": {
+        "$companyId": {
+          ".read": true,
+          ".write": true,
+          ".validate": "newData.hasChild('meta') && (!newData.child('meta').hasChild('tenantId') || newData.child('meta/tenantId').val() == $companyId) && (!newData.child('meta').hasChild('companyId') || newData.child('meta/companyId').val() == $companyId) && (newData.child('meta/tenantId').val() == $companyId || newData.child('meta/companyId').val() == $companyId)"
+        }
+      }
+    },
+    "cashTopChargeApp": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    ".read": false,
+    ".write": false
+  }
+}
