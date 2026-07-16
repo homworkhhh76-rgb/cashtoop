@@ -472,7 +472,7 @@
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <input type="number" step="0.001" id="pCost" class="form-control" placeholder="0.00" oninput="calculatePurchaseTotals()" required>
+                            <input type="number" step="0.001" id="pCost" class="form-control" placeholder="0.00" oninput="handlePurchaseCostInput('piece')" required>
                             <label for="pCost">سعر التكلفة (شراء القطعة)</label>
                         </div>
                         <div class="form-group">
@@ -502,7 +502,7 @@
                             <label for="uQty">عدد الوحدات (الكراتين) الواردة</label>
                         </div>
                         <div class="form-group">
-                            <input type="number" step="0.001" id="uCost" class="form-control" placeholder="0.00" oninput="calculatePurchaseTotals()">
+                            <input type="number" step="0.001" id="uCost" class="form-control" placeholder="0.00" oninput="handlePurchaseCostInput('unit')">
                             <label for="uCost">تكلفة شراء الوحدة</label>
                         </div>
                     </div>
@@ -1163,6 +1163,42 @@
                 renderStagedTable();
                 calculatePurchaseTotals();
             }
+        }
+
+        function configuredProfitRate() {
+            const direct = window.Cashtop?.getProfitRate?.();
+            if (Number.isFinite(Number(direct))) return Math.max(0, Number(direct));
+            try {
+                const settings = JSON.parse(localStorage.getItem('cashtop_settings') || '{}') || {};
+                return Math.max(0, Number(settings.profitRate || 0));
+            } catch (_) { return 0; }
+        }
+
+        function targetSaleFromCost(cost) {
+            const value = Math.max(0, Number(cost || 0));
+            if (window.Cashtop?.salePriceFromCost) return window.Cashtop.salePriceFromCost(value, configuredProfitRate());
+            return value * (1 + configuredProfitRate() / 100);
+        }
+
+        function formatAutoPrice(value) {
+            return Number(value || 0).toFixed(3).replace(/\.?0+$/, '');
+        }
+
+        function handlePurchaseCostInput(type) {
+            if (type === 'piece') {
+                const cost = parseFloat(document.getElementById('pCost')?.value) || 0;
+                const sale = document.getElementById('pSalePiece');
+                if (sale) sale.value = cost > 0 ? formatAutoPrice(targetSaleFromCost(cost)) : '';
+            } else {
+                const unitCost = parseFloat(document.getElementById('uCost')?.value) || 0;
+                const unitSale = document.getElementById('pSaleUnit');
+                const pieceSale = document.getElementById('pSalePieceInUnit');
+                const ppu = Math.max(1, parseFloat(document.getElementById('pPiecesPerUnit')?.value) || 1);
+                const calculatedUnitSale = targetSaleFromCost(unitCost);
+                if (unitSale) unitSale.value = unitCost > 0 ? formatAutoPrice(calculatedUnitSale) : '';
+                if (pieceSale) pieceSale.value = unitCost > 0 ? formatAutoPrice(calculatedUnitSale / ppu) : '';
+            }
+            calculatePurchaseTotals();
         }
 
         function calculatePurchaseTotals() {

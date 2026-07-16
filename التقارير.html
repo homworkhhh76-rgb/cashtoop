@@ -813,15 +813,33 @@
             showToast('تم فرز وتحديث بيانات التقرير بنجاح', 'success');
         }
 
+        function reportBrandSettings() {
+            let settings = {};
+            try { settings = JSON.parse(localStorage.getItem('cashtop_settings') || '{}') || {}; } catch (_) {}
+            const session = window.Cashtop?.getSession?.() || {};
+            return {
+                companyName: String(settings.companyName || session.companyName || 'كاش توب').trim(),
+                logo: String(settings.logo || '').trim(),
+                address: String(settings.address || '').trim(),
+                phone: String(settings.phone || '').trim()
+            };
+        }
+
+        function escapeReportBrand(value) {
+            return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+        }
+
         // ========================================================
         // التصدير إلى Excel باحترافية وتفصيل تام
         // ========================================================
         function exportExcel() {
             showToast("جاري إعداد وتحميل تقرير الإكسل الشامل...", "success");
             let filterText = document.getElementById('currentFilterLabel').innerText;
+            const brand = reportBrandSettings();
             
             let ws_data = [
-                ["نظام كاش توب - التقرير الشامل والمفصل"],
+                [`${brand.companyName} - التقرير الشامل والمفصل`],
+                [[brand.address, brand.phone].filter(Boolean).join(' | ')],
                 [filterText],
                 [],
                 ["--- الملخص المالي ---"],
@@ -855,7 +873,7 @@
             const ws = XLSX.utils.aoa_to_sheet(ws_data);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "التقرير_الشامل");
-            XLSX.writeFile(wb, `تقرير_أداء_كاش_توب_${Date.now()}.xlsx`);
+            XLSX.writeFile(wb, `تقرير_أداء_${brand.companyName.replace(/[^\w\u0600-\u06FF-]+/g, '_')}_${Date.now()}.xlsx`);
         }
 
         // ========================================================
@@ -864,6 +882,7 @@
         async function exportPDF() {
             showToast("جاري إنشاء التقرير كجداول PDF فعلية...", "success");
             const filterText = document.getElementById('currentFilterLabel')?.innerText || '';
+            const brand = reportBrandSettings();
             const summaryRows = [
                 ['إجمالي المبيعات', repSales.toFixed(2) + ' ₪'],
                 ['تكلفة المباع', repCost.toFixed(2) + ' ₪'],
@@ -880,15 +899,20 @@
             const topRows = topProductsArrForExport.slice(0,10).length ? topProductsArrForExport.slice(0,10).map(p => `<tr><td>${p.name}</td><td>${p.qty}</td><td>${p.revenue.toFixed(2)} ₪</td></tr>`).join('') : '<tr><td colspan="3">لا توجد مبيعات في هذه الفترة</td></tr>';
             const supplierRows = suppliersData.length ? suppliersData.map(s => `<tr><td>${s.name}</td><td>${parseFloat(s.balance || 0).toFixed(2)} ₪</td></tr>`).join('') : '<tr><td colspan="2">لا يوجد موردون</td></tr>';
             host.innerHTML = `
-                <h2>تقرير الإدارة المالي الشامل - كاش توب</h2><p>${filterText}</p>
+                <div style="text-align:center;margin-bottom:14px">
+                    ${brand.logo ? `<img src="${escapeReportBrand(brand.logo)}" alt="${escapeReportBrand(brand.companyName)}" style="width:82px;height:82px;object-fit:contain;margin:0 auto 8px;display:block">` : ''}
+                    <h2 style="margin:0 0 5px">تقرير الإدارة المالي الشامل - ${escapeReportBrand(brand.companyName)}</h2>
+                    <div style="font-size:12px">${escapeReportBrand([brand.address, brand.phone].filter(Boolean).join(' | '))}</div>
+                    <p>${escapeReportBrand(filterText)}</p>
+                </div>
                 <table><thead><tr><th>المؤشر المالي</th><th>القيمة</th></tr></thead><tbody>${summaryRows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('')}</tbody></table>
                 <table><thead><tr><th>اسم الفرع</th><th>إجمالي المبيعات</th><th>هامش الربح التشغيلي</th></tr></thead><tbody>${branchRows}</tbody></table>
                 <table><thead><tr><th>اسم المنتج</th><th>الكمية</th><th>الإيراد</th></tr></thead><tbody>${topRows}</tbody></table>
                 <table><thead><tr><th>اسم المورد</th><th>المستحق له</th></tr></thead><tbody>${supplierRows}<tr><td>إجمالي المطلوب سداده</td><td>${repSupDebt.toFixed(2)} ₪</td></tr></tbody></table>`;
             document.body.appendChild(host);
             try {
-                await CashtopExport.exportElementTablesToPDF(host, `تقرير_كاش_توب_التفصيلي_${Date.now()}.pdf`, {
-                    title: 'تقرير الإدارة المالي الشامل - كاش توب', subtitle: filterText, orientation: 'landscape', fontSize: 7.5
+                await CashtopExport.exportElementTablesToPDF(host, `تقرير_${brand.companyName.replace(/[^\w\u0600-\u06FF-]+/g, '_')}_التفصيلي_${Date.now()}.pdf`, {
+                    title: `تقرير الإدارة المالي الشامل - ${brand.companyName}`, subtitle: filterText, orientation: 'landscape', fontSize: 7.5
                 });
                 showToast('تم تنزيل التقرير بنجاح.', 'success');
             } catch (err) { console.error(err); showToast('تعذر إنشاء التقرير PDF.', 'error'); }
@@ -917,8 +941,9 @@
 
         function sendReport() {
             let filterText = document.getElementById('currentFilterLabel').innerText;
+            const brand = reportBrandSettings();
             
-            let msg = `*تقرير الإدارة المالي والإحصائي - كاش توب* 📊\n`;
+            let msg = `*تقرير الإدارة المالي والإحصائي - ${brand.companyName}* 📊\n`;
             msg += `_${filterText}_\n\n`;
             msg += `*إجمالي المبيعات:* ${repSales.toFixed(2)} ₪\n`;
             msg += `*تكلفة المباع:* ${repCost.toFixed(2)} ₪\n`;
@@ -927,7 +952,8 @@
             msg += `*قيمة المخزون بالتكلفة:* ${repInvCost.toFixed(2)} ₪\n`;
             msg += `*الأرباح المتوقعة:* ${(repInvPrice - repInvCost).toFixed(2)} ₪\n`;
             msg += `*المستحق للموردين:* ${repSupDebt.toFixed(2)} ₪\n\n`;
-            msg += `_تم إنشاء التقرير آلياً عبر نظام كاش توب_`;
+            msg += `_تم إنشاء التقرير آلياً عبر ${brand.companyName}_`;
+            if (brand.address || brand.phone) msg += `\n${[brand.address, brand.phone].filter(Boolean).join(' | ')}`;
 
             if(shareType === 'wa') {
                 let phone = document.getElementById('waNumber').value.trim();
@@ -937,7 +963,7 @@
             } else {
                 let email = document.getElementById('emailAddress').value.trim();
                 if(!email) { showToast('يرجى كتابة البريد الإلكتروني', 'error'); return; }
-                let subject = encodeURIComponent("التقرير المالي الشامل - كاش توب");
+                let subject = encodeURIComponent(`التقرير المالي الشامل - ${brand.companyName}`);
                 let cleanMsg = msg.replace(/\*/g, '').replace(/_/g, '');
                 let url = `mailto:${email}?subject=${subject}&body=${encodeURIComponent(cleanMsg)}`;
                 window.open(url, '_blank');

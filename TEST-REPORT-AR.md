@@ -162,3 +162,11 @@
 - تم ربط نقطة البيانات بالـ API الوسيط بدل Firebase RTDB المباشر.
 - تم استثناء API الحي من Service Worker Cache.
 - تم الحفاظ على طبقة Progressive Loading وLazy Rendering وWeb Worker والمعاملات المحلية الخاصة بـ Revision 31.
+
+## فحص Revision 41 - النوافذ / 120Hz-ready / Cache First
+- `node --check cashtop-core.js`: ناجح.
+- `node --check service-worker.js`: ناجح.
+- التحقق من قائمة App Shell: جميع ملفات HTML الموجودة (34/34) مدرجة في الكاش، ولا توجد صفحات HTML مفقودة.
+- التحقق من أن API الحي مستثنى من Cache Storage: بقيت قواعد `isLiveApiRequest` فعالة.
+- التحقق من Cache First المحلي: `localCacheFirst()` يعيد النسخة المخزنة فوراً، والتحديث الشبكي يتم بالخلفية مع throttling.
+- ملاحظة: معدل 120 إطار/ثانية الفعلي يعتمد على شاشة الجهاز، المتصفح، WebView وقدرة المعالج؛ النسخة محسنة للاستفادة من 120Hz عبر requestAnimationFrame وتقليل layout/paint ولا يمكن للويب فرض 120Hz على جهاز لا يدعمه.

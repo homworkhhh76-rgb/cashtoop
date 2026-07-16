@@ -427,6 +427,58 @@
     return `ct_sync_queue::${encodeURIComponent(companyIdFromSession())}`;
   }
 
+  const SYNC_QUEUE_DB = 'cashtop-sync-queue-v1';
+  const SYNC_QUEUE_STORE = 'queues';
+  let syncQueueBackupChain = Promise.resolve();
+
+  function openSyncQueueDb() {
+    if (!('indexedDB' in window)) return Promise.resolve(null);
+    return new Promise(resolve => {
+      try {
+        const request = indexedDB.open(SYNC_QUEUE_DB, 1);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains(SYNC_QUEUE_STORE)) db.createObjectStore(SYNC_QUEUE_STORE);
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => resolve(null);
+      } catch (_) { resolve(null); }
+    });
+  }
+
+  async function backupSyncQueue(queue) {
+    const db = await openSyncQueueDb();
+    if (!db) return false;
+    return new Promise(resolve => {
+      try {
+        const tx = db.transaction(SYNC_QUEUE_STORE, 'readwrite');
+        tx.objectStore(SYNC_QUEUE_STORE).put(Array.isArray(queue) ? queue : [], syncQueueKey());
+        tx.oncomplete = () => { db.close(); resolve(true); };
+        tx.onerror = () => { db.close(); resolve(false); };
+      } catch (_) { try { db.close(); } catch (_) {} resolve(false); }
+    });
+  }
+
+  async function restoreSyncQueueBackup() {
+    const db = await openSyncQueueDb();
+    if (!db) return [];
+    const restored = await new Promise(resolve => {
+      try {
+        const tx = db.transaction(SYNC_QUEUE_STORE, 'readonly');
+        const request = tx.objectStore(SYNC_QUEUE_STORE).get(syncQueueKey());
+        request.onsuccess = () => resolve(Array.isArray(request.result) ? request.result : []);
+        request.onerror = () => resolve([]);
+        tx.oncomplete = () => db.close();
+      } catch (_) { try { db.close(); } catch (_) {} resolve([]); }
+    });
+    if (!getSyncQueue().length && restored.length) {
+      rawSet(syncQueueKey(), JSON.stringify(restored.slice(-1200)));
+      updateSyncBadge();
+      window.dispatchEvent(new CustomEvent('cashtop:sync-queue-restored', { detail: { count: restored.length } }));
+    }
+    return restored;
+  }
+
   function getSyncQueue() {
     const queue = safeJson(rawGet(syncQueueKey()), []);
     return Array.isArray(queue) ? queue : [];
@@ -435,21 +487,93 @@
   function writeSyncQueue(queue) {
     const normalized = Array.isArray(queue) ? queue.slice(-1200) : [];
     rawSet(syncQueueKey(), JSON.stringify(normalized));
+    syncQueueBackupChain = syncQueueBackupChain.then(() => backupSyncQueue(normalized)).catch(() => false);
     updateSyncBadge();
     window.dispatchEvent(new CustomEvent('cashtop:sync-queue-changed', { detail: { count: normalized.length } }));
     return normalized;
   }
 
-  function enqueueSyncOperation(key) {
+  function recordIdentity(item) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return '';
+    for (const field of ['id', '_id', 'uuid', 'code', 'key', 'barcode']) {
+      const value = item[field];
+      if (value !== undefined && value !== null && String(value).trim()) return `${field}:${String(value).trim()}`;
+    }
+    return '';
+  }
+
+  function describeManagedChange(oldValue, newValue) {
+    const before = safeJson(oldValue, null);
+    const after = safeJson(newValue, null);
+    const detail = { touchedIds: [], deletedIds: [], touchedFields: [], deletedFields: [], nestedArrayChanges: {} };
+    if (Array.isArray(before) && Array.isArray(after)) {
+      const beforeMap = new Map(before.map(item => [recordIdentity(item), item]).filter(([id]) => id));
+      const afterMap = new Map(after.map(item => [recordIdentity(item), item]).filter(([id]) => id));
+      if (beforeMap.size || afterMap.size) {
+        for (const [id, item] of afterMap) {
+          if (!beforeMap.has(id) || JSON.stringify(beforeMap.get(id)) !== JSON.stringify(item)) detail.touchedIds.push(id);
+        }
+        for (const id of beforeMap.keys()) if (!afterMap.has(id)) detail.deletedIds.push(id);
+      }
+    } else if (before && after && typeof before === 'object' && typeof after === 'object' && !Array.isArray(before) && !Array.isArray(after)) {
+      const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
+      for (const key of keys) {
+        if (!Object.prototype.hasOwnProperty.call(after, key)) {
+          detail.deletedFields.push(key);
+          continue;
+        }
+        if (!Object.prototype.hasOwnProperty.call(before, key) || JSON.stringify(before[key]) !== JSON.stringify(after[key])) {
+          detail.touchedFields.push(key);
+          if (Array.isArray(before[key]) && Array.isArray(after[key])) {
+            const beforeMap = new Map(before[key].map(item => [recordIdentity(item), item]).filter(([id]) => id));
+            const afterMap = new Map(after[key].map(item => [recordIdentity(item), item]).filter(([id]) => id));
+            if (beforeMap.size || afterMap.size) {
+              const touchedIds = [];
+              const deletedIds = [];
+              for (const [id, item] of afterMap) {
+                if (!beforeMap.has(id) || JSON.stringify(beforeMap.get(id)) !== JSON.stringify(item)) touchedIds.push(id);
+              }
+              for (const id of beforeMap.keys()) if (!afterMap.has(id)) deletedIds.push(id);
+              detail.nestedArrayChanges[key] = { touchedIds, deletedIds };
+            }
+          }
+        }
+      }
+    }
+    return detail;
+  }
+
+  function enqueueSyncOperation(key, change = {}) {
     const canonical = canonicalKey(key);
     const queue = getSyncQueue();
-    // Only one pending upload is needed per dataset: Firebase receives the latest
-    // complete dataset value, so repeated edits before a flush are one sync job.
+    const mergeUnique = (a, b) => [...new Set([...(Array.isArray(a) ? a : []), ...(Array.isArray(b) ? b : [])])];
+    // عملية واحدة لكل dataset، مع الاحتفاظ بتفاصيل السجلات/الحقول المتغيرة
+    // حتى يمكن دمج تعديلات جهازين بدلاً من استبدال المجموعة كاملة.
     const existing = queue.find(item => item.key === canonical);
     if (existing) {
       existing.createdAt = Date.now();
       existing.deviceId = getDeviceId();
       existing.page = FILE;
+      const touchedNow = new Set(change.touchedIds || []);
+      const deletedNow = new Set(change.deletedIds || []);
+      const touchedFieldsNow = new Set(change.touchedFields || []);
+      const deletedFieldsNow = new Set(change.deletedFields || []);
+      existing.touchedIds = mergeUnique((existing.touchedIds || []).filter(id => !deletedNow.has(id)), [...touchedNow]);
+      existing.deletedIds = mergeUnique((existing.deletedIds || []).filter(id => !touchedNow.has(id)), [...deletedNow]);
+      existing.touchedFields = mergeUnique((existing.touchedFields || []).filter(field => !deletedFieldsNow.has(field)), [...touchedFieldsNow]);
+      existing.deletedFields = mergeUnique((existing.deletedFields || []).filter(field => !touchedFieldsNow.has(field)), [...deletedFieldsNow]);
+      existing.nestedArrayChanges = existing.nestedArrayChanges && typeof existing.nestedArrayChanges === 'object' ? existing.nestedArrayChanges : {};
+      Object.entries(change.nestedArrayChanges || {}).forEach(([field, delta]) => {
+        const previous = existing.nestedArrayChanges[field] || { touchedIds: [], deletedIds: [] };
+        const nestedTouchedNow = new Set(delta?.touchedIds || []);
+        const nestedDeletedNow = new Set(delta?.deletedIds || []);
+        existing.nestedArrayChanges[field] = {
+          touchedIds: mergeUnique((previous.touchedIds || []).filter(id => !nestedDeletedNow.has(id)), [...nestedTouchedNow]),
+          deletedIds: mergeUnique((previous.deletedIds || []).filter(id => !nestedTouchedNow.has(id)), [...nestedDeletedNow])
+        };
+      });
+      for (const field of deletedFieldsNow) delete existing.nestedArrayChanges[field];
+      if (Object.prototype.hasOwnProperty.call(change, 'deletedDataset')) existing.deletedDataset = change.deletedDataset === true;
       writeSyncQueue(queue);
       return existing.id;
     }
@@ -458,7 +582,13 @@
       key: canonical,
       createdAt: Date.now(),
       deviceId: getDeviceId(),
-      page: FILE
+      page: FILE,
+      touchedIds: mergeUnique([], change.touchedIds),
+      deletedIds: mergeUnique([], change.deletedIds),
+      touchedFields: mergeUnique([], change.touchedFields),
+      deletedFields: mergeUnique([], change.deletedFields),
+      nestedArrayChanges: JSON.parse(JSON.stringify(change.nestedArrayChanges || {})),
+      deletedDataset: change.deletedDataset === true
     };
     queue.push(operation);
     writeSyncQueue(queue);
@@ -1308,7 +1438,7 @@
         deviceId: getDeviceId(), page: FILE
       }));
       appendAudit(canonical, oldValue, stringValue);
-      const operationId = enqueueSyncOperation(canonical);
+      const operationId = enqueueSyncOperation(canonical, { ...describeManagedChange(oldValue, stringValue), deletedDataset: false });
       emitDataChange(canonical, oldValue, stringValue, 'local', operationId);
     };
 
@@ -1323,7 +1453,7 @@
       }
       rawRemove(ns); rawRemove(metaKey(canonical));
       appendAudit(canonical, oldValue, null, 'delete');
-      const operationId = enqueueSyncOperation(canonical);
+      const operationId = enqueueSyncOperation(canonical, { ...describeManagedChange(oldValue, null), deletedDataset: true });
       emitDataChange(canonical, oldValue, null, 'local', operationId);
     };
   }
@@ -1885,6 +2015,40 @@
     });
   }
 
+  function getSystemSettings() {
+    return safeJson(localStorage.getItem('cashtop_settings'), {}) || {};
+  }
+
+  function getProfitRate() {
+    const rate = Number(getSystemSettings().profitRate || 0);
+    return Number.isFinite(rate) ? Math.max(0, rate) : 0;
+  }
+
+  function salePriceFromCost(cost, rate = getProfitRate()) {
+    const value = Math.max(0, Number(cost || 0));
+    const percent = Math.max(0, Number(rate || 0));
+    return value * (1 + percent / 100);
+  }
+
+  function applySystemBranding() {
+    const session = getSession() || {};
+    const settings = getSystemSettings();
+    const companyName = String(settings.companyName || session.companyName || session.companyKey || APP_NAME).trim();
+    const logo = String(settings.logo || '').trim();
+    const address = String(settings.address || '').trim();
+    const phone = String(settings.phone || '').trim();
+    setText('ctCompanyTitle', [companyName, address, phone].filter(Boolean).join(' · ') || 'نظام المحاسبة والمخزون');
+    setText('ctSidebarCompany', companyName || APP_NAME);
+    document.querySelectorAll('.ct-sidebar-brand img, .ct-topbar-logo').forEach(image => {
+      if (logo) image.src = logo;
+      image.alt = companyName || APP_NAME;
+      image.title = [companyName, address, phone].filter(Boolean).join(' - ');
+    });
+    document.documentElement.dataset.companyName = companyName;
+    window.dispatchEvent(new CustomEvent('cashtop:branding-applied', { detail: { companyName, logo, address, phone } }));
+    return { companyName, logo, address, phone };
+  }
+
   function hydrateShell() {
     const session = getSession() || {};
     if (!enforceCurrentPageAccess(session)) return;
@@ -1897,9 +2061,8 @@
     const pageTitle = PAGE_TITLES[FILE] || document.title || APP_NAME;
     document.title = `${pageTitle} - ${APP_NAME}`;
     setText('ctPageTitle', pageTitle);
-    setText('ctCompanyTitle', session.companyName || 'نظام المحاسبة والمخزون');
-    setText('ctSidebarCompany', session.companyName || session.companyKey || APP_NAME);
     setText('ctCurrentUser', session.displayName || session.username || 'مستخدم');
+    applySystemBranding();
 
     const current = FILE;
     const currentSection = current === 'استيراد وتصدير ل كل قسم.html' ? (new URLSearchParams(location.search).get('section') || '') : '';
@@ -1925,19 +2088,25 @@
     displayLicenseWarning(session);
     compactCompletedData(false).catch(console.warn);
     let permissionRefreshFrame = 0;
+    const pendingMutationRoots = new Set();
     const observer = new MutationObserver(records => {
-      records.forEach(record => record.addedNodes.forEach(node => {
-        if (node.nodeType === 1) applyActionPermissions(node);
-      }));
-      // Large product/customer tables may add hundreds of rows in one render.
-      // Batch the expensive global permission/select pass into one animation frame.
-      if (!permissionRefreshFrame) {
-        permissionRefreshFrame = requestAnimationFrame(() => {
-          permissionRefreshFrame = 0;
-          enhanceAllSelects();
-          applyPermissionVisibility();
-        });
+      for (const record of records) {
+        if (!record.addedNodes?.length) continue;
+        // Process only the subtree that actually changed. Re-scanning the whole
+        // document on every modal/table render caused visible UI stalls.
+        if (record.target?.nodeType === 1) pendingMutationRoots.add(record.target);
       }
+      if (!pendingMutationRoots.size || permissionRefreshFrame) return;
+      permissionRefreshFrame = requestAnimationFrame(() => {
+        permissionRefreshFrame = 0;
+        const roots = [...pendingMutationRoots];
+        pendingMutationRoots.clear();
+        for (const root of roots) {
+          applyActionPermissions(root);
+          enhanceAllSelects(root);
+          applyPermissionVisibility(root);
+        }
+      });
     });
     observer.observe(document.getElementById('ctPageHost') || document.body, { childList: true, subtree: true });
     window.addEventListener('cashtop:data-changed', updateNotificationBadge);
@@ -1953,7 +2122,7 @@
     const panel = document.createElement('section');
     panel.id = 'ctSubscriptionPanel';
     panel.className = 'ct-subscription-panel';
-    panel.innerHTML = `<style>.ct-subscription-panel{background:#fff;border:1px solid #e2e8f0;border-top:4px solid #605ca8;border-radius:9px;padding:15px;margin:0 0 16px;font-family:Cairo}.ct-plan-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.ct-plan-head strong{font-size:14px}.ct-plan-badge{padding:5px 12px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:11px;font-weight:800}.ct-plan-description{margin-top:10px;color:#64748b;font-size:11px;line-height:1.8}</style><div class="ct-plan-head"><strong><i class="fa-solid fa-crown"></i> خطة الشركة</strong><span class="ct-plan-badge">${plan === 'plus' ? 'Plus' : 'Pro'}</span></div><div class="ct-plan-description">تُدار الخطة مركزياً من لوحة المشرف، وتُحدّث على جميع الأجهزة من Firebase.</div>`;
+    panel.innerHTML = `<style>.ct-subscription-panel{background:#fff;border:1px solid #e2e8f0;border-top:4px solid #605ca8;border-radius:9px;padding:15px;margin:0 0 16px;font-family:Cairo}.ct-plan-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.ct-plan-head strong{font-size:14px}.ct-plan-badge{padding:5px 12px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:11px;font-weight:800}.ct-plan-description{margin-top:10px;color:#64748b;font-size:11px;line-height:1.8}</style><div class="ct-plan-head"><strong><i class="fa-solid fa-crown"></i> خطة الشركة</strong><span class="ct-plan-badge">${plan === 'plus' ? 'Plus' : 'Pro'}</span></div><div class="ct-plan-description">تُدار الخطة مركزياً من لوحة المشرف، وتُحدّث على جميع الأجهزة من MongoDB.</div>`;
     host.prepend(panel);
   }
 
@@ -2642,8 +2811,12 @@
     requestAnimationFrame(() => searchInput?.focus({ preventScroll: true }));
   }
 
-  function enhanceAllSelects() {
-    document.querySelectorAll('select:not([data-ct-enhanced])').forEach(select => {
+  function enhanceAllSelects(root = document) {
+    const selects = [
+      ...(root?.matches?.('select:not([data-ct-enhanced])') ? [root] : []),
+      ...(root?.querySelectorAll?.('select:not([data-ct-enhanced])') || [])
+    ];
+    selects.forEach(select => {
       select.dataset.ctEnhanced = 'true';
       select.style.touchAction = 'pan-y';
       let gesture = null;
@@ -2697,8 +2870,16 @@
     });
     if (!document.documentElement.dataset.ctSelectEvents) {
       document.documentElement.dataset.ctSelectEvents = 'true';
-      window.addEventListener('resize', () => selectBoundaryPosition(ctSelectPopover, ctActiveSelect));
-      window.addEventListener('scroll', () => selectBoundaryPosition(ctSelectPopover, ctActiveSelect), true);
+      let selectPositionFrame = 0;
+      const scheduleSelectPosition = () => {
+        if (!ctActiveSelect || selectPositionFrame) return;
+        selectPositionFrame = requestAnimationFrame(() => {
+          selectPositionFrame = 0;
+          selectBoundaryPosition(ctSelectPopover, ctActiveSelect);
+        });
+      };
+      window.addEventListener('resize', scheduleSelectPosition, { passive: true });
+      window.addEventListener('scroll', scheduleSelectPosition, { capture: true, passive: true });
       document.addEventListener('keydown', event => {
         if (event.key === 'Escape' && ctActiveSelect) closeModernSelect(true);
       });
@@ -2748,7 +2929,8 @@
     validateSessionLocal,
     getTaxSettings, calculateTax, getSmartNotifications, updateNotificationBadge,
     archiveRecords, readArchivedRecords, compactCompletedData,
-    getSyncQueue, enqueueSyncOperation, completeSyncOperation, clearSyncQueue, updateSyncBadge,
+    getSyncQueue, enqueueSyncOperation, completeSyncOperation, clearSyncQueue, updateSyncBadge, restoreSyncQueueBackup,
+    getSystemSettings, getProfitRate, salePriceFromCost, applySystemBranding, recordIdentity,
     debounce, runWhenIdle, renderVirtualRows, runWorkerTask, queryRecords, atomicSetItems, recoverAtomicTransactions
   });
 
@@ -2759,7 +2941,10 @@
 
     window.addEventListener('online', () => { updateNetworkStatus(); syncNow({ manual: false }); });
     window.addEventListener('cashtop:sync-queue-changed', updateSyncBadge);
+    window.addEventListener('cashtop:sync-queue-restored', () => { if (navigator.onLine) syncNow({ manual: false }); });
+    window.addEventListener('cashtop:data-changed', event => { if (event.detail?.key === 'cashtop_settings') applySystemBranding(); });
     window.addEventListener('offline', updateNetworkStatus);
+    restoreSyncQueueBackup().catch(() => null);
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape') closeTransientUi();
     });
@@ -2784,6 +2969,7 @@
     setInterval(refreshSessionAccess, 4000);
     window.addEventListener('cashtop:remote-applied', event => {
       if (['cashtop_employees','cashtop_branches','cashtop_company_access'].includes(event.detail?.key)) refreshSessionAccess();
+      if (event.detail?.key === 'cashtop_settings') applySystemBranding();
     });
 
     if (channel) {

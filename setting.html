@@ -448,6 +448,12 @@
             loadSettings();
             updateInstallButtonState();
         });
+        window.addEventListener('cashtop:remote-applied', event => {
+            if (event.detail?.key === 'cashtop_settings') loadSettings();
+        });
+        window.addEventListener('cashtop:sync-complete', () => {
+            window.Cashtop?.applySystemBranding?.();
+        });
 
         function updateInstallButtonState() {
             const button = document.querySelector('.btn-install-app');
@@ -469,7 +475,7 @@
                 if (sysSettings.address) document.getElementById('sysCompanyAddress').value = sysSettings.address;
                 if (sysSettings.currency) document.getElementById('sysCurrency').value = sysSettings.currency;
                 if (sysSettings.alertLimit) document.getElementById('sysAlertLimit').value = sysSettings.alertLimit;
-                if (sysSettings.profitRate) document.getElementById('sysProfitRate').value = sysSettings.profitRate;
+                if (sysSettings.profitRate !== undefined && sysSettings.profitRate !== null) document.getElementById('sysProfitRate').value = sysSettings.profitRate;
                 document.getElementById('sysQtyByPriceToggle').checked = sysSettings.qtyByPrice === true;
                 document.getElementById('sysFractionQtyToggle').checked = sysSettings.allowFractionQty !== false;
                 document.getElementById('sysQuantityStep').value = Number(sysSettings.quantityStep || 0.001);
@@ -548,7 +554,8 @@
                 settings.logo = url;
                 localStorage.setItem('cashtop_settings', JSON.stringify(settings));
                 closeLogoUrlModal();
-                showToast('تم حفظ رابط الشعار مباشرة وإضافته إلى مزامنة Firebase.', 'success');
+                window.Cashtop?.applySystemBranding?.();
+                showToast('تم حفظ رابط الشعار وإضافته إلى مزامنة MongoDB.', 'success');
             } catch (_) {
                 showToast('تعذر تحميل الصورة من الرابط. تأكد أن الرابط مباشر ومتاح.', 'error');
             } finally {
@@ -648,7 +655,7 @@
             }
 
             if (!updated) return showToast('تعذر تحديد حساب المستخدم الحالي لتغيير كلمة مروره.', 'error');
-            showToast('تم تحديث كلمة المرور وإضافتها إلى طابور مزامنة Firebase.', 'success');
+            showToast('تم تحديث كلمة المرور وإضافتها إلى طابور مزامنة MongoDB.', 'success');
             closePasswordModal();
             try { await window.CashtopFirebase?.syncAll?.(); }
             catch (error) { console.warn('Password sync:', error); }
@@ -671,7 +678,7 @@
                 allowFractionQty: document.getElementById('sysFractionQtyToggle').checked,
                 quantityStep: Math.max(0.000001, parseFloat(document.getElementById('sysQuantityStep').value) || 0.001),
                 appName: 'كاش توب 2',
-                logo: savedLogoData // حفظ مسار الشعار
+                logo: savedLogoData || previousSettings.logo || '' // حفظ مسار الشعار
             };
 
             // الحفظ في التخزين المحلي
@@ -682,7 +689,8 @@
             db.config.alertLimit = settingsObj.alertLimit;
             localStorage.setItem('cashtop_db', JSON.stringify(db));
 
-            showToast('تم حفظ الإعدادات الأساسية للنظام بنجاح!', 'success');
+            window.Cashtop?.applySystemBranding?.();
+            showToast('تم حفظ الإعدادات الأساسية للنظام وإضافتها إلى مزامنة MongoDB بنجاح!', 'success');
         }
 
         function saveSmsSettings(event) {

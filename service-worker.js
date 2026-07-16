@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v40-mongodb-api-cache-first';
+const CACHE_VERSION = 'v42-mongodb-durable-sync-cache-first';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = `cash-top-2-remote-static-${CACHE_VERSION}`;
 
@@ -86,6 +86,30 @@ const REMOTE_STATIC_HOSTS = new Set([
   'unpkg.com',
   'www.gstatic.com'
 ]);
+
+/* Prevent background network refreshes from competing with UI rendering.
+ * HTML can refresh relatively often; immutable app assets refresh much less. */
+const LOCAL_REFRESH_AT = new Map();
+const HTML_REFRESH_MS = 90 * 1000;
+const STATIC_REFRESH_MS = 10 * 60 * 1000;
+let shellVerificationPromise = null;
+let remoteWarmPromise = null;
+
+function localRefreshInterval(request) {
+  const url = new URL(request.url);
+  return request.mode === 'navigate' || request.destination === 'document' || /\.html$/i.test(url.pathname)
+    ? HTML_REFRESH_MS
+    : STATIC_REFRESH_MS;
+}
+
+function shouldRefreshLocalInBackground(request) {
+  const key = canonicalLocalRequest(request).url;
+  const now = Date.now();
+  const last = Number(LOCAL_REFRESH_AT.get(key) || 0);
+  if (now - last < localRefreshInterval(request)) return false;
+  LOCAL_REFRESH_AT.set(key, now);
+  return true;
+}
 
 /*
  * هذه نطاقات بيانات حية. لا يجوز وضع استجاباتها في Cache Storage مطلقاً.
@@ -176,7 +200,7 @@ async function warmRemoteStaticAssets() {
   }));
 }
 
-async function ensureLocalShell() {
+async function verifyLocalShellOnce() {
   const cache = await caches.open(APP_CACHE);
   const missing = [];
   for (const asset of LOCAL_ASSETS) {
@@ -196,6 +220,26 @@ async function ensureLocalShell() {
     if (!(await cache.match(url, { ignoreSearch: true }))) remaining.push(asset);
   }
   return { complete: remaining.length === 0, missing: remaining };
+}
+
+function ensureLocalShell() {
+  if (!shellVerificationPromise) {
+    shellVerificationPromise = verifyLocalShellOnce().catch(error => {
+      shellVerificationPromise = null;
+      throw error;
+    });
+  }
+  return shellVerificationPromise;
+}
+
+function warmRemoteStaticAssetsOnce() {
+  if (!remoteWarmPromise) {
+    remoteWarmPromise = warmRemoteStaticAssets().catch(error => {
+      remoteWarmPromise = null;
+      throw error;
+    });
+  }
+  return remoteWarmPromise;
 }
 
 self.addEventListener('install', event => {
@@ -287,9 +331,12 @@ self.addEventListener('fetch', event => {
   if (isLiveApiRequest(url)) return;
 
   if (url.origin === self.location.origin) {
+    // Always return Cache Storage immediately, even while online. Network refresh
+    // is throttled and happens after the response so it cannot delay navigation.
     event.respondWith(localCacheFirst(request));
-    // تحديث صامت بعد تقديم النسخة المخبأة فوراً، لضمان السرعة مع بقاء الكاش حديثاً.
-    event.waitUntil(refreshCachedLocalInBackground(request));
+    if (shouldRefreshLocalInBackground(request)) {
+      event.waitUntil(refreshCachedLocalInBackground(request));
+    }
     return;
   }
 
@@ -313,7 +360,7 @@ self.addEventListener('message', event => {
         source.postMessage({ type: 'CASHTOP_CACHE_STATUS', ...result, cache: APP_CACHE });
       }
       // المكتبات الخارجية (ومنها قارئ الباركود للآيفون) تُحفظ مرة واحدة فقط في الخلفية.
-      await warmRemoteStaticAssets();
+      await warmRemoteStaticAssetsOnce();
     })());
   }
 });

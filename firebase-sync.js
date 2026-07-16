@@ -268,6 +268,28 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     return (await response.json()) || {};
   }
 
+  async function writeDatasetLocation(location, key, token = '', payload = null) {
+    const response = await fetchWithTimeout(datasetEndpoint(location, key, token), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json;charset=UTF-8', 'Cache-Control': 'no-cache, no-store, max-age=0' },
+      body: JSON.stringify(payload)
+    }, 18000);
+    if (!response.ok) throw await firebaseError(response);
+    return { ok: true, data: await response.json().catch(() => payload) };
+  }
+
+  async function writeMetaLocation(location, token = '', patch = {}) {
+    const current = await readMetaLocation(location, token).catch(() => ({}));
+    const next = { ...(current || {}), ...(patch || {}), updatedAt: Date.now() };
+    const response = await fetchWithTimeout(metaEndpoint(location, token), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json;charset=UTF-8', 'Cache-Control': 'no-cache, no-store, max-age=0' },
+      body: JSON.stringify(next)
+    }, 12000);
+    if (!response.ok) throw await firebaseError(response);
+    return next;
+  }
+
   function pagePriorityDatasets() {
     const common = ['cashtop_company_access', 'cashtop_branches', 'cashtop_employees', 'cashtop_settings'];
     const map = {
@@ -770,7 +792,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     }, Math.max(0, Number(delay) || 0));
   }
 
-  async function reconcileAll(options = {}) {
+  async function reconcileLegacyAll(options = {}) {
     if (!navigator.onLine) {
       return { processed: 0, pulled: 0, uploaded: 0, remaining: core.getSyncQueue().length, offline: true };
     }
@@ -919,6 +941,264 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     }
   }
 
+  function payloadJsonValue(payload) {
+    const normalized = normalizeRemotePayload(payload);
+    if (normalized.deleted) return null;
+    let value = normalized.value;
+    if (typeof value === 'string') {
+      try { return JSON.parse(value); } catch (_) { return value; }
+    }
+    return value;
+  }
+
+  function stableRecordId(item) {
+    return core.recordIdentity ? core.recordIdentity(item) : '';
+  }
+
+  function mergeArrayByDelta(localValue, remoteValue, touchedIds = [], deletedIds = []) {
+    const touched = new Set(touchedIds || []);
+    const deleted = new Set(deletedIds || []);
+    const localMap = new Map(localValue.map(item => [stableRecordId(item), item]).filter(([id]) => id));
+    const merged = [];
+    const seen = new Set();
+    for (const remoteItem of remoteValue) {
+      const id = stableRecordId(remoteItem);
+      if (id && deleted.has(id)) continue;
+      if (id && touched.has(id) && localMap.has(id)) {
+        merged.push(localMap.get(id));
+        seen.add(id);
+      } else {
+        merged.push(remoteItem);
+        if (id) seen.add(id);
+      }
+    }
+    for (const localItem of localValue) {
+      const id = stableRecordId(localItem);
+      if (!id) {
+        if (!merged.some(item => JSON.stringify(item) === JSON.stringify(localItem))) merged.push(localItem);
+        continue;
+      }
+      if (deleted.has(id) || seen.has(id)) continue;
+      if (touched.has(id) || !remoteValue.some(item => stableRecordId(item) === id)) merged.push(localItem);
+      seen.add(id);
+    }
+    return merged;
+  }
+
+  function arrayDeltaPresent(remoteValue, desiredValue, touchedIds = [], deletedIds = []) {
+    const remoteMap = new Map(remoteValue.map(item => [stableRecordId(item), item]).filter(([id]) => id));
+    const desiredMap = new Map(desiredValue.map(item => [stableRecordId(item), item]).filter(([id]) => id));
+    for (const id of touchedIds || []) {
+      if (!remoteMap.has(id) || JSON.stringify(remoteMap.get(id)) !== JSON.stringify(desiredMap.get(id))) return false;
+    }
+    for (const id of deletedIds || []) if (remoteMap.has(id)) return false;
+    return true;
+  }
+
+  function mergePendingPayload(localPayload, remotePayload, pending) {
+    if (!remotePayload || pending?.deletedDataset === true) return localPayload;
+    const localValue = payloadJsonValue(localPayload);
+    const remoteValue = payloadJsonValue(remotePayload);
+
+    if (Array.isArray(localValue) && Array.isArray(remoteValue) &&
+        ((pending?.touchedIds?.length || 0) + (pending?.deletedIds?.length || 0) > 0)) {
+      const merged = mergeArrayByDelta(localValue, remoteValue, pending.touchedIds || [], pending.deletedIds || []);
+      return { ...localPayload, value: JSON.stringify(merged), deleted: false };
+    }
+
+    if (localValue && remoteValue && typeof localValue === 'object' && typeof remoteValue === 'object' &&
+        !Array.isArray(localValue) && !Array.isArray(remoteValue) &&
+        ((pending?.touchedFields?.length || 0) + (pending?.deletedFields?.length || 0) > 0)) {
+      const merged = { ...remoteValue };
+      for (const field of pending.touchedFields || []) {
+        if (!Object.prototype.hasOwnProperty.call(localValue, field)) continue;
+        const nested = pending.nestedArrayChanges?.[field];
+        if (nested && Array.isArray(localValue[field]) && Array.isArray(remoteValue[field])) {
+          merged[field] = mergeArrayByDelta(localValue[field], remoteValue[field], nested.touchedIds || [], nested.deletedIds || []);
+        } else {
+          merged[field] = localValue[field];
+        }
+      }
+      for (const field of pending.deletedFields || []) delete merged[field];
+      return { ...localPayload, value: JSON.stringify(merged), deleted: false };
+    }
+
+    return localPayload;
+  }
+
+  function pendingChangesPresent(remotePayload, desiredPayload, pending) {
+    if (!remotePayload) return false;
+    const remote = normalizeRemotePayload(remotePayload);
+    if (pending?.deletedDataset === true) return remote.deleted === true || remote.value == null;
+    const remoteValue = payloadJsonValue(remote);
+    const desiredValue = payloadJsonValue(desiredPayload);
+
+    if (Array.isArray(remoteValue) && Array.isArray(desiredValue) &&
+        ((pending?.touchedIds?.length || 0) + (pending?.deletedIds?.length || 0) > 0)) {
+      return arrayDeltaPresent(remoteValue, desiredValue, pending.touchedIds || [], pending.deletedIds || []);
+    }
+
+    if (remoteValue && desiredValue && typeof remoteValue === 'object' && typeof desiredValue === 'object' &&
+        !Array.isArray(remoteValue) && !Array.isArray(desiredValue) &&
+        ((pending?.touchedFields?.length || 0) + (pending?.deletedFields?.length || 0) > 0)) {
+      for (const field of pending.touchedFields || []) {
+        const nested = pending.nestedArrayChanges?.[field];
+        if (nested && Array.isArray(remoteValue[field]) && Array.isArray(desiredValue[field])) {
+          if (!arrayDeltaPresent(remoteValue[field], desiredValue[field], nested.touchedIds || [], nested.deletedIds || [])) return false;
+        } else if (JSON.stringify(remoteValue[field]) !== JSON.stringify(desiredValue[field])) {
+          return false;
+        }
+      }
+      for (const field of pending.deletedFields || []) if (Object.prototype.hasOwnProperty.call(remoteValue, field)) return false;
+      return true;
+    }
+
+    return remote.deleted === desiredPayload.deleted && String(remote.value ?? '') === String(desiredPayload.value ?? '');
+  }
+
+  function applyMergedPayloadLocally(key, payload) {
+    if (payload.deleted) return;
+    const currentRaw = core.getRawCompanyDataset ? core.getRawCompanyDataset(key) : localStorage.getItem(key);
+    if (String(currentRaw ?? '') === String(payload.value ?? '')) return;
+    core.rawSet(core.namespaceKey(key), String(payload.value ?? ''));
+    core.rawSet(core.metaKey(key), JSON.stringify({
+      ...localMetaFor(key),
+      updatedAt: Number(payload.updatedAt || Date.now()),
+      revision: Number(payload.revision || 1),
+      deviceId: payload.deviceId || core.rawGet('cashtop_device_id') || '',
+      source: 'mongodb-rtdb-api',
+      seeded: false
+    }));
+    window.dispatchEvent(new CustomEvent('cashtop:remote-applied', { detail: { key, merged: true } }));
+  }
+
+  async function reconcileMongoAll(options = {}) {
+    if (!navigator.onLine) {
+      return { processed: 0, pulled: 0, uploaded: 0, remaining: core.getSyncQueue().length, offline: true };
+    }
+    if (syncing) return { processed: 0, pulled: 0, uploaded: 0, remaining: core.getSyncQueue().length, busy: true };
+
+    syncing = true;
+    writeState({ syncing: true, lastError: '', syncStartedAt: Date.now(), authMode: 'mongodb-api' });
+    try {
+      const access = await openLightDatabaseAccess();
+      const token = access.token;
+      const location = access.location;
+      const pendingKeys = core.getSyncQueue().map(item => item.key).filter(key => core.DATA_KEYS.includes(key));
+      const pullKeys = options.manual === true || options.forceCheck === true
+        ? core.DATA_KEYS
+        : pagePriorityDatasets();
+      const keys = [...new Set([...pendingKeys, ...pullKeys])];
+      let uploaded = 0;
+      let pulled = 0;
+
+      for (const key of keys) {
+        let pending = core.getSyncQueue().find(item => item.key === key) || null;
+        let remoteRaw;
+        try {
+          remoteRaw = await readDatasetLocation(location, key, token);
+        } catch (error) {
+          console.warn('[CASH TOP 2] Mongo dataset read:', key, error);
+          if (pending) throw error;
+          continue;
+        }
+        let remote = remoteRaw == null ? null : normalizeRemotePayload(remoteRaw);
+
+        if (pending) {
+          let committed = false;
+          let desired = null;
+          let sourceLocalPayload = null;
+          for (let attempt = 0; attempt < 4 && !committed; attempt += 1) {
+            pending = core.getSyncQueue().find(item => item.key === key) || pending;
+            const localPayload = makeLocalPayload(key, remote?.revision || 0);
+            sourceLocalPayload = localPayload;
+            desired = mergePendingPayload(localPayload, remote, pending);
+            await writeDatasetLocation(location, key, token, desired);
+            const verifiedRaw = await readDatasetLocation(location, key, token);
+            committed = pendingChangesPresent(verifiedRaw, desired, pending);
+            remote = normalizeRemotePayload(verifiedRaw);
+            if (!committed) await new Promise(resolve => setTimeout(resolve, 40 * (attempt + 1)));
+          }
+          if (!committed || !desired || !sourceLocalPayload) throw new Error(`تعذر تثبيت تعديلات ${key} بسبب تعارض مزامنة متكرر.`);
+
+          // إذا تغيرت نفس المجموعة محلياً أثناء انتظار الشبكة فلا نكتب النسخة الأقدم
+          // فوق التعديل الجديد. تبقى العملية في الطابور وتدخل دورة المزامنة التالية.
+          const currentRaw = core.getRawCompanyDataset ? core.getRawCompanyDataset(key) : localStorage.getItem(key);
+          const currentMeta = localMetaFor(key);
+          const localUnchanged = currentRaw === (sourceLocalPayload.deleted ? null : sourceLocalPayload.value) &&
+            Number(currentMeta.updatedAt || 0) <= Number(sourceLocalPayload.updatedAt || 0);
+          if (localUnchanged) {
+            applyMergedPayloadLocally(key, desired);
+            if (markUploaded(key, desired)) uploaded += 1;
+          }
+          continue;
+        }
+
+        if (!remote) {
+          const meta = localMetaFor(key);
+          if (meta.seeded !== true && Number(meta.updatedAt || 0) > 0) {
+            const payload = makeLocalPayload(key, 0);
+            await writeDatasetLocation(location, key, token, payload);
+            if (markUploaded(key, payload)) uploaded += 1;
+          }
+          continue;
+        }
+
+        const localMeta = localMetaFor(key);
+        const localTime = Number(localMeta.updatedAt || 0);
+        const remoteTime = Number(remote.updatedAt || 0);
+        const seeded = localMeta.seeded === true || localTime <= 0;
+        if ((options.force === true || seeded || remoteTime > localTime) && applyRemote(key, remote, { force: options.force === true })) {
+          pulled += 1;
+        } else if (!seeded && localTime > remoteTime) {
+          const payload = makeLocalPayload(key, remote.revision || 0);
+          await writeDatasetLocation(location, key, token, payload);
+          if (markUploaded(key, payload)) uploaded += 1;
+        }
+      }
+
+      await writeMetaLocation(location, token, companyMeta(location, {
+        reconciledAt: Date.now(),
+        lastSyncedBy: core.rawGet('cashtop_device_id') || ''
+      })).catch(error => console.warn('[CASH TOP 2] Mongo meta sync:', error));
+
+      writeState({
+        syncing: false,
+        initialLoaded: true,
+        loadedAt: Date.now(),
+        lastSuccessAt: Date.now(),
+        lastError: '',
+        authMode: 'mongodb-api',
+        remotePath: locationPath(location)
+      });
+      core.updateSyncBadge();
+      window.dispatchEvent(new CustomEvent('cashtop:sync-complete', {
+        detail: { processed: uploaded, pulled, uploaded, mongodb: true }
+      }));
+      return {
+        processed: uploaded,
+        pulled,
+        uploaded,
+        remaining: core.getSyncQueue().length,
+        projectId: cfg.projectId,
+        path: locationPath(location),
+        authMode: 'mongodb-api'
+      };
+    } catch (error) {
+      const message = errorMessage(error);
+      writeState({ syncing: false, lastError: message, errorAt: Date.now() });
+      console.error('[CASH TOP 2] MongoDB API sync:', error);
+      throw new Error(message);
+    } finally {
+      syncing = false;
+      core.updateSyncBadge();
+    }
+  }
+
+  async function reconcileAll(options = {}) {
+    return isMongoProxy ? reconcileMongoAll(options) : reconcileLegacyAll(options);
+  }
+
   async function pullAll(options = {}) {
     return pullDatasetKeys(core.DATA_KEYS, {
       force: options.force === true,
@@ -991,6 +1271,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   };
 
   window.addEventListener('cashtop:data-changed', () => scheduleSync(700));
+  window.addEventListener('cashtop:sync-queue-restored', () => scheduleSync(80));
   window.addEventListener('online', () => scheduleSync(180));
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && navigator.onLine) scheduleSync(350);

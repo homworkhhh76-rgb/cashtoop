@@ -1101,3 +1101,107 @@ textarea:focus, textarea:active,
   outline: none !important;
   box-shadow: none !important;
 }
+
+/* ===== Revision 41: 120Hz-ready UI + instant lightweight dialogs =====
+   requestAnimationFrame follows the device refresh rate automatically. These
+   rules keep animations compositor-only and remove hidden dialogs from layout,
+   paint and GPU-layer work until they are actually opened. */
+:root {
+  --ct-fast-motion: 110ms;
+  --ct-frame-budget-120hz: 8.333ms;
+}
+
+/* Hidden dialogs must be truly dormant. The previous opacity-only hiding kept
+   large forms/tables in layout and, together with will-change, could retain many
+   expensive compositor layers. */
+.ct-page-host .modal-overlay:not(.active),
+.ct-original-page .modal-overlay:not(.active),
+.ct-page-host .ct-modal:not(.open),
+.ct-original-page .ct-modal:not(.open) {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+  content-visibility: hidden !important;
+}
+
+.ct-page-host .modal-overlay.active,
+.ct-original-page .modal-overlay.active,
+.ct-page-host .ct-modal.open,
+.ct-original-page .ct-modal.open {
+  display: flex !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  contain: layout paint style;
+  isolation: isolate;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.ct-page-host .modal-overlay.active > .modal-box,
+.ct-page-host .modal-overlay.active > .modal-content,
+.ct-page-host .modal-overlay.active > .modal-container,
+.ct-page-host .ct-modal.open > .ct-modal-box,
+.ct-original-page .modal-overlay.active > .modal-box,
+.ct-original-page .modal-overlay.active > .modal-content,
+.ct-original-page .ct-modal.open > .ct-modal-box {
+  contain: layout paint style;
+  transform: translate3d(0, 0, 0) !important;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, .16) !important;
+}
+
+/* Do not reserve GPU layers for every closed modal. */
+.modal-overlay:not(.active), .ct-modal:not(.open) { will-change: auto !important; }
+.modal-overlay.active, .ct-modal.open { will-change: opacity; }
+.modal-overlay.active > .modal-box,
+.modal-overlay.active > .modal-content,
+.modal-overlay.active > .modal-container,
+.ct-modal.open > .ct-modal-box { will-change: transform, opacity; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .ct-page-host .modal-overlay.active,
+  .ct-original-page .modal-overlay.active,
+  .ct-page-host .ct-modal.open,
+  .ct-original-page .ct-modal.open {
+    animation: ctModalFastFade var(--ct-fast-motion) linear both !important;
+  }
+  .ct-page-host .modal-overlay.active > .modal-box,
+  .ct-page-host .modal-overlay.active > .modal-content,
+  .ct-page-host .modal-overlay.active > .modal-container,
+  .ct-page-host .ct-modal.open > .ct-modal-box,
+  .ct-original-page .modal-overlay.active > .modal-box,
+  .ct-original-page .modal-overlay.active > .modal-content,
+  .ct-original-page .ct-modal.open > .ct-modal-box {
+    animation: ctModalFastPop var(--ct-fast-motion) cubic-bezier(.2,.7,.2,1) both !important;
+  }
+}
+
+@keyframes ctModalFastFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ctModalFastPop {
+  from { opacity: .92; transform: translate3d(0, 6px, 0) scale(.992); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+/* Keep scrolling/interaction on the compositor path where browsers support it. */
+.ct-page-host,
+.ct-original-page,
+.table-responsive-box,
+.ct-table-wrap,
+.modal-box,
+.modal-content,
+.modal-container,
+.ct-modal-box {
+  scroll-behavior: auto !important;
+  overscroll-behavior: contain;
+}
+
+/* Avoid expensive paint effects during high-frequency interactions. */
+.modal-overlay, .ct-modal { filter: none !important; }
+@media (hover: none), (pointer: coarse) {
+  .modal-box, .modal-content, .modal-container, .ct-modal-box {
+    box-shadow: 0 5px 16px rgba(15,23,42,.14) !important;
+  }
+}

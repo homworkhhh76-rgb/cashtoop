@@ -1002,6 +1002,8 @@
             newCard.querySelectorAll('.calc-trigger').forEach(inp => {
                 inp.addEventListener('input', calculateInvoiceFinance);
             });
+            newCard.querySelector('.piece-buy')?.addEventListener('input', () => applyConfiguredProfitToPurchaseRow(newCard, 'piece'));
+            newCard.querySelector('.unit-buy')?.addEventListener('input', () => applyConfiguredProfitToPurchaseRow(newCard, 'unit'));
             calculateInvoiceFinance();
         }
 
@@ -1211,6 +1213,43 @@
         /* ========================================================== */
         /*   حسابات الفاتورة المالية المباشرة                         */
         /* ========================================================== */
+        function configuredPurchaseProfitRate() {
+            const direct = window.Cashtop?.getProfitRate?.();
+            if (Number.isFinite(Number(direct))) return Math.max(0, Number(direct));
+            try {
+                const settings = JSON.parse(localStorage.getItem('cashtop_settings') || '{}') || {};
+                return Math.max(0, Number(settings.profitRate || 0));
+            } catch (_) { return 0; }
+        }
+
+        function purchaseSaleFromCost(cost) {
+            const value = Math.max(0, Number(cost || 0));
+            const rate = configuredPurchaseProfitRate();
+            return window.Cashtop?.salePriceFromCost ? window.Cashtop.salePriceFromCost(value, rate) : value * (1 + rate / 100);
+        }
+
+        function formatPurchaseAutoPrice(value) {
+            return Number(value || 0).toFixed(3).replace(/\.?0+$/, '');
+        }
+
+        function applyConfiguredProfitToPurchaseRow(card, type) {
+            if (!card) return;
+            if (type === 'piece') {
+                const buy = parseFloat(card.querySelector('.piece-buy')?.value) || 0;
+                const sale = card.querySelector('.piece-sale');
+                if (sale) sale.value = buy > 0 ? formatPurchaseAutoPrice(purchaseSaleFromCost(buy)) : '';
+            } else {
+                const unitBuy = parseFloat(card.querySelector('.unit-buy')?.value) || 0;
+                const ppu = Math.max(1, parseFloat(card.querySelector('.ppu')?.value) || 1);
+                const unitSaleValue = purchaseSaleFromCost(unitBuy);
+                const unitSale = card.querySelector('.unit-sale');
+                const pieceSale = card.querySelector('.piece-sale-in-unit');
+                if (unitSale) unitSale.value = unitBuy > 0 ? formatPurchaseAutoPrice(unitSaleValue) : '';
+                if (pieceSale) pieceSale.value = unitBuy > 0 ? formatPurchaseAutoPrice(unitSaleValue / ppu) : '';
+            }
+            calculateInvoiceFinance();
+        }
+
         function calculateInvoiceFinance() {
             let grandTotal = 0;
             const productCards = document.querySelectorAll('.product-item');
