@@ -82,24 +82,76 @@
     const is58 = type === 'thermal-58';
     const isA4 = type === 'paper-a4';
     const width = is58 ? '58mm' : isA4 ? '190mm' : '80mm';
-    const baseFont = is58 ? '10px' : isA4 ? '14px' : '12px';
+    const padding = is58 ? '2.5mm 3mm' : isA4 ? '10mm 12mm' : '3mm 4mm';
     return `
       *{box-sizing:border-box;font-family:'Cairo',Arial,Tahoma,sans-serif}
-      .ct-print-receipt{background:#fff;color:#000;width:${width};max-width:${width};padding:${is58 ? '2.5mm 3mm' : isA4 ? '10mm 12mm' : '3mm 4mm'};font-size:${baseFont};direction:rtl;margin:0 auto}
+      html,body{margin:0;padding:0;background:#fff;color:#000}
+      .ct-print-receipt{
+        background:#fff;color:#000;width:${width};max-width:${width};padding:${padding};
+        direction:rtl;margin:0 auto;position:relative;font-size:${isA4 ? '14px' : is58 ? '11px' : '13px'};
+        -webkit-print-color-adjust:exact;print-color-adjust:exact
+      }
       .ct-print-receipt .receipt-header{text-align:center;margin-bottom:10px}
-      .ct-print-receipt .receipt-logo{max-width:${is58 ? '20mm' : isA4 ? '28mm' : '24mm'};max-height:${is58 ? '18mm' : isA4 ? '26mm' : '22mm'};object-fit:contain;filter:grayscale(100%) contrast(180%);margin:0 auto 5px;display:block}
-      .ct-print-receipt .store-name{font-size:${is58 ? '17px' : isA4 ? '26px' : '22px'};font-weight:900;margin:0}
-      .ct-print-receipt .branch-name{font-size:${is58 ? '10px' : isA4 ? '15px' : '12px'};margin:4px 0;font-weight:600}
-      .ct-print-receipt .invoice-title{font-size:${is58 ? '14px' : isA4 ? '20px' : '17px'};font-weight:800;margin:7px 0}
-      .ct-print-receipt .dashed-line{border-top:1.5px dashed #000;margin:8px 0;width:100%}
-      .ct-print-receipt .info-grid{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:${is58 ? '4px 5px' : '6px 9px'};font-size:${is58 ? '8.5px' : isA4 ? '13px' : '10.5px'};font-weight:600;margin-bottom:5px;align-items:center}
-      .ct-print-receipt .info-label{font-weight:400;color:#333}.ct-print-receipt .info-value{font-weight:700;text-align:right;min-width:0;overflow-wrap:anywhere}
-      .ct-print-receipt .receipt-table{width:100%;border-collapse:collapse;margin-bottom:5px;font-weight:700;font-size:${is58 ? '8px' : isA4 ? '12.5px' : '10.5px'};table-layout:fixed}
-      .ct-print-receipt .receipt-table th{padding:5px 1px}.ct-print-receipt .receipt-table td{padding:4px 1px;font-weight:600;overflow-wrap:anywhere}.ct-print-receipt .receipt-table th,.ct-print-receipt .receipt-table td{text-align:center}.ct-print-receipt .receipt-table th:first-child,.ct-print-receipt .receipt-table td:first-child{text-align:right}.ct-print-receipt .receipt-table th:last-child,.ct-print-receipt .receipt-table td:last-child{text-align:left}
-      .ct-print-receipt .totals-horizontal-box{display:flex;justify-content:space-between;border:2px solid #000;border-radius:8px;padding:${is58 ? '6px 2px' : '8px 5px'};margin:12px 0;background:#fff}
-      .ct-print-receipt .total-col{flex:1;display:flex;flex-direction:column;align-items:center;border-left:1px dashed #777;min-width:0}.ct-print-receipt .total-col:last-child{border-left:none}
-      .ct-print-receipt .total-label{font-size:${is58 ? '8px' : isA4 ? '12px' : '10px'};font-weight:700;margin-bottom:3px;color:#222}.ct-print-receipt .total-val{font-size:${is58 ? '9px' : isA4 ? '14px' : '11px'};font-weight:900;overflow-wrap:anywhere;text-align:center}
-      .ct-print-receipt .receipt-footer{text-align:center;margin-top:9px;font-weight:600}.ct-print-receipt .items-count{padding-bottom:4px;font-size:${is58 ? '9px' : isA4 ? '14px' : '11px'};font-weight:700}.ct-print-receipt .terms{font-size:${is58 ? '7.5px' : isA4 ? '11px' : '9px'};margin-top:4px;line-height:1.5;font-weight:600}.ct-print-receipt .barcode-container{text-align:center;margin-top:8px}.ct-print-receipt .barcode-container svg{max-width:100%;height:${is58 ? '28px' : '35px'}}
+      .ct-print-receipt .receipt-logo{max-width:90px;max-height:90px;object-fit:contain;filter:grayscale(100%) contrast(200%);margin:0 auto 5px;display:block}
+      .ct-print-receipt .store-name{font-size:22px;font-weight:900;margin:0}
+      .ct-print-receipt .branch-name{font-size:14px;margin:5px 0;font-weight:600}
+      .ct-print-receipt .invoice-title{font-size:18px;font-weight:800;margin:10px 0}
+      .ct-print-receipt .dashed-line{border-top:1.5px dashed #000;margin:10px 0;width:100%}
+      .ct-print-receipt .info-grid{
+        display:grid;grid-template-columns:auto 1fr auto 1fr;gap:6px 10px;
+        font-size:12.5px;font-weight:600;margin-bottom:5px;align-items:center
+      }
+      .ct-print-receipt .info-label{font-weight:400;color:#333}
+      .ct-print-receipt .info-value{font-weight:700;text-align:right;min-width:0;overflow-wrap:anywhere}
+      .ct-print-receipt .receipt-table{
+        width:100%;border-collapse:collapse;margin-bottom:5px;font-weight:700;
+        font-size:12.5px;table-layout:fixed
+      }
+      .ct-print-receipt .receipt-table th{padding:6px 0}
+      .ct-print-receipt .receipt-table td{padding:4px 0;font-weight:600;overflow-wrap:anywhere}
+      .ct-print-receipt .receipt-table th,.ct-print-receipt .receipt-table td{text-align:center}
+      .ct-print-receipt .receipt-table th:first-child,.ct-print-receipt .receipt-table td:first-child{text-align:right}
+      .ct-print-receipt .receipt-table th:last-child,.ct-print-receipt .receipt-table td:last-child{text-align:left}
+      .ct-print-receipt .totals-horizontal-box{
+        display:flex;justify-content:space-between;border:2px solid #000;border-radius:8px;
+        padding:8px 5px;margin:15px 0;background:#fff
+      }
+      .ct-print-receipt .total-col{
+        flex:1;display:flex;flex-direction:column;align-items:center;border-left:1px dashed #777;min-width:0
+      }
+      .ct-print-receipt .total-col:last-child{border-left:none}
+      .ct-print-receipt .total-label{font-size:12px;font-weight:700;margin-bottom:4px;color:#222}
+      .ct-print-receipt .total-val{font-size:14px;font-weight:900;overflow-wrap:anywhere;text-align:center}
+      .ct-print-receipt .receipt-footer{text-align:center;margin-top:10px;font-weight:600}
+      .ct-print-receipt .items-count{padding-bottom:5px;font-size:14px;font-weight:700}
+      .ct-print-receipt .terms{font-size:11px;margin-top:5px;line-height:1.5;font-weight:600}
+      .ct-print-receipt .barcode-container{text-align:center;margin-top:10px}
+      .ct-print-receipt .barcode-container svg{max-width:100%;height:35px}
+      .ct-print-receipt .barcode-fallback{font-family:monospace;font-size:12px;letter-spacing:2px;font-weight:700}
+      ${is58 ? `
+        .ct-print-receipt .receipt-logo{max-width:70px;max-height:70px}
+        .ct-print-receipt .store-name{font-size:17px}
+        .ct-print-receipt .branch-name{font-size:10px}
+        .ct-print-receipt .invoice-title{font-size:14px;margin:7px 0}
+        .ct-print-receipt .info-grid{gap:4px 5px;font-size:8.5px}
+        .ct-print-receipt .receipt-table{font-size:8px}
+        .ct-print-receipt .receipt-table th{padding:5px 1px}
+        .ct-print-receipt .receipt-table td{padding:4px 1px}
+        .ct-print-receipt .totals-horizontal-box{padding:6px 2px;margin:12px 0}
+        .ct-print-receipt .total-label{font-size:8px}
+        .ct-print-receipt .total-val{font-size:9px}
+        .ct-print-receipt .items-count{font-size:9px}
+        .ct-print-receipt .terms{font-size:7.5px}
+        .ct-print-receipt .barcode-container svg{height:28px}
+      ` : ''}
+      ${isA4 ? `
+        .ct-print-receipt .receipt-logo{max-width:110px;max-height:110px}
+        .ct-print-receipt .store-name{font-size:26px}
+        .ct-print-receipt .branch-name{font-size:15px}
+        .ct-print-receipt .invoice-title{font-size:20px}
+        .ct-print-receipt .info-grid{font-size:13px}
+        .ct-print-receipt .receipt-table{font-size:12.5px}
+      ` : ''}
     `;
   }
 
@@ -393,6 +445,52 @@
 
   function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
+  async function printUsb(invoice, options = {}) {
+    const printer = { ...getPrinterSettings(), ...(options.printer || {}) };
+    if (printer.printType === 'paper-a4') throw new Error('الطباعة الحرارية USB المباشرة مخصصة لمقاسات 58/80 ملم.');
+    if (!navigator.usb) throw new Error('WebUSB غير متاح في هذا المتصفح أو يحتاج تشغيل التطبيق عبر HTTPS/localhost.');
+
+    const { canvas } = await renderInvoiceCanvas(invoice, { ...options, printer });
+    const data = canvasToEscPosRaster(canvas);
+    const copies = Math.min(10, Math.max(1, parseInt(printer.printCopies, 10) || 1));
+
+    const device = options.device || await navigator.usb.requestDevice({ filters: [] });
+    await device.open();
+    if (!device.configuration) await device.selectConfiguration(1);
+
+    let interfaceNumber = null;
+    let endpointNumber = null;
+    let alternateSetting = null;
+    for (const iface of device.configuration.interfaces) {
+      for (const alternate of iface.alternates) {
+        const outEndpoint = alternate.endpoints.find(ep => ep.direction === 'out');
+        if (outEndpoint) {
+          interfaceNumber = iface.interfaceNumber;
+          endpointNumber = outEndpoint.endpointNumber;
+          alternateSetting = alternate.alternateSetting;
+          break;
+        }
+      }
+      if (interfaceNumber !== null) break;
+    }
+    if (interfaceNumber === null || endpointNumber === null) {
+      throw new Error('تم اختيار جهاز USB لكن لم يتم العثور على منفذ إرسال للطابعة.');
+    }
+
+    await device.claimInterface(interfaceNumber);
+    if (alternateSetting !== null) {
+      try { await device.selectAlternateInterface(interfaceNumber, alternateSetting); } catch (_) {}
+    }
+
+    for (let copy = 0; copy < copies; copy += 1) {
+      for (let offset = 0; offset < data.length; offset += 16384) {
+        const result = await device.transferOut(endpointNumber, data.slice(offset, Math.min(offset + 16384, data.length)));
+        if (result?.status && result.status !== 'ok') throw new Error('فشل إرسال بيانات الطباعة عبر USB.');
+      }
+    }
+    return { ok: true, mode: 'usb', copies };
+  }
+
   async function printSerial(invoice, options = {}) {
     const printer = { ...getPrinterSettings(), ...(options.printer || {}) };
     if (printer.printType === 'paper-a4') throw new Error('الطباعة الحرارية المباشرة مخصصة لمقاسات 58/80 ملم.');
@@ -454,31 +552,120 @@
     return false;
   }
 
+  async function waitForFrameReady(frame) {
+    const doc = frame.contentDocument;
+    try { await doc.fonts?.ready; } catch (_) {}
+    const images = [...doc.images];
+    await Promise.all(images.map(img => {
+      if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+      if (typeof img.decode === 'function') return img.decode().catch(() => {});
+      return new Promise(resolve => {
+        img.addEventListener('load', resolve, { once: true });
+        img.addEventListener('error', resolve, { once: true });
+        setTimeout(resolve, 2500);
+      });
+    }));
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    await sleep(120);
+  }
+
+  function createPrintFrame() {
+    let frame = document.getElementById('ctUniversalPrintFrame');
+    if (!frame) {
+      frame = document.createElement('iframe');
+      frame.id = 'ctUniversalPrintFrame';
+      frame.setAttribute('title', 'معاينة طباعة الفاتورة');
+      frame.setAttribute('aria-hidden', 'true');
+      frame.style.cssText = 'position:fixed;left:-100000px;top:0;width:1px;height:1px;border:0;pointer-events:none;z-index:-2147483647;background:#fff;';
+      document.body.appendChild(frame);
+    }
+    return frame;
+  }
+
+  async function renderBarcodeInDocument(doc, type, code) {
+    const barcodes = [...doc.querySelectorAll('.ct-invoice-barcode')];
+    if (!barcodes.length) return;
+    try {
+      await ensureLibraries();
+      for (const barcode of barcodes) {
+        window.JsBarcode(barcode, code, {
+          format: 'CODE128',
+          width: type === 'thermal-58' ? 1.15 : 1.5,
+          height: type === 'thermal-58' ? 26 : 34,
+          displayValue: true,
+          margin: 0,
+          fontSize: type === 'thermal-58' ? 8 : 10
+        });
+      }
+    } catch (error) {
+      console.warn('[CASH TOP] barcode library unavailable for system print:', error);
+      for (const barcode of barcodes) {
+        const fallback = doc.createElement('div');
+        fallback.className = 'barcode-fallback';
+        fallback.textContent = code;
+        barcode.replaceWith(fallback);
+      }
+    }
+  }
+
+  function printPageCss(type, thermalHeightMm, copies) {
+    const isA4 = type === 'paper-a4';
+    if (isA4) {
+      return `
+        @page{size:A4 portrait;margin:10mm}
+        html,body{margin:0!important;padding:0!important;background:#fff!important}
+        body{direction:rtl}
+        .ct-print-copy{width:190mm;min-height:277mm;margin:0 auto;display:flex;align-items:flex-start;justify-content:center;page-break-after:always;break-after:page}
+        .ct-print-copy:last-child{page-break-after:auto;break-after:auto}
+        .ct-print-receipt{box-shadow:none!important}
+      `;
+    }
+    const sizeMm = type === 'thermal-58' ? 58 : 80;
+    const heightMm = Math.max(20, Math.ceil(Number(thermalHeightMm) || 20));
+    return `
+      @page{size:${sizeMm}mm ${heightMm}mm;margin:0}
+      html,body{width:${sizeMm}mm!important;margin:0!important;padding:0!important;background:#fff!important;overflow:visible!important}
+      body{direction:rtl}
+      .ct-print-copy{display:block;width:${sizeMm}mm;margin:0;padding:0;page-break-after:always;break-after:page}
+      .ct-print-copy:last-child{page-break-after:auto;break-after:auto}
+      .ct-print-receipt{width:${sizeMm}mm!important;max-width:${sizeMm}mm!important;margin:0!important;box-shadow:none!important}
+    `;
+  }
+
   async function systemPrint(invoice, options = {}) {
     const printer = { ...getPrinterSettings(), ...(options.printer || {}) };
-    const { canvas, type } = await renderInvoiceCanvas(invoice, { ...options, printer });
-    const isA4 = type === 'paper-a4';
-    const sizeMm = type === 'thermal-58' ? 58 : 80;
-    const heightMm = isA4 ? 277 : Math.max(20, Math.ceil((canvas.height / canvas.width) * sizeMm));
+    const built = buildReceiptMarkup(invoice, { ...options, printer });
+    const type = built.type;
     const copies = Math.min(10, Math.max(1, parseInt(printer.printCopies, 10) || 1));
-    let sheet = document.getElementById('ctUniversalPrintSheet');
-    if (!sheet) {
-      sheet = document.createElement('div');
-      sheet.id = 'ctUniversalPrintSheet';
-      sheet.setAttribute('aria-hidden', 'true');
-      document.body.appendChild(sheet);
+    const frame = createPrintFrame();
+    const doc = frame.contentDocument || frame.contentWindow.document;
+    const copyHtml = Array.from({ length: copies }, () => `<section class="ct-print-copy">${built.html}</section>`).join('');
+
+    doc.open();
+    doc.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>فاتورة ${escapeHtml(invoiceNumber(invoice))}</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap"><style>${built.css}</style><style id="ctPagePrintStyle"></style></head><body>${copyHtml}</body></html>`);
+    doc.close();
+
+    await renderBarcodeInDocument(doc, type, invoiceNumber(invoice));
+    await waitForFrameReady(frame);
+
+    let thermalHeightMm = 0;
+    if (type !== 'paper-a4') {
+      const receipt = doc.querySelector('.ct-print-receipt');
+      const pxHeight = Math.max(receipt?.scrollHeight || 0, receipt?.getBoundingClientRect?.().height || 0);
+      thermalHeightMm = Math.max(20, Math.ceil(pxHeight * 25.4 / 96) + 2);
     }
-    const imageUrl = canvas.toDataURL('image/png');
-    sheet.innerHTML = Array.from({ length: copies }, (_, index) => `<section class="ct-print-copy"><img src="${imageUrl}" alt="فاتورة جاهزة للطباعة">${index < copies - 1 ? '<div class="ct-copy-break"></div>' : ''}</section>`).join('');
-    let style = document.getElementById('ctUniversalPrintStyle');
-    if (!style) { style = document.createElement('style'); style.id = 'ctUniversalPrintStyle'; document.head.appendChild(style); }
-    style.textContent = isA4 ? `
-      #ctUniversalPrintSheet{display:none}@media print{@page{size:A4 portrait;margin:10mm}html,body{margin:0!important;padding:0!important;background:#fff!important}body>*:not(#ctUniversalPrintSheet){display:none!important}#ctUniversalPrintSheet{display:block!important;width:190mm!important;margin:0!important;padding:0!important}.ct-print-copy{width:190mm!important;min-height:277mm!important;display:flex!important;align-items:flex-start;justify-content:center;page-break-after:always;break-after:page}.ct-print-copy:last-child{page-break-after:auto;break-after:auto}.ct-print-copy img{display:block!important;max-width:190mm!important;max-height:277mm!important;width:auto!important;height:auto!important;object-fit:contain!important}.ct-copy-break{display:none!important}}
-    ` : `
-      #ctUniversalPrintSheet{display:none}@media print{@page{size:${sizeMm}mm ${heightMm}mm;margin:0}html,body{margin:0!important;padding:0!important;background:#fff!important}body>*:not(#ctUniversalPrintSheet){display:none!important}#ctUniversalPrintSheet{display:block!important;width:${sizeMm}mm!important;margin:0!important;padding:0!important}.ct-print-copy{display:block!important;width:${sizeMm}mm!important;height:${heightMm}mm!important;margin:0!important;padding:0!important;overflow:hidden!important;page-break-after:always;break-after:page}.ct-print-copy:last-child{page-break-after:auto;break-after:auto}.ct-print-copy img{display:block!important;width:${sizeMm}mm!important;height:auto!important;max-width:none!important;max-height:none!important;margin:0!important;padding:0!important}.ct-copy-break{display:none!important}}
-    `;
-    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    window.print();
+    let pageStyle = doc.getElementById('ctPagePrintStyle');
+    if (!pageStyle) {
+      pageStyle = doc.createElement('style');
+      pageStyle.id = 'ctPagePrintStyle';
+      doc.head.appendChild(pageStyle);
+    }
+    pageStyle.textContent = printPageCss(type, thermalHeightMm, copies);
+
+    await waitForFrameReady(frame);
+    const printWindow = frame.contentWindow;
+    printWindow.focus();
+    printWindow.print();
     return { ok: true, mode: 'system', copies };
   }
 
@@ -511,6 +698,7 @@
     systemPrint,
     printBluetooth,
     printSerial,
+    printUsb,
     connectBluetooth,
     connectSerialBluetooth,
     disconnectBluetooth,

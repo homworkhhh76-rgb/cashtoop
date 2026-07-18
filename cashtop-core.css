@@ -1215,14 +1215,30 @@ textarea:focus, textarea:active,
 /* Keep scrolling/interaction on the compositor path where browsers support it. */
 .ct-page-host,
 .ct-original-page,
-.table-responsive-box,
-.ct-table-wrap,
 .modal-box,
 .modal-content,
 .modal-container,
 .ct-modal-box {
   scroll-behavior: auto !important;
   overscroll-behavior: contain;
+}
+
+/*
+ * Revision 38: never trap vertical page scrolling inside table wrappers.
+ * Tables may still pan horizontally, but when an inner table reaches its
+ * vertical top/bottom edge the gesture chains immediately to the page.
+ * This fixes the Android/WebView "frozen page unless I swipe outside table"
+ * behaviour caused by overscroll-behavior: contain on table containers.
+ */
+.table-responsive-box,
+.table-responsive,
+.table-wrap,
+.ct-table-wrap {
+  scroll-behavior: auto !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain !important;
+  overscroll-behavior-y: auto !important;
+  touch-action: pan-x pan-y !important;
 }
 
 /* Avoid expensive paint effects during high-frequency interactions. */
