@@ -2517,7 +2517,9 @@
   function updateNetworkStatus() {
     const status = document.getElementById('ctNetStatus');
     if (!status) return;
-    const online = navigator.onLine;
+    const backendState = window.CashtopFirebase?.getState?.() || {};
+    const backendRecentlyReachable = backendState.backendReachable === true && Date.now() - Number(backendState.backendReachableAt || 0) < 120000;
+    const online = navigator.onLine !== false || backendRecentlyReachable;
     status.classList.toggle('offline', !online);
     const span = status.querySelector('span');
     if (span) span.textContent = online ? 'متصل' : 'غير متصل';
@@ -2576,6 +2578,41 @@
     return { installed: choice?.outcome === 'accepted', outcome: choice?.outcome || 'dismissed' };
   }
 
+  let cloudSyncRuntimePromise = null;
+
+  function ensureCloudSyncRuntime() {
+    if (window.CashtopFirebase && typeof window.CashtopFirebase.syncAll === 'function') {
+      return Promise.resolve(true);
+    }
+    const cfg = window.CASHTOP_FIREBASE || {};
+    if (!cfg.enabled || !cfg.config?.databaseURL) return Promise.resolve(false);
+    if (cloudSyncRuntimePromise) return cloudSyncRuntimePromise;
+
+    cloudSyncRuntimePromise = new Promise(resolve => {
+      const existing = document.querySelector('script[data-ct-sync-runtime="classic"]');
+      if (existing) {
+        const started = Date.now();
+        const wait = () => {
+          if (window.CashtopFirebase?.syncAll) return resolve(true);
+          if (Date.now() - started > 5000) return resolve(false);
+          setTimeout(wait, 80);
+        };
+        wait();
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'firebase-sync.js?v=23';
+      script.async = true;
+      script.dataset.ctSyncRuntime = 'classic';
+      script.onload = () => resolve(Boolean(window.CashtopFirebase?.syncAll));
+      script.onerror = () => resolve(false);
+      (document.head || document.documentElement).appendChild(script);
+    }).finally(() => {
+      if (!window.CashtopFirebase?.syncAll) cloudSyncRuntimePromise = null;
+    });
+    return cloudSyncRuntimePromise;
+  }
+
   async function syncNow(options = {}) {
     const manual = options.manual !== false;
     if (manual && !can('sync.run')) {
@@ -2591,13 +2628,12 @@
     };
     if (manual) button?.classList.add('ct-syncing');
     window.dispatchEvent(new CustomEvent('cashtop:sync-request', { detail: { manual } }));
-    if (!navigator.onLine) {
-      if (manual) showToast('لا يوجد اتصال. تم الحفظ محلياً وستتم المزامنة تلقائياً عند عودة الإنترنت.', 'warning');
-      finishAnimation(800);
-      updateSyncBadge();
-      return { processed: 0, offline: true };
-    }
+    // navigator.onLine مؤشر تقريبي فقط وقد يكون خاطئاً على بعض الشبكات/VPN.
+    // نحاول خادم قاعدة البيانات فعلياً ونقرر النتيجة من استجابة الطلب نفسه.
     try {
+      if (!(window.CashtopFirebase && typeof window.CashtopFirebase.syncAll === 'function')) {
+        await ensureCloudSyncRuntime();
+      }
       if (window.CashtopFirebase && typeof window.CashtopFirebase.syncAll === 'function') {
         const result = await window.CashtopFirebase.syncAll({ manual, forceCheck: true });
         if (manual) {
@@ -2606,7 +2642,7 @@
           const remaining = Number(result?.remaining || 0);
           const failed = Number(result?.failed || 0);
           if (result?.offline || result?.networkDeferred) {
-            showToast('تعذر الاتصال حالياً. العمليات محفوظة محلياً وستبقى معلقة حتى عودة الإنترنت.', 'warning');
+            showToast(result?.message || 'تعذر وصول هذه المحاولة إلى خادم المزامنة. البيانات محفوظة محلياً وستتم إعادة المحاولة تلقائياً.', 'warning');
           } else if (failed > 0 || remaining > 0 || result?.partial) {
             if (processed > 0 || pulled > 0) {
               showToast(`تمت مزامنة العمليات الجاهزة، وبقي ${remaining} قيد الانتظار لإعادة المحاولة تلقائياً.`, 'warning');
@@ -2621,14 +2657,14 @@
         }
         return result;
       }
-      if (manual) showToast('البيانات محفوظة محلياً. تعذر تحميل وحدة المزامنة السحابية حالياً.', 'info');
+      if (manual) showToast(location.protocol === 'file:' ? 'تعذر تشغيل وحدة المزامنة من فتح الملف المباشر. أعد فتح هذه النسخة؛ تم تحويل وحدة المزامنة إلى وضع متوافق مع file://.' : 'البيانات محفوظة محلياً. تعذر تحميل وحدة المزامنة السحابية حالياً.', 'info');
       return { processed: 0, unavailable: true };
     } catch (error) {
       console.error(error);
       const rawMessage = String(error?.message || '');
-      const networkLike = error?.name === 'TypeError' || /failed to fetch|networkerror|network request failed|load failed|مهلة الاتصال|تعذر الاتصال/i.test(rawMessage);
+      const networkLike = error?.name === 'TypeError' || /failed to fetch|networkerror|network request failed|load failed|مهلة الاتصال|تعذر الاتصال|خادم المزامنة|قاعدة البيانات/i.test(rawMessage);
       if (manual) showToast(networkLike
-        ? 'تعذر الاتصال حالياً. العمليات محفوظة محلياً وستتم إعادة المحاولة تلقائياً.'
+        ? (rawMessage || 'تعذر وصول هذه المحاولة إلى خادم المزامنة. البيانات محفوظة محلياً وستتم إعادة المحاولة تلقائياً.')
         : (rawMessage || 'تعذرت المزامنة الآن، وستتم إعادة المحاولة تلقائياً.'), networkLike ? 'warning' : 'error');
       return { processed: 0, error: true, networkDeferred: networkLike };
     } finally {
@@ -2679,12 +2715,6 @@
   async function syncImportedData(keys = []) {
     const importedKeys = [...new Set((Array.isArray(keys) ? keys : []).map(canonicalKey).filter(key => DATA_KEYS.includes(key)))];
     importedKeys.forEach(key => enqueueSyncOperation(key, { forceReplace: true }));
-    if (!navigator.onLine) {
-      window.dispatchEvent(new CustomEvent('cashtop:sync-progress', {
-        detail: { active: false, done: true, success: true, current: 0, total: importedKeys.length, label: 'النسخة محفوظة محلياً وستُرفع عند عودة الإنترنت' }
-      }));
-      return { offline: true, remaining: getSyncQueue().length };
-    }
     if (!window.CashtopFirebase?.syncAll) return { unavailable: true, remaining: getSyncQueue().length };
 
     window.dispatchEvent(new CustomEvent('cashtop:sync-progress', {
@@ -2701,7 +2731,7 @@
           importSync: true,
           forceRetry: true
         });
-        if (!navigator.onLine || Number(result?.remaining || getSyncQueue().length) === 0) break;
+        if (Number(result?.remaining || getSyncQueue().length) === 0) break;
         await new Promise(resolve => setTimeout(resolve, 180 + attempt * 120));
       }
       return result || { remaining: getSyncQueue().length };
@@ -2791,7 +2821,7 @@
     });
     showToast('تمت الاستعادة محلياً، ويجري رفعها الآن إلى قاعدة البيانات.', 'success');
     const syncResult = await syncImportedData(importedKeys);
-    if (navigator.onLine && Number(syncResult?.remaining || getSyncQueue().length) === 0) {
+    if (Number(syncResult?.remaining || getSyncQueue().length) === 0) {
       showToast('تمت مزامنة النسخة الاحتياطية بالكامل مع قاعدة البيانات.', 'success');
     } else if (getSyncQueue().length) {
       showToast(`تم حفظ النسخة محلياً وبقي ${getSyncQueue().length} عملية للمزامنة التلقائية.`, 'warning');
@@ -3413,7 +3443,7 @@
 
     window.addEventListener('online', () => { updateNetworkStatus(); syncNow({ manual: false }); });
     window.addEventListener('cashtop:sync-queue-changed', updateSyncBadge);
-    window.addEventListener('cashtop:sync-queue-restored', () => { if (navigator.onLine) syncNow({ manual: false }); });
+    window.addEventListener('cashtop:sync-queue-restored', () => { syncNow({ manual: false }); });
     window.addEventListener('cashtop:data-changed', event => { if (event.detail?.key === 'cashtop_settings') applySystemBranding(); });
     window.addEventListener('offline', updateNetworkStatus);
     durableReadyPromise = restoreDurableCompanyData().catch(() => ({ restored: 0 }));
@@ -3423,7 +3453,7 @@
       .then(() => migrateLegacySyncQueues().catch(() => ({ migrated: 0 })))
       .then(() => {
         updateSyncBadge();
-        if (navigator.onLine && getSyncQueue().length) syncNow({ manual: false });
+        if (getSyncQueue().length) syncNow({ manual: false });
       })
       .catch(() => null);
     window.addEventListener('cashtop:sync-progress', event => setSyncProgress(event.detail || {}));
@@ -3491,10 +3521,16 @@
       /* بعض المتصفحات لا تمنح التخزين الدائم إلا بعد تفاعل واضح من المستخدم. */
       document.addEventListener('pointerdown', requestPersistentStorage, { once: true, passive: true });
     }
+    // بعض متصفحات Android تمنع <script type="module"> عند فتح التطبيق من file://.
+    // نحاول هنا تشغيل وحدة المزامنة كـ classic script بعد اكتمال تحميل الصفحة،
+    // وهذا يصلح أيضاً الصفحات القديمة التي قد تكون ما زالت محفوظة في كاش سابق.
+    setTimeout(() => ensureCloudSyncRuntime().catch(() => false), 120);
+
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
       (async () => {
         try {
           const registration = await navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });
+          registration.update().catch(() => null);
           const worker = registration.active || registration.waiting || registration.installing;
           worker?.postMessage({ type: 'VERIFY_CACHE' });
           const ready = await navigator.serviceWorker.ready;

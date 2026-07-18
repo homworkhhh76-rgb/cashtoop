@@ -300,19 +300,53 @@
     if (!token) return url;
     return `${url}${url.includes('?') ? '&' : '?'}auth=${encodeURIComponent(token)}`;
   }
+  function loginTransportCandidates(url) {
+    const primary = transportUrl(url);
+    const candidates = [primary];
+    if (isMongoProxy) {
+      try {
+        const parsed = new URL(primary, location.href);
+        const configuredOrigin = new URL(backendBase, location.href).origin;
+        const path = parsed.searchParams.get('path');
+        const webOriginAvailable = ['http:', 'https:'].includes(location.protocol) && location.origin && location.origin !== 'null';
+        if (webOriginAvailable && configuredOrigin !== location.origin && path !== null) {
+          candidates.push(`${location.origin}/api/rtdb?path=${encodeURIComponent(path)}`);
+        }
+      } catch (_) {}
+    }
+    return [...new Set(candidates)];
+  }
+
   async function fetchJson(url, timeout = 18000) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeout);
-    try {
-      const targetUrl = transportUrl(url);
-      let response = await fetch(targetUrl, { cache: 'no-store', signal: controller.signal, headers: { Accept: 'application/json' } });
-      if (!isMongoProxy && !response.ok && (response.status === 401 || response.status === 403)) {
-        const token = await getLoginDatabaseToken().catch(() => '');
-        if (token) response = await fetch(withAuth(targetUrl, token), { cache: 'no-store', signal: controller.signal, headers: { Accept: 'application/json' } });
+    let lastError = null;
+    for (const targetUrl of loginTransportCandidates(url)) {
+      for (let attempt = 0; attempt < (navigator.onLine === false ? 1 : 2); attempt += 1) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeout);
+        try {
+          let response = await fetch(targetUrl, { cache: 'no-store', signal: controller.signal, headers: { Accept: 'application/json' } });
+          if (!isMongoProxy && !response.ok && (response.status === 401 || response.status === 403)) {
+            const token = await getLoginDatabaseToken().catch(() => '');
+            if (token) response = await fetch(withAuth(targetUrl, token), { cache: 'no-store', signal: controller.signal, headers: { Accept: 'application/json' } });
+          }
+          if ([408, 425, 429, 500, 502, 503, 504].includes(response.status) && attempt === 0) {
+            await new Promise(resolve => setTimeout(resolve, 220));
+            continue;
+          }
+          if (!response.ok) throw new Error(`تعذر قراءة بيانات الدخول من قاعدة البيانات (${response.status}).`);
+          const type = String(response.headers.get('content-type') || '').toLowerCase();
+          if (targetUrl.includes('/api/rtdb') && type && !type.includes('json')) throw new Error('واجهة قاعدة البيانات لا تعيد JSON صالحاً.');
+          return await response.json();
+        } catch (error) {
+          lastError = error;
+          if (attempt === 0 && navigator.onLine !== false) {
+            await new Promise(resolve => setTimeout(resolve, 220));
+            continue;
+          }
+        } finally { clearTimeout(timer); }
       }
-      if (!response.ok) throw new Error(`تعذر قراءة بيانات الدخول من قاعدة البيانات (${response.status}).`);
-      return await response.json();
-    } finally { clearTimeout(timer); }
+    }
+    throw lastError || new Error('تعذر قراءة بيانات الدخول من قاعدة البيانات.');
   }
 
 
@@ -581,8 +615,8 @@
     try {
       let remoteError = null;
       let authenticated = false;
-      // عند توفر الإنترنت تكون بيانات قاعدة البيانات هي المصدر المرجعي للخطة والحالة.
-      if (navigator.onLine && window.CASHTOP_FIREBASE?.enabled) {
+      // نجرب قاعدة البيانات مباشرة؛ navigator.onLine قد يعطي false رغم وجود اتصال فعلي.
+      if (window.CASHTOP_FIREBASE?.enabled) {
         try { await databaseLogin(key, username, password, remember); authenticated = true; }
         catch (error) {
           remoteError = error;
@@ -593,7 +627,7 @@
         try { await localLogin(key, username, password, remember); authenticated = true; }
         catch (localError) {
           const firebaseReady = Boolean(window.CASHTOP_FIREBASE?.enabled && (window.CASHTOP_FIREBASE?.adminConfig || window.CASHTOP_FIREBASE?.config)?.databaseURL);
-          if (firebaseReady && navigator.onLine && window.CASHTOP_FIREBASE?.authMode === 'firebase-only') {
+          if (firebaseReady && window.CASHTOP_FIREBASE?.authMode === 'firebase-only') {
             await firebaseLogin(key, username, password, remember); authenticated = true;
           } else {
             throw remoteError || localError;
@@ -650,6 +684,7 @@
     (async () => {
       try {
         const registration = await navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });
+        registration.update().catch(() => null);
         const worker = registration.active || registration.waiting || registration.installing;
         worker?.postMessage?.({ type: 'VERIFY_CACHE' });
         const ready = await navigator.serviceWorker.ready;

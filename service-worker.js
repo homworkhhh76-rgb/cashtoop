@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v44-indexeddb-realtime-sync-import-progress';
+const CACHE_VERSION = 'v46-r36-file-sync-loader-cache-first';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = `cash-top-2-remote-static-${CACHE_VERSION}`;
 
@@ -91,8 +91,8 @@ const REMOTE_STATIC_HOSTS = new Set([
 /* Prevent background network refreshes from competing with UI rendering.
  * HTML can refresh relatively often; immutable app assets refresh much less. */
 const LOCAL_REFRESH_AT = new Map();
-const HTML_REFRESH_MS = 90 * 1000;
-const STATIC_REFRESH_MS = 10 * 60 * 1000;
+const HTML_REFRESH_MS = 45 * 1000;
+const STATIC_REFRESH_MS = 5 * 60 * 1000;
 let shellVerificationPromise = null;
 let remoteWarmPromise = null;
 
@@ -157,7 +157,7 @@ async function fetchLocalAsset(asset) {
   const url = new URL(asset, self.registration.scope).href;
   const request = new Request(url, {
     method: 'GET',
-    cache: 'reload',
+    cache: 'no-store',
     credentials: 'same-origin'
   });
   const response = await fetch(request);
@@ -199,6 +199,18 @@ async function warmRemoteStaticAssets() {
       await cacheRemoteCssDependencies(cache, url, response);
     }
   }));
+}
+
+async function refreshCompleteLocalShell() {
+  const cache = await caches.open(APP_CACHE);
+  const results = await Promise.allSettled(LOCAL_ASSETS.map(fetchLocalAsset));
+  let updated = 0;
+  for (const result of results) {
+    if (result.status !== 'fulfilled') continue;
+    await cache.put(result.value.request, result.value.response);
+    updated += 1;
+  }
+  return { updated, total: LOCAL_ASSETS.length, complete: updated === LOCAL_ASSETS.length };
 }
 
 async function verifyLocalShellOnce() {
@@ -260,6 +272,8 @@ self.addEventListener('activate', event => {
       try { await self.registration.navigationPreload.disable(); } catch (_) {}
     }
     await self.clients.claim();
+    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    clients.forEach(client => client.postMessage({ type: 'CASHTOP_CACHE_READY', cache: APP_CACHE, version: CACHE_VERSION }));
   })());
 });
 
@@ -359,6 +373,12 @@ self.addEventListener('message', event => {
       const source = event.source;
       if (source && typeof source.postMessage === 'function') {
         source.postMessage({ type: 'CASHTOP_CACHE_STATUS', ...result, cache: APP_CACHE });
+      }
+      // حدّث الحزمة المحلية كاملة في الخلفية. تبقى الاستجابة للمستخدم Cache First،
+      // لكن الزيارة التالية تحصل على أحدث HTML/JS/CSS دون انتظار الشبكة.
+      const refreshed = await refreshCompleteLocalShell().catch(() => ({ updated: 0, total: LOCAL_ASSETS.length, complete: false }));
+      if (source && typeof source.postMessage === 'function') {
+        source.postMessage({ type: 'CASHTOP_CACHE_REFRESHED', ...refreshed, cache: APP_CACHE });
       }
       // المكتبات الخارجية (ومنها قارئ الباركود للآيفون) تُحفظ مرة واحدة فقط في الخلفية.
       await warmRemoteStaticAssetsOnce();

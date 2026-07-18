@@ -1,3 +1,5 @@
+(() => {
+'use strict';
 const settings = window.CASHTOP_FIREBASE || {};
 const core = window.Cashtop;
 
@@ -69,13 +71,18 @@ if (settings.enabled && core && settings.config?.databaseURL) {
 
   function isTransientNetworkError(error) {
     const message = errorMessage(error).toLowerCase();
-    return navigator.onLine === false || error?.name === 'TypeError' || error?.name === 'AbortError' ||
-      /failed to fetch|networkerror|network request failed|load failed|fetch failed|timeout|مهلة الاتصال|تعذر الاتصال/.test(message);
+    const status = Number(error?.httpStatus || 0);
+    return error?.name === 'TypeError' || error?.name === 'AbortError' ||
+      [408, 425, 429, 500, 502, 503, 504].includes(status) ||
+      /failed to fetch|networkerror|network request failed|load failed|fetch failed|timeout|مهلة الاتصال|تعذر الاتصال|temporarily unavailable|service unavailable|bad gateway|gateway timeout/.test(message);
   }
 
   function safeSyncMessage(error) {
-    if (isTransientNetworkError(error)) return 'تعذر الاتصال حالياً. ستبقى العمليات محفوظة محلياً ومعلقة حتى عودة الاتصال.';
-    return errorMessage(error);
+    if (!isTransientNetworkError(error)) return errorMessage(error);
+    if (navigator.onLine === false) {
+      return 'تعذر الوصول إلى خادم المزامنة حالياً. البيانات محفوظة محلياً وستُعاد المحاولة تلقائياً.';
+    }
+    return 'الإنترنت متوفر، لكن خادم المزامنة لم يستجب لهذه المحاولة. ستتم إعادة المحاولة تلقائياً دون فقدان أي عملية.';
   }
 
 
@@ -129,18 +136,93 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     return `${baseUrl}?path=${encodeURIComponent(pathPart)}`;
   }
 
-  async function fetchWithTimeout(url, options = {}, timeout = 22000) {
+  function transportCandidates(url) {
+    const primary = transportUrl(url);
+    const candidates = [primary];
+    if (!isMongoProxy || typeof location === 'undefined') return candidates;
+    try {
+      const primaryUrl = new URL(primary, location.href);
+      const configuredOrigin = new URL(baseUrl, location.href).origin;
+      // عند حظر CORS أو تعطل النطاق الخارجي نجرب نفس مسار API على نطاق التطبيق،
+      // وهذا يفيد عندما تكون الواجهة وواجهة MongoDB منشورتين في مشروع Vercel نفسه.
+      const webOriginAvailable = ['http:', 'https:'].includes(location.protocol) && location.origin && location.origin !== 'null';
+      if (webOriginAvailable && configuredOrigin !== location.origin) {
+        const path = primaryUrl.searchParams.get('path');
+        if (path !== null) candidates.push(`${location.origin}/api/rtdb?path=${encodeURIComponent(path)}`);
+      }
+    } catch (_) {}
+    return [...new Set(candidates)];
+  }
+
+  function transportFetchOptions(options = {}) {
+    if (!isMongoProxy) return options;
+    // هذه الرؤوس كانت تجبر المتصفح على CORS preflight حتى في GET، وبعض نسخ API
+    // لا تسمح بها في Access-Control-Allow-Headers فتظهر Failed to fetch رغم وجود الإنترنت.
+    // cache:'no-store' أدناه يكفي لمنع كاش المتصفح من دون إرسال رؤوس غير ضرورية للخادم.
+    const headers = new Headers(options.headers || {});
+    ['cache-control', 'pragma', 'x-firebase-etag', 'if-match'].forEach(name => headers.delete(name));
+    return { ...options, headers };
+  }
+
+  async function fetchAttempt(targetUrl, options, timeout) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
     try {
-      const targetUrl = transportUrl(url);
-      return await fetch(targetUrl, { ...options, signal: controller.signal, cache: 'no-store' });
-    } catch (error) {
-      if (error?.name === 'AbortError') throw new Error('انتهت مهلة الاتصال مع قاعدة البيانات.');
-      throw error;
+      return await fetch(targetUrl, { ...transportFetchOptions(options), signal: controller.signal, cache: 'no-store' });
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  async function fetchWithTimeout(url, options = {}, timeout = 22000) {
+    const candidates = transportCandidates(url);
+    const method = String(options.method || 'GET').toUpperCase();
+    const attemptsPerCandidate = navigator.onLine === false ? 1 : 2;
+    let lastError = null;
+
+    for (const targetUrl of candidates) {
+      for (let attempt = 0; attempt < attemptsPerCandidate; attempt += 1) {
+        try {
+          const response = await fetchAttempt(targetUrl, options, timeout);
+          // أخطاء الخادم المؤقتة يعاد طلبها سريعاً بدلاً من اعتبار الجهاز بلا إنترنت.
+          const transientStatus = [408, 425, 429, 500, 502, 503, 504].includes(response.status);
+          if (transientStatus && attempt + 1 < attemptsPerCandidate) {
+            await new Promise(resolve => setTimeout(resolve, 180 + (attempt * 320)));
+            continue;
+          }
+          // إذا كان الخادم الخارجي متعطلاً أو المسار غير منشور، انتقل إلى API على نطاق التطبيق إن وجد.
+          if (targetUrl !== candidates[candidates.length - 1] && (transientStatus || [404, 405].includes(response.status))) {
+            lastError = new Error(`تعذر الوصول إلى نقطة المزامنة الأساسية (${response.status}).`);
+            lastError.httpStatus = response.status;
+            break;
+          }
+          // مسار same-origin الاحتياطي يجب أن يعيد JSON؛ صفحة HTML ليست API صالحاً.
+          if (isMongoProxy && response.ok && targetUrl !== candidates[0]) {
+            const type = String(response.headers.get('content-type') || '').toLowerCase();
+            if (type && !type.includes('json')) {
+              lastError = new Error('مسار API المحلي الاحتياطي لا يعيد JSON.');
+              break;
+            }
+          }
+          writeState({ backendReachable: true, backendReachableAt: Date.now(), lastTransportUrl: targetUrl });
+          return response;
+        } catch (error) {
+          lastError = error;
+          writeState({ backendReachable: false, backendErrorAt: Date.now(), backendError: errorMessage(error) });
+          if (attempt + 1 < attemptsPerCandidate) {
+            await new Promise(resolve => setTimeout(resolve, 180 + (attempt * 320)));
+            continue;
+          }
+        }
+      }
+    }
+
+    if (lastError?.name === 'AbortError') {
+      const error = new Error('انتهت مهلة استجابة خادم قاعدة البيانات.');
+      error.name = 'SyncTimeoutError';
+      throw error;
+    }
+    throw lastError || new Error(`${method} request failed`);
   }
 
   async function firebaseError(response) {
@@ -323,7 +405,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     if (key) realtimePendingKeys.add(key);
     clearTimeout(realtimePullTimer);
     realtimePullTimer = setTimeout(async () => {
-      if (!navigator.onLine) return;
+      // لا نعتمد على navigator.onLine كحكم نهائي؛ بعض الأجهزة تعطي حالة خاطئة.
       const keys = [...realtimePendingKeys];
       realtimePendingKeys.clear();
       try {
@@ -341,7 +423,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   }
 
   function startRealtimeStream(location, token = '') {
-    if (isMongoProxy || typeof EventSource !== 'function' || !navigator.onLine || !location) return false;
+    if (isMongoProxy || typeof EventSource !== 'function' || !location) return false;
     const path = locationPath(location);
     if (realtimeSource && realtimeLocationPath === path && realtimeSource.readyState !== EventSource.CLOSED) return true;
     stopRealtimeStream();
@@ -369,7 +451,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       source.addEventListener('cancel', () => writeState({ realtimeConnected: false, realtimeAt: Date.now() }));
       source.onerror = () => {
         writeState({ realtimeConnected: false, realtimeAt: Date.now() });
-        if (source.readyState === EventSource.CLOSED && navigator.onLine) {
+        if (source.readyState === EventSource.CLOSED) {
           setTimeout(async () => {
             try {
               const access = await openLightDatabaseAccess();
@@ -842,7 +924,6 @@ if (settings.enabled && core && settings.config?.databaseURL) {
 
 
   async function pullDatasetKeys(keys, options = {}) {
-    if (!navigator.onLine) return { hasRemote: false, count: 0, applied: 0, offline: true };
     if (core.localReady && typeof core.localReady.then === 'function') {
       try { await core.localReady; } catch (_) {}
     }
@@ -933,14 +1014,14 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   function scheduleBackgroundFullPull(delay = 1400) {
     clearTimeout(backgroundPullTimer);
     backgroundPullTimer = setTimeout(async () => {
-      if (!navigator.onLine || backgroundPullRunning || core.getSyncQueue().length) return;
+      if (backgroundPullRunning || core.getSyncQueue().length) return;
       backgroundPullRunning = true;
       try {
         const priority = new Set(pagePriorityDatasets());
         const remaining = core.DATA_KEYS.filter(key => !priority.has(key));
         const chunkSize = 5;
         for (let i = 0; i < remaining.length; i += chunkSize) {
-          if (!navigator.onLine || core.getSyncQueue().length) break;
+          if (core.getSyncQueue().length) break;
           await pullDatasetKeys(remaining.slice(i, i + chunkSize), { concurrency: 6, silentProgress: true }).catch(error => console.warn('[CASH TOP 2] background dataset sync:', error));
           await new Promise(resolve => {
             if (typeof requestIdleCallback === 'function') requestIdleCallback(() => resolve(), { timeout: 900 });
@@ -954,9 +1035,6 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   }
 
   async function reconcileLegacyAll(options = {}) {
-    if (!navigator.onLine) {
-      return { processed: 0, pulled: 0, uploaded: 0, remaining: core.getSyncQueue().length, offline: true };
-    }
     if (syncing) return { processed: 0, pulled: 0, uploaded: 0, remaining: core.getSyncQueue().length, busy: true };
 
     syncing = true;
@@ -1238,9 +1316,6 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   }
 
   async function reconcileMongoAll(options = {}) {
-    if (!navigator.onLine) {
-      return { processed: 0, pulled: 0, uploaded: 0, remaining: core.getSyncQueue().length, offline: true };
-    }
     if (syncing) return { processed: 0, pulled: 0, uploaded: 0, remaining: core.getSyncQueue().length, busy: true };
 
     syncing = true;
@@ -1366,9 +1441,6 @@ if (settings.enabled && core && settings.config?.databaseURL) {
    * من عداد العمليات المعلقة، بينما تبقى المجموعات المتعثرة للمحاولة التالية.
    */
   async function reconcileDatasetsIndependently(options = {}) {
-    if (!navigator.onLine) {
-      return { processed: 0, pulled: 0, uploaded: 0, failed: 0, remaining: core.getSyncQueue().length, offline: true };
-    }
     if (core.localReady && typeof core.localReady.then === 'function') {
       try { await core.localReady; } catch (_) {}
     }
@@ -1584,7 +1656,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   function scheduleSync(delay = 900) {
     clearTimeout(scheduledSync);
     scheduledSync = setTimeout(() => {
-      if (!navigator.onLine) return;
+      // لا نعتمد على navigator.onLine كحكم نهائي؛ بعض الأجهزة تعطي حالة خاطئة.
       const job = syncAll({ manual: false, forceCheck: false });
       job.then(result => {
         if (core.getSyncQueue().length) {
@@ -1595,7 +1667,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
         }
       }).catch(error => {
         console.warn('[CASH TOP 2] scheduled database sync:', error);
-        if (core.getSyncQueue().length && navigator.onLine) scheduleSync(6000);
+        if (core.getSyncQueue().length) scheduleSync(6500);
       });
     }, delay);
   }
@@ -1640,13 +1712,13 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     scheduleSync(20);
   });
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && navigator.onLine) scheduleSync(90);
+    if (document.visibilityState === 'visible') scheduleSync(90);
   });
 
   /* Firebase يستخدم بث SSE لحظياً بين الأجهزة. يبقى polling سريعاً كخطة احتياطية،
      وMongo/API يعتمد polling أقصر لأنه لا يوفّر EventSource بنفس الواجهة. */
   pollTimer = setInterval(() => {
-    if (!navigator.onLine || document.hidden || core.getSyncQueue().length) return;
+    if (document.hidden || core.getSyncQueue().length) return;
     const realtimeHealthy = !isMongoProxy && realtimeSource && realtimeSource.readyState === EventSource.OPEN;
     if (!realtimeHealthy) pullPriorityDatasets({ concurrency: 8, silentProgress: true }).catch(() => null);
   }, isMongoProxy ? 2500 : 7000);
@@ -1659,12 +1731,11 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     if (pollTimer) clearInterval(pollTimer);
   }, { once: true });
 
-  if (navigator.onLine) {
-    // أول دخول: اسحب بيانات الصفحة فوراً، ثم أكمل بقية الشركة في الخلفية.
-    scheduleSync(10);
-    if (!core.getSyncQueue().length) scheduleBackgroundFullPull(750);
-  }
+  // أول دخول: نحاول قاعدة البيانات مباشرة حتى لو كانت navigator.onLine غير دقيقة.
+  scheduleSync(10);
+  if (!core.getSyncQueue().length) scheduleBackgroundFullPull(750);
 } else if (core) {
   console.warn('[CASH TOP 2] Firebase sync configuration is incomplete.');
   core.updateSyncBadge();
 }
+})();
