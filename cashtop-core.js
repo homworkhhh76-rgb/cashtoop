@@ -340,9 +340,199 @@
     cashtop_archive_index: { lastCompactionAt: 0, archivedCounts: {} }
   };
 
-  function rawGet(key) { return RAW.get.call(localStorage, key); }
-  function rawSet(key, value) { RAW.set.call(localStorage, key, String(value)); }
-  function rawRemove(key) { RAW.remove.call(localStorage, key); }
+  /*
+   * IndexedDB هو طبقة التخزين المحلية المتينة والكبيرة. localStorage يبقى
+   * كـ hot cache متزامن حتى لا نكسر الصفحات القديمة التي تتوقع getItem فوراً،
+   * بينما كل بيانات الشركة والـ meta وطابور المزامنة تُنسخ أيضاً إلى IndexedDB.
+   * عند امتلاء localStorage تبقى القيمة في الذاكرة + IndexedDB بدلاً من فشل الحفظ.
+   */
+  const DURABLE_LOCAL_DB = 'cashtop-local-durable-v2';
+  const DURABLE_LOCAL_STORE = 'kv';
+  const durableMemory = new Map();
+  let durableDbPromise = null;
+  let durableWriteChain = Promise.resolve();
+  let durableReadyPromise = Promise.resolve({ restored: 0 });
+
+  function isDurableLocalKey(key) {
+    return typeof key === 'string' && (
+      key.startsWith('cashtop_data::') ||
+      key.startsWith('cashtop_meta::') ||
+      key.startsWith('ct_sync_queue::') ||
+      key.startsWith('cashtop_tx::')
+    );
+  }
+
+  function isQuotaError(error) {
+    return error?.name === 'QuotaExceededError' || error?.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+      /quota|storage.*full|exceeded/i.test(String(error?.message || ''));
+  }
+
+  function openDurableLocalDb() {
+    if (!('indexedDB' in window)) return Promise.resolve(null);
+    if (durableDbPromise) return durableDbPromise;
+    durableDbPromise = new Promise(resolve => {
+      try {
+        const request = indexedDB.open(DURABLE_LOCAL_DB, 2);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains(DURABLE_LOCAL_STORE)) {
+            db.createObjectStore(DURABLE_LOCAL_STORE, { keyPath: 'key' });
+          }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => resolve(null);
+        request.onblocked = () => console.warn('[CASH TOP 2] durable local DB upgrade is blocked by another tab.');
+      } catch (_) { resolve(null); }
+    });
+    return durableDbPromise;
+  }
+
+  async function persistDurableLocalKey(key, value) {
+    if (!isDurableLocalKey(key)) return false;
+    const db = await openDurableLocalDb();
+    if (!db) return false;
+    return new Promise(resolve => {
+      try {
+        const tx = db.transaction(DURABLE_LOCAL_STORE, 'readwrite');
+        tx.objectStore(DURABLE_LOCAL_STORE).put({ key, value: String(value), savedAt: Date.now() });
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => resolve(false);
+        tx.onabort = () => resolve(false);
+      } catch (_) { resolve(false); }
+    });
+  }
+
+  async function deleteDurableLocalKey(key) {
+    if (!isDurableLocalKey(key)) return false;
+    const db = await openDurableLocalDb();
+    if (!db) return false;
+    return new Promise(resolve => {
+      try {
+        const tx = db.transaction(DURABLE_LOCAL_STORE, 'readwrite');
+        tx.objectStore(DURABLE_LOCAL_STORE).delete(key);
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => resolve(false);
+        tx.onabort = () => resolve(false);
+      } catch (_) { resolve(false); }
+    });
+  }
+
+  function scheduleDurablePersist(key, value) {
+    if (!isDurableLocalKey(key)) return;
+    durableWriteChain = durableWriteChain
+      .catch(() => false)
+      .then(() => persistDurableLocalKey(key, value))
+      .catch(() => false);
+  }
+
+  function scheduleDurableDelete(key) {
+    if (!isDurableLocalKey(key)) return;
+    durableWriteChain = durableWriteChain
+      .catch(() => false)
+      .then(() => deleteDurableLocalKey(key))
+      .catch(() => false);
+  }
+
+  function rawGet(key) {
+    if (durableMemory.has(key)) return durableMemory.get(key);
+    return RAW.get.call(localStorage, key);
+  }
+
+  function rawSet(key, value) {
+    const stringValue = String(value);
+    let storedInLocalStorage = true;
+    try {
+      RAW.set.call(localStorage, key, stringValue);
+      durableMemory.delete(key);
+    } catch (error) {
+      if (!isDurableLocalKey(key) || !isQuotaError(error)) throw error;
+      storedInLocalStorage = false;
+      durableMemory.set(key, stringValue);
+      window.dispatchEvent(new CustomEvent('cashtop:local-storage-pressure', { detail: { key } }));
+    }
+    scheduleDurablePersist(key, stringValue);
+    return storedInLocalStorage;
+  }
+
+  function rawRemove(key) {
+    durableMemory.delete(key);
+    try { RAW.remove.call(localStorage, key); } catch (_) {}
+    scheduleDurableDelete(key);
+  }
+
+  async function restoreDurableCompanyData() {
+    const db = await openDurableLocalDb();
+    if (!db) return { restored: 0 };
+    const tenant = encodeURIComponent(tenantIdFromSession());
+    const dataPrefix = `cashtop_data::${tenant}::`;
+    const metaPrefix = `cashtop_meta::${tenant}::`;
+    const prefixes = [dataPrefix, metaPrefix, `ct_sync_queue::${tenant}`, `cashtop_tx::${tenant}::`];
+    const records = await new Promise(resolve => {
+      try {
+        const tx = db.transaction(DURABLE_LOCAL_STORE, 'readonly');
+        const request = tx.objectStore(DURABLE_LOCAL_STORE).getAll();
+        request.onsuccess = () => resolve(Array.isArray(request.result) ? request.result : []);
+        request.onerror = () => resolve([]);
+      } catch (_) { resolve([]); }
+    });
+    const recordMap = new Map(records.map(record => [String(record?.key || ''), record]));
+    let restored = 0;
+    const restoredDatasets = new Set();
+
+    const writeRestored = (key, value) => {
+      try {
+        RAW.set.call(localStorage, key, value);
+        durableMemory.delete(key);
+      } catch (error) {
+        if (!isQuotaError(error)) return false;
+        durableMemory.set(key, value);
+      }
+      return true;
+    };
+
+    // البيانات أولاً، مع السماح لـ IndexedDB باستبدال القيم الفارغة التي أنشأها seed.
+    for (const record of records) {
+      const key = String(record?.key || '');
+      if (!key.startsWith(dataPrefix)) continue;
+      const dataset = key.slice(dataPrefix.length);
+      const currentRaw = rawGet(key);
+      const currentMeta = safeJson(rawGet(`${metaPrefix}${dataset}`), {}) || {};
+      const durableMeta = safeJson(recordMap.get(`${metaPrefix}${dataset}`)?.value, {}) || {};
+      const shouldRestore = currentRaw === null || currentMeta.seeded === true || Number(currentMeta.updatedAt || 0) <= 0 ||
+        Number(durableMeta.updatedAt || 0) > Number(currentMeta.updatedAt || 0);
+      if (!shouldRestore) continue;
+      if (writeRestored(key, String(record?.value ?? ''))) {
+        restored += 1;
+        restoredDatasets.add(dataset);
+      }
+    }
+
+    // ثم الـ meta والطابور والمعاملات غير المكتملة.
+    for (const record of records) {
+      const key = String(record?.key || '');
+      if (!prefixes.some(prefix => key.startsWith(prefix)) || key.startsWith(dataPrefix)) continue;
+      const current = rawGet(key);
+      let shouldRestore = current === null;
+      if (key.startsWith(metaPrefix)) {
+        const currentMeta = safeJson(current, {}) || {};
+        const durableMeta = safeJson(record?.value, {}) || {};
+        shouldRestore = shouldRestore || currentMeta.seeded === true || Number(currentMeta.updatedAt || 0) <= 0 ||
+          Number(durableMeta.updatedAt || 0) > Number(currentMeta.updatedAt || 0);
+      }
+      if (!shouldRestore) continue;
+      if (writeRestored(key, String(record?.value ?? ''))) restored += 1;
+    }
+
+    if (restored) {
+      restoredDatasets.forEach(key => {
+        dispatchLogicalStorageEvents(key, null, rawGet(namespaceKey(key)));
+        window.dispatchEvent(new CustomEvent('cashtop:remote-applied', { detail: { key, source: 'indexeddb-restore' } }));
+      });
+      window.dispatchEvent(new CustomEvent('cashtop:durable-restored', { detail: { restored, datasets: [...restoredDatasets] } }));
+    }
+    return { restored, datasets: [...restoredDatasets] };
+  }
+
   function safeJson(value, fallback = null) {
     try { return JSON.parse(value); } catch (_) { return fallback; }
   }
@@ -479,6 +669,139 @@
     return restored;
   }
 
+
+  async function readSyncQueueBackupByKey(queueKey) {
+    const db = await openSyncQueueDb();
+    if (!db) return [];
+    return new Promise(resolve => {
+      try {
+        const tx = db.transaction(SYNC_QUEUE_STORE, 'readonly');
+        const request = tx.objectStore(SYNC_QUEUE_STORE).get(queueKey);
+        request.onsuccess = () => resolve(Array.isArray(request.result) ? request.result : []);
+        request.onerror = () => resolve([]);
+        tx.oncomplete = () => db.close();
+      } catch (_) { try { db.close(); } catch (_) {} resolve([]); }
+    });
+  }
+
+  async function deleteSyncQueueBackupByKey(queueKey) {
+    const db = await openSyncQueueDb();
+    if (!db) return false;
+    return new Promise(resolve => {
+      try {
+        const tx = db.transaction(SYNC_QUEUE_STORE, 'readwrite');
+        tx.objectStore(SYNC_QUEUE_STORE).delete(queueKey);
+        tx.oncomplete = () => { db.close(); resolve(true); };
+        tx.onerror = () => { db.close(); resolve(false); };
+      } catch (_) { try { db.close(); } catch (_) {} resolve(false); }
+    });
+  }
+
+  function legacySyncQueueCandidateKeys() {
+    const currentTenant = String(companyIdFromSession());
+    const current = syncQueueKey();
+    const identifiers = new Set();
+    const session = getSession() || {};
+    [session.tenantId, session.companyId, session.licenseId, session.companyKey].forEach(value => {
+      if (value !== undefined && value !== null && String(value).trim()) identifiers.add(String(value));
+    });
+
+    const bindings = safeJson(rawGet('cashtop_tenant_bindings'), {}) || {};
+    Object.entries(bindings).forEach(([key, tenant]) => {
+      if (String(tenant) === currentTenant && String(key).trim()) identifiers.add(String(key));
+    });
+
+    const licenses = normalizeAdminRecords(rawGet('cashtop_admin_licenses'), ['key', 'tenantId', 'companyId']);
+    licenses.forEach(item => {
+      const tenant = String(item?.tenantId || item?.companyId || item?.id || '');
+      if (tenant !== currentTenant) return;
+      [item.key, item.id, item.tenantId, item.companyId].forEach(value => {
+        if (value !== undefined && value !== null && String(value).trim()) identifiers.add(String(value));
+      });
+    });
+
+    // نكتشف أيضاً مساحة قديمة مرتبطة صراحةً بنفس tenantId من بيانات الوصول.
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const candidateQueueKey = RAW.key.call(localStorage, i);
+      if (!candidateQueueKey?.startsWith('ct_sync_queue::') || candidateQueueKey === current) continue;
+      const encodedId = candidateQueueKey.slice('ct_sync_queue::'.length);
+      let legacyId = '';
+      try { legacyId = decodeURIComponent(encodedId); } catch (_) { legacyId = encodedId; }
+      const accessRaw = rawGet(`cashtop_data::${encodedId}::cashtop_company_access`);
+      const access = safeJson(accessRaw, {}) || {};
+      if (String(access.tenantId || access.companyId || '') === currentTenant) identifiers.add(legacyId);
+    }
+
+    return [...identifiers]
+      .map(value => `ct_sync_queue::${encodeURIComponent(value)}`)
+      .filter(key => key !== current);
+  }
+
+  async function migrateLegacySyncQueues() {
+    const candidates = legacySyncQueueCandidateKeys();
+    if (!candidates.length) return { migrated: 0, sources: 0 };
+    let migrated = 0;
+    let sources = 0;
+
+    for (const queueKey of candidates) {
+      const encodedLegacyId = queueKey.slice('ct_sync_queue::'.length);
+      let legacyTenantId = '';
+      try { legacyTenantId = decodeURIComponent(encodedLegacyId); } catch (_) { legacyTenantId = encodedLegacyId; }
+      const fromStorage = safeJson(rawGet(queueKey), []);
+      const fromBackup = await readSyncQueueBackupByKey(queueKey);
+      const combined = [
+        ...(Array.isArray(fromStorage) ? fromStorage : []),
+        ...(Array.isArray(fromBackup) ? fromBackup : [])
+      ];
+      if (!combined.length) continue;
+      sources += 1;
+      const seen = new Set();
+      for (const item of combined) {
+        if (!item?.key || !DATA_KEYS.includes(canonicalKey(item.key))) continue;
+        const canonical = canonicalKey(item.key);
+        const fingerprint = `${item.id || ''}|${item.key}|${item.createdAt || ''}`;
+        if (seen.has(fingerprint)) continue;
+        seen.add(fingerprint);
+
+        // إذا كان الطابور القديم تابعاً لمساحة key قديمة، ننقل قيمة dataset المعلقة
+        // إلى مساحة tenant الحالية قبل رفعها. لا نستبدل نسخة محلية أحدث.
+        if (legacyTenantId && legacyTenantId !== companyIdFromSession()) {
+          const oldDataKey = namespaceKey(canonical, legacyTenantId);
+          const oldMetaKey = metaKey(canonical, legacyTenantId);
+          const oldRaw = rawGet(oldDataKey);
+          const oldMeta = safeJson(rawGet(oldMetaKey), {}) || {};
+          const currentRaw = rawGet(namespaceKey(canonical));
+          const currentMeta = safeJson(rawGet(metaKey(canonical)), {}) || {};
+          if (oldRaw !== null && (currentRaw === null || Number(oldMeta.updatedAt || 0) >= Number(currentMeta.updatedAt || 0))) {
+            rawSet(namespaceKey(canonical), oldRaw);
+            rawSet(metaKey(canonical), JSON.stringify({ ...oldMeta, migratedFromTenant: legacyTenantId, migratedAt: Date.now() }));
+          }
+        }
+
+        enqueueSyncOperation(canonical, {
+          touchedIds: item.touchedIds || [],
+          deletedIds: item.deletedIds || [],
+          touchedFields: item.touchedFields || [],
+          deletedFields: item.deletedFields || [],
+          nestedArrayChanges: item.nestedArrayChanges || {},
+          deletedDataset: item.deletedDataset === true,
+          forceReplace: item.forceReplace === true
+        });
+        migrated += 1;
+      }
+      // بعد نسخها إلى الطابور الحالي وحفظه في IndexedDB نحذف النسخة القديمة
+      // حتى لا تعود العملية نفسها في كل دخول.
+      rawRemove(queueKey);
+      await deleteSyncQueueBackupByKey(queueKey);
+    }
+
+    if (migrated) {
+      await backupSyncQueue(getSyncQueue()).catch(() => false);
+      window.dispatchEvent(new CustomEvent('cashtop:sync-queue-restored', { detail: { count: getSyncQueue().length, migrated, sources } }));
+    }
+    return { migrated, sources };
+  }
+
   function getSyncQueue() {
     const queue = safeJson(rawGet(syncQueueKey()), []);
     return Array.isArray(queue) ? queue : [];
@@ -574,6 +897,7 @@
       });
       for (const field of deletedFieldsNow) delete existing.nestedArrayChanges[field];
       if (Object.prototype.hasOwnProperty.call(change, 'deletedDataset')) existing.deletedDataset = change.deletedDataset === true;
+      if (change.forceReplace === true) existing.forceReplace = true;
       writeSyncQueue(queue);
       return existing.id;
     }
@@ -588,7 +912,8 @@
       touchedFields: mergeUnique([], change.touchedFields),
       deletedFields: mergeUnique([], change.deletedFields),
       nestedArrayChanges: JSON.parse(JSON.stringify(change.nestedArrayChanges || {})),
-      deletedDataset: change.deletedDataset === true
+      deletedDataset: change.deletedDataset === true,
+      forceReplace: change.forceReplace === true
     };
     queue.push(operation);
     writeSyncQueue(queue);
@@ -618,6 +943,42 @@
     }
     if (button) button.title = count ? `عمليات بانتظار المزامنة: ${count}` : 'البيانات متزامنة';
     return count;
+  }
+
+
+  let lastSyncProgressDetail = { active: false, done: true };
+  function setSyncProgress(detail = {}) {
+    lastSyncProgressDetail = { ...lastSyncProgressDetail, ...detail };
+    const button = document.getElementById('ctSyncButton');
+    const track = document.getElementById('ctSyncProgress');
+    const bar = document.getElementById('ctSyncProgressBar');
+    if (!track || !bar) return;
+    const active = detail.active !== false && detail.done !== true;
+    const total = Math.max(0, Number(detail.total || 0));
+    const current = Math.max(0, Number(detail.current || 0));
+    const percent = total > 0 ? Math.max(3, Math.min(100, (current / total) * 100)) : 28;
+    track.hidden = !active;
+    track.classList.toggle('ct-sync-progress-indeterminate', active && total <= 0);
+    if (total > 0) bar.style.width = `${percent}%`;
+    else bar.style.width = '28%';
+    if (button) {
+      button.classList.toggle('ct-syncing', active);
+      if (detail.label) button.title = String(detail.label);
+    }
+    if (!active) {
+      bar.style.width = detail.success === false ? '0%' : '100%';
+      window.setTimeout(() => {
+        if (track) track.hidden = true;
+        if (button) button.classList.remove('ct-syncing');
+      }, 320);
+    }
+  }
+
+  function setRecordsPulling(active, detail = {}) {
+    document.body?.classList.toggle('ct-records-pulling', Boolean(active));
+    if (document.body) {
+      document.body.dataset.ctPullDataset = active ? String(detail.key || detail.dataset || '') : '';
+    }
   }
 
   const channel = 'BroadcastChannel' in window ? new BroadcastChannel('cashtop-app') : null;
@@ -1712,6 +2073,9 @@
   }
 
   async function logout(reason) {
+    // العمليات المعلقة تخص الشركة لا جلسة التبويب؛ نحفظ نسخة IndexedDB قبل
+    // تسجيل الخروج حتى تبقى جاهزة للمزامنة عند الدخول مجدداً أو عودة الإنترنت.
+    try { await backupSyncQueue(getSyncQueue()); } catch (_) {}
     try {
       if (window.CashtopFirebase && typeof window.CashtopFirebase.signOut === 'function') {
         await window.CashtopFirebase.signOut();
@@ -2237,7 +2601,19 @@
       if (window.CashtopFirebase && typeof window.CashtopFirebase.syncAll === 'function') {
         const result = await window.CashtopFirebase.syncAll({ manual, forceCheck: true });
         if (manual) {
-          if (Number(result?.processed || 0) > 0 || Number(result?.pulled || 0) > 0) {
+          const processed = Number(result?.processed || 0);
+          const pulled = Number(result?.pulled || 0);
+          const remaining = Number(result?.remaining || 0);
+          const failed = Number(result?.failed || 0);
+          if (result?.offline || result?.networkDeferred) {
+            showToast('تعذر الاتصال حالياً. العمليات محفوظة محلياً وستبقى معلقة حتى عودة الإنترنت.', 'warning');
+          } else if (failed > 0 || remaining > 0 || result?.partial) {
+            if (processed > 0 || pulled > 0) {
+              showToast(`تمت مزامنة العمليات الجاهزة، وبقي ${remaining} قيد الانتظار لإعادة المحاولة تلقائياً.`, 'warning');
+            } else {
+              showToast(`تعذر مزامنة ${remaining || failed} عملية حالياً. ستبقى محفوظة محلياً وتُعاد المحاولة تلقائياً.`, 'warning');
+            }
+          } else if (processed > 0 || pulled > 0) {
             showToast('تمت المزامنة', 'success');
           } else {
             showToast('لا توجد عمليات معلقة؛ البيانات متزامنة.', 'success');
@@ -2249,8 +2625,12 @@
       return { processed: 0, unavailable: true };
     } catch (error) {
       console.error(error);
-      if (manual) showToast(error?.message || 'تعذرت المزامنة الآن، وستتم إعادة المحاولة تلقائياً.', 'error');
-      return { processed: 0, error: true };
+      const rawMessage = String(error?.message || '');
+      const networkLike = error?.name === 'TypeError' || /failed to fetch|networkerror|network request failed|load failed|مهلة الاتصال|تعذر الاتصال/i.test(rawMessage);
+      if (manual) showToast(networkLike
+        ? 'تعذر الاتصال حالياً. العمليات محفوظة محلياً وستتم إعادة المحاولة تلقائياً.'
+        : (rawMessage || 'تعذرت المزامنة الآن، وستتم إعادة المحاولة تلقائياً.'), networkLike ? 'warning' : 'error');
+      return { processed: 0, error: true, networkDeferred: networkLike };
     } finally {
       updateSyncBadge();
       finishAnimation(1050);
@@ -2296,10 +2676,47 @@
     return access?.backupImportEnabled === true;
   }
 
-  async function syncImportedData() {
-    if (window.CashtopFirebase?.syncAll) {
-      try { await window.CashtopFirebase.syncAll({ manual: false, forceCheck: true }); }
-      catch (error) { console.warn('[CASH TOP] restore sync:', error); }
+  async function syncImportedData(keys = []) {
+    const importedKeys = [...new Set((Array.isArray(keys) ? keys : []).map(canonicalKey).filter(key => DATA_KEYS.includes(key)))];
+    importedKeys.forEach(key => enqueueSyncOperation(key, { forceReplace: true }));
+    if (!navigator.onLine) {
+      window.dispatchEvent(new CustomEvent('cashtop:sync-progress', {
+        detail: { active: false, done: true, success: true, current: 0, total: importedKeys.length, label: 'النسخة محفوظة محلياً وستُرفع عند عودة الإنترنت' }
+      }));
+      return { offline: true, remaining: getSyncQueue().length };
+    }
+    if (!window.CashtopFirebase?.syncAll) return { unavailable: true, remaining: getSyncQueue().length };
+
+    window.dispatchEvent(new CustomEvent('cashtop:sync-progress', {
+      detail: { active: true, current: 0, total: Math.max(1, importedKeys.length), label: 'جاري رفع النسخة الاحتياطية إلى قاعدة البيانات...' }
+    }));
+
+    let result = null;
+    try {
+      // ننتظر أي دورة قائمة ثم نكرر فوراً حتى لا تضيع الاستعادة بسبب busy/backoff.
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        result = await window.CashtopFirebase.syncAll({
+          manual: attempt > 0,
+          forceCheck: true,
+          importSync: true,
+          forceRetry: true
+        });
+        if (!navigator.onLine || Number(result?.remaining || getSyncQueue().length) === 0) break;
+        await new Promise(resolve => setTimeout(resolve, 180 + attempt * 120));
+      }
+      return result || { remaining: getSyncQueue().length };
+    } catch (error) {
+      console.warn('[CASH TOP] restore sync:', error);
+      return { error: true, remaining: getSyncQueue().length, message: String(error?.message || error) };
+    } finally {
+      window.dispatchEvent(new CustomEvent('cashtop:sync-progress', {
+        detail: {
+          active: false, done: true, success: getSyncQueue().length === 0,
+          current: Math.max(0, importedKeys.length - getSyncQueue().length),
+          total: Math.max(1, importedKeys.length),
+          label: getSyncQueue().length ? 'بقيت عمليات معلقة وستُرفع تلقائياً' : 'اكتملت مزامنة النسخة الاحتياطية'
+        }
+      }));
     }
   }
 
@@ -2314,27 +2731,72 @@
     if (backupTenant && currentCompany && backupTenant !== currentCompany) {
       throw new Error('هذه النسخة تخص شركة أخرى ولا يمكن دمجها داخل الشركة الحالية');
     }
-    if (backup.companyKey && session.companyKey && String(backup.companyKey).trim().toUpperCase() !== String(session.companyKey).trim().toUpperCase()) {
-      throw new Error('مفتاح النسخة الاحتياطية لا يطابق مفتاح الشركة الحالية');
+    // المفتاح قد يكون قديماً بعد تغيير مفتاح نفس الشركة. tenantId الثابت هو المرجع.
+    // إذا كانت النسخة بلا tenantId نحتفظ بفحص المفتاح كحاجز أمان.
+    if (!backupTenant && backup.companyKey && session.companyKey &&
+        String(backup.companyKey).trim().toUpperCase() !== String(session.companyKey).trim().toUpperCase()) {
+      throw new Error('مفتاح النسخة الاحتياطية لا يطابق الشركة الحالية');
     }
-    // التخزين المحلي أولاً؛ اعتراض localStorage ينشئ العمليات المعلقة لكل قسم.
+
+    const importedKeys = [];
+    const currentAccess = getCompanyAccess();
+    const protectedAccessFields = [
+      'tenantId', 'companyId', 'companyKey', 'companyName', 'status', 'plan', 'startAt', 'endAt',
+      'durationUnit', 'durationQuantity', 'backupImportEnabled', 'authVersion', 'deleted', 'manager'
+    ];
+
+    // التخزين المحلي أولاً؛ ثم نُجبر كل dataset مستورد على الرفع إلى القاعدة.
     Object.entries(backup.datasets).forEach(([key, entry]) => {
       if (!isManagedKey(key)) return;
+      const canonical = canonicalKey(key);
       const exactRaw = entry && typeof entry === 'object' && entry.valueEncoding === 'local-storage-raw-v1';
       if (exactRaw && entry.exists === false) {
-        localStorage.removeItem(key);
+        if (canonical === 'cashtop_company_access') {
+          setRawCompanyDataset(canonical, JSON.stringify(currentAccess), { action: 'backup-import' });
+          enqueueSyncOperation(canonical, { forceReplace: true });
+        } else {
+          const oldValue = getRawCompanyDataset(canonical);
+          rawRemove(namespaceKey(canonical));
+          rawSet(metaKey(canonical), JSON.stringify({ updatedAt: Date.now(), revision: 1, deviceId: getDeviceId(), page: FILE, deleted: true }));
+          enqueueSyncOperation(canonical, { deletedDataset: true, forceReplace: true });
+          emitDataChange(canonical, oldValue, null, 'backup-import');
+        }
+        importedKeys.push(canonical);
         return;
       }
-      const storageValue = exactRaw
+      let storageValue = exactRaw
         ? String(entry.value ?? '')
-        : (typeof entry === 'string' && ['cashtop_sms_template', 'cashtop_invoice_message_template'].includes(canonicalKey(key))
+        : (typeof entry === 'string' && ['cashtop_sms_template', 'cashtop_invoice_message_template'].includes(canonical)
           ? entry
           : JSON.stringify(entry));
-      localStorage.setItem(key, storageValue);
+
+      // لا نسمح لنسخة قديمة أن تعيد مفتاحاً/حالةً/مديراً قديماً وتُعطّل الحساب.
+      if (canonical === 'cashtop_company_access') {
+        const importedAccess = safeJson(storageValue, {}) || {};
+        const mergedAccess = { ...importedAccess };
+        protectedAccessFields.forEach(field => {
+          if (Object.prototype.hasOwnProperty.call(currentAccess, field)) mergedAccess[field] = currentAccess[field];
+        });
+        mergedAccess.tenantId = session.tenantId || session.companyId || currentAccess.tenantId || currentAccess.companyId || '';
+        mergedAccess.companyId = mergedAccess.tenantId;
+        mergedAccess.companyKey = session.companyKey || currentAccess.companyKey || '';
+        mergedAccess.backupImportEnabled = currentAccess.backupImportEnabled === true;
+        storageValue = JSON.stringify(mergedAccess);
+      }
+
+      // النسخة الكاملة تُكتب على مستوى الشركة كلها، لا على فرع الجلسة فقط.
+      setRawCompanyDataset(canonical, storageValue, { action: 'backup-import' });
+      enqueueSyncOperation(canonical, { forceReplace: true });
+      importedKeys.push(canonical);
     });
-    showToast('تمت الاستعادة محلياً، وتجري المزامنة الآن.', 'success');
-    await syncImportedData();
-    setTimeout(() => location.reload(), 500);
+    showToast('تمت الاستعادة محلياً، ويجري رفعها الآن إلى قاعدة البيانات.', 'success');
+    const syncResult = await syncImportedData(importedKeys);
+    if (navigator.onLine && Number(syncResult?.remaining || getSyncQueue().length) === 0) {
+      showToast('تمت مزامنة النسخة الاحتياطية بالكامل مع قاعدة البيانات.', 'success');
+    } else if (getSyncQueue().length) {
+      showToast(`تم حفظ النسخة محلياً وبقي ${getSyncQueue().length} عملية للمزامنة التلقائية.`, 'warning');
+    }
+    setTimeout(() => location.reload(), 850);
   }
 
   function applyRemoteDataset(key, value, meta) {
@@ -2492,6 +2954,15 @@
       syncBadge.className = 'ct-sync-badge';
       syncBadge.id = 'ctSyncBadge';
       sync.appendChild(syncBadge);
+    }
+    if (sync && !sync.querySelector('#ctSyncProgress')) {
+      const progress = document.createElement('span');
+      progress.className = 'ct-sync-progress';
+      progress.id = 'ctSyncProgress';
+      progress.hidden = true;
+      progress.innerHTML = '<span class="ct-sync-progress-bar" id="ctSyncProgressBar"></span>';
+      sync.appendChild(progress);
+      if (lastSyncProgressDetail.active && lastSyncProgressDetail.done !== true) setSyncProgress(lastSyncProgressDetail);
     }
     if (sync) sync.insertAdjacentElement('afterend', bell);
     else actions.insertBefore(bell, actions.firstChild);
@@ -2929,7 +3400,8 @@
     validateSessionLocal,
     getTaxSettings, calculateTax, getSmartNotifications, updateNotificationBadge,
     archiveRecords, readArchivedRecords, compactCompletedData,
-    getSyncQueue, enqueueSyncOperation, completeSyncOperation, clearSyncQueue, updateSyncBadge, restoreSyncQueueBackup,
+    getSyncQueue, enqueueSyncOperation, completeSyncOperation, clearSyncQueue, updateSyncBadge, restoreSyncQueueBackup, migrateLegacySyncQueues,
+    setSyncProgress, restoreDurableCompanyData,
     getSystemSettings, getProfitRate, salePriceFromCost, applySystemBranding, recordIdentity,
     debounce, runWhenIdle, renderVirtualRows, runWorkerTask, queryRecords, atomicSetItems, recoverAtomicTransactions
   });
@@ -2944,7 +3416,22 @@
     window.addEventListener('cashtop:sync-queue-restored', () => { if (navigator.onLine) syncNow({ manual: false }); });
     window.addEventListener('cashtop:data-changed', event => { if (event.detail?.key === 'cashtop_settings') applySystemBranding(); });
     window.addEventListener('offline', updateNetworkStatus);
-    restoreSyncQueueBackup().catch(() => null);
+    durableReadyPromise = restoreDurableCompanyData().catch(() => ({ restored: 0 }));
+    window.Cashtop.localReady = durableReadyPromise;
+    durableReadyPromise
+      .then(() => restoreSyncQueueBackup().catch(() => []))
+      .then(() => migrateLegacySyncQueues().catch(() => ({ migrated: 0 })))
+      .then(() => {
+        updateSyncBadge();
+        if (navigator.onLine && getSyncQueue().length) syncNow({ manual: false });
+      })
+      .catch(() => null);
+    window.addEventListener('cashtop:sync-progress', event => setSyncProgress(event.detail || {}));
+    window.addEventListener('cashtop:pull-start', event => setRecordsPulling(true, event.detail || {}));
+    window.addEventListener('cashtop:pull-end', event => setRecordsPulling(false, event.detail || {}));
+    window.addEventListener('cashtop:local-storage-pressure', () => {
+      showToast('تم تحويل التخزين تلقائياً إلى قاعدة IndexedDB المحلية الكبيرة للحفاظ على البيانات.', 'info', 4200);
+    });
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape') closeTransientUi();
     });

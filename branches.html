@@ -948,6 +948,7 @@
             branch.managerAuthVersion = Date.now();
             branch.updatedAt = new Date().toISOString();
             localStorage.setItem('cashtop_branches', JSON.stringify(branchesData));
+            window.dispatchEvent(new CustomEvent('cashtop:sync-now', { detail: { key: 'cashtop_branches' } }));
             document.getElementById('managerForm').reset();
             closeModal('managerModal');
             applySessionUI();

@@ -798,6 +798,33 @@ select[data-ct-enhanced="true"] { cursor: pointer; }
 .ct-icon-button.ct-syncing .ct-svg-icon { animation: ctSyncPulse .72s ease-in-out infinite alternate; transform-origin: 50% 50%; }
 @keyframes ctSyncPulse { from { transform: translateY(1px) scale(.9); opacity: .55; } to { transform: translateY(-1px) scale(1.08); opacity: 1; } }
 
+.ct-sync-progress {
+  position: absolute; right: 5px; left: 5px; bottom: -5px; height: 3px;
+  border-radius: 999px; overflow: hidden; background: rgba(96,92,168,.16);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.75);
+  pointer-events: none;
+}
+.ct-sync-progress[hidden] { display: none !important; }
+.ct-sync-progress-bar {
+  display: block; width: 0%; height: 100%; border-radius: inherit;
+  background: currentColor; transition: width .18s ease;
+}
+.ct-sync-progress-indeterminate .ct-sync-progress-bar { animation: ctSyncProgressSlide 1s ease-in-out infinite; }
+@keyframes ctSyncProgressSlide {
+  0% { transform: translateX(150%); }
+  50% { transform: translateX(0); }
+  100% { transform: translateX(-250%); }
+}
+
+/* أثناء السحب المباشر من قاعدة البيانات يظهر مؤشر صغير داخل كل سجل ظاهر. */
+.ct-records-pulling tbody tr > td:first-child { position: relative; }
+.ct-records-pulling tbody tr > td:first-child::before {
+  content: ''; display: inline-block; width: 8px; height: 8px; margin-inline-end: 6px;
+  border: 1.5px solid currentColor; border-inline-start-color: transparent; border-radius: 50%;
+  vertical-align: middle; opacity: .55; animation: ctRowSyncSpin .62s linear infinite;
+}
+@keyframes ctRowSyncSpin { to { transform: rotate(360deg); } }
+
 /* Compact all page dialogs instead of full-screen forms. */
 .ct-original-page .modal-overlay { padding: 14px !important; }
 .ct-original-page .modal-box {

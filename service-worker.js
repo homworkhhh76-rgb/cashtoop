@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v42-mongodb-durable-sync-cache-first';
+const CACHE_VERSION = 'v44-indexeddb-realtime-sync-import-progress';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = `cash-top-2-remote-static-${CACHE_VERSION}`;
 
@@ -22,6 +22,7 @@ const LOCAL_ASSETS = [
   './cashtop-core.js',
   './cashtop-export.js',
   './cashtop-logo.png',
+  './cashtop-printer.js',
   './cashtop-worker.js',
   './customer-groups.html',
   './customers.html',

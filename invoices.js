@@ -14,7 +14,7 @@ function visibleInvoices() {
   return allInvoices.filter(invoice => String(invoice.branchId || '') === String(invoiceSessionBranchId));
 }
 
-window.addEventListener('load', refreshInvoices);
+window.addEventListener('load', () => { initializeInvoiceReportFilters(); refreshInvoices(); });
 window.addEventListener('storage', event => {
   if (event.key && event.key.includes(DB_KEY)) refreshInvoices();
 });
@@ -80,8 +80,188 @@ function currencyLabel() {
 function refreshInvoices() {
   allInvoices = readArray(DB_KEY);
   const displayInvoices = visibleInvoices();
-  renderTable(displayInvoices);
+  if (document.getElementById('invoicePeriodFilter')) filterTable();
+  else renderTable(displayInvoices);
   updateStats(displayInvoices);
+}
+
+function invoiceDateValue(invoice) {
+  const date = new Date(invoice?.date || invoice?.createdAt || 0);
+  return Number.isFinite(date.getTime()) ? date : null;
+}
+
+function startOfDay(date) {
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  return next;
+}
+
+function endOfDay(date) {
+  const next = new Date(date);
+  next.setHours(23, 59, 59, 999);
+  return next;
+}
+
+function selectedInvoiceReportRange() {
+  const mode = document.getElementById('invoicePeriodFilter')?.value || 'all';
+  const now = new Date();
+  if (mode === 'all') return { mode, from: null, to: null, label: 'كل الفواتير' };
+  if (mode === 'daily') {
+    return { mode, from: startOfDay(now), to: endOfDay(now), label: `اليوم ${now.toLocaleDateString('ar')}` };
+  }
+  if (mode === 'weekly') {
+    const from = startOfDay(now);
+    from.setDate(from.getDate() - from.getDay());
+    const to = endOfDay(from);
+    to.setDate(to.getDate() + 6);
+    return { mode, from, to, label: `الأسبوع ${from.toLocaleDateString('ar')} - ${to.toLocaleDateString('ar')}` };
+  }
+  if (mode === 'monthly') {
+    const from = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    const to = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    return { mode, from, to, label: `الشهر ${from.toLocaleDateString('ar', { month: 'long', year: 'numeric' })}` };
+  }
+  if (mode === 'yearly') {
+    const from = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+    const to = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+    return { mode, from, to, label: `السنة ${now.getFullYear()}` };
+  }
+  const fromInput = document.getElementById('invoiceDateFrom')?.value || '';
+  const toInput = document.getElementById('invoiceDateTo')?.value || '';
+  const from = fromInput ? startOfDay(new Date(`${fromInput}T00:00:00`)) : null;
+  const to = toInput ? endOfDay(new Date(`${toInput}T00:00:00`)) : null;
+  const label = `من ${from ? from.toLocaleDateString('ar') : 'البداية'} إلى ${to ? to.toLocaleDateString('ar') : 'اليوم'}`;
+  return { mode: 'custom', from, to, label };
+}
+
+function filterInvoicesBySelectedPeriod(source = visibleInvoices()) {
+  const range = selectedInvoiceReportRange();
+  return source.filter(invoice => {
+    if (!range.from && !range.to) return true;
+    const date = invoiceDateValue(invoice);
+    if (!date) return false;
+    if (range.from && date < range.from) return false;
+    if (range.to && date > range.to) return false;
+    return true;
+  });
+}
+
+function localDateInputValue(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function initializeInvoiceReportFilters() {
+  const iso = localDateInputValue(new Date());
+  const from = document.getElementById('invoiceDateFrom');
+  const to = document.getElementById('invoiceDateTo');
+  if (from && !from.value) from.value = iso;
+  if (to && !to.value) to.value = iso;
+  handleInvoicePeriodChange(false);
+}
+
+function handleInvoicePeriodChange(runFilter = true) {
+  const mode = document.getElementById('invoicePeriodFilter')?.value || 'all';
+  document.querySelectorAll('.custom-invoice-range').forEach(element => {
+    element.style.display = mode === 'custom' ? 'flex' : 'none';
+  });
+  const label = document.getElementById('invoiceReportPeriodLabel');
+  if (label) label.textContent = selectedInvoiceReportRange().label;
+  if (runFilter) filterTable();
+}
+
+function invoiceStatusText(invoice) {
+  const debt = Number(invoice?.debt || 0);
+  const paid = Number(invoice?.paid || 0);
+  if (invoice?.status === 'draft') return 'معلقة';
+  if (debt <= 0) return 'مدفوعة بالكامل';
+  if (paid > 0) return 'مدفوعة جزئياً';
+  return 'غير مدفوعة';
+}
+
+function reportInvoices() {
+  return filterInvoicesBySelectedPeriod(visibleInvoices()).slice().sort((a, b) => (invoiceDateValue(b)?.getTime() || 0) - (invoiceDateValue(a)?.getTime() || 0));
+}
+
+function invoiceReportRowsHtml(invoices) {
+  return invoices.map(invoice => `<tr>
+    <td>#${escapeHtml(String(invoice.id || '').replace('INV_', ''))}</td>
+    <td>${escapeHtml(invoice.customer || 'عميل نقدي')}</td>
+    <td>${escapeHtml(invoice.paymentMethod || 'كاش')}</td>
+    <td>${escapeHtml(invoiceStatusText(invoice))}</td>
+    <td>${escapeHtml(invoice.user || 'مدير النظام')}</td>
+    <td>${money(invoice.total)}</td>
+    <td>${money(invoice.paid)}</td>
+    <td>${money(invoice.debt)}</td>
+    <td>${escapeHtml(invoiceDateValue(invoice)?.toLocaleString('en-GB') || '-')}</td>
+  </tr>`).join('');
+}
+
+function invoiceReportHeaderHtml(range) {
+  const settings = getSystemSettings();
+  const logo = settings.logo ? `<img src="${escapeHtml(settings.logo)}" alt="شعار المحل" style="width:72px;height:72px;object-fit:contain">` : '';
+  return `<div class="report-brand">${logo}<div><h1>${escapeHtml(settings.companyName || 'كاش توب')}</h1><div>تقرير فواتير المبيعات</div><small>${escapeHtml(range.label)}</small></div></div>`;
+}
+
+function invoiceReportSummary(invoices) {
+  return invoices.reduce((acc, invoice) => {
+    acc.total += Number(invoice.total || 0);
+    acc.paid += Number(invoice.paid || 0);
+    acc.debt += Number(invoice.debt || 0);
+    return acc;
+  }, { total: 0, paid: 0, debt: 0 });
+}
+
+function downloadInvoiceReportBlob(content, filename, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1200);
+}
+
+function exportInvoicesExcel() {
+  const invoices = reportInvoices();
+  if (!invoices.length) return notify('لا توجد فواتير ضمن الفترة المحددة للتصدير', 'warning');
+  const range = selectedInvoiceReportRange();
+  const summary = invoiceReportSummary(invoices);
+  const html = `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><style>
+    body{font-family:Cairo,Arial,sans-serif;direction:rtl}.report-brand{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:18px;text-align:center}.report-brand h1{margin:0;font-size:22px}.report-brand small{display:block;margin-top:6px;color:#555}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #777;padding:7px;text-align:center}th{background:#e8eef7;font-weight:700}.summary td{font-weight:700;background:#f3f4f6}
+  </style></head><body>${invoiceReportHeaderHtml(range)}<table><thead><tr><th>رقم الفاتورة</th><th>العميل</th><th>طريقة الدفع</th><th>الحالة</th><th>الموظف / المدير</th><th>الإجمالي</th><th>المدفوع</th><th>الدين</th><th>التاريخ</th></tr></thead><tbody>${invoiceReportRowsHtml(invoices)}<tr class="summary"><td colspan="5">الإجماليات (${invoices.length} فاتورة)</td><td>${money(summary.total)}</td><td>${money(summary.paid)}</td><td>${money(summary.debt)}</td><td>${escapeHtml(range.label)}</td></tr></tbody></table></body></html>`;
+  const filename = `فواتير_المبيعات_${new Date().toISOString().slice(0, 10)}.xls`;
+  downloadInvoiceReportBlob('﻿' + html, filename, 'application/vnd.ms-excel;charset=utf-8');
+  notify('تم تجهيز ملف Excel لتفاصيل سجل الفواتير خلال الفترة المحددة', 'success');
+}
+
+async function exportInvoicesPdf() {
+  const invoices = reportInvoices();
+  if (!invoices.length) return notify('لا توجد فواتير ضمن الفترة المحددة للتصدير', 'warning');
+  if (!window.CashtopExport?.exportHtmlPagesToPDF) return notify('وحدة تصدير PDF غير متاحة حالياً', 'error');
+  const range = selectedInvoiceReportRange();
+  const summary = invoiceReportSummary(invoices);
+  const chunkSize = 22;
+  const chunks = [];
+  for (let i = 0; i < invoices.length; i += chunkSize) chunks.push(invoices.slice(i, i + chunkSize));
+  const pages = chunks.map((chunk, index) => `<section dir="rtl" style="font-family:Cairo,Arial,sans-serif;padding:28px 34px;background:#fff;color:#111;min-height:100%;box-sizing:border-box">
+    <style>.report-brand{display:flex;align-items:center;justify-content:center;gap:16px;text-align:center;margin-bottom:16px}.report-brand h1{margin:0;font-size:24px}.report-brand small{display:block;color:#64748b;margin-top:4px}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #cbd5e1;padding:7px 5px;text-align:center}th{background:#e2e8f0;font-weight:800}.report-footer{margin-top:14px;display:flex;justify-content:space-between;font-size:11px;color:#475569}.summary-box{display:flex;gap:14px;justify-content:center;margin:12px 0}.summary-box span{border:1px solid #94a3b8;border-radius:6px;padding:7px 12px;font-weight:700}</style>
+    ${invoiceReportHeaderHtml(range)}
+    ${index === 0 ? `<div class="summary-box"><span>عدد الفواتير: ${invoices.length}</span><span>الإجمالي: ${money(summary.total)}</span><span>المدفوع: ${money(summary.paid)}</span><span>الدين: ${money(summary.debt)}</span></div>` : ''}
+    <table><thead><tr><th>رقم الفاتورة</th><th>العميل</th><th>طريقة الدفع</th><th>الحالة</th><th>الموظف / المدير</th><th>الإجمالي</th><th>المدفوع</th><th>الدين</th><th>التاريخ</th></tr></thead><tbody>${invoiceReportRowsHtml(chunk)}</tbody></table>
+    <div class="report-footer"><span>${escapeHtml(getSystemSettings().companyName || 'كاش توب')}</span><span>صفحة ${index + 1} من ${chunks.length}</span></div>
+  </section>`);
+  try {
+    await window.CashtopExport.exportHtmlPagesToPDF(pages, `فواتير_المبيعات_${new Date().toISOString().slice(0, 10)}`, { orientation: 'landscape', format: 'a4', scale: 1.4 });
+    notify('تم تنزيل تقرير PDF للفواتير خلال الفترة المحددة', 'success');
+  } catch (error) {
+    console.error(error);
+    notify('تعذر إنشاء ملف PDF. تحقق من تحميل الشعار ومكتبات التصدير.', 'error');
+  }
 }
 
 let invoiceStatsSequence = 0;
@@ -165,7 +345,9 @@ function renderTable(data) {
 let invoiceSearchSequence = 0;
 function filterTable() {
   const value = document.getElementById('searchInput').value.toLowerCase().trim();
-  const source = visibleInvoices();
+  const source = filterInvoicesBySelectedPeriod(visibleInvoices());
+  const periodLabel = document.getElementById('invoiceReportPeriodLabel');
+  if (periodLabel) periodLabel.textContent = selectedInvoiceReportRange().label;
   const sequence = ++invoiceSearchSequence;
   const fallback = () => source.filter(invoice =>
     String(invoice.id).toLowerCase().includes(value) ||
@@ -245,28 +427,18 @@ function editInvoice(id) {
   window.location.href = `cashier.html?edit=${encodeURIComponent(id)}`;
 }
 
-function printInvoice(id) {
+async function printInvoice(id) {
   if (!can('sales.print')) return notify('لا تملك صلاحية طباعة الفواتير', 'error');
   const invoice = allInvoices.find(item => String(item.id) === String(id));
   if (!invoice) return;
-
-  const printer = getPrinterSettings();
-  const copies = Math.min(10, Math.max(1, Number.parseInt(printer.printCopies, 10) || 1));
-  const type = printer.printType === 'thermal-58' ? 'thermal-58' : 'thermal-80';
-  const width = type === 'thermal-58' ? '58mm' : '80mm';
-  const pageSize = `${width} auto`;
-  const popup = window.open('', '_blank', 'width=520,height=760');
-  if (!popup) return notify('تعذر فتح نافذة الطباعة. اسمح بالنوافذ المنبثقة لهذا الموقع.', 'error');
-
-  const copiesHtml = Array.from({ length: copies }, (_, index) =>
-    `<section class="print-copy">${invoiceMarkup(invoice, { compact: true })}${index < copies - 1 ? '<div class="page-break"></div>' : ''}</section>`
-  ).join('');
-
-  popup.document.open();
-  popup.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>فاتورة ${escapeHtml(invoice.id)}</title><style>
-    @page{size:${pageSize};margin:0}*{box-sizing:border-box}html,body{margin:0!important;padding:0!important;width:${width}!important;max-width:${width}!important;background:#fff!important}body{font-family:Arial,Tahoma,sans-serif;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}.print-copy{display:block;width:${width};max-width:${width};margin:0;padding:0}.invoice-receipt{display:block;width:100%;max-width:100%;padding:2mm 2mm 3mm;background:#fff;overflow:hidden}.receipt-brand{text-align:center;border-bottom:1px dashed #000;padding-bottom:2mm;margin-bottom:2mm}.receipt-logo{display:block;width:${type === 'thermal-58' ? '16mm' : '20mm'};height:${type === 'thermal-58' ? '16mm' : '20mm'};object-fit:contain;margin:0 auto 1mm}.receipt-brand h2{font-size:${type === 'thermal-58' ? '14px' : '18px'};line-height:1.25;margin:0}.receipt-brand p,.receipt-footer{font-size:${type === 'thermal-58' ? '8px' : '9px'};margin:1mm 0;overflow-wrap:anywhere}.receipt-meta{font-size:${type === 'thermal-58' ? '8px' : '9px'};line-height:1.6}.receipt-meta>div{border-bottom:1px dotted #777;padding:1mm 0}.receipt-meta-pair{display:flex;justify-content:space-between;gap:2mm;align-items:flex-start}.receipt-meta-pair span{min-width:0;overflow-wrap:anywhere}.receipt-table{table-layout:fixed;width:100%;border-collapse:collapse;font-size:${type === 'thermal-58' ? '7.5px' : '9px'};margin-top:2mm}.receipt-table th,.receipt-table td{border-bottom:1px solid #999;padding:1.1mm .35mm;text-align:center;vertical-align:top;overflow-wrap:anywhere}.receipt-table th:first-child,.receipt-table td:first-child{text-align:right;width:42%}.receipt-total-row{display:flex;justify-content:space-between;gap:2mm;font-size:${type === 'thermal-58' ? '9px' : '10px'};padding:.7mm 0}.receipt-total-row.final{font-size:${type === 'thermal-58' ? '11px' : '13px'};font-weight:bold;border-top:1px dashed #000;border-bottom:1px dashed #000;margin:1mm 0;padding:1.5mm 0}.receipt-notes{font-size:${type === 'thermal-58' ? '8px' : '9px'};margin-top:2mm}.receipt-footer{text-align:center;border-top:1px dashed #777;padding-top:2mm}.page-break{height:0;break-after:page;page-break-after:always}.compact-receipt{border:0;border-radius:0}@media screen{body{margin:0 auto!important;box-shadow:0 0 12px rgba(0,0,0,.12)}}@media print{html,body,.print-copy{width:${width}!important;max-width:${width}!important}.invoice-receipt{page-break-inside:avoid}}
-  </style></head><body>${copiesHtml}<script>window.addEventListener('load',async()=>{try{await document.fonts?.ready;await Promise.all([...document.images].map(img=>img.decode?img.decode().catch(()=>{}):Promise.resolve()));}catch(e){}setTimeout(()=>window.print(),120);});<\/script></body></html>`);
-  popup.document.close();
+  if (!window.CashtopPrinter?.printInvoice) return notify('وحدة الطباعة الحرارية غير متاحة حالياً', 'error');
+  try {
+    const result = await window.CashtopPrinter.printInvoice(invoice);
+    if (result?.mode === 'bluetooth') notify('تم إرسال الفاتورة مباشرة إلى طابعة Bluetooth', 'success');
+  } catch (error) {
+    console.error(error);
+    notify(error?.message || 'تعذر بدء الطباعة', 'error');
+  }
 }
 
 async function downloadAsImage(id) {
@@ -658,6 +830,8 @@ function selectBatchProductSuggestion(input, product) {
   input.dataset.productId = product.id != null ? String(product.id) : '';
   const priceInput = row.querySelector('.batch-item-price');
   if (priceInput) priceInput.value = batchDisplayNumber(product.pricePiece ?? product.price ?? 0);
+  const barcodeInput = row.querySelector('.batch-product-barcode');
+  if (barcodeInput) barcodeInput.value = product.barcodePiece || product.barcode || product.unitBarcode || '';
   batchCloseSuggestionBoxes();
   recalculateBatchInvoice(input);
 }
@@ -693,6 +867,7 @@ function batchSerializeDraft() {
       items: [...card.querySelectorAll('.batch-item-row')].map(row => ({
         name: row.querySelector('.batch-product-name')?.value || '',
         productId: row.querySelector('.batch-product-name')?.dataset?.productId || '',
+        barcode: row.querySelector('.batch-product-barcode')?.value || '',
         qty: row.querySelector('.batch-item-qty')?.value || '',
         price: row.querySelector('.batch-item-price')?.value || ''
       }))
@@ -846,6 +1021,7 @@ function addBatchItem(card, preset = {}, options = {}) {
   row.className = 'batch-item-row';
   row.innerHTML = `
     <div class="batch-field"><label>الصنف</label><div class="batch-autocomplete"><input class="batch-input batch-product-name" type="text" autocomplete="off" placeholder="اكتب حرفاً لعرض الاقتراحات" value="${escapeHtml(preset.name || '')}" onfocus="showBatchProductSuggestions(this)" oninput="handleBatchProductInput(this)"><div class="batch-suggestions" role="listbox"></div></div></div>
+    <div class="batch-field"><label>الباركود</label><input class="batch-input batch-product-barcode" type="text" inputmode="none" autocomplete="off" placeholder="ضع المؤشر وامسح الباركود" value="${escapeHtml(preset.barcode || '')}" oninput="handleBatchBarcodeInput(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();handleBatchBarcodeInput(this,true)}"></div>
     <div class="batch-field"><label>الكمية</label><input class="batch-input batch-item-qty" type="number" min="0" step="0.001" inputmode="decimal" placeholder="0" value="${escapeHtml(preset.qty || '')}" oninput="recalculateBatchInvoice(this)"></div>
     <div class="batch-field"><label>السعر</label><input class="batch-input batch-item-price" type="number" min="0" step="0.001" inputmode="decimal" placeholder="0" value="${escapeHtml(preset.price || '')}" oninput="recalculateBatchInvoice(this)"></div>
     <div class="batch-field"><label>الإجمالي</label><input class="batch-input batch-item-total" type="text" value="0" readonly></div>
@@ -898,6 +1074,38 @@ function handleBatchProductInput(input) {
   recalculateBatchInvoice(input);
 }
 
+function batchProductBarcodes(product) {
+  const codes = [product?.barcodePiece, product?.pieceBarcode, product?.barcode, product?.unitBarcode, product?.barcodeInUnit]
+    .filter(Boolean).map(value => String(value).trim());
+  (product?.variants || []).forEach(variant => {
+    if (variant?.barcode) codes.push(String(variant.barcode).trim());
+  });
+  return [...new Set(codes.filter(Boolean))];
+}
+
+function handleBatchBarcodeInput(input, force = false) {
+  const row = input?.closest('.batch-item-row');
+  if (!row) return false;
+  const code = String(input.value || '').trim();
+  if (!code) return false;
+  const products = readArray('cashtop_products');
+  const product = products.find(item => batchProductBarcodes(item).some(value => value === code));
+  if (!product) {
+    if (force) notify(`لم يتم العثور على منتج بالباركود ${code}`, 'warning');
+    return false;
+  }
+  const nameInput = row.querySelector('.batch-product-name');
+  const priceInput = row.querySelector('.batch-item-price');
+  if (nameInput) {
+    nameInput.value = product.name || '';
+    nameInput.dataset.productId = product.id != null ? String(product.id) : '';
+  }
+  if (priceInput) priceInput.value = batchDisplayNumber(product.pricePiece ?? product.price ?? 0);
+  recalculateBatchInvoice(input);
+  row.querySelector('.batch-item-qty')?.focus();
+  return true;
+}
+
 function recalculateBatchInvoice(source, options = {}) {
   const card = source?.classList?.contains('batch-invoice-card') ? source : source?.closest?.('.batch-invoice-card');
   if (!card) return;
@@ -927,6 +1135,11 @@ function batchFindProduct(products, itemInput) {
   if (id) {
     const byId = products.find(product => String(product.id) === String(id));
     if (byId && batchNormalizeText(byId.name) === batchNormalizeText(itemInput.value)) return byId;
+  }
+  const barcode = itemInput?.closest('.batch-item-row')?.querySelector('.batch-product-barcode')?.value?.trim();
+  if (barcode) {
+    const byBarcode = products.find(product => batchProductBarcodes(product).some(value => value === barcode));
+    if (byBarcode) return byBarcode;
   }
   const normalized = batchNormalizeText(itemInput?.value);
   return normalized ? products.find(product => batchNormalizeText(product.name) === normalized) : null;

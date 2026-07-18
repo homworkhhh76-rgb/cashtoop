@@ -837,6 +837,7 @@
             }
 
             localStorage.setItem('cashtop_employees', JSON.stringify(employeesDB));
+            window.dispatchEvent(new CustomEvent('cashtop:sync-now', { detail: { key: 'cashtop_employees' } }));
             closeModal('employeeModal');
             renderTable();
         }

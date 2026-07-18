@@ -164,7 +164,8 @@
     <script src="cashtop-core.js?v=22"></script>
     <script src="firebase-config.js?v=19"></script>
     <script src="accounting-engine.js"></script>
-    <script type="module" src="firebase-sync.js?v=20"></script>
+    <script src="cashtop-printer.js?v=1"></script>
+    <script type="module" src="firebase-sync.js?v=21"></script>
 </head>
 <body>
 <div class="ct-sidebar-overlay" id="ctSidebarOverlay" data-ct-action="close-sidebar"></div>
@@ -281,14 +282,15 @@
                 <div class="form-grid">
                     <div class="form-group">
                         <select class="form-control" id="printType" required>
-                            <option value="thermal-80">طابعة حرارية كاملة 80 ملم</option>
-                            <option value="thermal-58">طابعة حرارية كاملة 58 ملم</option>
+                            <option value="thermal-80">طابعة حرارية 80 ملم</option>
+                            <option value="thermal-58">طابعة حرارية 58 ملم</option>
+                            <option value="paper-a4">طابعة / ورق A4</option>
                         </select>
                         <label for="printType">نوع ومقاس الطابعة</label>
                     </div>
 
                     <div class="toggle-wrapper printer-toggle" style="grid-column:1/-1; height:auto; min-height:42px;">
-                        <span class="toggle-label-text"><i class="fa-solid fa-circle-check" style="color:#00a65a"></i> يتم استخدام الطابعة الافتراضية المعرّفة في الجهاز تلقائياً</span>
+                        <span class="toggle-label-text"><i class="fa-solid fa-circle-check" style="color:#00a65a"></i> الطابعات المثبتة في النظام تعمل عبر نافذة الطباعة، ويمكن ربط طابعة BLE مباشرة من الخيار أدناه.</span>
                     </div>
 
                     <div class="form-group">
@@ -304,6 +306,23 @@
                             <span class="slider"></span>
                         </label>
                     </div>
+
+                    <div class="toggle-wrapper printer-toggle">
+                        <span class="toggle-label-text">إظهار باركود رقم الفاتورة</span>
+                        <label class="switch">
+                            <input type="checkbox" id="toggleShowInvoiceBarcode" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="toggle-wrapper printer-toggle">
+                        <span class="toggle-label-text">تفعيل طابعة Bluetooth المباشرة</span>
+                        <label class="switch">
+                            <input type="checkbox" id="toggleBluetoothPrinter" onchange="toggleBluetoothPrinterConnection(this)">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div id="bluetoothPrinterStatus" style="grid-column:1/-1;padding:10px 12px;border:1px dashed #cbd5e1;border-radius:6px;font-size:12px;color:#64748b;background:#f8fafc">Bluetooth غير مفعّل.</div>
 
                     <!-- مفتاح تفعيل طباعة الفاتورة تلقائياً بعد الحفظ -->
                     <div class="toggle-wrapper printer-toggle">
@@ -415,9 +434,12 @@
                     document.getElementById('printType').value = printerSettings.printType || 'thermal-80';
                     document.getElementById('printCopies').value = printerSettings.printCopies || 1;
                     document.getElementById('toggleShowLogo').checked = printerSettings.showLogo !== false;
+                    document.getElementById('toggleShowInvoiceBarcode').checked = printerSettings.showBarcode !== false;
                     document.getElementById('toggleAutoPrint').checked = printerSettings.autoPrint !== false;
                     document.getElementById('toggleShowFooterText').checked = printerSettings.showFooterText !== false;
+                    document.getElementById('toggleBluetoothPrinter').checked = printerSettings.bluetoothEnabled === true;
                 }
+                updateBluetoothPrinterStatus();
 
                 // تحميل إعدادات الباركود
                 const barcodeSettings = JSON.parse(localStorage.getItem('cashtop_barcode_settings'));
@@ -433,6 +455,52 @@
             }
         }
 
+        function updateBluetoothPrinterStatus(message = '') {
+            const el = document.getElementById('bluetoothPrinterStatus');
+            if (!el) return;
+            const settings = window.CashtopPrinter?.getSettings?.() || {};
+            const state = window.CashtopPrinter?.getBluetoothState?.() || {};
+            if (message) { el.textContent = message; return; }
+            if (settings.bluetoothEnabled === true) {
+                el.textContent = state.connected
+                    ? `متصل: ${state.name || 'طابعة Bluetooth'}`
+                    : `Bluetooth مفعّل${settings.bluetoothDeviceName ? ` — الطابعة المحفوظة: ${settings.bluetoothDeviceName}` : ' — أعد الربط إذا لم تظهر الطابعة'}`;
+            } else {
+                el.textContent = 'Bluetooth غير مفعّل.';
+            }
+        }
+
+        async function toggleBluetoothPrinterConnection(input) {
+            if (!input) return;
+            if (!input.checked) {
+                try { await window.CashtopPrinter?.disconnectBluetooth?.(); } catch (_) {}
+                window.CashtopPrinter?.saveSettings?.({ bluetoothEnabled: false });
+                updateBluetoothPrinterStatus('تم إيقاف طابعة Bluetooth. ستستخدم الطباعة طابعة النظام المختارة.');
+                return;
+            }
+            if (!window.CashtopPrinter?.connectBluetooth) {
+                input.checked = false;
+                return showToast('وحدة ربط طابعة Bluetooth غير متاحة.', 'error');
+            }
+            updateBluetoothPrinterStatus('جاري البحث عن طابعات Bluetooth... اختر الطابعة من النافذة.');
+            try {
+                const device = await window.CashtopPrinter.connectBluetooth({ prompt: true });
+                window.CashtopPrinter.saveSettings({
+                    bluetoothEnabled: true,
+                    bluetoothDeviceId: device.id || '',
+                    bluetoothDeviceName: device.name || 'Bluetooth Printer'
+                });
+                updateBluetoothPrinterStatus(`تم الاتصال بالطابعة: ${device.name || 'Bluetooth Printer'}`);
+                showToast('تم ربط طابعة Bluetooth وستُستخدم عند طباعة الفواتير الحرارية.', 'success');
+            } catch (error) {
+                console.error(error);
+                input.checked = false;
+                window.CashtopPrinter.saveSettings({ bluetoothEnabled: false });
+                updateBluetoothPrinterStatus('لم يتم ربط طابعة Bluetooth.');
+                showToast(error?.message || 'تعذر ربط طابعة Bluetooth.', 'error');
+            }
+        }
+
         // حفظ إعدادات الطابعة وتعميمها على النظام
         function savePrinterSettings(event) {
             event.preventDefault();
@@ -441,14 +509,16 @@
                 printType: document.getElementById('printType').value,
                 printCopies: parseInt(document.getElementById('printCopies').value) || 1,
                 showLogo: document.getElementById('toggleShowLogo').checked,
+                showBarcode: document.getElementById('toggleShowInvoiceBarcode').checked,
                 autoPrint: document.getElementById('toggleAutoPrint').checked,
-                showFooterText: document.getElementById('toggleShowFooterText').checked
+                showFooterText: document.getElementById('toggleShowFooterText').checked,
+                bluetoothEnabled: document.getElementById('toggleBluetoothPrinter').checked
             };
 
             const oldSettings = JSON.parse(localStorage.getItem('cashtop_printer_settings')) || {};
             delete oldSettings.printerName;
             localStorage.setItem('cashtop_printer_settings', JSON.stringify({ ...oldSettings, ...printerSettings, systemPrinter: 'default' }));
-            showToast('🖨️ تم حفظ إعدادات الطباعة الحرارية، وسيتم استخدام طابعة الجهاز الافتراضية تلقائياً!', 'success');
+            showToast('🖨️ تم حفظ إعدادات الطباعة والمقاس والباركود والاتصال بنجاح!', 'success');
         }
 
         // حفظ إعدادات الباركود وتعميمها على النظام

@@ -46,6 +46,11 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   let authFallbackReason = '';
   let backgroundPullTimer = null;
   let backgroundPullRunning = false;
+  let realtimeSource = null;
+  let realtimeLocationPath = '';
+  let realtimePullTimer = null;
+  let syncSerial = Promise.resolve();
+  const datasetRetryState = new Map();
 
   function readState() {
     try { return JSON.parse(sessionStorage.getItem(stateKey) || '{}') || {}; }
@@ -60,6 +65,49 @@ if (settings.enabled && core && settings.config?.databaseURL) {
 
   function errorMessage(error) {
     return String(error?.message || error?.code || error || 'تعذر الاتصال بقاعدة البيانات.');
+  }
+
+  function isTransientNetworkError(error) {
+    const message = errorMessage(error).toLowerCase();
+    return navigator.onLine === false || error?.name === 'TypeError' || error?.name === 'AbortError' ||
+      /failed to fetch|networkerror|network request failed|load failed|fetch failed|timeout|مهلة الاتصال|تعذر الاتصال/.test(message);
+  }
+
+  function safeSyncMessage(error) {
+    if (isTransientNetworkError(error)) return 'تعذر الاتصال حالياً. ستبقى العمليات محفوظة محلياً ومعلقة حتى عودة الاتصال.';
+    return errorMessage(error);
+  }
+
+
+  function reportSyncProgress(current, total, label = '', extra = {}) {
+    window.dispatchEvent(new CustomEvent('cashtop:sync-progress', {
+      detail: { active: extra.active !== false, current, total, label, ...extra }
+    }));
+  }
+
+  function reportPullStart(key = '', current = 0, total = 0) {
+    window.dispatchEvent(new CustomEvent('cashtop:pull-start', { detail: { key, current, total } }));
+  }
+
+  function reportPullEnd(key = '', current = 0, total = 0) {
+    window.dispatchEvent(new CustomEvent('cashtop:pull-end', { detail: { key, current, total } }));
+  }
+
+  function canRetryDatasetNow(key, manual = false) {
+    if (manual) return true;
+    const state = datasetRetryState.get(key);
+    return !state || Number(state.nextAt || 0) <= Date.now();
+  }
+
+  function noteDatasetFailure(key, error) {
+    const previous = datasetRetryState.get(key) || { count: 0 };
+    const count = Math.min(8, Number(previous.count || 0) + 1);
+    const delay = Math.min(60000, 2500 * (2 ** Math.max(0, count - 1)));
+    datasetRetryState.set(key, { count, nextAt: Date.now() + delay, message: safeSyncMessage(error) });
+  }
+
+  function clearDatasetFailure(key) {
+    datasetRetryState.delete(key);
   }
 
   function readAuth() {
@@ -248,6 +296,93 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   function metaEndpoint(location, token = '') {
     const query = token ? `?auth=${encodeURIComponent(token)}` : '';
     return `${baseUrl}/${locationPath(location)}/meta.json${query}`;
+  }
+
+
+  const realtimePendingKeys = new Set();
+
+  function stopRealtimeStream() {
+    clearTimeout(realtimePullTimer);
+    realtimePullTimer = null;
+    realtimePendingKeys.clear();
+    if (realtimeSource) {
+      try { realtimeSource.close(); } catch (_) {}
+      realtimeSource = null;
+    }
+    realtimeLocationPath = '';
+  }
+
+  function realtimeDatasetKey(pathValue) {
+    const path = String(pathValue || '/').replace(/^\/+/, '');
+    if (!path) return '';
+    const segment = path.split('/')[0];
+    return core.DATA_KEYS.find(key => sanitizeSegment(key) === segment) || '';
+  }
+
+  function scheduleRealtimePull(key = '') {
+    if (key) realtimePendingKeys.add(key);
+    clearTimeout(realtimePullTimer);
+    realtimePullTimer = setTimeout(async () => {
+      if (!navigator.onLine) return;
+      const keys = [...realtimePendingKeys];
+      realtimePendingKeys.clear();
+      try {
+        if (core.getSyncQueue().length) {
+          await syncAll({ manual: false, forceCheck: false, realtime: true });
+        } else if (keys.length) {
+          await pullDatasetKeys(keys, { concurrency: 8 });
+        } else {
+          await pullPriorityDatasets({ concurrency: 8, silentProgress: true });
+        }
+      } catch (error) {
+        console.warn('[CASH TOP 2] realtime pull deferred:', error);
+      }
+    }, 70);
+  }
+
+  function startRealtimeStream(location, token = '') {
+    if (isMongoProxy || typeof EventSource !== 'function' || !navigator.onLine || !location) return false;
+    const path = locationPath(location);
+    if (realtimeSource && realtimeLocationPath === path && realtimeSource.readyState !== EventSource.CLOSED) return true;
+    stopRealtimeStream();
+    const query = token ? `?auth=${encodeURIComponent(token)}` : '';
+    const url = `${baseUrl}/${path}/datasets.json${query}`;
+    try {
+      const source = new EventSource(url);
+      realtimeSource = source;
+      realtimeLocationPath = path;
+      source.addEventListener('open', () => {
+        writeState({ realtimeConnected: true, realtimeAt: Date.now(), remotePath: path });
+      });
+      const onData = event => {
+        try {
+          const payload = JSON.parse(event.data || '{}');
+          const key = realtimeDatasetKey(payload.path);
+          // حدث path=/ هو لقطة الاتصال الأولى؛ سحب الصفحة يكفي بدلاً من تنزيل كل الشركة.
+          scheduleRealtimePull(key);
+        } catch (_) {
+          scheduleRealtimePull('');
+        }
+      };
+      source.addEventListener('put', onData);
+      source.addEventListener('patch', onData);
+      source.addEventListener('cancel', () => writeState({ realtimeConnected: false, realtimeAt: Date.now() }));
+      source.onerror = () => {
+        writeState({ realtimeConnected: false, realtimeAt: Date.now() });
+        if (source.readyState === EventSource.CLOSED && navigator.onLine) {
+          setTimeout(async () => {
+            try {
+              const access = await openLightDatabaseAccess();
+              startRealtimeStream(access.location, access.token);
+            } catch (_) {}
+          }, 2200);
+        }
+      };
+      return true;
+    } catch (error) {
+      console.warn('[CASH TOP 2] realtime stream unavailable:', error);
+      return false;
+    }
   }
 
   async function readDatasetLocation(location, key, token = '') {
@@ -708,61 +843,87 @@ if (settings.enabled && core && settings.config?.databaseURL) {
 
   async function pullDatasetKeys(keys, options = {}) {
     if (!navigator.onLine) return { hasRemote: false, count: 0, applied: 0, offline: true };
+    if (core.localReady && typeof core.localReady.then === 'function') {
+      try { await core.localReady; } catch (_) {}
+    }
     const requested = [...new Set((Array.isArray(keys) ? keys : []).filter(key => core.DATA_KEYS.includes(key)))];
     if (!requested.length) return { hasRemote: false, count: 0, applied: 0 };
+    const showProgress = options.silentProgress !== true;
+    if (showProgress) {
+      reportPullStart(requested[0] || '', 0, requested.length);
+      reportSyncProgress(0, requested.length, 'جاري سحب أحدث البيانات من قاعدة البيانات...');
+    }
     const access = await openLightDatabaseAccess();
     const token = access.token;
     const location = access.location;
+    startRealtimeStream(location, token);
     let applied = 0;
     let found = 0;
+    let processed = 0;
 
-    /* بيانات الوصول التي قرأناها للتحقق تُطبّق أيضاً إن كانت أحدث. */
-    if (requested.includes('cashtop_company_access') && access.accessPayload != null) {
-      const payload = normalizeRemotePayload(access.accessPayload);
-      found += 1;
-      if ((options.force === true || canApplyRemote('cashtop_company_access', payload)) && applyRemote('cashtop_company_access', payload, { force: options.force === true })) applied += 1;
-    }
-
-    const rest = requested.filter(key => key !== 'cashtop_company_access');
-    const concurrency = Math.max(1, Math.min(5, Number(options.concurrency || 4)));
-    for (let i = 0; i < rest.length; i += concurrency) {
-      const chunk = rest.slice(i, i + concurrency);
-      const results = await Promise.all(chunk.map(async key => {
-        try { return { key, raw: await readDatasetLocation(location, key, token) }; }
-        catch (error) { return { key, error }; }
-      }));
-      for (const result of results) {
-        if (result.error) {
-          console.warn('[CASH TOP 2] progressive dataset pull:', result.key, result.error);
-          continue;
+    try {
+      /* بيانات الوصول التي قرأناها للتحقق تُطبّق أيضاً إن كانت أحدث. */
+      if (requested.includes('cashtop_company_access')) {
+        if (access.accessPayload != null) {
+          const payload = normalizeRemotePayload(access.accessPayload);
+          found += 1;
+          if ((options.force === true || canApplyRemote('cashtop_company_access', payload)) &&
+              applyRemote('cashtop_company_access', payload, { force: options.force === true })) applied += 1;
         }
-        if (result.raw == null) continue;
-        found += 1;
-        const payload = normalizeRemotePayload(result.raw);
-        const localMeta = localMetaFor(result.key);
-        const localTime = Number(localMeta.updatedAt || 0);
-        const remoteTime = Number(payload.updatedAt || 0);
-        const pending = Boolean(pendingForKey(result.key));
-        const seeded = localMeta.seeded === true || localTime <= 0;
-        if ((options.force === true || seeded || (!pending && remoteTime > localTime)) &&
-            applyRemote(result.key, payload, { force: options.force === true })) applied += 1;
+        processed += 1;
+        if (showProgress) reportSyncProgress(processed, requested.length, 'تم سحب بيانات الوصول والمستخدمين...');
+      }
+
+      const rest = requested.filter(key => key !== 'cashtop_company_access');
+      const concurrency = Math.max(1, Math.min(8, Number(options.concurrency || 6)));
+      for (let i = 0; i < rest.length; i += concurrency) {
+        const chunk = rest.slice(i, i + concurrency);
+        const results = await Promise.all(chunk.map(async key => {
+          try { return { key, raw: await readDatasetLocation(location, key, token) }; }
+          catch (error) { return { key, error }; }
+        }));
+        for (const result of results) {
+          processed += 1;
+          if (result.error) {
+            console.warn('[CASH TOP 2] progressive dataset pull:', result.key, result.error);
+            if (showProgress) reportSyncProgress(processed, requested.length, `تعذر سحب ${result.key} مؤقتاً؛ متابعة بقية البيانات...`);
+            continue;
+          }
+          if (result.raw != null) {
+            found += 1;
+            const payload = normalizeRemotePayload(result.raw);
+            const localMeta = localMetaFor(result.key);
+            const localTime = Number(localMeta.updatedAt || 0);
+            const remoteTime = Number(payload.updatedAt || 0);
+            const pending = Boolean(pendingForKey(result.key));
+            const seeded = localMeta.seeded === true || localTime <= 0;
+            if ((options.force === true || seeded || (!pending && remoteTime > localTime)) &&
+                applyRemote(result.key, payload, { force: options.force === true })) applied += 1;
+          }
+          if (showProgress) reportSyncProgress(processed, requested.length, `جاري تحديث ${result.key}...`);
+        }
+      }
+
+      const meta = await readMetaLocation(location, token).catch(() => ({}));
+      writeState({
+        initialLoaded: true,
+        progressiveLoaded: true,
+        loadedAt: Date.now(),
+        lastRemoteUpdatedAt: Number(meta?.updatedAt || 0),
+        lastSuccessAt: Date.now(),
+        lastError: '',
+        authMode: isMongoProxy ? 'mongodb-api' : (token ? 'anonymous' : 'database-rules'),
+        remotePath: locationPath(location)
+      });
+      core.updateSyncBadge();
+      if (applied > 0) window.dispatchEvent(new CustomEvent('cashtop:sync-complete', { detail: { processed: 0, pulled: applied, uploaded: 0, progressive: true } }));
+      return { hasRemote: found > 0, count: found, applied, path: locationPath(location), progressive: true };
+    } finally {
+      if (showProgress) {
+        reportPullEnd(requested[requested.length - 1] || '', processed, requested.length);
+        reportSyncProgress(processed, requested.length, 'اكتمل سحب البيانات', { active: false, done: true, success: true });
       }
     }
-
-    const meta = await readMetaLocation(location, token).catch(() => ({}));
-    writeState({
-      initialLoaded: true,
-      progressiveLoaded: true,
-      loadedAt: Date.now(),
-      lastRemoteUpdatedAt: Number(meta?.updatedAt || 0),
-      lastSuccessAt: Date.now(),
-      lastError: '',
-      authMode: isMongoProxy ? 'mongodb-api' : (token ? 'anonymous' : 'database-rules'),
-      remotePath: locationPath(location)
-    });
-    core.updateSyncBadge();
-    if (applied > 0) window.dispatchEvent(new CustomEvent('cashtop:sync-complete', { detail: { processed: 0, pulled: applied, uploaded: 0, progressive: true } }));
-    return { hasRemote: found > 0, count: found, applied, path: locationPath(location), progressive: true };
   }
 
   async function pullPriorityDatasets(options = {}) {
@@ -780,7 +941,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
         const chunkSize = 5;
         for (let i = 0; i < remaining.length; i += chunkSize) {
           if (!navigator.onLine || core.getSyncQueue().length) break;
-          await pullDatasetKeys(remaining.slice(i, i + chunkSize), { concurrency: 4 }).catch(error => console.warn('[CASH TOP 2] background dataset sync:', error));
+          await pullDatasetKeys(remaining.slice(i, i + chunkSize), { concurrency: 6, silentProgress: true }).catch(error => console.warn('[CASH TOP 2] background dataset sync:', error));
           await new Promise(resolve => {
             if (typeof requestIdleCallback === 'function') requestIdleCallback(() => resolve(), { timeout: 900 });
             else setTimeout(resolve, 80);
@@ -996,6 +1157,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   }
 
   function mergePendingPayload(localPayload, remotePayload, pending) {
+    if (pending?.forceReplace === true) return localPayload;
     if (!remotePayload || pending?.deletedDataset === true) return localPayload;
     const localValue = payloadJsonValue(localPayload);
     const remoteValue = payloadJsonValue(remotePayload);
@@ -1030,6 +1192,9 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     if (!remotePayload) return false;
     const remote = normalizeRemotePayload(remotePayload);
     if (pending?.deletedDataset === true) return remote.deleted === true || remote.value == null;
+    if (pending?.forceReplace === true) {
+      return remote.deleted === desiredPayload.deleted && String(remote.value ?? '') === String(desiredPayload.value ?? '');
+    }
     const remoteValue = payloadJsonValue(remote);
     const desiredValue = payloadJsonValue(desiredPayload);
 
@@ -1066,7 +1231,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       updatedAt: Number(payload.updatedAt || Date.now()),
       revision: Number(payload.revision || 1),
       deviceId: payload.deviceId || core.rawGet('cashtop_device_id') || '',
-      source: 'mongodb-rtdb-api',
+      source: isMongoProxy ? 'mongodb-rtdb-api' : 'firebase-rtdb-rest',
       seeded: false
     }));
     window.dispatchEvent(new CustomEvent('cashtop:remote-applied', { detail: { key, merged: true } }));
@@ -1195,8 +1360,189 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     }
   }
 
+  /*
+   * المزامنة المتينة تعمل على مستوى كل dataset بصورة مستقلة. فشل مجموعة واحدة
+   * (مثلاً موظفين أو مخزون) لا يوقف بقية الطابور؛ كل مجموعة تنجح تُحذف فوراً
+   * من عداد العمليات المعلقة، بينما تبقى المجموعات المتعثرة للمحاولة التالية.
+   */
+  async function reconcileDatasetsIndependently(options = {}) {
+    if (!navigator.onLine) {
+      return { processed: 0, pulled: 0, uploaded: 0, failed: 0, remaining: core.getSyncQueue().length, offline: true };
+    }
+    if (core.localReady && typeof core.localReady.then === 'function') {
+      try { await core.localReady; } catch (_) {}
+    }
+    if (options.forceRetry === true) datasetRetryState.clear();
+    if (syncing) return { processed: 0, pulled: 0, uploaded: 0, failed: 0, remaining: core.getSyncQueue().length, busy: true };
+
+    syncing = true;
+    writeState({ syncing: true, lastError: '', lastDeferredError: '', syncStartedAt: Date.now() });
+    let location = null;
+    let token = '';
+    let uploaded = 0;
+    let pulled = 0;
+    const failedKeys = [];
+    const errorSummaries = [];
+
+    try {
+      const access = await openLightDatabaseAccess();
+      token = access.token;
+      location = access.location;
+      startRealtimeStream(location, token);
+      const manual = options.manual === true || options.forceRetry === true;
+      const pendingKeys = [...new Set(core.getSyncQueue().map(item => item.key).filter(key => core.DATA_KEYS.includes(key)))];
+      let pendingProgress = 0;
+      if (pendingKeys.length) reportSyncProgress(0, pendingKeys.length, options.importSync ? 'جاري رفع النسخة الاحتياطية...' : 'جاري رفع العمليات المعلقة...');
+
+      for (const key of pendingKeys) {
+        if (!canRetryDatasetNow(key, manual)) {
+          failedKeys.push(key);
+          pendingProgress += 1;
+          reportSyncProgress(pendingProgress, pendingKeys.length, `تأجيل ${key} مؤقتاً ومتابعة بقية العمليات...`);
+          continue;
+        }
+
+        try {
+          let remoteRaw;
+          try {
+            remoteRaw = await readDatasetLocation(location, key, token);
+          } catch (error) {
+            if (!token && isPermissionError(error)) {
+              token = await requireDatabaseToken();
+              remoteRaw = await readDatasetLocation(location, key, token);
+            } else {
+              throw error;
+            }
+          }
+          let remote = remoteRaw == null ? null : normalizeRemotePayload(remoteRaw);
+
+          // حقول الاشتراك/الخطة وحالة مدير الشركة مرجعها البعيد حتى أثناء رفع تعديل محلي.
+          if (key === 'cashtop_company_access' && remoteRaw != null) mergeAdminControlledAccess(remoteRaw);
+
+          let committed = false;
+          let desired = null;
+          let sourceLocalPayload = null;
+          let sourcePending = null;
+
+          for (let attempt = 0; attempt < 4 && !committed; attempt += 1) {
+            sourcePending = pendingForKey(key);
+            if (!sourcePending) { committed = true; break; }
+            sourceLocalPayload = makeLocalPayload(key, remote?.revision || 0);
+            desired = mergePendingPayload(sourceLocalPayload, remote, sourcePending);
+            try {
+              await writeDatasetLocation(location, key, token, desired);
+            } catch (error) {
+              if (!token && isPermissionError(error)) {
+                token = await requireDatabaseToken();
+                await writeDatasetLocation(location, key, token, desired);
+              } else {
+                throw error;
+              }
+            }
+            const verifiedRaw = await readDatasetLocation(location, key, token);
+            committed = pendingChangesPresent(verifiedRaw, desired, sourcePending);
+            remote = verifiedRaw == null ? null : normalizeRemotePayload(verifiedRaw);
+            if (!committed) await new Promise(resolve => setTimeout(resolve, 55 * (attempt + 1)));
+          }
+
+          // قد تكون العملية حُسمت أثناء الانتظار؛ لا نعدّها فشلاً.
+          if (!pendingForKey(key)) {
+            clearDatasetFailure(key);
+            continue;
+          }
+          if (!committed || !desired || !sourceLocalPayload) {
+            throw new Error(`تعذر تثبيت تعديلات ${key} بسبب تعارض مزامنة متكرر.`);
+          }
+
+          // إذا حدث تعديل أحدث أثناء انتظار الشبكة نترك العملية الجديدة في الطابور.
+          const currentRaw = core.getRawCompanyDataset ? core.getRawCompanyDataset(key) : localStorage.getItem(key);
+          const currentMeta = localMetaFor(key);
+          const localUnchanged = currentRaw === (sourceLocalPayload.deleted ? null : sourceLocalPayload.value) &&
+            Number(currentMeta.updatedAt || 0) <= Number(sourceLocalPayload.updatedAt || 0);
+
+          if (localUnchanged) {
+            if (!desired.deleted) applyMergedPayloadLocally(key, desired);
+            if (markUploaded(key, desired)) uploaded += 1;
+          }
+          clearDatasetFailure(key);
+        } catch (error) {
+          noteDatasetFailure(key, error);
+          failedKeys.push(key);
+          errorSummaries.push({ key, message: safeSyncMessage(error) });
+          console.warn('[CASH TOP 2] deferred dataset sync:', key, error);
+          // مهم: لا نرمي الخطأ هنا حتى تكمل بقية العمليات الجاهزة في الطابور.
+        } finally {
+          pendingProgress += 1;
+          reportSyncProgress(pendingProgress, Math.max(1, pendingKeys.length), `مزامنة ${key}...`);
+        }
+      }
+
+      // بعد رفع ما يمكن رفعه، اسحب بيانات الصفحة. المجموعات التي بقيت معلقة
+      // محمية داخل applyRemote ولن تُستبدل بنسخة بعيدة أقدم.
+      const pullKeys = options.manual === true || options.forceCheck === true ? core.DATA_KEYS : pagePriorityDatasets();
+      try {
+        const pullResult = await pullDatasetKeys(pullKeys, { force: options.force === true, concurrency: 4 });
+        pulled = Number(pullResult?.applied || 0);
+      } catch (error) {
+        errorSummaries.push({ key: '__pull__', message: safeSyncMessage(error) });
+        console.warn('[CASH TOP 2] deferred progressive pull:', error);
+      }
+
+      await writeMetaLocation(location, token, companyMeta(location, {
+        reconciledAt: Date.now(),
+        lastSyncedBy: core.rawGet('cashtop_device_id') || ''
+      })).catch(error => console.warn('[CASH TOP 2] metadata sync deferred:', error));
+
+      const remaining = core.getSyncQueue().length;
+      const deferredMessage = errorSummaries[0]?.message || '';
+      writeState({
+        syncing: false,
+        initialLoaded: true,
+        loadedAt: Date.now(),
+        lastSuccessAt: uploaded > 0 || pulled > 0 || failedKeys.length === 0 ? Date.now() : readState().lastSuccessAt,
+        lastError: '',
+        lastDeferredError: deferredMessage,
+        deferredAt: failedKeys.length ? Date.now() : 0,
+        authMode: isMongoProxy ? 'mongodb-api' : (token ? 'anonymous' : 'database-rules'),
+        remotePath: locationPath(location)
+      });
+      core.updateSyncBadge();
+      window.dispatchEvent(new CustomEvent('cashtop:sync-complete', {
+        detail: { processed: uploaded, pulled, uploaded, failed: failedKeys.length, remaining, partial: failedKeys.length > 0 }
+      }));
+      return {
+        processed: uploaded,
+        pulled,
+        uploaded,
+        failed: failedKeys.length,
+        failedKeys,
+        errors: errorSummaries,
+        remaining,
+        partial: failedKeys.length > 0,
+        deferred: failedKeys.length > 0,
+        projectId: cfg.projectId,
+        path: locationPath(location),
+        authMode: isMongoProxy ? 'mongodb-api' : (token ? 'anonymous' : 'database-rules')
+      };
+    } catch (error) {
+      const message = safeSyncMessage(error);
+      writeState({ syncing: false, lastError: isTransientNetworkError(error) ? '' : message, lastDeferredError: message, errorAt: Date.now() });
+      console.warn('[CASH TOP 2] database access deferred:', error);
+      if (isTransientNetworkError(error)) {
+        return { processed: uploaded, pulled, uploaded, failed: core.getSyncQueue().length, remaining: core.getSyncQueue().length, deferred: true, networkDeferred: true, message };
+      }
+      throw new Error(message);
+    } finally {
+      syncing = false;
+      core.updateSyncBadge();
+      reportSyncProgress(1, 1, core.getSyncQueue().length ? 'بقيت عمليات معلقة وستُعاد تلقائياً' : 'اكتملت المزامنة', {
+        active: false, done: true, success: core.getSyncQueue().length === 0
+      });
+    }
+  }
+
   async function reconcileAll(options = {}) {
-    return isMongoProxy ? reconcileMongoAll(options) : reconcileLegacyAll(options);
+    return reconcileDatasetsIndependently(options);
   }
 
   async function pullAll(options = {}) {
@@ -1206,13 +1552,21 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     });
   }
 
-  async function syncAll(options = {}) {
-    if (core.getSyncQueue().length) return reconcileAll(options);
-    return options.manual === true || options.forceCheck === true ? pullAll(options) : pullPriorityDatasets(options);
+  function syncAll(options = {}) {
+    const run = async () => {
+      if (core.localReady && typeof core.localReady.then === 'function') {
+        try { await core.localReady; } catch (_) {}
+      }
+      if (core.getSyncQueue().length) return reconcileAll(options);
+      return options.manual === true || options.forceCheck === true ? pullAll(options) : pullPriorityDatasets(options);
+    };
+    // كل طلبات المزامنة تمر في سلسلة واحدة حتى لا ترجع الاستعادة busy أثناء دورة قائمة.
+    syncSerial = syncSerial.catch(() => null).then(run);
+    return syncSerial;
   }
 
   async function flushPendingQueue() {
-    const result = await reconcileAll();
+    const result = await syncAll({ forceRetry: true });
     return { processed: result.uploaded || 0, remaining: result.remaining || 0, pulled: result.pulled || 0 };
   }
 
@@ -1223,7 +1577,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   async function uploadDataset(key) {
     if (!core.DATA_KEYS.includes(key)) return false;
     core.enqueueSyncOperation(key);
-    const result = await reconcileAll();
+    const result = await syncAll({ forceRetry: true });
     return Number(result.uploaded || 0) > 0;
   }
 
@@ -1231,10 +1585,18 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     clearTimeout(scheduledSync);
     scheduledSync = setTimeout(() => {
       if (!navigator.onLine) return;
-      const job = core.getSyncQueue().length ? reconcileAll() : pullPriorityDatasets();
-      job.then(() => {
-        if (!core.getSyncQueue().length) scheduleBackgroundFullPull(900);
-      }).catch(error => console.warn('[CASH TOP 2] scheduled database sync:', error));
+      const job = syncAll({ manual: false, forceCheck: false });
+      job.then(result => {
+        if (core.getSyncQueue().length) {
+          // تبقى العمليات المتعثرة معلقة ويُعاد فحصها لاحقاً، من دون تعطيل ما بعدها.
+          scheduleSync(result?.networkDeferred ? 6000 : 3500);
+        } else {
+          scheduleBackgroundFullPull(900);
+        }
+      }).catch(error => {
+        console.warn('[CASH TOP 2] scheduled database sync:', error);
+        if (core.getSyncQueue().length && navigator.onLine) scheduleSync(6000);
+      });
     }, delay);
   }
 
@@ -1270,29 +1632,37 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     })
   };
 
-  window.addEventListener('cashtop:data-changed', () => scheduleSync(700));
-  window.addEventListener('cashtop:sync-queue-restored', () => scheduleSync(80));
-  window.addEventListener('online', () => scheduleSync(180));
+  window.addEventListener('cashtop:data-changed', () => scheduleSync(45));
+  window.addEventListener('cashtop:sync-now', () => scheduleSync(20));
+  window.addEventListener('cashtop:sync-queue-restored', () => scheduleSync(35));
+  window.addEventListener('online', () => {
+    datasetRetryState.clear();
+    scheduleSync(20);
+  });
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && navigator.onLine) scheduleSync(350);
+    if (document.visibilityState === 'visible' && navigator.onLine) scheduleSync(90);
   });
 
-  /* فحص خفيف للبيانات الخاصة بالصفحة بدلاً من تنزيل عقدة الشركة كاملة كل 4 ثوانٍ. */
+  /* Firebase يستخدم بث SSE لحظياً بين الأجهزة. يبقى polling سريعاً كخطة احتياطية،
+     وMongo/API يعتمد polling أقصر لأنه لا يوفّر EventSource بنفس الواجهة. */
   pollTimer = setInterval(() => {
-    if (navigator.onLine && !document.hidden && !core.getSyncQueue().length) {
-      pullPriorityDatasets().catch(() => null);
-    }
-  }, 15000);
+    if (!navigator.onLine || document.hidden || core.getSyncQueue().length) return;
+    const realtimeHealthy = !isMongoProxy && realtimeSource && realtimeSource.readyState === EventSource.OPEN;
+    if (!realtimeHealthy) pullPriorityDatasets({ concurrency: 8, silentProgress: true }).catch(() => null);
+  }, isMongoProxy ? 2500 : 7000);
 
   window.addEventListener('pagehide', () => {
     clearTimeout(scheduledSync);
     clearTimeout(backgroundPullTimer);
+    clearTimeout(realtimePullTimer);
+    stopRealtimeStream();
     if (pollTimer) clearInterval(pollTimer);
   }, { once: true });
 
   if (navigator.onLine) {
-    scheduleSync(220);
-    if (!core.getSyncQueue().length) scheduleBackgroundFullPull(1600);
+    // أول دخول: اسحب بيانات الصفحة فوراً، ثم أكمل بقية الشركة في الخلفية.
+    scheduleSync(10);
+    if (!core.getSyncQueue().length) scheduleBackgroundFullPull(750);
   }
 } else if (core) {
   console.warn('[CASH TOP 2] Firebase sync configuration is incomplete.');

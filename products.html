@@ -1536,7 +1536,10 @@
             if (editMode && idIndex > -1) {
                 const previous = targetProducts[idIndex];
                 const replacement = cloneData(incoming);
-                replacement.stockPieces = previous.stockPieces;
+                // تعديل المنتج يجب أن يحفظ كمية المخزون التي أدخلها المستخدم فوراً.
+                // نحافظ فقط على أرصدة المخازن والدفعات التي لا تظهر في نموذج التعديل؛
+                // أما stockPieces و qty للمتغيرات فتؤخذ من القيم الجديدة.
+                replacement.stockPieces = Math.max(0, Number(incoming.stockPieces || 0));
                 replacement.storeStocks = cloneData(previous.storeStocks || {});
                 replacement.inventoryLots = cloneData(previous.inventoryLots || []);
                 if (replacement.hasVariants && Array.isArray(replacement.variants)) {
@@ -1545,7 +1548,11 @@
                             (variant.barcode && String(item?.barcode) === String(variant.barcode)) ||
                             (String(item?.size || '') === String(variant.size || '') && String(item?.color || '') === String(variant.color || ''))
                         );
-                        return { ...variant, qty: Number(oldVariant?.qty || 0), storeStocks: cloneData(oldVariant?.storeStocks || {}) };
+                        return {
+                            ...variant,
+                            qty: Math.max(0, Number(variant.qty || 0)),
+                            storeStocks: cloneData(oldVariant?.storeStocks || {})
+                        };
                     });
                 }
                 targetProducts[idIndex] = replacement;
