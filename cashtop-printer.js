@@ -3,6 +3,7 @@
 (function () {
   const PRINTER_KEY = 'cashtop_printer_settings';
   const SETTINGS_KEY = 'cashtop_settings';
+  const CUSTOM_DESIGN_KEY = 'cashtop_invoice_design';
   const DEFAULTS = {
     printType: 'thermal-80',
     printCopies: 1,
@@ -155,9 +156,131 @@
     `;
   }
 
+
+
+  function customDesignCss(type) {
+    const is58 = type === 'thermal-58';
+    const isA4 = type === 'paper-a4';
+    const width = is58 ? '58mm' : isA4 ? '190mm' : '80mm';
+    return `
+      *{box-sizing:border-box;font-family:'Cairo',Arial,Tahoma,sans-serif;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}
+      html,body{margin:0;padding:0;background:#fff!important;color:#000}
+      .ct-custom-receipt{position:relative;width:${width};max-width:${width};min-height:120px;margin:0 auto;background:#fff!important;color:#000;overflow:visible;direction:rtl}
+      .ct-custom-receipt .draggable-item{position:absolute;min-width:30px;min-height:20px;user-select:none}
+      .ct-custom-receipt .draggable-item .content{width:100%;height:100%;padding:2px;border:1px solid transparent;word-wrap:break-word;overflow-wrap:anywhere;box-sizing:border-box;background-color:transparent}
+      .ct-custom-receipt .type-line .content{border-bottom:2px solid #000!important;height:0!important;min-height:0!important;padding:0;margin-top:10px}
+      .ct-custom-receipt .type-box .content{border:2px solid #000!important}
+      .ct-custom-receipt .type-circle .content{border:2px solid #000!important;border-radius:50%}
+      .ct-custom-receipt .receipt-table{width:100%;border-collapse:collapse;font-size:inherit;text-align:center;table-layout:fixed}
+      .ct-custom-receipt .receipt-table th,.ct-custom-receipt .receipt-table td{border-bottom:1px dashed #000;padding:4px 2px;min-width:20px;overflow-wrap:anywhere;background:transparent!important;color:inherit!important}
+      .ct-custom-receipt .resizer,.ct-custom-receipt .delete-btn{display:none!important}
+      .ct-custom-receipt img{max-width:100%;object-fit:contain}
+      @media print{html,body{background:#fff!important}.ct-custom-receipt{box-shadow:none!important;border:none!important;background:#fff!important}.ct-custom-receipt *{visibility:visible!important}}
+    `;
+  }
+
+  function buildCustomReceiptMarkup(invoice, printer, settings) {
+    const design = safeJson(localStorage.getItem(CUSTOM_DESIGN_KEY), null);
+    if (!design || !design.receiptHTML) return null;
+    const type = ['thermal-58', 'thermal-80', 'paper-a4'].includes(printer.printType) ? printer.printType : (design.paperSize || 'thermal-80');
+    const items = Array.isArray(invoice?.items) ? invoice.items : [];
+    const subtotal = Number.isFinite(Number(invoice?.subtotal)) ? number(invoice.subtotal) : items.reduce((sum, item) => sum + number(item.qty) * number(item.price), 0);
+    const total = number(invoice?.total ?? subtotal);
+    const paid = number(invoice?.paid);
+    const remaining = Math.max(0, number(invoice?.debt ?? (total - paid)));
+    const date = new Date(invoice?.date || Date.now());
+    const firstItem = items[0] || {};
+    const firstQty = number(firstItem.qty), firstPrice = number(firstItem.price);
+    const values = {
+      company_name: settings.companyName || 'كاش توب',
+      customer_name: invoice?.customer || 'عميل نقدي',
+      customer_phone: invoice?.phone || '-',
+      invoice_no: invoiceNumber(invoice),
+      date: Number.isFinite(date.getTime()) ? date.toLocaleDateString('en-GB') : '-',
+      time: Number.isFinite(date.getTime()) ? date.toLocaleTimeString('en-GB', { hour12: false }) : '-',
+      cashier_name: invoice?.user || 'مستخدم',
+      branch_name: invoice?.branchName || settings.branchName || 'الفرع الرئيسي',
+      payment_method: invoice?.paymentMethod || invoice?.accountName || 'كاش',
+      item_name: firstItem.name || 'صنف',
+      item_unit: itemUnit(firstItem),
+      item_qty: Number(firstQty.toFixed(6)),
+      item_price: money(firstPrice),
+      item_total: money(firstQty * firstPrice),
+      items_count: items.length,
+      subtotal: money(subtotal),
+      discount: money(invoice?.discount || 0),
+      tax: money(invoice?.tax || 0),
+      total: money(total),
+      paid: money(paid),
+      remaining: money(remaining),
+      notes: invoice?.notes || ''
+    };
+
+    const holder = document.createElement('div');
+    holder.innerHTML = `<div class="ct-custom-receipt ${type}">${design.receiptHTML}</div>`;
+    const receipt = holder.firstElementChild;
+    const baseHeight = Math.max(120, parseFloat(design.receiptHeight) || 720);
+    receipt.style.height = baseHeight + 'px';
+
+    const logoEl = receipt.querySelector('.type-image[data-role="logo"]');
+    if (logoEl) {
+      if (printer.showLogo === false || !settings.logo) logoEl.remove();
+      else {
+        const c = logoEl.querySelector('.content');
+        if (c) c.style.backgroundImage = `url("${String(settings.logo).replace(/"/g, '&quot;')}")`;
+      }
+    }
+
+    const tableEl = receipt.querySelector('.type-table[data-role="items"]') || receipt.querySelector('.type-table');
+    let extraHeight = 0;
+    if (tableEl) {
+      tableEl.dataset.role = 'items';
+      const tbody = tableEl.querySelector('tbody');
+      const oldRows = tbody ? Math.max(1, tbody.querySelectorAll('tr').length - 1) : 1;
+      if (tbody) {
+        tbody.innerHTML = `<tr><th>الصنف</th><th>الوحدة</th><th>الكمية</th><th>السعر</th><th>الاجمالي</th></tr>` + (items.map(item => {
+          const qty = number(item.qty), price = number(item.price);
+          return `<tr><td>${escapeHtml(item.name || 'صنف')}</td><td>${escapeHtml(itemUnit(item))}</td><td>${escapeHtml(Number(qty.toFixed(6)))}</td><td>${money(price)}</td><td>${money(qty * price)}</td></tr>`;
+        }).join('') || '<tr><td colspan="5">لا توجد أصناف</td></tr>');
+      }
+      const newRows = Math.max(1, items.length);
+      extraHeight = Math.max(0, newRows - oldRows) * 27;
+      const tableTop = parseFloat(tableEl.style.top) || 0;
+      if (extraHeight > 0) {
+        receipt.querySelectorAll('.draggable-item').forEach(el => {
+          if (el === tableEl) return;
+          const top = parseFloat(el.style.top);
+          if (Number.isFinite(top) && top > tableTop + 45) el.style.top = (top + extraHeight) + 'px';
+        });
+      }
+    }
+
+    let html = receipt.innerHTML;
+    Object.entries(values).forEach(([key, value]) => {
+      const safe = key === 'notes' ? escapeHtml(value).replace(/\n/g, '<br>') : escapeHtml(value);
+      html = html.replace(new RegExp(`{{${key}}}`, 'g'), safe);
+    });
+    receipt.innerHTML = html;
+
+    let maxBottom = baseHeight + extraHeight;
+    receipt.querySelectorAll('.draggable-item').forEach(el => {
+      const top = parseFloat(el.style.top) || 0;
+      const height = parseFloat(el.style.height) || (el.matches('.type-table') ? 55 + Math.max(1, items.length) * 27 : 35);
+      maxBottom = Math.max(maxBottom, top + height + 25);
+    });
+    receipt.style.height = Math.ceil(maxBottom) + 'px';
+
+    return { type, css: customDesignCss(type), html: receipt.outerHTML };
+  }
+
+
   function buildReceiptMarkup(invoice, options = {}) {
     const printer = { ...getPrinterSettings(), ...(options.printer || {}) };
     const settings = { ...getSystemSettings(), ...(options.settings || {}) };
+    if (options.ignoreCustomDesign !== true) {
+      const custom = buildCustomReceiptMarkup(invoice, printer, settings);
+      if (custom) return custom;
+    }
     const type = ['thermal-58', 'thermal-80', 'paper-a4'].includes(printer.printType) ? printer.printType : 'thermal-80';
     const items = Array.isArray(invoice?.items) ? invoice.items : [];
     const subtotal = Number.isFinite(Number(invoice?.subtotal)) ? number(invoice.subtotal) : items.reduce((sum, item) => sum + number(item.qty) * number(item.price), 0);

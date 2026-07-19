@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v49-r38-same-project-mongodb-api';
+const CACHE_VERSION = 'v50-r39-invoice-designer';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = `cash-top-2-remote-static-${CACHE_VERSION}`;
 
@@ -41,6 +41,7 @@ const LOCAL_ASSETS = [
   './notifications.html',
   './offline.html',
   './printer-settings.html',
+  './invoice-designer.html',
   './products.html',
   './qr.mp3',
   './sales-offers.html',

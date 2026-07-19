@@ -443,6 +443,25 @@
 
         let savedLogoData = null; // متغير لحفظ الصورة كـ Base64
 
+        function syncInvoiceDesignLogo(newLogo) {
+            try {
+                const design = JSON.parse(localStorage.getItem('cashtop_invoice_design') || 'null');
+                if (!design?.receiptHTML) return;
+                const host = document.createElement('div');
+                host.innerHTML = design.receiptHTML;
+                host.querySelectorAll('.type-image[data-role="logo"]').forEach(el => {
+                    const content = el.querySelector('.content');
+                    if (!newLogo) el.remove();
+                    else if (content) content.style.backgroundImage = `url("${String(newLogo).replace(/"/g, '&quot;')}")`;
+                });
+                design.receiptHTML = host.innerHTML;
+                design.logoUpdatedAt = new Date().toISOString();
+                localStorage.setItem('cashtop_invoice_design', JSON.stringify(design));
+            } catch (error) {
+                console.warn('Invoice design logo sync:', error);
+            }
+        }
+
         // تحميل الإعدادات عند فتح الصفحة
         window.addEventListener('load', function() {
             loadSettings();
@@ -553,6 +572,7 @@
                 const settings = JSON.parse(localStorage.getItem('cashtop_settings')) || {};
                 settings.logo = url;
                 localStorage.setItem('cashtop_settings', JSON.stringify(settings));
+                syncInvoiceDesignLogo(url);
                 closeLogoUrlModal();
                 window.Cashtop?.applySystemBranding?.();
                 showToast('تم حفظ رابط الشعار وإضافته إلى مزامنة MongoDB.', 'success');
@@ -683,6 +703,7 @@
 
             // الحفظ في التخزين المحلي
             localStorage.setItem('cashtop_settings', JSON.stringify(settingsObj));
+            syncInvoiceDesignLogo(settingsObj.logo);
             
             // تحديث إعدادات قاعدة البيانات الخاصة بصفحة النواقص بشكل متزامن
             let db = JSON.parse(localStorage.getItem('cashtop_db')) || { config: {} };
