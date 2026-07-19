@@ -1,0 +1,20 @@
+CASH TOP - ملفات API لـ Vercel
+
+ارفع هذه الملفات إلى جذر مستودع GitHub المرتبط بمشروع Vercel:
+
+1) مجلد api وفي داخله rtdb.js
+2) package.json
+3) vercel.json
+
+لا تضع كلمة مرور MongoDB داخل هذه الملفات.
+
+متغيرات Vercel المطلوبة:
+MONGODB_URI = رابط MongoDB الكامل
+MONGODB_DB = cash
+MONGODB_COLLECTION = yop
+
+بعد رفع الملفات إلى GitHub:
+- انتظر Vercel يعمل Deployment جديد تلقائياً.
+- افتح:
+  https://cashtop.vercel.app/api/rtdb?path=cashTopExchange/cashTopPOS
+- إذا ظهر JSON أو null بدون authentication failed فهذا يعني أن API وصل لقاعدة البيانات.
