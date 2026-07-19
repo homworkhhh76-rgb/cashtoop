@@ -4,10 +4,11 @@
 
 ## نقطة الاتصال المستخدمة
 
-- API: `https://cash-top-api-2026.vercel.app/api/rtdb`
+- API الأساسي في Revision 39: `/api/rtdb` داخل نفس المشروع المنشور.
+- API القديم `https://cash-top-api-2026.vercel.app/api/rtdb` بقي كـ fallback مؤقت للتوافق.
 - نمط الطلب: `GET/PUT/DELETE /api/rtdb?path=<encoded-path>`
 - لا يحتوي كود الواجهة على `MONGODB_URI` أو كلمة مرور MongoDB.
-- يفترض أن الخادم يقرأ `MONGODB_URI` و `MONGODB_DB` من متغيرات البيئة الخاصة به.
+- الخادم الموجود في `api/rtdb.js` يقرأ `MONGODB_URI` و `MONGODB_DB` و `MONGODB_COLLECTION` من متغيرات البيئة الخاصة بالاستضافة.
 
 ## التوافق
 
@@ -35,3 +36,6 @@
 - الكتابة عبر MongoDB API تتم على مستوى `datasets/<key>` بدلاً من استبدال عقدة الشركة كاملة عند كل تعديل.
 - عند وجود تعديلات من أكثر من جهاز يتم دمج السجلات/الحقول التي يمكن تحديدها، ثم التحقق من نتيجة الكتابة وإعادة المحاولة عند التعارض.
 - طلبات MongoDB API مستثناة بالكامل من Service Worker Cache؛ الكاش مخصص لملفات وصفحات التطبيق فقط.
+
+## تحديث Revision 41
+عند استضافة التطبيق مع مجلد `api` في نفس مشروع Vercel، تستخدم الواجهة تلقائياً `/api/rtdb` من نفس النطاق أولاً. عند فتح التطبيق خارج الاستضافة يوجد رابط API خارجي مجرب كخطة بديلة. لا تضع `MONGODB_URI` داخل HTML أو JavaScript؛ يبقى داخل Environment Variables فقط.

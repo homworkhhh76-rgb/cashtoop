@@ -16,6 +16,8 @@
   const rawKey = index => Storage.prototype.key.call(localStorage, index);
   const backendSettings = window.CASHTOP_FIREBASE || {};
   const backendBase = String(backendSettings.config?.databaseURL || '').replace(/\/+$/, '');
+  const backendFallbacks = (Array.isArray(backendSettings.config?.fallbackDatabaseURLs) ? backendSettings.config.fallbackDatabaseURLs : [])
+    .map(value => String(value || '').replace(/\/+$/, '')).filter(Boolean);
   const isMongoProxy = backendSettings.backendMode === 'mongodb-rtdb-api' || /\/api\/rtdb(?:$|\?)/i.test(backendBase);
   function transportUrl(url) {
     if (!isMongoProxy) return url;
@@ -306,8 +308,15 @@
     if (isMongoProxy) {
       try {
         const parsed = new URL(primary, location.href);
-        const configuredOrigin = new URL(backendBase, location.href).origin;
         const path = parsed.searchParams.get('path');
+        if (path !== null) {
+          backendFallbacks.forEach(fallbackBase => {
+            try {
+              candidates.push(`${new URL(fallbackBase, location.href).href.replace(/\/+$/, '')}?path=${encodeURIComponent(path)}`);
+            } catch (_) {}
+          });
+        }
+        const configuredOrigin = new URL(backendBase, location.href).origin;
         const webOriginAvailable = ['http:', 'https:'].includes(location.protocol) && location.origin && location.origin !== 'null';
         if (webOriginAvailable && configuredOrigin !== location.origin && path !== null) {
           candidates.push(`${location.origin}/api/rtdb?path=${encodeURIComponent(path)}`);

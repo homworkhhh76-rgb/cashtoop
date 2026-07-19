@@ -12,6 +12,8 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   const legacyRoots = Array.isArray(settings.legacyRootPaths) ? settings.legacyRootPaths : [];
   const session = core.getSession() || {};
   const baseUrl = String(cfg.databaseURL || '').replace(/\/+$/, '');
+  const fallbackBaseUrls = (Array.isArray(cfg.fallbackDatabaseURLs) ? cfg.fallbackDatabaseURLs : [])
+    .map(value => String(value || '').replace(/\/+$/, '')).filter(Boolean);
   const isMongoProxy = settings.backendMode === 'mongodb-rtdb-api' || /\/api\/rtdb(?:$|\?)/i.test(baseUrl);
   const rawStorage = {
     get: key => Storage.prototype.getItem.call(localStorage, key),
@@ -142,13 +144,19 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     if (!isMongoProxy || typeof location === 'undefined') return candidates;
     try {
       const primaryUrl = new URL(primary, location.href);
+      const logicalPath = primaryUrl.searchParams.get('path');
+      if (logicalPath !== null) {
+        fallbackBaseUrls.forEach(fallbackBase => {
+          try {
+            const target = new URL(fallbackBase, location.href);
+            candidates.push(`${target.href.replace(/\/+$/, '')}?path=${encodeURIComponent(logicalPath)}`);
+          } catch (_) {}
+        });
+      }
       const configuredOrigin = new URL(baseUrl, location.href).origin;
-      // عند حظر CORS أو تعطل النطاق الخارجي نجرب نفس مسار API على نطاق التطبيق،
-      // وهذا يفيد عندما تكون الواجهة وواجهة MongoDB منشورتين في مشروع Vercel نفسه.
       const webOriginAvailable = ['http:', 'https:'].includes(location.protocol) && location.origin && location.origin !== 'null';
-      if (webOriginAvailable && configuredOrigin !== location.origin) {
-        const path = primaryUrl.searchParams.get('path');
-        if (path !== null) candidates.push(`${location.origin}/api/rtdb?path=${encodeURIComponent(path)}`);
+      if (webOriginAvailable && configuredOrigin !== location.origin && logicalPath !== null) {
+        candidates.push(`${location.origin}/api/rtdb?path=${encodeURIComponent(logicalPath)}`);
       }
     } catch (_) {}
     return [...new Set(candidates)];
@@ -196,11 +204,12 @@ if (settings.enabled && core && settings.config?.databaseURL) {
             lastError.httpStatus = response.status;
             break;
           }
-          // مسار same-origin الاحتياطي يجب أن يعيد JSON؛ صفحة HTML ليست API صالحاً.
-          if (isMongoProxy && response.ok && targetUrl !== candidates[0]) {
+          // أي MongoDB API ناجح يجب أن يعيد JSON. بعض الاستضافات الثابتة تعيد index.html
+          // بحالة 200 لمسار /api/rtdb؛ لا نعتبر ذلك اتصالاً ناجحاً بل ننتقل للمرشح التالي.
+          if (isMongoProxy && response.ok) {
             const type = String(response.headers.get('content-type') || '').toLowerCase();
             if (type && !type.includes('json')) {
-              lastError = new Error('مسار API المحلي الاحتياطي لا يعيد JSON.');
+              lastError = new Error('نقطة المزامنة أعادت صفحة HTML بدلاً من JSON.');
               break;
             }
           }
