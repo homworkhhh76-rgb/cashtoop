@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v51-r41-new-api-instant-pages-cache-first';
+const CACHE_VERSION = 'v49-r38-same-project-mongodb-api';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = `cash-top-2-remote-static-${CACHE_VERSION}`;
 
@@ -92,10 +92,8 @@ const REMOTE_STATIC_HOSTS = new Set([
 /* Prevent background network refreshes from competing with UI rendering.
  * HTML can refresh relatively often; immutable app assets refresh much less. */
 const LOCAL_REFRESH_AT = new Map();
-// لا نسمح لتحديثات الشبكة المتكررة بمنافسة فتح الصفحات. كل الصفحات تُعرض
-// من Cache Storage أولاً فوراً حتى مع وجود الإنترنت، ثم تتجدد بهدوء لاحقاً.
-const HTML_REFRESH_MS = 10 * 60 * 1000;
-const STATIC_REFRESH_MS = 30 * 60 * 1000;
+const HTML_REFRESH_MS = 45 * 1000;
+const STATIC_REFRESH_MS = 5 * 60 * 1000;
 let shellVerificationPromise = null;
 let remoteWarmPromise = null;
 
@@ -122,9 +120,7 @@ function shouldRefreshLocalInBackground(request) {
  */
 function isLiveApiRequest(url) {
   const host = String(url.hostname || '').toLowerCase();
-  const path = String(url.pathname || '').toLowerCase();
-  return path === '/api/rtdb' || path.startsWith('/api/rtdb/') ||
-    host === 'cash-top-api-2026.vercel.app' ||
+  return host === 'cash-top-api-2026.vercel.app' ||
     host.endsWith('.firebaseio.com') ||
     host.endsWith('.firebasedatabase.app') ||
     host === 'identitytoolkit.googleapis.com' ||
@@ -308,25 +304,10 @@ async function refreshLocalCache(request, cache) {
 async function localCacheFirst(request) {
   const cache = await caches.open(APP_CACHE);
   const cacheKey = canonicalLocalRequest(request);
-  const cached = await cache.match(cacheKey, { ignoreSearch: true });
+  const cached = await cache.match(cacheKey);
 
-  // اعرض النسخة المحلية فوراً حتى مع وجود الإنترنت؛ لا ننتظر الشبكة إطلاقاً
-  // عندما تكون الصفحة/الملف موجودة في Cache Storage.
+  // اعرض النسخة المحلية فوراً حتى مع وجود الإنترنت.
   if (cached) return cached;
-
-  // بعض المتصفحات تبني طلب التنقل بصيغة مختلفة قليلاً. ابحث عن نفس pathname
-  // داخل الحزمة المسبقة قبل اللجوء للشبكة، حتى تبقى كل صفحة فورية قدر الإمكان.
-  if (request.mode === 'navigate' || request.destination === 'document') {
-    const requestedUrl = new URL(request.url);
-    const keys = await cache.keys();
-    const pathnameHit = keys.find(key => {
-      try { return new URL(key.url).pathname === requestedUrl.pathname; } catch (_) { return false; }
-    });
-    if (pathnameHit) {
-      const page = await cache.match(pathnameHit, { ignoreSearch: true });
-      if (page) return page;
-    }
-  }
 
   const response = await refreshLocalCache(request, cache);
   if (response) return response;
@@ -338,7 +319,7 @@ async function localCacheFirst(request) {
 
 async function refreshCachedLocalInBackground(request) {
   const cache = await caches.open(APP_CACHE);
-  const cached = await cache.match(canonicalLocalRequest(request), { ignoreSearch: true });
+  const cached = await cache.match(canonicalLocalRequest(request));
   if (!cached) return;
   await refreshLocalCache(request, cache);
 }

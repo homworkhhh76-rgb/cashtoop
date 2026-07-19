@@ -16,9 +16,7 @@
   const rawKey = index => Storage.prototype.key.call(localStorage, index);
   const backendSettings = window.CASHTOP_FIREBASE || {};
   const backendBase = String(backendSettings.config?.databaseURL || '').replace(/\/+$/, '');
-  const backendFallbacks = (Array.isArray(backendSettings.config?.fallbackDatabaseURLs) ? backendSettings.config.fallbackDatabaseURLs : [])
-    .map(value => String(value || '').replace(/\/+$/, '')).filter(Boolean);
-  const isMongoProxy = backendSettings.backendMode === 'mongodb-rtdb-api' || /\/api\/rtdb(?:$|\?)/i.test(backendBase);
+  const isMongoProxy = ['mongodb-http-api','mongodb-rtdb-api'].includes(backendSettings.backendMode) || /\/api\/rtdb(?:$|\?)/i.test(backendBase);
   function transportUrl(url) {
     if (!isMongoProxy) return url;
     const raw = String(url || '');
@@ -303,27 +301,8 @@
     return `${url}${url.includes('?') ? '&' : '?'}auth=${encodeURIComponent(token)}`;
   }
   function loginTransportCandidates(url) {
-    const primary = transportUrl(url);
-    const candidates = [primary];
-    if (isMongoProxy) {
-      try {
-        const parsed = new URL(primary, location.href);
-        const path = parsed.searchParams.get('path');
-        if (path !== null) {
-          backendFallbacks.forEach(fallbackBase => {
-            try {
-              candidates.push(`${new URL(fallbackBase, location.href).href.replace(/\/+$/, '')}?path=${encodeURIComponent(path)}`);
-            } catch (_) {}
-          });
-        }
-        const configuredOrigin = new URL(backendBase, location.href).origin;
-        const webOriginAvailable = ['http:', 'https:'].includes(location.protocol) && location.origin && location.origin !== 'null';
-        if (webOriginAvailable && configuredOrigin !== location.origin && path !== null) {
-          candidates.push(`${location.origin}/api/rtdb?path=${encodeURIComponent(path)}`);
-        }
-      } catch (_) {}
-    }
-    return [...new Set(candidates)];
+    // لا يوجد API محلي داخل الاستضافة في النسخة المحمولة.
+    return [transportUrl(url)];
   }
 
   async function fetchJson(url, timeout = 18000) {
@@ -344,7 +323,6 @@
           }
           if (!response.ok) throw new Error(`تعذر قراءة بيانات الدخول من قاعدة البيانات (${response.status}).`);
           const type = String(response.headers.get('content-type') || '').toLowerCase();
-          if (targetUrl.includes('/api/rtdb') && type && !type.includes('json')) throw new Error('واجهة قاعدة البيانات لا تعيد JSON صالحاً.');
           return await response.json();
         } catch (error) {
           lastError = error;

@@ -12,9 +12,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   const legacyRoots = Array.isArray(settings.legacyRootPaths) ? settings.legacyRootPaths : [];
   const session = core.getSession() || {};
   const baseUrl = String(cfg.databaseURL || '').replace(/\/+$/, '');
-  const fallbackBaseUrls = (Array.isArray(cfg.fallbackDatabaseURLs) ? cfg.fallbackDatabaseURLs : [])
-    .map(value => String(value || '').replace(/\/+$/, '')).filter(Boolean);
-  const isMongoProxy = settings.backendMode === 'mongodb-rtdb-api' || /\/api\/rtdb(?:$|\?)/i.test(baseUrl);
+  const isMongoProxy = ['mongodb-http-api','mongodb-rtdb-api'].includes(settings.backendMode) || /\/api\/rtdb(?:$|\?)/i.test(baseUrl);
   const rawStorage = {
     get: key => Storage.prototype.getItem.call(localStorage, key),
     set: (key, value) => Storage.prototype.setItem.call(localStorage, key, String(value)),
@@ -139,27 +137,9 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   }
 
   function transportCandidates(url) {
-    const primary = transportUrl(url);
-    const candidates = [primary];
-    if (!isMongoProxy || typeof location === 'undefined') return candidates;
-    try {
-      const primaryUrl = new URL(primary, location.href);
-      const logicalPath = primaryUrl.searchParams.get('path');
-      if (logicalPath !== null) {
-        fallbackBaseUrls.forEach(fallbackBase => {
-          try {
-            const target = new URL(fallbackBase, location.href);
-            candidates.push(`${target.href.replace(/\/+$/, '')}?path=${encodeURIComponent(logicalPath)}`);
-          } catch (_) {}
-        });
-      }
-      const configuredOrigin = new URL(baseUrl, location.href).origin;
-      const webOriginAvailable = ['http:', 'https:'].includes(location.protocol) && location.origin && location.origin !== 'null';
-      if (webOriginAvailable && configuredOrigin !== location.origin && logicalPath !== null) {
-        candidates.push(`${location.origin}/api/rtdb?path=${encodeURIComponent(logicalPath)}`);
-      }
-    } catch (_) {}
-    return [...new Set(candidates)];
+    // النسخة المحمولة تستخدم نقطة MongoDB HTTPS الخارجية فقط.
+    // لا تعتمد على وجود API داخل نفس الاستضافة، لذلك تعمل الواجهة من أي نطاق يدعم HTTPS.
+    return [transportUrl(url)];
   }
 
   function transportFetchOptions(options = {}) {
@@ -198,18 +178,15 @@ if (settings.enabled && core && settings.config?.databaseURL) {
             await new Promise(resolve => setTimeout(resolve, 180 + (attempt * 320)));
             continue;
           }
-          // إذا كان الخادم الخارجي متعطلاً أو المسار غير منشور، انتقل إلى API على نطاق التطبيق إن وجد.
           if (targetUrl !== candidates[candidates.length - 1] && (transientStatus || [404, 405].includes(response.status))) {
             lastError = new Error(`تعذر الوصول إلى نقطة المزامنة الأساسية (${response.status}).`);
             lastError.httpStatus = response.status;
             break;
           }
-          // أي MongoDB API ناجح يجب أن يعيد JSON. بعض الاستضافات الثابتة تعيد index.html
-          // بحالة 200 لمسار /api/rtdb؛ لا نعتبر ذلك اتصالاً ناجحاً بل ننتقل للمرشح التالي.
-          if (isMongoProxy && response.ok) {
+          if (isMongoProxy && response.ok && targetUrl !== candidates[0]) {
             const type = String(response.headers.get('content-type') || '').toLowerCase();
             if (type && !type.includes('json')) {
-              lastError = new Error('نقطة المزامنة أعادت صفحة HTML بدلاً من JSON.');
+              lastError = new Error('مسار API المحلي الاحتياطي لا يعيد JSON.');
               break;
             }
           }
@@ -885,7 +862,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       updatedAt: Number(payload.updatedAt || Date.now()),
       revision: Number(payload.revision || 1),
       deviceId: payload.deviceId || '',
-      source: isMongoProxy ? 'mongodb-rtdb-api' : 'firebase-rtdb-rest',
+      source: isMongoProxy ? 'mongodb-http-api' : 'firebase-rtdb-rest',
       seeded: false
     }));
     completePendingForKey(key);
@@ -909,7 +886,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       updatedAt: Number(payload.updatedAt || Date.now()),
       revision: Number(payload.revision || 1),
       deviceId: payload.deviceId || null,
-      source: isMongoProxy ? 'mongodb-rtdb-api' : 'firebase-rtdb-rest',
+      source: isMongoProxy ? 'mongodb-http-api' : 'firebase-rtdb-rest',
       seeded: false
     });
     completePendingForKey(key);
@@ -1318,7 +1295,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       updatedAt: Number(payload.updatedAt || Date.now()),
       revision: Number(payload.revision || 1),
       deviceId: payload.deviceId || core.rawGet('cashtop_device_id') || '',
-      source: isMongoProxy ? 'mongodb-rtdb-api' : 'firebase-rtdb-rest',
+      source: isMongoProxy ? 'mongodb-http-api' : 'firebase-rtdb-rest',
       seeded: false
     }));
     window.dispatchEvent(new CustomEvent('cashtop:remote-applied', { detail: { key, merged: true } }));
