@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v53-r43-isolated-fast-cache';
+const CACHE_VERSION = 'v54-r44-downloads-portal-sync';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = `cash-top-2-remote-static-${CACHE_VERSION}`;
 
@@ -21,6 +21,7 @@ const LOCAL_ASSETS = [
   './cashtop-core.css',
   './cashtop-core.js',
   './cashtop-export.js',
+  './cashtop-download-fix.js',
   './cashtop-logo.png',
   './cashtop-printer.js',
   './cashtop-worker.js',
