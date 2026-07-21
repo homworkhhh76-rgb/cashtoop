@@ -641,11 +641,18 @@
             const table = document.querySelector('.type-table[data-role="items"] .receipt-table tbody');
             if (table) {
                 const items = Array.isArray(inv.items) ? inv.items : [];
-                table.innerHTML = '<tr><th>الصنف</th><th>الوحدة</th><th>الكمية</th><th>السعر</th><th>الاجمالي</th></tr>' + items.slice(0, 8).map(item => {
+                table.innerHTML = '<tr><th>الصنف</th><th>الوحدة</th><th>الكمية</th><th>السعر</th><th>الاجمالي</th></tr>' + items.map(item => {
                     const q = Number(item.qty || 0), p = Number(item.price || 0);
                     const unit = item.selectedUnit === 'unit' ? (item.unitName || 'وحدة') : (item.pieceName || 'حبة');
                     return `<tr><td>${item.name || 'صنف'}</td><td>${unit}</td><td>${q}</td><td>${p.toFixed(2)}</td><td>${(q*p).toFixed(2)}</td></tr>`;
                 }).join('');
+                const tableEl = document.querySelector('.type-table[data-role="items"]');
+                if (tableEl) {
+                    const rows = Math.max(1, items.length);
+                    tableEl.style.height = 'auto';
+                    const neededBottom = tableEl.offsetTop + 70 + (rows * 28) + 220;
+                    document.getElementById('receipt').style.height = Math.max(720, neededBottom) + 'px';
+                }
             }
             document.querySelectorAll('.type-image[data-role="logo"] .content').forEach(c => {
                 const logo = readJson('cashtop_settings', {}).logo || '';
@@ -666,12 +673,14 @@
                 updatedAt: Date.now()
             };
             localStorage.setItem(CASH_TOP_DESIGN_KEY, JSON.stringify(data));
+            window.dispatchEvent(new CustomEvent('cashtop:data-changed', { detail: { key: CASH_TOP_DESIGN_KEY, source: 'invoice-designer' } }));
             try {
-                await window.CashtopFirebase?.syncAll?.({ manual: true });
-                alert('تم حفظ تصميم الفاتورة ومزامنته وتطبيقه على الطباعة بنجاح.');
+                const uploaded = await window.CashtopFirebase?.uploadDataset?.(CASH_TOP_DESIGN_KEY);
+                if (uploaded === false && window.CashtopFirebase?.flushPendingQueue) await window.CashtopFirebase.flushPendingQueue();
+                window.Cashtop?.showToast?.('تم حفظ تصميم الفاتورة وتطبيقه ومزامنته بنجاح.', 'success', 4200);
             } catch (error) {
                 console.warn('Invoice design sync:', error);
-                alert('تم حفظ التصميم على هذا الجهاز، وسيتم مزامنته تلقائياً عند توفر الاتصال.');
+                window.Cashtop?.showToast?.('تم حفظ التصميم وتطبيقه محلياً، وسيتم رفعه تلقائياً عند عودة الاتصال.', 'warning', 5200);
             }
         }
 
@@ -693,9 +702,10 @@
 
         async function restoreDefaultCashTopDesign() {
             localStorage.removeItem(CASH_TOP_DESIGN_KEY);
+            window.dispatchEvent(new CustomEvent('cashtop:data-changed', { detail: { key: CASH_TOP_DESIGN_KEY, source: 'invoice-designer', deleted: true } }));
             makeDefaultCashTopDesign();
-            try { await window.CashtopFirebase?.syncAll?.({ manual: true }); } catch (_) {}
-            alert('تمت استعادة تصميم الفاتورة الافتراضي ومزامنة الإعداد.');
+            try { await window.CashtopFirebase?.uploadDataset?.(CASH_TOP_DESIGN_KEY); } catch (_) {}
+            window.Cashtop?.showToast?.('تمت استعادة تصميم الفاتورة الافتراضي ومزامنة التغيير.', 'success', 4200);
         }
 
         // شعار المصمم يُجلب حصراً من إعدادات الموقع لضمان وجود مصدر واحد متزامن.
