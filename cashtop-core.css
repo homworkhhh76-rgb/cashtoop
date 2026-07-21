@@ -816,14 +816,16 @@ select[data-ct-enhanced="true"] { cursor: pointer; }
   100% { transform: translateX(-250%); }
 }
 
-/* أثناء السحب المباشر من قاعدة البيانات يظهر مؤشر صغير داخل كل سجل ظاهر. */
-.ct-records-pulling tbody tr > td:first-child { position: relative; }
-.ct-records-pulling tbody tr > td:first-child::before {
-  content: ''; display: inline-block; width: 8px; height: 8px; margin-inline-end: 6px;
-  border: 1.5px solid currentColor; border-inline-start-color: transparent; border-radius: 50%;
-  vertical-align: middle; opacity: .55; animation: ctRowSyncSpin .62s linear infinite;
+/* Revision 43: لا نظهر أي دائرة مزامنة بجانب بيانات السجلات. */
+.ct-records-pulling tbody tr > td:first-child::before,
+tbody tr > td .ct-row-spinner,
+tbody tr > td .record-spinner,
+tbody tr > td .fa-spinner,
+tbody tr > td .fa-circle-notch {
+  content: none !important;
+  display: none !important;
+  animation: none !important;
 }
-@keyframes ctRowSyncSpin { to { transform: rotate(360deg); } }
 
 /* Compact all page dialogs instead of full-screen forms. */
 .ct-original-page .modal-overlay { padding: 14px !important; }
@@ -1256,3 +1258,13 @@ textarea:focus, textarea:active,
 .ct-menu-group>summary,.ct-sidebar a,.ct-bottom-nav a,button{transition:transform 120ms cubic-bezier(.2,.8,.2,1),opacity 120ms linear,background-color 120ms linear,border-color 120ms linear!important}
 .ct-menu-group>summary:active,.ct-sidebar a:active,.ct-bottom-nav a:active,button:active{transform:translateZ(0) scale(.985)}
 @media (prefers-reduced-motion:no-preference){.ct-sidebar,.ct-sidebar-overlay,.modal-overlay,.modal-content{will-change:transform,opacity}}
+
+
+/* Revision 43: منع مؤشرات الدوران داخل أي سجل/صف في جميع الشاشات. */
+.ct-original-page table tbody .fa-spin,
+.ct-original-page table tbody [class*="spinner"],
+.ct-original-page .data-row .fa-spin,
+.ct-original-page .record-row .fa-spin {
+  display: none !important;
+  animation: none !important;
+}

@@ -258,6 +258,7 @@
 
   function saveSession(context, account, companyKey, remember) {
     const license = context.license || context.access;
+    if (context.access?.maintenanceMode === true || license?.maintenanceMode === true) { const tenant=encodeURIComponent(context.tenantId||context.companyId||license?.tenantId||license?.companyId||''); location.href=`maintenance.html${tenant?`?tenant=${tenant}`:''}`; throw new Error('النظام قيد الصيانة حالياً.'); }
     const tenantId = String(context.tenantId || context.companyId || license.tenantId || license.companyId || license.id || sanitizeSegment(companyKey));
     const session = {
       mode: 'local', uid: account.id, username: account.username, displayName: account.displayName || account.username,

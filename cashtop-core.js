@@ -1428,11 +1428,68 @@
   function todayCount(items) { return normalizeArrayValue(items, []).filter(isTodayRecord).length; }
   function todayBranchCount(items, branch) { return normalizeArrayValue(items, []).filter(item => sameBranch(item, branch) && isTodayRecord(item)).length; }
 
+  /*
+   * Revision 43: every record list is exposed newest-first at the storage API
+   * boundary. This makes legacy pages, desktop tables and mobile cards agree
+   * without duplicating sorting logic in every screen. The stored dataset stays
+   * tenant-scoped; sorting only affects the projected value returned to a page.
+   */
+  function parseRecordDateValue(value) {
+    if (value == null || value === '') return 0;
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value > 1e11 ? value : 0;
+    }
+    const text = String(value).trim();
+    if (!text) return 0;
+    if (/^\d{12,}$/.test(text)) return Number(text);
+    const ar = text.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})(?:[ T،,]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+    if (ar) {
+      const [, d, m, y, hh='0', mm='0', ss='0'] = ar;
+      const time = new Date(Number(y), Number(m)-1, Number(d), Number(hh), Number(mm), Number(ss)).getTime();
+      return Number.isFinite(time) ? time : 0;
+    }
+    const parsed = Date.parse(text);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function recordNewestEpoch(record) {
+    if (!record || typeof record !== 'object') return 0;
+    const fields = [
+      'createdAt','created_at','createdDate','created_date','timestamp','timeStamp',
+      'updatedAt','updated_at','date','invoiceDate','purchaseDate','paymentDate',
+      'movementDate','transactionDate','orderDate','addedAt','savedAt'
+    ];
+    for (const field of fields) {
+      const value = parseRecordDateValue(record[field]);
+      if (value) return value;
+    }
+    for (const field of ['id','invoiceId','reference','number','code']) {
+      const match = String(record[field] ?? '').match(/(\d{12,})/);
+      if (match) return Number(match[1]) || 0;
+    }
+    return 0;
+  }
+
+  function sortNewestFirstRecords(input) {
+    const list = normalizeArrayValue(input, []);
+    return list.map((record, index) => ({ record, index, epoch: recordNewestEpoch(record) }))
+      .sort((a, b) => (b.epoch - a.epoch) || (b.index - a.index))
+      .map(item => item.record);
+  }
+
   function transformManagedRead(canonical, rawValue) {
     if (rawValue == null) return rawValue;
-    if (canonical === 'cashtop_products') return projectProducts(safeJson(rawValue, []));
-    if (BRANCH_SCOPED_ARRAY_KEYS.has(canonical)) return projectBranchArray(safeJson(rawValue, []));
+    if (canonical === 'cashtop_products') {
+      const projected = safeJson(projectProducts(safeJson(rawValue, [])), []);
+      return JSON.stringify(sortNewestFirstRecords(projected));
+    }
+    if (BRANCH_SCOPED_ARRAY_KEYS.has(canonical)) {
+      const projected = safeJson(projectBranchArray(safeJson(rawValue, [])), []);
+      return JSON.stringify(sortNewestFirstRecords(projected));
+    }
     if (BRANCH_SCOPED_OBJECT_KEYS.has(canonical)) return projectFunds(rawValue);
+    const parsed = safeJson(rawValue, null);
+    if (Array.isArray(parsed)) return JSON.stringify(sortNewestFirstRecords(parsed));
     return rawValue;
   }
 
@@ -2010,6 +2067,7 @@
     session.companyId = companyId;
     if (access.status && access.status !== 'active') return { ok: false, reason: 'stopped' };
     if (access.deleted === true) return { ok: false, reason: 'deleted' };
+    if (access.maintenanceMode === true) return { ok: false, reason: 'maintenance' };
     const accessEnd = access.endAt ? new Date(access.endAt).getTime() : 0;
     if (accessEnd && Number.isFinite(accessEnd) && Date.now() >= accessEnd) return { ok: false, reason: 'expired' };
     if (session.status && session.status !== 'active') return { ok: false, reason: 'stopped' };
@@ -2068,6 +2126,7 @@
   function redirectToLogin(reason) {
     const params = new URLSearchParams();
     if (reason) params.set('reason', reason);
+    if (reason === 'maintenance') { const tenant = encodeURIComponent(companyIdFromSession() || ''); const target = `maintenance.html${tenant ? `?tenant=${tenant}` : ''}`; if (!location.pathname.endsWith('maintenance.html')) location.replace(target); return; }
     const target = `صفحة تسجيل الدخول.html${params.toString() ? `?${params}` : ''}`;
     if (!location.pathname.endsWith(encodeURI('صفحة تسجيل الدخول.html'))) location.replace(target);
   }
@@ -2089,6 +2148,11 @@
     } catch (_) {}
     const globalSession = safeJson(rawGet('cashtop_session'), null);
     if (!globalSession || sessionTenantId(globalSession) === sessionTenantId(currentSession)) rawRemove('cashtop_session');
+    if (reason === 'maintenance') {
+      const target = `maintenance.html${companyId ? `?tenant=${encodeURIComponent(companyId)}` : ''}`;
+      if (!location.pathname.endsWith('maintenance.html')) location.replace(target);
+      return;
+    }
     redirectToLogin(reason || 'logout');
   }
 
@@ -3432,7 +3496,7 @@
     archiveRecords, readArchivedRecords, compactCompletedData,
     getSyncQueue, enqueueSyncOperation, completeSyncOperation, clearSyncQueue, updateSyncBadge, restoreSyncQueueBackup, migrateLegacySyncQueues,
     setSyncProgress, restoreDurableCompanyData,
-    getSystemSettings, getProfitRate, salePriceFromCost, applySystemBranding, recordIdentity,
+    getSystemSettings, getProfitRate, salePriceFromCost, applySystemBranding, recordIdentity, sortNewestFirstRecords,
     debounce, runWhenIdle, renderVirtualRows, runWorkerTask, queryRecords, atomicSetItems, recoverAtomicTransactions
   });
 

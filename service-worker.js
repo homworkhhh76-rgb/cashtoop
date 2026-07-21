@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v51-r40-customer-portal';
+const CACHE_VERSION = 'v53-r43-isolated-fast-cache';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = `cash-top-2-remote-static-${CACHE_VERSION}`;
 
@@ -43,6 +43,7 @@ const LOCAL_ASSETS = [
   './printer-settings.html',
   './invoice-designer.html',
   './customer-portal.html',
+  './maintenance.html',
   './products.html',
   './qr.mp3',
   './sales-offers.html',
@@ -94,8 +95,8 @@ const REMOTE_STATIC_HOSTS = new Set([
 /* Prevent background network refreshes from competing with UI rendering.
  * HTML can refresh relatively often; immutable app assets refresh much less. */
 const LOCAL_REFRESH_AT = new Map();
-const HTML_REFRESH_MS = 45 * 1000;
-const STATIC_REFRESH_MS = 5 * 60 * 1000;
+const HTML_REFRESH_MS = 20 * 1000;
+const STATIC_REFRESH_MS = 2 * 60 * 1000;
 let shellVerificationPromise = null;
 let remoteWarmPromise = null;
 
