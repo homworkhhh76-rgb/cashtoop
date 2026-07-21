@@ -1268,3 +1268,47 @@ textarea:focus, textarea:active,
   display: none !important;
   animation: none !important;
 }
+
+
+/* ===== Revision 46: Ultra-fast cached navigation / high-refresh rendering ===== */
+:root { --ct-ultrafast-motion: 90ms; }
+html { scroll-behavior: auto !important; }
+body { text-rendering: optimizeSpeed; }
+.ct-page-host,
+.ct-original-page,
+.ct-content,
+main {
+  contain: layout style;
+}
+/* لا نحجز طبقة GPU إلا للعناصر المتحركة فعلياً. */
+.ct-sidebar,
+.ct-sidebar-overlay,
+.ct-bottom-nav,
+.modal-overlay.active,
+.ct-modal.open {
+  transform: translate3d(0,0,0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.ct-menu-group > summary,
+.ct-sidebar a,
+.ct-bottom-nav a,
+button,
+.btn {
+  transition-duration: var(--ct-ultrafast-motion) !important;
+  transition-timing-function: cubic-bezier(.2,.8,.2,1) !important;
+}
+/* تقليل إعادة الرسم للعناصر البعيدة عن الشاشة دون التأثير على الجداول أو النماذج. */
+.ct-original-page > section,
+.ct-page-host > section,
+.ct-card-grid > .ct-card,
+.dashboard-grid > .card {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 360px;
+}
+@media (prefers-reduced-motion: no-preference) and (min-resolution: 1dppx) {
+  .ct-sidebar a:hover,
+  .ct-menu-group > summary:hover,
+  button:hover,
+  .btn:hover { transform: translate3d(0,0,0); }
+}

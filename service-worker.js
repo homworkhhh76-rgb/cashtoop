@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v54-r44-downloads-portal-sync';
+const CACHE_VERSION = 'v55-r46-ultrafast-cache';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = `cash-top-2-remote-static-${CACHE_VERSION}`;
 
@@ -18,7 +18,7 @@ const LOCAL_ASSETS = [
   './barcode-tools.js',
   './branches.html',
   './cashier.html',
-  './cashtop-rev45-live-portal',
+  './cashtop-core.css',
   './cashtop-core.js',
   './cashtop-export.js',
   './cashtop-download-fix.js',
@@ -96,8 +96,8 @@ const REMOTE_STATIC_HOSTS = new Set([
 /* Prevent background network refreshes from competing with UI rendering.
  * HTML can refresh relatively often; immutable app assets refresh much less. */
 const LOCAL_REFRESH_AT = new Map();
-const HTML_REFRESH_MS = 20 * 1000;
-const STATIC_REFRESH_MS = 2 * 60 * 1000;
+const HTML_REFRESH_MS = 5 * 60 * 1000;
+const STATIC_REFRESH_MS = 30 * 60 * 1000;
 let shellVerificationPromise = null;
 let remoteWarmPromise = null;
 
@@ -277,6 +277,9 @@ self.addEventListener('activate', event => {
       try { await self.registration.navigationPreload.disable(); } catch (_) {}
     }
     await self.clients.claim();
+    // تأكد من اكتمال كاش التطبيق ثم سخّن مكتبات العرض في الخلفية.
+    await ensureLocalShell().catch(() => null);
+    warmRemoteStaticAssetsOnce().catch(() => null);
     const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     clients.forEach(client => client.postMessage({ type: 'CASHTOP_CACHE_READY', cache: APP_CACHE, version: CACHE_VERSION }));
   })());
