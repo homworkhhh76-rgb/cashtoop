@@ -1312,3 +1312,202 @@ button,
   button:hover,
   .btn:hover { transform: translate3d(0,0,0); }
 }
+
+
+/* ===== Revision 47: global viewport/layout repair + stable fixed cashier action bar ===== */
+html, body {
+  max-width: 100vw !important;
+  overflow-x: hidden !important;
+}
+
+.ct-app-shell,
+.ct-main-wrapper,
+.ct-page-host,
+.ct-original-page {
+  box-sizing: border-box !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+
+/* Prevent legacy page wrappers from turning into giant white fixed layers on desktop. */
+.ct-original-page > :not(.modal-overlay):not(.desktop-fixed-footer) {
+  max-width: 100% !important;
+}
+.ct-original-page .modal-overlay:not(.active) {
+  pointer-events: none !important;
+}
+
+/* Every main page container must size itself to content, not to a stale 100vh. */
+.ct-original-page .dashboard-container,
+.ct-original-page .main-container,
+.ct-original-page .page-container,
+.ct-original-page .content-container,
+.ct-original-page .app-container,
+.ct-original-page .pos-container,
+.ct-original-page .settings-container,
+.ct-original-page .reports-container {
+  min-height: 0 !important;
+  height: auto !important;
+  box-sizing: border-box !important;
+}
+
+/* Tables/cards stay inside the visible viewport on laptops, tablets and phones. */
+.ct-original-page .table-responsive,
+.ct-original-page .table-container,
+.ct-original-page .table-wrapper,
+.ct-original-page .table-wrap {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow-x: auto !important;
+}
+.ct-original-page table { max-width: 100% !important; }
+.ct-original-page .card,
+.ct-original-page .settings-card,
+.ct-original-page .pos-section,
+.ct-original-page .panel,
+.ct-original-page .box {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Cashier: the summary/save bar is always a compact fixed bar at the real bottom. */
+@media (min-width: 993px) {
+  html.ct-cashier-page .ct-page-host {
+    padding-bottom: 92px !important;
+    overflow-x: hidden !important;
+  }
+  html.ct-cashier-page .desktop-fixed-footer {
+    position: fixed !important;
+    inset: auto 0 0 0 !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 64px !important;
+    max-height: 92px !important;
+    margin: 0 !important;
+    padding: 10px 18px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 16px !important;
+    overflow: visible !important;
+    background: #f8fafc !important;
+    z-index: 2400 !important;
+  }
+  html.ct-cashier-page .desktop-fixed-footer .footer-summary-grid,
+  html.ct-cashier-page .desktop-fixed-footer .footer-actions-box {
+    min-width: 0 !important;
+    flex-wrap: nowrap !important;
+  }
+  html.ct-cashier-page .desktop-fixed-footer .footer-summary-grid { gap: 18px !important; }
+  html.ct-cashier-page .desktop-fixed-footer button { white-space: nowrap !important; }
+}
+
+@media (max-width: 1200px) and (min-width: 993px) {
+  html.ct-cashier-page .desktop-fixed-footer { padding: 8px 10px !important; gap: 8px !important; }
+  html.ct-cashier-page .desktop-fixed-footer .footer-summary-grid { gap: 10px !important; }
+  html.ct-cashier-page .desktop-fixed-footer .footer-summary-item span { font-size: 10px !important; }
+  html.ct-cashier-page .desktop-fixed-footer .footer-summary-item strong { font-size: 13px !important; }
+  html.ct-cashier-page .desktop-fixed-footer .footer-summary-item.highlight-total strong { font-size: 17px !important; }
+  html.ct-cashier-page .desktop-fixed-footer .btn-basket-action,
+  html.ct-cashier-page .desktop-fixed-footer .btn-action-invoice { padding: 8px 10px !important; font-size: 11px !important; }
+}
+
+@media (max-width: 992px) {
+  html.ct-cashier-page .desktop-fixed-footer { display: none !important; }
+  .ct-original-page .pos-container { width: 100% !important; }
+}
+
+/* Login/Customers/Warehouses/Branches: keep dialogs inside the viewport.
+   Do not force a desktop width here: each page already defines the intended
+   compact modal width, and overriding it was what made dialogs look full-screen. */
+.ct-original-page .modal-box,
+.ct-original-page .modal-content,
+.ct-original-page .modal-container {
+  max-height: calc(100dvh - 28px) !important;
+}
+@media (max-width: 768px) {
+  .ct-original-page .modal-box,
+  .ct-original-page .modal-content,
+  .ct-original-page .modal-container {
+    width: min(94vw, 620px) !important;
+    max-width: min(94vw, 620px) !important;
+  }
+}
+
+
+/* ===== Revision 48: desktop viewport stability, centered compact dialogs, fixed cashier footer =====
+   Revision 46's layout containment/content-visibility optimization created new
+   containing blocks for fixed descendants on desktop. That made overlays and
+   the cashier footer follow the scrollable page instead of the real viewport,
+   and could leave large blank/white regions while sections were skipped.
+   Keep the phone layout untouched; repair desktop/laptop only. */
+@media (min-width: 769px) {
+  .ct-page-host,
+  .ct-original-page,
+  main.ct-page-host {
+    contain: none !important;
+  }
+
+  .ct-original-page > section,
+  .ct-page-host > section {
+    content-visibility: visible !important;
+    contain: none !important;
+    contain-intrinsic-size: auto !important;
+  }
+
+  .ct-page-host .modal-overlay,
+  .ct-original-page .modal-overlay,
+  .ct-page-host .ct-modal,
+  .ct-original-page .ct-modal {
+    position: fixed !important;
+    inset: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    overflow: auto !important;
+  }
+
+  .ct-page-host .modal-overlay.active,
+  .ct-original-page .modal-overlay.active,
+  .ct-page-host .ct-modal.open,
+  .ct-original-page .ct-modal.open {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .ct-page-host .modal-overlay > .modal-box,
+  .ct-page-host .modal-overlay > .modal-content,
+  .ct-page-host .modal-overlay > .modal-container,
+  .ct-original-page .modal-overlay > .modal-box,
+  .ct-original-page .modal-overlay > .modal-content,
+  .ct-original-page .modal-overlay > .modal-container,
+  .ct-page-host .ct-modal > .ct-modal-box,
+  .ct-original-page .ct-modal > .ct-modal-box {
+    margin: auto !important;
+    max-height: calc(100dvh - 48px) !important;
+    overflow-y: auto !important;
+  }
+
+  html.ct-cashier-page .ct-page-host {
+    padding-bottom: 92px !important;
+  }
+
+  html.ct-cashier-page .desktop-fixed-footer {
+    position: fixed !important;
+    right: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    top: auto !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    margin: 0 !important;
+    transform: none !important;
+    z-index: 2400 !important;
+  }
+}

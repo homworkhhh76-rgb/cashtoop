@@ -83,79 +83,73 @@
     const is58 = type === 'thermal-58';
     const isA4 = type === 'paper-a4';
     const width = is58 ? '58mm' : isA4 ? '190mm' : '80mm';
-    const padding = is58 ? '2.5mm 3mm' : isA4 ? '10mm 12mm' : '3mm 4mm';
+    const padding = is58 ? '0.6mm 2mm 1.4mm' : isA4 ? '7mm 10mm' : '0.8mm 2.5mm 1.8mm';
     return `
       *{box-sizing:border-box;font-family:'Cairo',Arial,Tahoma,sans-serif}
       html,body{margin:0;padding:0;background:#fff;color:#000}
       .ct-print-receipt{
         background:#fff;color:#000;width:${width};max-width:${width};padding:${padding};
-        direction:rtl;margin:0 auto;position:relative;font-size:${isA4 ? '14px' : is58 ? '11px' : '13px'};
-        -webkit-print-color-adjust:exact;print-color-adjust:exact
+        direction:rtl;margin:0 auto;position:relative;font-size:${isA4 ? '12px' : is58 ? '8.5px' : '10px'};
+        line-height:1.25;-webkit-print-color-adjust:exact;print-color-adjust:exact
       }
-      .ct-print-receipt .receipt-header{text-align:center;margin-bottom:10px}
-      .ct-print-receipt .receipt-logo{max-width:90px;max-height:90px;object-fit:contain;filter:grayscale(100%) contrast(200%);margin:0 auto 5px;display:block}
-      .ct-print-receipt .store-name{font-size:22px;font-weight:900;margin:0}
-      .ct-print-receipt .branch-name{font-size:14px;margin:5px 0;font-weight:600}
-      .ct-print-receipt .invoice-title{font-size:18px;font-weight:800;margin:10px 0}
-      .ct-print-receipt .dashed-line{border-top:1.5px dashed #000;margin:10px 0;width:100%}
+      .ct-print-receipt .receipt-header{text-align:center;margin:0 0 3px}
+      .ct-print-receipt .receipt-logo{max-width:62px;max-height:46px;object-fit:contain;filter:grayscale(100%) contrast(200%);margin:0 auto 2px;display:block}
+      .ct-print-receipt .store-name{font-size:17px;line-height:1.15;font-weight:900;margin:0}
+      .ct-print-receipt .dashed-line{border-top:1px dashed #000;margin:5px 0;width:100%}
       .ct-print-receipt .info-grid{
-        display:grid;grid-template-columns:auto 1fr auto 1fr;gap:6px 10px;
-        font-size:12.5px;font-weight:600;margin-bottom:5px;align-items:center
+        display:grid;grid-template-columns:auto minmax(0,1fr) auto minmax(0,1fr);gap:3px 6px;
+        font-size:9.5px;font-weight:600;margin:0;align-items:center
       }
-      .ct-print-receipt .info-label{font-weight:400;color:#333}
-      .ct-print-receipt .info-value{font-weight:700;text-align:right;min-width:0;overflow-wrap:anywhere}
+      .ct-print-receipt .info-label{font-weight:500;color:#222;white-space:nowrap}
+      .ct-print-receipt .info-value{font-weight:700;text-align:right;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .ct-print-receipt .receipt-table{
-        width:100%;border-collapse:collapse;margin-bottom:5px;font-weight:700;
-        font-size:12.5px;table-layout:fixed
+        width:100%;border-collapse:collapse;margin:0;font-weight:700;
+        font-size:9.5px;table-layout:fixed
       }
-      .ct-print-receipt .receipt-table th{padding:6px 0}
-      .ct-print-receipt .receipt-table td{padding:4px 0;font-weight:600;overflow-wrap:anywhere}
-      .ct-print-receipt .receipt-table th,.ct-print-receipt .receipt-table td{text-align:center}
+      .ct-print-receipt .receipt-table th{padding:3px 0}
+      .ct-print-receipt .receipt-table td{padding:2px 0;font-weight:600;overflow:hidden;text-overflow:ellipsis}
+      .ct-print-receipt .receipt-table th,.ct-print-receipt .receipt-table td{text-align:center;line-height:1.2}
       .ct-print-receipt .receipt-table th:first-child,.ct-print-receipt .receipt-table td:first-child{text-align:right}
       .ct-print-receipt .receipt-table th:last-child,.ct-print-receipt .receipt-table td:last-child{text-align:left}
+      .ct-print-receipt .receipt-table .item-name{white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;max-width:0}
       .ct-print-receipt .totals-horizontal-box{
-        display:flex;justify-content:space-between;border:2px solid #000;border-radius:8px;
-        padding:8px 5px;margin:15px 0;background:#fff
+        display:flex;justify-content:space-between;border:1.5px solid #000;border-radius:5px;
+        padding:4px 2px;margin:6px 0;background:#fff
       }
       .ct-print-receipt .total-col{
         flex:1;display:flex;flex-direction:column;align-items:center;border-left:1px dashed #777;min-width:0
       }
       .ct-print-receipt .total-col:last-child{border-left:none}
-      .ct-print-receipt .total-label{font-size:12px;font-weight:700;margin-bottom:4px;color:#222}
-      .ct-print-receipt .total-val{font-size:14px;font-weight:900;overflow-wrap:anywhere;text-align:center}
-      .ct-print-receipt .receipt-footer{text-align:center;margin-top:10px;font-weight:600}
-      .ct-print-receipt .items-count{padding-bottom:5px;font-size:14px;font-weight:700}
-      .ct-print-receipt .terms{font-size:11px;margin-top:5px;line-height:1.5;font-weight:600}
-      .ct-print-receipt .barcode-container{text-align:center;margin-top:10px}
-      .ct-print-receipt .barcode-container svg{max-width:100%;height:35px}
-      .ct-print-receipt .barcode-fallback{font-family:monospace;font-size:12px;letter-spacing:2px;font-weight:700}
+      .ct-print-receipt .total-label{font-size:8.5px;font-weight:700;margin-bottom:1px;color:#222;white-space:nowrap}
+      .ct-print-receipt .total-val{font-size:10px;font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;max-width:100%}
+      .ct-print-receipt .receipt-footer{text-align:center;margin-top:3px;font-weight:600}
+      .ct-print-receipt .terms{font-size:8px;margin-top:2px;line-height:1.35;font-weight:600}
+      .ct-print-receipt .barcode-container{text-align:center;margin-top:4px}
+      .ct-print-receipt .barcode-container svg{max-width:100%;height:25px}
+      .ct-print-receipt .barcode-fallback{font-family:monospace;font-size:9px;letter-spacing:1px;font-weight:700}
       ${is58 ? `
-        .ct-print-receipt .receipt-logo{max-width:70px;max-height:70px}
-        .ct-print-receipt .store-name{font-size:17px}
-        .ct-print-receipt .branch-name{font-size:10px}
-        .ct-print-receipt .invoice-title{font-size:14px;margin:7px 0}
-        .ct-print-receipt .info-grid{gap:4px 5px;font-size:8.5px}
-        .ct-print-receipt .receipt-table{font-size:8px}
-        .ct-print-receipt .receipt-table th{padding:5px 1px}
-        .ct-print-receipt .receipt-table td{padding:4px 1px}
-        .ct-print-receipt .totals-horizontal-box{padding:6px 2px;margin:12px 0}
-        .ct-print-receipt .total-label{font-size:8px}
-        .ct-print-receipt .total-val{font-size:9px}
-        .ct-print-receipt .items-count{font-size:9px}
-        .ct-print-receipt .terms{font-size:7.5px}
-        .ct-print-receipt .barcode-container svg{height:28px}
+        .ct-print-receipt .receipt-logo{max-width:50px;max-height:38px}
+        .ct-print-receipt .store-name{font-size:14px}
+        .ct-print-receipt .info-grid{gap:2px 4px;font-size:7.3px}
+        .ct-print-receipt .receipt-table{font-size:7px}
+        .ct-print-receipt .receipt-table th{padding:2px 0}
+        .ct-print-receipt .receipt-table td{padding:1.5px 0}
+        .ct-print-receipt .totals-horizontal-box{padding:3px 1px;margin:5px 0}
+        .ct-print-receipt .total-label{font-size:6.7px}
+        .ct-print-receipt .total-val{font-size:7.6px}
+        .ct-print-receipt .terms{font-size:6.5px}
+        .ct-print-receipt .barcode-container svg{height:21px}
       ` : ''}
       ${isA4 ? `
-        .ct-print-receipt .receipt-logo{max-width:110px;max-height:110px}
-        .ct-print-receipt .store-name{font-size:26px}
-        .ct-print-receipt .branch-name{font-size:15px}
-        .ct-print-receipt .invoice-title{font-size:20px}
-        .ct-print-receipt .info-grid{font-size:13px}
-        .ct-print-receipt .receipt-table{font-size:12.5px}
+        .ct-print-receipt .receipt-logo{max-width:90px;max-height:72px}
+        .ct-print-receipt .store-name{font-size:22px}
+        .ct-print-receipt .info-grid{font-size:11px;gap:4px 8px}
+        .ct-print-receipt .receipt-table{font-size:10.5px}
+        .ct-print-receipt .total-label{font-size:10px}
+        .ct-print-receipt .total-val{font-size:12px}
       ` : ''}
     `;
   }
-
 
 
   function customDesignCss(type) {
@@ -173,6 +167,7 @@
       .ct-custom-receipt .type-circle .content{border:2px solid #000!important;border-radius:50%}
       .ct-custom-receipt .receipt-table{width:100%;border-collapse:collapse;font-size:inherit;text-align:center;table-layout:fixed}
       .ct-custom-receipt .receipt-table th,.ct-custom-receipt .receipt-table td{border-bottom:1px dashed #000;padding:4px 2px;min-width:20px;overflow-wrap:anywhere;background:transparent!important;color:inherit!important}
+      .ct-custom-receipt .receipt-table th:first-child,.ct-custom-receipt .receipt-table td:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .ct-custom-receipt .resizer,.ct-custom-receipt .delete-btn{display:none!important}
       .ct-custom-receipt img{max-width:100%;object-fit:contain}
       @media print{html,body{background:#fff!important}.ct-custom-receipt{box-shadow:none!important;border:none!important;background:#fff!important}.ct-custom-receipt *{visibility:visible!important}}
@@ -297,7 +292,7 @@
     const rows = items.map(item => {
       const qty = number(item.qty);
       const price = number(item.price);
-      return `<tr><td style="width:35%">${escapeHtml(item.name || 'صنف')}</td><td style="width:15%">${escapeHtml(itemUnit(item))}</td><td style="width:15%">${escapeHtml(Number(qty.toFixed(6)))}</td><td style="width:17%">${money(price)}</td><td style="width:18%">${money(qty * price)}</td></tr>`;
+      return `<tr><td class="item-name" title="${escapeHtml(item.name || 'صنف')}" style="width:35%">${escapeHtml(item.name || 'صنف')}</td><td style="width:15%">${escapeHtml(itemUnit(item))}</td><td style="width:15%">${escapeHtml(Number(qty.toFixed(6)))}</td><td style="width:17%">${money(price)}</td><td style="width:18%">${money(qty * price)}</td></tr>`;
     }).join('') || '<tr><td colspan="5">لا توجد أصناف</td></tr>';
     const barcode = printer.showBarcode !== false
       ? `<div class="barcode-container"><svg class="ct-invoice-barcode" data-code="${escapeHtml(invoiceNumber(invoice))}"></svg></div>`
@@ -309,13 +304,12 @@
       type,
       css: receiptCss(type),
       html: `<div class="ct-print-receipt ${type}">
-        <div class="receipt-header">${logo}<p class="store-name">${escapeHtml(settings.companyName || 'كاش توب')}</p><p class="branch-name">${escapeHtml(invoice?.branchName || settings.branchName || 'الفرع الرئيسي')}</p><p class="invoice-title">فاتورة بيع ضريبية</p></div>
+        <div class="receipt-header">${logo}<p class="store-name">${escapeHtml(settings.companyName || 'كاش توب')}</p></div>
         <div class="dashed-line"></div>
         <div class="info-grid">
           <span class="info-label">رقم العملية:</span><span class="info-value">${escapeHtml(invoiceNumber(invoice))}</span><span class="info-label">التاريخ:</span><span class="info-value">${escapeHtml(dateText)}</span>
-          <span class="info-label">الكاشير:</span><span class="info-value">${escapeHtml(invoice?.user || 'المدير')}</span><span class="info-label">الوقت:</span><span class="info-value">${escapeHtml(timeText)}</span>
-          <span class="info-label">العميل:</span><span class="info-value">${escapeHtml(invoice?.customer || 'عميل نقدي')}</span><span class="info-label">الجوال:</span><span class="info-value">${escapeHtml(invoice?.phone || '-')}</span>
-          <span class="info-label">الدفع:</span><span class="info-value">${escapeHtml(invoice?.paymentMethod || 'نقداً')}</span><span></span><span></span>
+          <span class="info-label">الوقت:</span><span class="info-value">${escapeHtml(timeText)}</span><span class="info-label">العميل:</span><span class="info-value">${escapeHtml(invoice?.customer || 'عميل نقدي')}</span>
+          <span class="info-label">الجوال:</span><span class="info-value">${escapeHtml(invoice?.phone || '-')}</span><span></span><span></span>
         </div>
         <div class="dashed-line"></div>
         <table class="receipt-table"><thead><tr><th>الصنف</th><th>الوحدة</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead><tbody>${rows}</tbody></table>
@@ -326,7 +320,7 @@
           <div class="total-col"><span class="total-label">المدفوع</span><span class="total-val">${money(paid)} ${escapeHtml(currency)}</span></div>
           <div class="total-col"><span class="total-label">المتبقي</span><span class="total-val">${money(remaining)} ${escapeHtml(currency)}</span></div>
         </div>
-        <div class="receipt-footer"><div class="items-count">عدد الاصناف المباعة <span>${items.length}</span></div><div class="dashed-line"></div>${footer}${barcode}</div>
+        <div class="receipt-footer">${footer}${barcode}</div>
       </div>`
     };
   }
@@ -648,9 +642,10 @@
     const data = canvasToEscPosRaster(canvas);
     const copies = Math.min(10, Math.max(1, parseInt(printer.printCopies, 10) || 1));
     for (let copy = 0; copy < copies; copy += 1) {
-      for (let offset = 0; offset < data.length; offset += 100) {
-        await writeBleChunk(characteristic, data.slice(offset, Math.min(offset + 100, data.length)));
-        await sleep(10);
+      const bleChunkSize = Math.max(20, Math.min(64, Number(printer.bluetoothChunkSize) || 20));
+      for (let offset = 0; offset < data.length; offset += bleChunkSize) {
+        await writeBleChunk(characteristic, data.slice(offset, Math.min(offset + bleChunkSize, data.length)));
+        await sleep(characteristic.properties?.writeWithoutResponse ? 12 : 6);
       }
     }
     return { ok: true, mode: 'bluetooth', copies };
@@ -802,13 +797,21 @@
 
     if (printer.bluetoothEnabled === true) {
       try {
-        return await printBluetooth(invoice, { ...options, printer, prompt: true });
+        // First reconnect silently to the previously authorised printer. If the browser
+        // cannot restore it, ask once for the printer instead of silently skipping Bluetooth.
+        try { return await printBluetooth(invoice, { ...options, printer, prompt: false }); }
+        catch (_) { return await printBluetooth(invoice, { ...options, printer, prompt: true }); }
       } catch (error) {
         console.warn('[CASH TOP] Bluetooth printer unavailable:', error);
         if (options.bluetoothFallback === false) throw error;
       }
     }
     return systemPrint(invoice, { ...options, printer });
+  }
+
+
+  async function printReceiptData(invoice, options = {}) {
+    return printInvoice(invoice, options);
   }
 
   window.CashtopPrinter = {
@@ -818,6 +821,7 @@
     buildReceiptMarkup,
     renderInvoiceCanvas,
     printInvoice,
+    printReceiptData,
     systemPrint,
     printBluetooth,
     printSerial,

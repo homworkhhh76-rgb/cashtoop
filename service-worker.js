@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v55-r46-ultrafast-cache';
+const CACHE_VERSION = 'v57-r48-desktop-modal-footer-compact-print';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = `cash-top-2-remote-static-${CACHE_VERSION}`;
 
