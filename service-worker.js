@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v50-r39-invoice-designer';
+const CACHE_VERSION = 'v51-r40-customer-portal';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = `cash-top-2-remote-static-${CACHE_VERSION}`;
 
@@ -42,6 +42,7 @@ const LOCAL_ASSETS = [
   './offline.html',
   './printer-settings.html',
   './invoice-designer.html',
+  './customer-portal.html',
   './products.html',
   './qr.mp3',
   './sales-offers.html',

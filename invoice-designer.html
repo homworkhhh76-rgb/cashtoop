@@ -134,8 +134,9 @@
                 <button onclick="addElement('table')" style="grid-column: span 2;"><i class="fa-solid fa-table"></i> جدول</button>
             </div>
             <div style="margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 10px;">
-                <label style="font-size: 12px; display:block; margin-bottom: 5px;"><i class="fa-solid fa-images"></i> إضافة صورة (تضاف كعنصر جديد):</label>
-                <input type="file" id="logoUpload" accept="image/*" onchange="addLogo(event)">
+                <label style="font-size: 12px; display:block; margin-bottom: 5px;"><i class="fa-solid fa-image"></i> شعار الفاتورة:</label>
+                <button type="button" onclick="useSystemLogo()" style="width:100%;background:#0f766e"><i class="fa-solid fa-wand-magic-sparkles"></i> جلب شعار الموقع</button>
+                <small style="display:block;margin-top:6px;color:#64748b;line-height:1.6">يتم جلب الشعار المحفوظ في إعدادات النظام، وأي تغيير لاحق على شعار الموقع يتزامن تلقائياً مع تصميم الفاتورة.</small>
             </div>
         </div>
 
@@ -219,6 +220,9 @@
         <div id="receipt" class="receipt-container size-80"></div>
     </div>
 
+    <script src="firebase-config.js"></script>
+    <script src="cashtop-core.js"></script>
+    <script src="firebase-sync.js"></script>
     <script>
         let selectedElements = new Set();
         let zIndexCounter = 10;
@@ -649,18 +653,26 @@
             });
         }
 
-        function saveCashTopDesign() {
+        async function saveCashTopDesign() {
             clearSelection();
+            syncDesignerPreview();
             const receipt = document.getElementById('receipt');
             const data = {
-                version: 1,
+                version: 2,
                 paperSize: document.getElementById('paperSize').value,
                 receiptHTML: receipt.innerHTML,
                 receiptHeight: receipt.style.height || receipt.offsetHeight + 'px',
-                savedAt: new Date().toISOString()
+                savedAt: new Date().toISOString(),
+                updatedAt: Date.now()
             };
             localStorage.setItem(CASH_TOP_DESIGN_KEY, JSON.stringify(data));
-            alert('تم حفظ تصميم الفاتورة وتطبيقه على الطباعة بنجاح.');
+            try {
+                await window.CashtopFirebase?.syncAll?.({ manual: true });
+                alert('تم حفظ تصميم الفاتورة ومزامنته وتطبيقه على الطباعة بنجاح.');
+            } catch (error) {
+                console.warn('Invoice design sync:', error);
+                alert('تم حفظ التصميم على هذا الجهاز، وسيتم مزامنته تلقائياً عند توفر الاتصال.');
+            }
         }
 
         function loadCurrentCashTopDesign() {
@@ -679,31 +691,26 @@
             alert('تم جلب تصميم الفاتورة الحالي.');
         }
 
-        function restoreDefaultCashTopDesign() {
+        async function restoreDefaultCashTopDesign() {
             localStorage.removeItem(CASH_TOP_DESIGN_KEY);
             makeDefaultCashTopDesign();
-            alert('تمت استعادة تصميم الفاتورة الافتراضي. احفظ التصميم إذا أردت اعتماده للطباعة.');
+            try { await window.CashtopFirebase?.syncAll?.({ manual: true }); } catch (_) {}
+            alert('تمت استعادة تصميم الفاتورة الافتراضي ومزامنة الإعداد.');
         }
 
-        // رفع شعار واحد فقط: يستبدل السابق في النظام وفي تصميم الفاتورة.
-        addLogo = function(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const settings = readJson('cashtop_settings', {});
-                settings.logo = e.target.result;
-                localStorage.setItem('cashtop_settings', JSON.stringify(settings));
-                document.querySelectorAll('.type-image[data-role="logo"]').forEach(el => el.remove());
-                const el = document.createElement('div');
-                el.className = 'draggable-item type-image'; el.dataset.role = 'logo';
-                el.style.cssText = 'left:100px;top:15px;width:100px;height:75px;z-index:'+(zIndexCounter++);
-                el.innerHTML = `<div class="content" style="width:100%;height:100%;background-image:url('${e.target.result}');background-size:contain;background-position:center;background-repeat:no-repeat"></div><div class="resizer w"></div><div class="resizer h"></div><div class="resizer wh"></div>`;
-                document.getElementById('receipt').appendChild(el); makeInteractable(el); clearSelection(); setActive(el);
-            };
-            reader.readAsDataURL(file);
-        };
+        // شعار المصمم يُجلب حصراً من إعدادات الموقع لضمان وجود مصدر واحد متزامن.
+        function useSystemLogo() {
+            const logo = readJson('cashtop_settings', {}).logo || '';
+            if (!logo) return alert('لا يوجد شعار محفوظ في إعدادات النظام. أضف شعار الموقع أولاً.');
+            document.querySelectorAll('.type-image[data-role="logo"]').forEach(el => el.remove());
+            const el = document.createElement('div');
+            el.className = 'draggable-item type-image'; el.dataset.role = 'logo';
+            el.style.cssText = 'left:100px;top:15px;width:100px;height:75px;z-index:'+(zIndexCounter++);
+            el.innerHTML = `<div class="content" style="width:100%;height:100%;background-image:url('${logo}');background-size:contain;background-position:center;background-repeat:no-repeat"></div><div class="resizer w"></div><div class="resizer h"></div><div class="resizer wh"></div>`;
+            document.getElementById('receipt').appendChild(el); makeInteractable(el); clearSelection(); setActive(el);
+        }
 
+        window.addEventListener('cashtop:remote-applied', event => { if (event.detail?.key === CASH_TOP_DESIGN_KEY) loadCurrentCashTopDesign(); });
         window.addEventListener('DOMContentLoaded', () => {
             syncMockDataFromCashTop();
             const existing = readJson(CASH_TOP_DESIGN_KEY, null);

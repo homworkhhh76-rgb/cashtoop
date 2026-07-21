@@ -268,6 +268,15 @@
                         </div>
                     </div>
 
+
+                    <div class="form-group" style="grid-column:1/-1;">
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <input type="text" class="form-control" id="sysCustomerPortalUrl" readonly placeholder="سيظهر رابط بوابة العملاء هنا" style="direction:ltr;text-align:left;">
+                            <button type="button" class="btn-logo-url" title="نسخ الرابط" onclick="copyCustomerPortalUrl()"><i class="fa-solid fa-copy"></i></button>
+                        </div>
+                        <label for="sysCustomerPortalUrl">رابط صفحة العملاء المستقلة</label>
+                        <small style="color:#718096;display:block;margin-top:5px">الرابط خاص بهذه الشركة وينتهي بمفتاح الشركة. لا يحتوي على قوائم أو روابط إلى لوحة الإدارة.</small>
+                    </div>
                     <div class="form-group">
                         <input type="tel" class="form-control" id="sysCompanyPhone" placeholder="05xxxxxxxx" required>
                         <label for="sysCompanyPhone">رقم جوال الشركة</label>
@@ -499,6 +508,7 @@
                 document.getElementById('sysFractionQtyToggle').checked = sysSettings.allowFractionQty !== false;
                 document.getElementById('sysQuantityStep').value = Number(sysSettings.quantityStep || 0.001);
                 updateFractionSettingsState();
+                updateCustomerPortalUrl(sysSettings);
                 
                 if (sysSettings.logo) {
                     savedLogoData = sysSettings.logo;
@@ -681,6 +691,22 @@
             catch (error) { console.warn('Password sync:', error); }
         }
 
+        function buildCustomerPortalUrl() {
+            const session = window.Cashtop?.getSession?.() || {};
+            const companyKey = String(session.companyKey || '').trim();
+            const base = location.href.split('/').slice(0, -1).join('/');
+            return companyKey ? `${base}/customer-portal.html#/${encodeURIComponent(companyKey)}` : `${base}/customer-portal.html`;
+        }
+        function updateCustomerPortalUrl(settings = {}) {
+            const input = document.getElementById('sysCustomerPortalUrl');
+            if (input) input.value = settings.customerPortalUrl || buildCustomerPortalUrl();
+        }
+        async function copyCustomerPortalUrl() {
+            const url = document.getElementById('sysCustomerPortalUrl')?.value || buildCustomerPortalUrl();
+            try { await navigator.clipboard.writeText(url); showToast('تم نسخ رابط بوابة العملاء.', 'success'); }
+            catch (_) { prompt('انسخ رابط بوابة العملاء:', url); }
+        }
+
         function saveSystemSettings(event) {
             event.preventDefault();
             if (!window.Cashtop?.can?.('settings.edit')) { showToast('لا تملك صلاحية تعديل الإعدادات', 'error'); return; }
@@ -698,6 +724,7 @@
                 allowFractionQty: document.getElementById('sysFractionQtyToggle').checked,
                 quantityStep: Math.max(0.000001, parseFloat(document.getElementById('sysQuantityStep').value) || 0.001),
                 appName: 'كاش توب 2',
+                customerPortalUrl: buildCustomerPortalUrl(),
                 logo: savedLogoData || previousSettings.logo || '' // حفظ مسار الشعار
             };
 
@@ -711,6 +738,8 @@
             localStorage.setItem('cashtop_db', JSON.stringify(db));
 
             window.Cashtop?.applySystemBranding?.();
+            updateCustomerPortalUrl(settingsObj);
+            window.CashtopFirebase?.syncAll?.().catch?.(error => console.warn('Settings sync:', error));
             showToast('تم حفظ الإعدادات الأساسية للنظام وإضافتها إلى مزامنة MongoDB بنجاح!', 'success');
         }
 

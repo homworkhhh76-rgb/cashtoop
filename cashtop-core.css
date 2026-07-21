@@ -1248,3 +1248,11 @@ textarea:focus, textarea:active,
     box-shadow: 0 5px 16px rgba(15,23,42,.14) !important;
   }
 }
+
+
+/* ===== Revision 40: smoother menu interactions / no blocking loaders ===== */
+.ct-loader,.loader-overlay,.global-loader,.loading-overlay,.spinner-overlay,.page-spinner{display:none!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important}
+.ct-sidebar,.ct-sidebar-overlay,.ct-menu-group>summary,.ct-bottom-nav,.modal-overlay,.modal-content{transform:translateZ(0);backface-visibility:hidden}
+.ct-menu-group>summary,.ct-sidebar a,.ct-bottom-nav a,button{transition:transform 120ms cubic-bezier(.2,.8,.2,1),opacity 120ms linear,background-color 120ms linear,border-color 120ms linear!important}
+.ct-menu-group>summary:active,.ct-sidebar a:active,.ct-bottom-nav a:active,button:active{transform:translateZ(0) scale(.985)}
+@media (prefers-reduced-motion:no-preference){.ct-sidebar,.ct-sidebar-overlay,.modal-overlay,.modal-content{will-change:transform,opacity}}

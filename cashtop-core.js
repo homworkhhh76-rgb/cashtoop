@@ -54,7 +54,7 @@
     'cashtop_branches', 'cashtop_branch_transfer_history', 'cashtop_employees',
     'cashtop_company_access',
     'cashtop_workers', 'cashtop_sales_agents', 'cashtop_agent_movements',
-    'cashtop_settings', 'cashtop_db', 'cashtop_printer_settings', 'cashtop_barcode_settings',
+    'cashtop_settings', 'cashtop_db', 'cashtop_printer_settings', 'cashtop_barcode_settings', 'cashtop_invoice_design',
     'cashtop_sms_template', 'cashtop_invoice_message_template', 'cashtop_journal', 'cashtop_audit_log',
     'cashtop_sales_offers', 'cashtop_tax_settings',
     'cashtop_notification_settings', 'cashtop_manufacturing_recipes', 'cashtop_manufacturing_orders',

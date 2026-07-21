@@ -418,6 +418,7 @@
                         <tr>
                             <th>اسم العميل</th>
                             <th>رقم الجوال</th>
+                            <th>مفتاح العميل</th>
                             <th>المجموعة</th>
                             <th>الحد الإئتماني</th>
                             <th>الرصيد الحالي</th>
@@ -690,6 +691,24 @@
         }
 
         let customersData = readArray('cashtop_customers');
+        // كل عميل يملك مفتاحاً رقمياً مستقلاً لبوابة العميل. يتم ترحيل العملاء القدامى تلقائياً مرة واحدة.
+        const usedPortalKeys = new Set(customersData.map(c => String(c?.portalKey || '')).filter(Boolean));
+        let portalKeysChanged = false;
+        function createUniqueCustomerPortalKey() {
+            let key = '';
+            do { key = String(Math.floor(100000 + Math.random() * 900000)); } while (usedPortalKeys.has(key));
+            usedPortalKeys.add(key);
+            return key;
+        }
+        customersData = customersData.map(customer => {
+            if (customer?.portalKey) return customer;
+            portalKeysChanged = true;
+            return { ...customer, portalKey: createUniqueCustomerPortalKey(), updatedAt: customer?.updatedAt || new Date().toISOString() };
+        });
+        if (portalKeysChanged) {
+            localStorage.setItem('cashtop_customers', JSON.stringify(customersData));
+            queueMicrotask(() => window.CashtopFirebase?.syncAll?.().catch?.(() => {}));
+        }
         let groupsData = readArray('cashtop_customer_groups').map(group => ({
             ...group,
             id: String(group?.id || ''),
@@ -766,6 +785,7 @@
                 const groupName = groupsData.find(g => String(g?.id) === String(cust.group))?.name || 'بدون مجموعة';
                 const safeName = String(cust.name || 'عميل بدون اسم');
                 const safePhone = String(cust.phone || '');
+                const portalKey = String(cust.portalKey || '-');
                 const safeId = String(cust.id || '');
                 const exceededLimit = balanceValue > 0 && limitValue > 0 && balanceValue > limitValue;
                 const balanceCell = `<span class="balance-stack">${balanceBadge}${exceededLimit ? '<span class="badge-limit-warning"><i class="fa-solid fa-triangle-exclamation"></i> متجاوز الحد</span>' : ''}</span>`;
@@ -774,6 +794,7 @@
                 tr.innerHTML = `
                     <td><strong>${escapeHtml(safeName)}</strong></td>
                     <td dir="ltr" style="color: #555; font-weight: 600;">${escapeHtml(safePhone || '-')}</td>
+                    <td dir="ltr"><code style="font-weight:800;color:#5e5296">${escapeHtml(portalKey)}</code></td>
                     <td><span class="badge-group">${escapeHtml(groupName)}</span></td>
                     <td style="font-weight: bold; color: #444;">${limitValue.toFixed(2)}</td>
                     <td>${balanceCell}</td>
@@ -795,12 +816,12 @@
 
             if (window.Cashtop?.renderVirtualRows) {
                 window.Cashtop.renderVirtualRows(tbody, data, createRow, {
-                    chunkSize: 90, eagerLimit: 180, colspan: 6,
-                    emptyHtml: `<tr><td colspan="6" style="padding:20px; color:#999;">لا يوجد عملاء مسجلين</td></tr>`
+                    chunkSize: 90, eagerLimit: 180, colspan: 7,
+                    emptyHtml: `<tr><td colspan="7" style="padding:20px; color:#999;">لا يوجد عملاء مسجلين</td></tr>`
                 });
             } else {
                 tbody.innerHTML = '';
-                if (!data.length) tbody.innerHTML = `<tr><td colspan="6" style="padding:20px; color:#999;">لا يوجد عملاء مسجلين</td></tr>`;
+                if (!data.length) tbody.innerHTML = `<tr><td colspan="7" style="padding:20px; color:#999;">لا يوجد عملاء مسجلين</td></tr>`;
                 else data.forEach(cust => tbody.appendChild(createRow(cust)));
             }
 
@@ -1224,10 +1245,12 @@
                     creditLimit: parseFloat(document.getElementById('cLimitInput')?.value) || 0,
                     balance: balInput,
                     notes: String(document.getElementById('cNotesInput')?.value || '').trim(),
+                    portalKey: (customersData.find(c => String(c?.id) === id)?.portalKey) || createUniqueCustomerPortalKey(),
                     updatedAt: new Date().toISOString()
                 };
 
                 const previous = customersData.find(c => String(c?.id) === id) || null;
+                if (previous) Object.assign(cust, { ...previous, ...cust, portalKey: previous.portalKey || cust.portalKey, debtInvoices: Array.isArray(previous.debtInvoices) ? previous.debtInvoices : cust.debtInvoices });
                 if (previous?.createdAt) cust.createdAt = previous.createdAt;
                 else cust.createdAt = new Date().toISOString();
 

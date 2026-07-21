@@ -1678,7 +1678,7 @@
             if(invoiceObj.debt > 0 && invoiceObj.customer !== 'عميل نقدي') {
                 let debtCustomer = selectedCustomer || customersData.find(c => String(c.id) === String(invoiceObj.customerId)) || customersData.find(c => c.name === invoiceObj.customer);
                 if (!debtCustomer) {
-                    debtCustomer = { id: `C_${Date.now()}`, name: invoiceObj.customer, phone: invoiceObj.phone, group: 'retail', balance: 0, createdAt: new Date().toISOString() };
+                    debtCustomer = { id: `C_${Date.now()}`, name: invoiceObj.customer, phone: invoiceObj.phone, portalKey: String(Math.floor(100000 + Math.random() * 900000)), group: 'retail', balance: 0, createdAt: new Date().toISOString() };
                     customersData.push(debtCustomer);
                 }
                 debtCustomer.balance = (parseFloat(debtCustomer.balance) || 0) + invoiceObj.debt;
