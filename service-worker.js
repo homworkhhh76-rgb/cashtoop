@@ -18,7 +18,7 @@ const LOCAL_ASSETS = [
   './barcode-tools.js',
   './branches.html',
   './cashier.html',
-  './cashtop-core.css',
+  './cashtop-rev45-live-portal',
   './cashtop-core.js',
   './cashtop-export.js',
   './cashtop-download-fix.js',
