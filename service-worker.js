@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v57-r48-desktop-modal-footer-compact-print';
+const CACHE_VERSION = 'v58-r49-mobile-modal-scroll-cache-first';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = `cash-top-2-remote-static-${CACHE_VERSION}`;
 
@@ -96,8 +96,8 @@ const REMOTE_STATIC_HOSTS = new Set([
 /* Prevent background network refreshes from competing with UI rendering.
  * HTML can refresh relatively often; immutable app assets refresh much less. */
 const LOCAL_REFRESH_AT = new Map();
-const HTML_REFRESH_MS = 5 * 60 * 1000;
-const STATIC_REFRESH_MS = 30 * 60 * 1000;
+const HTML_REFRESH_MS = 15 * 60 * 1000;
+const STATIC_REFRESH_MS = 2 * 60 * 60 * 1000;
 let shellVerificationPromise = null;
 let remoteWarmPromise = null;
 
@@ -382,14 +382,20 @@ self.addEventListener('message', event => {
       if (source && typeof source.postMessage === 'function') {
         source.postMessage({ type: 'CASHTOP_CACHE_STATUS', ...result, cache: APP_CACHE });
       }
-      // حدّث الحزمة المحلية كاملة في الخلفية. تبقى الاستجابة للمستخدم Cache First،
-      // لكن الزيارة التالية تحصل على أحدث HTML/JS/CSS دون انتظار الشبكة.
+      // لا نعيد تنزيل حزمة التطبيق كاملة عند فتح كل صفحة. كل تنقل محلي
+      // يُخدم فوراً من Cache Storage حتى مع وجود الإنترنت، والتحديث الشبكي
+      // المحدود يحدث بعد الاستجابة فقط كي لا ينافس فتح الصفحة أو الرسم.
+      await warmRemoteStaticAssetsOnce();
+    })());
+    return;
+  }
+  if (data.type === 'REFRESH_CACHE') {
+    event.waitUntil((async () => {
+      const source = event.source;
       const refreshed = await refreshCompleteLocalShell().catch(() => ({ updated: 0, total: LOCAL_ASSETS.length, complete: false }));
       if (source && typeof source.postMessage === 'function') {
         source.postMessage({ type: 'CASHTOP_CACHE_REFRESHED', ...refreshed, cache: APP_CACHE });
       }
-      // المكتبات الخارجية (ومنها قارئ الباركود للآيفون) تُحفظ مرة واحدة فقط في الخلفية.
-      await warmRemoteStaticAssetsOnce();
     })());
   }
 });

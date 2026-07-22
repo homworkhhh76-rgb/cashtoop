@@ -1511,3 +1511,83 @@ html, body {
     z-index: 2400 !important;
   }
 }
+
+/* ===== Revision 49: mobile-only centered modals with full reachable scroll =====
+   Desktop/laptop rules are intentionally untouched. On phones, Revision 46's
+   layout containment could become a containing block for fixed dialogs, making
+   them look offset/clipped inside the page host. Keep fixed dialogs anchored to
+   the real visible viewport, remove the dark backdrop edge, and let long forms
+   scroll all the way to their final actions. */
+@media (max-width: 768px) {
+  /* `contain: layout` changes the containing block of position:fixed descendants.
+     Removing containment here does not change page dimensions; it only restores
+     correct viewport anchoring for mobile dialogs. */
+  .ct-page-host,
+  .ct-original-page {
+    contain: none !important;
+  }
+
+  .ct-page-host .modal-overlay,
+  .ct-original-page .modal-overlay,
+  .ct-page-host .ct-modal,
+  .ct-original-page .ct-modal,
+  .ct-page-host .modal,
+  .ct-original-page .modal {
+    position: fixed !important;
+    top: var(--ct-topbar-height) !important;
+    right: 0 !important;
+    bottom: calc(var(--ct-bottom-height) + var(--ct-safe-bottom)) !important;
+    left: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    box-sizing: border-box !important;
+    padding: 8px max(8px, var(--ct-safe-right)) 8px max(8px, var(--ct-safe-left)) !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain !important;
+    touch-action: pan-y !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .ct-page-host .modal-overlay.active,
+  .ct-original-page .modal-overlay.active,
+  .ct-page-host .ct-modal.open,
+  .ct-original-page .ct-modal.open,
+  .ct-page-host .modal.show,
+  .ct-original-page .modal.show {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .ct-page-host .modal-overlay > .modal-box,
+  .ct-page-host .modal-overlay > .modal-content,
+  .ct-page-host .modal-overlay > .modal-container,
+  .ct-original-page .modal-overlay > .modal-box,
+  .ct-original-page .modal-overlay > .modal-content,
+  .ct-original-page .modal-overlay > .modal-container,
+  .ct-page-host .ct-modal > .ct-modal-box,
+  .ct-original-page .ct-modal > .ct-modal-box,
+  .ct-page-host .modal > .modal-card,
+  .ct-original-page .modal > .modal-card {
+    position: relative !important;
+    margin: auto !important;
+    min-height: 0 !important;
+    max-height: calc(var(--ct-visual-viewport-height, 100dvh) - var(--ct-topbar-height) - var(--ct-bottom-height) - var(--ct-safe-bottom) - 16px) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: auto !important;
+    touch-action: pan-y !important;
+    scroll-behavior: auto !important;
+    scroll-padding-bottom: 20px;
+    box-shadow: 0 3px 12px rgba(15, 23, 42, .08) !important;
+  }
+}
