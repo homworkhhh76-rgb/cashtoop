@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تجربة الإشعارات</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f9;
+            margin: 0;
+        }
+        button {
+            padding: 15px 30px;
+            font-size: 18px;
+            color: #fff;
+            background-color: #007bff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+    <button onclick="sendNotification()">إرسال إشعار</button>
+
+    <script>
+        function sendNotification() {
+            // 1. التحقق مما إذا كان المتصفح يدعم الإشعارات أساساً
+            if (!("Notification" in window)) {
+                alert("متصفحك لا يدعم إشعارات الويب.");
+                return;
+            }
+
+            // 2. إذا كان المستخدم قد أعطى الإذن مسبقاً، نعرض الإشعار
+            if (Notification.permission === "granted") {
+                createNotification();
+            } 
+            // 3. إذا لم يتم تحديد الإذن بعد، نطلب الصلاحية من المستخدم
+            else if (Notification.permission !== "denied") {
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        createNotification();
+                    }
+                });
+            } 
+            // 4. إذا قام المستخدم بحظر الإشعارات مسبقاً
+            else {
+                alert("لقد قمت بحظر الإشعارات. يرجى تفعيلها من إعدادات المتصفح (علامة القفل بجانب الرابط).");
+            }
+        }
+
+        // وظيفة بناء الإشعار وتفاصيله
+        function createNotification() {
+            const notification = new Notification("نجاح العملية! 🎉", {
+                body: "هذا إشعار تجريبي يعمل بشكل ممتاز من صفحة الويب.",
+                icon: "https://cdn-icons-png.flaticon.com/512/843/843260.png" // رابط لأيقونة اختيارية
+            });
+
+            // إجراء عند الضغط على الإشعار نفسه (مثلاً إعادة التركيز على الصفحة)
+            notification.onclick = function() {
+                window.focus();
+                this.close();
+            };
+        }
+    </script>
+
+</body>
+</html>
