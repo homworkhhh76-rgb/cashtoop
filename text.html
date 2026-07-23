@@ -76,7 +76,12 @@
         </div>
 
         <div class="form-group">
-            <label>صورة الإشعار (اختياري - من الجهاز):</label>
+            <label>الأيقونة المصغرة (لتبديل حرف الـ C):</label>
+            <input type="file" id="notifIcon" accept="image/*">
+        </div>
+
+        <div class="form-group">
+            <label>الصورة الكبيرة داخل الإشعار (اختياري):</label>
             <input type="file" id="notifImage" accept="image/*">
         </div>
 
@@ -89,7 +94,6 @@
     </div>
 
     <script>
-        // تسجيل Service Worker لكي يرضى متصفح الجوال
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js')
             .then(() => console.log("تم تسجيل ملف sw.js بنجاح"))
@@ -116,22 +120,29 @@
             const body = document.getElementById('notifBody').value || '';
             const mainUrl = document.getElementById('mainUrl').value;
             
+            // معالجة الأيقونة المصغرة (لإزالة حرف C)
+            const iconFile = document.getElementById('notifIcon').files[0];
+            let iconUrl = 'https://cdn-icons-png.flaticon.com/512/843/843260.png'; // أيقونة افتراضية في حال لم ترفع صورة
+            if (iconFile) {
+                iconUrl = URL.createObjectURL(iconFile);
+            }
+
+            // معالجة الصورة الكبيرة
             const imageFile = document.getElementById('notifImage').files[0];
             let imageUrl = null;
             if (imageFile) {
                 imageUrl = URL.createObjectURL(imageFile);
             }
 
-            // استخدام الطريقة الإجبارية للجوال (Service Worker Registration)
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.ready.then(registration => {
                     registration.showNotification(title, {
                         body: body,
-                        icon: '1000085180.png',
-                        badge: '1000085180.png',
+                        icon: iconUrl, // هنا يتم تحديد الأيقونة بدلاً من حرف C
+                        badge: iconUrl,
                         image: imageUrl,
                         data: {
-                            url: mainUrl // تمرير الرابط ليتم فتحه عند الضغط
+                            url: mainUrl
                         }
                     }).catch(err => alert("حدث خطأ أثناء عرض الإشعار: " + err));
                 });
