@@ -188,15 +188,18 @@
             .btn-submit, .btn-cancel { width: 100%; justify-content: center;}
             .modal-box { padding: 15px; }
         }
+    
+        .supplier-pay-currency{display:none}.supplier-pay-currency.active{display:flex}.supplier-pay-currency small{font-size:11px;color:#64748b}
     </style>
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Firebase sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=48">
-    <script src="cashtop-core.js?v=24"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=54">
+    <script src="cashtop-core.js?v=54"></script><script src="push-config.js?v=54"></script><script src="push-client.js?v=54"></script>
+    <script src="multi-system.js?v=51"></script>
     <script src="firebase-config.js?v=19"></script>
     <script src="accounting-engine.js"></script>
-    <script src="firebase-sync.js?v=23"></script>
+    <script src="firebase-sync.js?v=54"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -217,6 +220,7 @@
         <summary><i class="fa-solid fa-boxes-stacked"></i><span>المخزون</span><i class="fa-solid fa-chevron-down ct-menu-arrow"></i></summary>
         <div class="ct-submenu">
           <a href="products.html">المنتجات</a>
+          <a href="materials.html">الأصناف</a>
           <a href="warehouses.html">المخازن</a>
           <a href="branches.html">الفروع</a>
           <a href="units.html">الوحدات</a>
@@ -419,6 +423,13 @@
             </div>
             <form id="payForm" onsubmit="executePayment(event)">
                 <input type="hidden" id="paySupId">
+                <div class="form-row supplier-pay-currency" id="supplierPayCurrencyWrap">
+                    <div class="form-group">
+                        <label>عملة الدفعة</label>
+                        <select class="form-control" id="payCurrencySelect" onchange="handleSupplierPayCurrencyChange()"></select>
+                        <small id="supplierPayCurrencyHint"></small>
+                    </div>
+                </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>المبلغ المراد دفعه (سداده)</label>
@@ -664,18 +675,23 @@
         });
 
         function initLayout() {
+            populateSupplierPayCurrency();
             populateVaults();
             renderTable();
             calculateStats();
         }
 
+        function supplierPayCurrencyConfig(){ return window.CashtopMulti?.getCurrencyConfig?.() || {enabled:false,baseCurrencyId:'ILS',base:{id:'ILS',symbol:'₪',code:'ILS',ratePer100Base:100},currencies:[{id:'ILS',name:'شيكل',symbol:'₪',code:'ILS',ratePer100Base:100}]}; }
+        function supplierPayCurrencyId(){ const cfg=supplierPayCurrencyConfig(); return document.getElementById('payCurrencySelect')?.value || cfg.baseCurrencyId; }
+        function populateSupplierPayCurrency(preferredId=''){ const cfg=supplierPayCurrencyConfig(),select=document.getElementById('payCurrencySelect'),wrap=document.getElementById('supplierPayCurrencyWrap');if(!select)return;const previous=preferredId||select.value||cfg.baseCurrencyId;select.innerHTML=cfg.currencies.map(c=>`<option value="${c.id}">${c.name} (${c.symbol||c.code})</option>`).join('');select.value=cfg.currencies.some(c=>String(c.id)===String(previous))?previous:cfg.baseCurrencyId;wrap?.classList.toggle('active',cfg.enabled===true);const cur=window.CashtopMulti?.getCurrency?.(select.value)||cfg.base;const hint=document.getElementById('supplierPayCurrencyHint');if(hint)hint.textContent=String(cur.id)===String(cfg.baseCurrencyId)?'العملة الأساسية':`100 ${cfg.base.symbol||cfg.base.code} = ${Number(cur.ratePer100Base||0)} ${cur.symbol||cur.code}`;}
+        function handleSupplierPayCurrencyChange(){ populateVaults(); }
         function populateVaults() {
             const select = document.getElementById('payVaultSelect');
+            if(!select)return; const cfg=supplierPayCurrencyConfig(),cid=cfg.enabled?supplierPayCurrencyId():cfg.baseCurrencyId;
             select.innerHTML = '<option value="">-- اختر الصندوق المالي --</option>';
             if(fundsDB.accounts) {
-                fundsDB.accounts.forEach(a => {
-                    select.innerHTML += `<option value="${a.id}">${a.name} (المتاح: ${parseFloat(a.balance).toFixed(2)})</option>`;
-                });
+                fundsDB.accounts.forEach(a=>{if(!a.currencyId)a.currencyId=cfg.baseCurrencyId;});
+                fundsDB.accounts.forEach(a => { const cur=window.CashtopMulti?.getCurrency?.(a.currencyId||cfg.baseCurrencyId)||cfg.base; select.innerHTML += `<option value="${a.id}">${a.name} (المتاح: ${parseFloat(a.balance||0).toFixed(2)} ${cur.symbol||cur.code})</option>`; });
             }
         }
 
@@ -874,36 +890,43 @@
             document.getElementById('payForm').reset();
             document.getElementById('paySupId').value = id;
             document.getElementById('paySupName').innerText = name;
+            populateSupplierPayCurrency(supplierPayCurrencyConfig().baseCurrencyId);
+            populateVaults();
             openModal('payModal');
         }
 
         function executePayment(e) {
             e.preventDefault();
             const supId = document.getElementById('paySupId').value;
-            const amount = parseFloat(document.getElementById('payAmountInput').value);
-            const vaultId = parseInt(document.getElementById('payVaultSelect').value);
+            const cfg=supplierPayCurrencyConfig(), currencyId=cfg.enabled?supplierPayCurrencyId():cfg.baseCurrencyId;
+            const amountNative = parseFloat(document.getElementById('payAmountInput').value);
+            const amount = window.CashtopMulti?.toBase?.(amountNative,currencyId) ?? amountNative;
+            const vaultId = document.getElementById('payVaultSelect').value;
             const notes = document.getElementById('payNotesInput').value.trim() || 'سداد دفعة نقدية';
             const logDate = new Date().toISOString().split('T')[0];
 
-            if(!vaultId || isNaN(amount) || amount <= 0) { showToast('تأكد من البيانات والمبلغ المدخل!', 'error'); return;}
+            if(!vaultId || isNaN(amountNative) || amountNative <= 0) { showToast('تأكد من البيانات والمبلغ المدخل!', 'error'); return;}
 
             let sup = suppliersDB.find(s => s.id === supId);
-            let vault = fundsDB.accounts.find(a => a.id === vaultId);
+            let vault = fundsDB.accounts.find(a => String(a.id) === String(vaultId));
 
             if(!sup || !vault) { showToast('خطأ في تحديد المورد أو الصندوق!', 'error'); return;}
-            if(vault.balance < amount) { showToast(`الصندوق المحدد لا يحتوي رصيداً كافياً!`, 'error'); return;}
+            const settlement = window.CashtopMulti?.settleToAccount?.(amountNative, currencyId, vault)
+                || { accountAmount: amountNative, accountCurrencyId: vault.currencyId || currencyId, baseAmount: amount };
+            if(Number(vault.balance || 0) < Number(settlement.accountAmount || 0)) { showToast(`الصندوق المحدد لا يحتوي رصيداً كافياً بعد تحويل العملة!`, 'error'); return;}
 
-            // خصم من الصندوق وتوثيقها
-            vault.balance -= amount;
+            // خصم من الصندوق وتوثيقها بعملة الصندوق، مع حفظ عملة العملية الأصلية.
+            vault.balance -= Number(settlement.accountAmount || 0);
             let movId = 'spay_' + Date.now();
             fundsDB.accountLogs.push({
-                accountId: vault.id, date: logDate, type: "سحب", amount: amount, 
-                notes: `سداد למورد [${sup.name}] | ${notes}`, refType: "supplierPayment", refId: movId
+                accountId: vault.id, date: logDate, type: "سحب", amount: Number(settlement.accountAmount || 0), baseAmount: amount, currencyId: settlement.accountCurrencyId,
+                transactionAmount: amountNative, transactionCurrencyId: currencyId,
+                notes: `سداد لمورد [${sup.name}] | ${notes}`, refType: "supplierPayment", refId: movId
             });
 
             // تسجيل الدفعة في المورد (تنقص الدين)
             sup.movements.push({
-                id: movId, type: "payment", amount: amount, note: notes, 
+                id: movId, type: "payment", amount: amount, amountNative, currencyId, note: notes, 
                 accountId: vault.id, date: logDate, refType: "supplierPayment", refId: movId
             });
 

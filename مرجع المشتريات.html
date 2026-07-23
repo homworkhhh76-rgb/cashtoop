@@ -168,15 +168,18 @@
             .modal-box { padding: 20px 15px; width: 95%; max-height: 90vh; }
             .modal-footer { flex-direction: column-reverse; display: flex; }
         }
+    
+        .return-currency-wrap{display:none}.return-currency-wrap.active{display:flex}.return-currency-wrap small{font-size:11px;color:#64748b}
     </style>
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Firebase sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=48">
-    <script src="cashtop-core.js?v=24"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=54">
+    <script src="cashtop-core.js?v=54"></script><script src="push-config.js?v=54"></script><script src="push-client.js?v=54"></script>
+    <script src="multi-system.js?v=51"></script>
     <script src="firebase-config.js?v=19"></script>
     <script src="accounting-engine.js"></script>
-    <script src="firebase-sync.js?v=23"></script>
+    <script src="firebase-sync.js?v=54"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -197,6 +200,7 @@
         <summary><i class="fa-solid fa-boxes-stacked"></i><span>المخزون</span><i class="fa-solid fa-chevron-down ct-menu-arrow"></i></summary>
         <div class="ct-submenu">
           <a href="products.html">المنتجات</a>
+          <a href="materials.html">الأصناف</a>
           <a href="warehouses.html">المخازن</a>
           <a href="branches.html">الفروع</a>
           <a href="units.html">الوحدات</a>
@@ -305,6 +309,13 @@
                         <p>إرجاع بضاعة للمورد، مع خصم المخزون وتسجيل النقدية المستردة بالصندوق، والباقي يُخصم من حساب المورد.</p>
                     </div>
 
+                    <div class="form-row return-currency-wrap" id="returnCurrencyWrap">
+                        <div class="form-group">
+                            <select class="form-control" id="returnCurrencySelect" onchange="handleReturnCurrencyChange()"></select>
+                            <label>عملة المبلغ المسترد</label>
+                            <small id="returnCurrencyHint"></small>
+                        </div>
+                    </div>
                     <div class="form-row">
                         <div class="form-group">
                             <select class="form-control" id="supplierSelect" required></select>
@@ -548,6 +559,7 @@
             else fundsData = { accounts: [{id: 1, name: "صندوق الكاش الرئيسي", type: "كاش", balance: 0}], accountLogs: [] };
 
             // تعبئة القوائم المنسدلة
+            populateReturnCurrency();
             populateSelects();
 
             // إعداد تاريخ اليوم الافتراضي
@@ -561,13 +573,19 @@
             renderReturnsTable();
         }
 
+        function returnCurrencyConfig(){ return window.CashtopMulti?.getCurrencyConfig?.() || {enabled:false,baseCurrencyId:'ILS',base:{id:'ILS',symbol:'₪',code:'ILS',ratePer100Base:100},currencies:[{id:'ILS',name:'شيكل',symbol:'₪',code:'ILS',ratePer100Base:100}]}; }
+        function returnCurrencyId(){ const cfg=returnCurrencyConfig(); return document.getElementById('returnCurrencySelect')?.value || cfg.baseCurrencyId; }
+        function populateReturnCurrency(preferredId=''){ const cfg=returnCurrencyConfig(),select=document.getElementById('returnCurrencySelect'),wrap=document.getElementById('returnCurrencyWrap');if(!select)return;const previous=preferredId||select.value||cfg.baseCurrencyId;select.innerHTML=cfg.currencies.map(c=>`<option value="${c.id}">${c.name} (${c.symbol||c.code})</option>`).join('');select.value=cfg.currencies.some(c=>String(c.id)===String(previous))?previous:cfg.baseCurrencyId;wrap?.classList.toggle('active',cfg.enabled===true);const cur=window.CashtopMulti?.getCurrency?.(select.value)||cfg.base;const hint=document.getElementById('returnCurrencyHint');if(hint)hint.textContent=String(cur.id)===String(cfg.baseCurrencyId)?'العملة الأساسية':`100 ${cfg.base.symbol||cfg.base.code} = ${Number(cur.ratePer100Base||0)} ${cur.symbol||cur.code}`;}
+        function handleReturnCurrencyChange(){ populateSelects(); calculateReturnsFinance(); }
         function populateSelects() {
             let supHtml = '<option value="">اختر المورد...</option>';
             suppliersData.forEach(s => { supHtml += `<option value="${s.id}">${s.name}</option>`; });
             document.getElementById('supplierSelect').innerHTML = supHtml;
 
+            const cfg=returnCurrencyConfig(),cid=cfg.enabled?returnCurrencyId():cfg.baseCurrencyId;
+            fundsData.accounts.forEach(f=>{if(!f.currencyId)f.currencyId=cfg.baseCurrencyId;});
             let fundHtml = '';
-            fundsData.accounts.forEach(f => { fundHtml += `<option value="${f.id}">${f.name} [${f.type}]</option>`; });
+            fundsData.accounts.forEach(f => { const cur=window.CashtopMulti?.getCurrency?.(f.currencyId||cfg.baseCurrencyId)||cfg.base; fundHtml += `<option value="${f.id}">${f.name} [${f.type}] — ${Number(f.balance||0).toFixed(2)} ${cur.symbol||cur.code}</option>`; });
             document.getElementById('accountSelect').innerHTML = fundHtml;
         }
 
@@ -588,9 +606,8 @@
                             <div class="suggestions-box"></div>
                         </div>
                         <div class="form-group">
-                            <select class="form-control return-type-select" onchange="calculateReturnsFinance()">
+                            <select class="form-control return-type-select" onchange="handleReturnUnitChange(this)">
                                 <option value="piece">قطعة</option>
-                                <option value="unit">وحدة كاملة / عبوة</option>
                             </select>
                             <label>نوع الإرجاع</label>
                         </div>
@@ -711,6 +728,14 @@
             openModal('variantModal');
         }
 
+        function setReturnRowChain(row, product) {
+            const chain = window.CashtopMulti?.normalizeProductChain?.(product) || [{id:'piece',name:product?.pieceName||'قطعة',factorToBase:1}];
+            row.dataset.unitChain = JSON.stringify(chain);
+            return chain;
+        }
+        function getReturnRowChain(row) { try { const value=JSON.parse(row.dataset.unitChain||'[]'); return Array.isArray(value)&&value.length?value:[{id:'piece',name:row.dataset.pieceName||'قطعة',factorToBase:1}]; } catch(_){ return [{id:'piece',name:'قطعة',factorToBase:1}]; } }
+        function handleReturnUnitChange(select){ const row=select.closest('.product-item'); const chain=getReturnRowChain(row); const level=chain.find(x=>String(x.id)===String(select.value))||chain[0]; const base=Number(row.dataset.baseCost||0); row.querySelector('.price-input').value=(base*Math.max(0.000001,Number(level.factorToBase||1))).toFixed(3).replace(/\.?0+$/,''); calculateReturnsFinance(); }
+
         function selectVariant(prodId, vIndex, availQty, rowId) {
             const prod = productsData.find(p => p.id === prodId);
             const variant = prod.variants[vIndex];
@@ -724,7 +749,8 @@
             
             // تحديث خيارات الوحدة (للمتفرع عادة قطعة فقط، لكن سنضع خيار الوحدة كقطعة للحماية)
             let select = row.querySelector('.return-type-select');
-            select.innerHTML = `<option value="piece">${prod.pieceName || 'قطعة'}</option>`;
+            const chain = setReturnRowChain(row, {pieceName: prod.pieceName || 'قطعة'});
+            select.innerHTML = `<option value="${chain[0].id}">${chain[0].name}</option>`;
 
             row.dataset.productId = prod.id;
             row.dataset.variantIndex = vIndex;
@@ -742,14 +768,8 @@
             row.querySelector('.stock-input').value = `${availQty} ${prod.pieceName || 'قطعة'}`;
             
             let select = row.querySelector('.return-type-select');
-            if(prod.addType === 'unit') {
-                select.innerHTML = `
-                    <option value="piece">${prod.pieceName || 'قطعة'}</option>
-                    <option value="unit">${prod.unitName || 'كرتونة'} (${prod.piecesPerUnit || 1} ${prod.pieceName})</option>
-                `;
-            } else {
-                select.innerHTML = `<option value="piece">${prod.pieceName || 'قطعة'}</option>`;
-            }
+            const chain = setReturnRowChain(row, prod);
+            select.innerHTML = chain.map(level => `<option value="${level.id}">${level.name} — ×${Number(level.factorToBase||1)} ${chain[0].name}</option>`).join('');
 
             // السعر المبدئي للقطعة
             row.querySelector('.price-input').value = parseFloat(prod.cost || 0).toFixed(3).replace(/\.?0+$/, '');
@@ -758,16 +778,8 @@
             row.dataset.variantIndex = "";
             row.dataset.piecesPerUnit = prod.piecesPerUnit || 1;
             row.dataset.stockLimit = availQty;
-            row.dataset.baseCost = prod.cost || 0; // لحفظ التكلفة الأساسية للقطعة
-
-            // إضافة مستمع لتغيير نوع الوحدة لتحديث السعر الافتراضي
-            select.onchange = function() {
-                let costInput = row.querySelector('.price-input');
-                let base = parseFloat(row.dataset.baseCost);
-                if(this.value === 'unit') costInput.value = (base * parseFloat(row.dataset.piecesPerUnit)).toFixed(3).replace(/\.?0+$/, '');
-                else costInput.value = base.toFixed(3).replace(/\.?0+$/, '');
-                calculateReturnsFinance();
-            };
+            row.dataset.baseCost = prod.cost || 0; // تكلفة الوحدة الأساسية
+            select.onchange = function() { handleReturnUnitChange(this); };
 
             calculateReturnsFinance();
         }
@@ -788,13 +800,14 @@
                 totalReturnsRequired += rowTotal;
             });
 
-            const received = parseFloat(document.getElementById('moneyReceivedBox').value) || 0;
-            // الدين = إجمالي المرجع - النقدية المستلمة
+            const cfg=returnCurrencyConfig(),cid=cfg.enabled?returnCurrencyId():cfg.baseCurrencyId;
+            const receivedNative = parseFloat(document.getElementById('moneyReceivedBox').value) || 0;
+            const received = window.CashtopMulti?.toBase?.(receivedNative,cid) ?? receivedNative;
             let finalDebt = totalReturnsRequired - received;
-            if (finalDebt < 0) finalDebt = 0; // كحماية منطقية
-
-            document.getElementById('finalTotalRequired').textContent = moneyDisplay(totalReturnsRequired) + " ₪";
-            document.getElementById('finalReceived').textContent = moneyDisplay(received) + " ₪";
+            if (finalDebt < 0) finalDebt = 0;
+            const symbol=cfg.base.symbol||cfg.base.code||'₪';
+            document.getElementById('finalTotalRequired').textContent = moneyDisplay(totalReturnsRequired) + " " + symbol;
+            document.getElementById('finalReceived').textContent = moneyDisplay(received) + " " + symbol;
             document.getElementById('finalDebt').value = moneyDisplay(finalDebt);
         }
 
@@ -803,9 +816,11 @@
         // ==========================================
         function savePurchaseReturn() {
             let supplierId = document.getElementById('supplierSelect').value;
-            let accountId = parseInt(document.getElementById('accountSelect').value);
+            const cfg=returnCurrencyConfig(), currencyId=cfg.enabled?returnCurrencyId():cfg.baseCurrencyId;
+            let accountId = document.getElementById('accountSelect').value;
             let returnDate = document.getElementById('returnDateBox').value;
-            let receivedAmt = parseFloat(document.getElementById('moneyReceivedBox').value) || 0;
+            let receivedNative = parseFloat(document.getElementById('moneyReceivedBox').value) || 0;
+            let receivedAmt = window.CashtopMulti?.toBase?.(receivedNative,currencyId) ?? receivedNative;
             let notes = document.getElementById('notesBox').value.trim();
 
             if (!supplierId || !accountId) {
@@ -814,8 +829,10 @@
             }
 
             let supplier = suppliersData.find(s => s.id == supplierId);
-            let account = fundsData.accounts.find(f => f.id === accountId);
+            let account = fundsData.accounts.find(f => String(f.id) === String(accountId));
             if (!supplier || !account) { showToast('تعذر العثور على المورد أو الصندوق المحدد.', 'error'); return; }
+            const refundSettlement = window.CashtopMulti?.settleToAccount?.(receivedNative, currencyId, account)
+                || { accountAmount: receivedNative, accountCurrencyId: account.currencyId || currencyId, baseAmount: receivedAmt };
             const saveRollback = {
                 products: JSON.parse(JSON.stringify(productsData)),
                 suppliers: JSON.parse(JSON.stringify(suppliersData)),
@@ -837,15 +854,16 @@
                 let isVariant = vIdx !== "";
                 let ppu = parseFloat(row.dataset.piecesPerUnit) || 1;
                 let maxStock = parseFloat(row.dataset.stockLimit) || 0;
-                
+                const chain = getReturnRowChain(row);
                 let returnType = row.querySelector('.return-type-select').value;
+                const selectedLevel = chain.find(level=>String(level.id)===String(returnType)) || chain[0];
                 let inputQty = parseFloat(row.querySelector('.qty-input').value) || 0;
                 let inputCost = parseFloat(row.querySelector('.price-input').value) || 0;
                 let rowName = row.querySelector('.search-input').value;
 
                 if (inputQty <= 0) return;
 
-                let piecesToDeduct = returnType === 'unit' ? (inputQty * ppu) : inputQty;
+                let piecesToDeduct = inputQty * Math.max(0.000001, Number(selectedLevel.factorToBase || 1));
 
                 if (piecesToDeduct > maxStock) {
                     showToast(`الكمية المرجعة للصنف [${rowName}] تتجاوز المخزون المتوفر!`, "error");
@@ -860,7 +878,7 @@
                     name: rowName,
                     isVariant: isVariant,
                     vIndex: isVariant ? parseInt(vIdx) : null,
-                    returnType: returnType,
+                    returnType: returnType, selectedUnitId: selectedLevel.id, selectedUnitName: selectedLevel.name, factorToBase: Number(selectedLevel.factorToBase||1),
                     inputQty: inputQty,
                     piecesToDeduct: piecesToDeduct,
                     unitCost: inputCost,
@@ -890,13 +908,14 @@
 
             // 2. تحديث الصندوق المالي (إذا استلمنا نقدية من المورد)
             if (receivedAmt > 0) {
-                account.balance += receivedAmt;
+                account.balance += Number(refundSettlement.accountAmount || 0);
                 fundsData.accountLogs.push({
                     id: `LOG_${returnId}`,
                     accountId: account.id,
                     date: returnDate,
                     type: "إيداع",
-                    amount: receivedAmt,
+                    amount: Number(refundSettlement.accountAmount || 0), baseAmount: receivedAmt, currencyId: refundSettlement.accountCurrencyId,
+                    transactionAmount: receivedNative, transactionCurrencyId: currencyId,
                     notes: `مسترد نقدي من مرتجع [${productNames}] للمورد: ${supplier.name}`,
                     sourceType: 'purchaseReturn', sourceId: returnId
                 });
@@ -919,7 +938,7 @@
                 const cashMovementId = `SCASH_${returnId}`;
                 supplierMovementIds.push(cashMovementId);
                 supplier.movements.push({
-                    id: cashMovementId, type: 'refundCash', amount: receivedAmt,
+                    id: cashMovementId, type: 'refundCash', amount: receivedAmt, amountNative: receivedNative, currencyId,
                     note: `مسترد نقدي عن: ${productNames || returnId}`, productNames,
                     date: returnDate, refType: 'purchaseReturn', refId: returnId, balanceEffect: 0
                 });
@@ -940,7 +959,8 @@
                 accountId: account.id,
                 accountName: account.name,
                 totalValue: totalReturnVal,
-                receivedCash: receivedAmt,
+                receivedCash: receivedAmt, receivedCashNative: receivedNative, currencyId,
+                accountAmountNative: Number(refundSettlement.accountAmount || 0), accountCurrencyId: refundSettlement.accountCurrencyId, currencyName:(window.CashtopMulti?.getCurrency?.(currencyId)||cfg.base).name, currencySymbol:(window.CashtopMulti?.getCurrency?.(currencyId)||cfg.base).symbol || (window.CashtopMulti?.getCurrency?.(currencyId)||cfg.base).code, exchangeRatePer100Base:Number((window.CashtopMulti?.getCurrency?.(currencyId)||cfg.base).ratePer100Base||100),
                 debtDeducted: debtToDeductFromSupplier,
                 supplierMovementIds,
                 productNames,
@@ -1141,14 +1161,16 @@
 
             // 2. عكس قيود الصندوق (سحب المال الذي أودعناه من المورد)
             if (r.receivedCash > 0) {
-                let account = fundsData.accounts.find(f => f.id === r.accountId);
+                let account = fundsData.accounts.find(f => String(f.id) === String(r.accountId));
                 if (account) {
-                    account.balance -= r.receivedCash;
+                    const reversalAccountCurrencyId = r.accountCurrencyId || account.currencyId || returnCurrencyConfig().baseCurrencyId;
+                    const reversalNative = Number.isFinite(Number(r.accountAmountNative)) ? Number(r.accountAmountNative) : (window.CashtopMulti?.accountAmountFromBase?.(Number(r.receivedCash||0), reversalAccountCurrencyId) ?? Number(r.receivedCash||0));
+                    account.balance -= reversalNative;
                     fundsData.accountLogs.push({ 
                         accountId: account.id, 
                         date: new Date().toISOString().split('T')[0], 
                         type: "سحب", 
-                        amount: r.receivedCash, 
+                        amount: reversalNative, baseAmount: Number(r.receivedCash||0), currencyId: r.accountCurrencyId || account.currencyId || returnCurrencyConfig().baseCurrencyId, 
                         notes: `عكس قيد: إلغاء مرتجع مشتريات رقم ${r.id} للمورد: ${r.supplierName}` 
                     });
                     }

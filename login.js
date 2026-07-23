@@ -258,7 +258,6 @@
 
   function saveSession(context, account, companyKey, remember) {
     const license = context.license || context.access;
-    if (context.access?.maintenanceMode === true || license?.maintenanceMode === true) { const tenant=encodeURIComponent(context.tenantId||context.companyId||license?.tenantId||license?.companyId||''); location.href=`maintenance.html${tenant?`?tenant=${tenant}`:''}`; throw new Error('النظام قيد الصيانة حالياً.'); }
     const tenantId = String(context.tenantId || context.companyId || license.tenantId || license.companyId || license.id || sanitizeSegment(companyKey));
     const session = {
       mode: 'local', uid: account.id, username: account.username, displayName: account.displayName || account.username,
@@ -667,6 +666,8 @@
       header.prepend(img);
     }
     displayReason();
+    const pushBtn=document.getElementById('enablePushBtn');
+    if(pushBtn){pushBtn.addEventListener('click',async()=>{pushBtn.disabled=true;const old=pushBtn.innerHTML;pushBtn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> جاري التفعيل...';try{const result=await window.CashtopPush?.requestAndSubscribe?.();if(result?.ok){pushBtn.innerHTML='<i class="fa-solid fa-circle-check"></i> الإشعارات مفعلة';}else{pushBtn.innerHTML=old;alert(result?.message||'تعذر تفعيل الإشعارات.');}}finally{pushBtn.disabled=false;}});}
   });
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     (async () => {

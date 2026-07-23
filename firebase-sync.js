@@ -13,6 +13,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   const session = core.getSession() || {};
   const baseUrl = String(cfg.databaseURL || '').replace(/\/+$/, '');
   const isMongoProxy = ['mongodb-http-api','mongodb-rtdb-api'].includes(settings.backendMode) || /\/api\/rtdb(?:$|\?)/i.test(baseUrl);
+  const CLOUD_DATA_KEYS = core.DATA_KEYS.filter(key => key !== 'cashtop_audit_log');
   const rawStorage = {
     get: key => Storage.prototype.getItem.call(localStorage, key),
     set: (key, value) => Storage.prototype.setItem.call(localStorage, key, String(value)),
@@ -361,6 +362,24 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     return `${baseUrl}/${locationPath(location)}/datasets/${sanitizeSegment(key)}.json${query}`;
   }
 
+  function auditTrailEndpoint(location, day, hour = '', recordId = '', token = '') {
+    const query = token ? `?auth=${encodeURIComponent(token)}` : '';
+    const hourPath = hour === '' ? '' : `/${sanitizeSegment(hour)}`;
+    const suffix = recordId ? `/${sanitizeSegment(recordId)}` : '';
+    return `${baseUrl}/${locationPath(location)}/auditTrail/${sanitizeSegment(day)}${hourPath}${suffix}.json${query}`;
+  }
+
+  function auditTrailRecentEndpoint(location, recordId = '', token = '') {
+    const query = token ? `?auth=${encodeURIComponent(token)}` : '';
+    const suffix = recordId ? `/${sanitizeSegment(recordId)}` : '';
+    return `${baseUrl}/${locationPath(location)}/auditTrailRecent${suffix}.json${query}`;
+  }
+
+  function auditTrailLegacyRootEndpoint(location, token = '') {
+    const query = token ? `?auth=${encodeURIComponent(token)}` : '';
+    return `${baseUrl}/${locationPath(location)}/auditTrail.json${query}`;
+  }
+
   function metaEndpoint(location, token = '') {
     const query = token ? `?auth=${encodeURIComponent(token)}` : '';
     return `${baseUrl}/${locationPath(location)}/meta.json${query}`;
@@ -384,7 +403,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     const path = String(pathValue || '/').replace(/^\/+/, '');
     if (!path) return '';
     const segment = path.split('/')[0];
-    return core.DATA_KEYS.find(key => sanitizeSegment(key) === segment) || '';
+    return CLOUD_DATA_KEYS.find(key => sanitizeSegment(key) === segment) || '';
   }
 
   function scheduleRealtimePull(key = '') {
@@ -494,11 +513,12 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   }
 
   function pagePriorityDatasets() {
-    const common = ['cashtop_company_access', 'cashtop_branches', 'cashtop_employees', 'cashtop_settings'];
+    const common = ['cashtop_company_access', 'cashtop_branches', 'cashtop_employees', 'cashtop_settings', 'cashtop_db', 'cashtop_printer_settings', 'cashtop_barcode_settings', 'cashtop_invoice_design', 'cashtop_tax_settings', 'cashtop_notification_settings', 'cashtop_sms_template', 'cashtop_invoice_message_template'];
     const map = {
       'لوحة التحكم.html': ['cashtop_invoices', 'cashtop_products', 'cashtop_customers', 'cashtop_expenses', 'cashtop_funds_db'],
       'cashier.html': ['cashtop_products', 'cashtop_customers', 'cashtop_customer_groups', 'cashtop_funds_db', 'cashtop_sales_offers', 'cashtop_tax_settings', 'cashtop_units', 'cashtop_stores'],
       'products.html': ['cashtop_products', 'cashtop_units', 'cashtop_stores', 'cashtop_suppliers', 'cashtop_purchases', 'cashtop_funds_db'],
+      'materials.html': ['cashtop_materials', 'cashtop_material_purchases', 'cashtop_units', 'cashtop_stores', 'cashtop_suppliers', 'cashtop_funds_db'],
       'invoices.html': ['cashtop_invoices', 'cashtop_products', 'cashtop_customers', 'cashtop_funds_db', 'cashtop_sales_offers'],
       'customers.html': ['cashtop_customers', 'cashtop_customer_groups', 'cashtop_invoices', 'cashtop_vouchers'],
       'customer-groups.html': ['cashtop_customer_groups', 'cashtop_customers', 'cashtop_products'],
@@ -518,16 +538,17 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       'sales-offers.html': ['cashtop_sales_offers', 'cashtop_products'],
       'sands.html': ['cashtop_vouchers', 'cashtop_funds_db'],
       'notifications.html': ['cashtop_notification_settings', 'cashtop_products', 'cashtop_invoices', 'cashtop_funds_db'],
+      'audit-trail.html': ['cashtop_employees'],
       'barcode-generator.html': ['cashtop_products', 'cashtop_barcode_settings', 'cashtop_settings'],
       'printer-settings.html': ['cashtop_printer_settings', 'cashtop_barcode_settings', 'cashtop_settings', 'cashtop_invoice_design'],
       'invoice-designer.html': ['cashtop_invoice_design', 'cashtop_printer_settings', 'cashtop_settings', 'cashtop_invoices'],
       'tax-settings.html': ['cashtop_tax_settings', 'cashtop_settings'],
       'storage-settings.html': ['cashtop_archive_index', 'cashtop_invoices', 'cashtop_transfer_history', 'cashtop_branch_transfer_history', 'cashtop_settings'],
       'setting.html': ['cashtop_company_access', 'cashtop_settings', 'cashtop_db', 'cashtop_branches', 'cashtop_employees', 'cashtop_sms_template', 'cashtop_invoice_message_template'],
-      'ادارة التصنيع.html': ['cashtop_manufacturing_recipes', 'cashtop_manufacturing_orders', 'cashtop_products', 'cashtop_stores'],
+      'ادارة التصنيع.html': ['cashtop_manufacturing_recipes', 'cashtop_manufacturing_orders', 'cashtop_products', 'cashtop_materials', 'cashtop_stores'],
       'التقارير.html': ['cashtop_invoices', 'cashtop_purchases', 'cashtop_expenses', 'cashtop_products', 'cashtop_customers', 'cashtop_funds_db']
     };
-    return [...new Set([...common, ...(map[core.FILE] || [])])].filter(key => core.DATA_KEYS.includes(key));
+    return [...new Set([...common, ...(map[core.FILE] || [])])].filter(key => CLOUD_DATA_KEYS.includes(key));
   }
 
   function assertAccessIdentity(rawPayload, location) {
@@ -902,7 +923,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       companyName: session.companyName || '',
       appName: 'كاش توب 2',
       schema: 19,
-      datasetCount: core.DATA_KEYS.length,
+      datasetCount: CLOUD_DATA_KEYS.length,
       deviceId: core.rawGet('cashtop_device_id') || '',
       updatedAt: Date.now(),
       ...extra
@@ -914,7 +935,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     if (core.localReady && typeof core.localReady.then === 'function') {
       try { await core.localReady; } catch (_) {}
     }
-    const requested = [...new Set((Array.isArray(keys) ? keys : []).filter(key => core.DATA_KEYS.includes(key)))];
+    const requested = [...new Set((Array.isArray(keys) ? keys : []).filter(key => CLOUD_DATA_KEYS.includes(key)))];
     if (!requested.length) return { hasRemote: false, count: 0, applied: 0 };
     const showProgress = options.silentProgress !== true;
     if (showProgress) {
@@ -1005,7 +1026,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       backgroundPullRunning = true;
       try {
         const priority = new Set(pagePriorityDatasets());
-        const remaining = core.DATA_KEYS.filter(key => !priority.has(key));
+        const remaining = CLOUD_DATA_KEYS.filter(key => !priority.has(key));
         const chunkSize = 5;
         for (let i = 0; i < remaining.length; i += chunkSize) {
           if (core.getSyncQueue().length) break;
@@ -1048,7 +1069,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
         const uploads = [];
         const queue = core.getSyncQueue();
 
-        for (const key of core.DATA_KEYS) {
+        for (const key of CLOUD_DATA_KEYS) {
           const hasRemote = Object.prototype.hasOwnProperty.call(remoteDatasets, key);
           const remote = hasRemote ? normalizeRemotePayload(remoteDatasets[key]) : null;
           const localMeta = localMetaFor(key);
@@ -1311,9 +1332,9 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       const access = await openLightDatabaseAccess();
       const token = access.token;
       const location = access.location;
-      const pendingKeys = core.getSyncQueue().map(item => item.key).filter(key => core.DATA_KEYS.includes(key));
+      const pendingKeys = core.getSyncQueue().map(item => item.key).filter(key => CLOUD_DATA_KEYS.includes(key));
       const pullKeys = options.manual === true || options.forceCheck === true
-        ? core.DATA_KEYS
+        ? CLOUD_DATA_KEYS
         : pagePriorityDatasets();
       const keys = [...new Set([...pendingKeys, ...pullKeys])];
       let uploaded = 0;
@@ -1449,7 +1470,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       location = access.location;
       startRealtimeStream(location, token);
       const manual = options.manual === true || options.forceRetry === true;
-      const pendingKeys = [...new Set(core.getSyncQueue().map(item => item.key).filter(key => core.DATA_KEYS.includes(key)))];
+      const pendingKeys = [...new Set(core.getSyncQueue().map(item => item.key).filter(key => CLOUD_DATA_KEYS.includes(key)))];
       let pendingProgress = 0;
       if (pendingKeys.length) reportSyncProgress(0, pendingKeys.length, options.importSync ? 'جاري رفع النسخة الاحتياطية...' : 'جاري رفع العمليات المعلقة...');
 
@@ -1538,7 +1559,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
 
       // بعد رفع ما يمكن رفعه، اسحب بيانات الصفحة. المجموعات التي بقيت معلقة
       // محمية داخل applyRemote ولن تُستبدل بنسخة بعيدة أقدم.
-      const pullKeys = options.manual === true || options.forceCheck === true ? core.DATA_KEYS : pagePriorityDatasets();
+      const pullKeys = options.manual === true || options.forceCheck === true ? CLOUD_DATA_KEYS : pagePriorityDatasets();
       try {
         const pullResult = await pullDatasetKeys(pullKeys, { force: options.force === true, concurrency: 4 });
         pulled = Number(pullResult?.applied || 0);
@@ -1605,7 +1626,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   }
 
   async function pullAll(options = {}) {
-    return pullDatasetKeys(core.DATA_KEYS, {
+    return pullDatasetKeys(CLOUD_DATA_KEYS, {
       force: options.force === true,
       concurrency: options.concurrency || 4
     });
@@ -1634,7 +1655,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   }
 
   async function uploadDataset(key) {
-    if (!core.DATA_KEYS.includes(key)) return false;
+    if (!CLOUD_DATA_KEYS.includes(key)) return false;
     core.enqueueSyncOperation(key);
     const result = await syncAll({ forceRetry: true });
     return Number(result.uploaded || 0) > 0;
@@ -1659,6 +1680,105 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     }, delay);
   }
 
+
+  let legacyAuditCleanupDone = false;
+  async function pruneRemoteAuditTrailRecent(location, token, limit = 100) {
+    try {
+      const response = await fetchWithTimeout(auditTrailRecentEndpoint(location, '', token), { method:'GET', headers:{Accept:'application/json'} }, 12000);
+      if (!response.ok) return 0;
+      const payload = await response.json().catch(()=>null);
+      const rows = payload && typeof payload === 'object' ? Object.values(payload).filter(Boolean) : [];
+      rows.sort((a,b)=>new Date(b.timestamp||0)-new Date(a.timestamp||0));
+      const remove = rows.slice(Math.max(1, Number(limit)||100));
+      await Promise.allSettled(remove.map(item=>fetchWithTimeout(auditTrailRecentEndpoint(location, item.id, token), {method:'DELETE'}, 9000)));
+      return remove.length;
+    } catch (_) { return 0; }
+  }
+  async function cleanupLegacyAuditTrail(location, token) {
+    if (legacyAuditCleanupDone) return;
+    legacyAuditCleanupDone = true;
+    try { await fetchWithTimeout(auditTrailLegacyRootEndpoint(location, token), {method:'DELETE'}, 12000); } catch (_) {}
+  }
+
+  let auditTrailSyncing = false;
+  async function flushAuditTrailPending(options = {}) {
+    if (auditTrailSyncing) return { uploaded: 0, busy: true };
+    const limit = Math.max(1, Number(options.limit || 80));
+    const pending = core.getAuditPendingAsync ? await core.getAuditPendingAsync(limit) : (core.getAuditPending?.() || []).slice(0, limit);
+    if (!pending.length) return { uploaded: 0, remaining: 0 };
+    if (navigator.onLine === false && options.force !== true) return { uploaded: 0, remaining: pending.length, offline: true };
+    auditTrailSyncing = true;
+    const succeeded = [];
+    try {
+      const { token, location } = await openLightDatabaseAccess();
+      const batch = pending.slice(0, limit);
+      const concurrency = Math.min(8, Math.max(1, Number(options.concurrency || 6)));
+      let cursor = 0;
+      async function worker() {
+        while (cursor < batch.length) {
+          const index = cursor++;
+          const record = batch[index];
+          if (!record?.id) continue;
+          const stamp = String(record.timestamp || new Date().toISOString());
+          const day = stamp.slice(0, 10) || new Date().toISOString().slice(0,10);
+          const hour = String(new Date(stamp).getHours()).padStart(2,'0');
+          try {
+            const response = await fetchWithTimeout(auditTrailRecentEndpoint(location, record.id, token), {
+              method: 'PUT', headers: { 'Content-Type': 'application/json;charset=UTF-8' }, body: JSON.stringify(record)
+            }, 9000);
+            if (!response.ok) throw await firebaseError(response);
+            succeeded.push(String(record.id));
+          } catch (error) {
+            if (!isTransientNetworkError(error)) console.warn('[CASH TOP 2] audit upload:', error);
+          }
+        }
+      }
+      await Promise.all(Array.from({ length: Math.min(concurrency, batch.length) }, () => worker()));
+      if (succeeded.length) {
+        if (core.completeAuditPendingAsync) await core.completeAuditPendingAsync(succeeded);
+        else core.completeAuditPending?.(succeeded);
+        await pruneRemoteAuditTrailRecent(location, token, 100);
+        cleanupLegacyAuditTrail(location, token).catch(() => null);
+      }
+      const remaining = core.getAuditPendingCountAsync ? await core.getAuditPendingCountAsync() : (core.getAuditPending?.().length || 0);
+      if (remaining && navigator.onLine !== false) setTimeout(() => flushAuditTrailPending({ limit: 80 }).catch(() => null), 600);
+      return { uploaded: succeeded.length, remaining };
+    } finally {
+      auditTrailSyncing = false;
+    }
+  }
+
+  async function fetchAuditTrailRecent(limit = 100) {
+    const { token, location } = await openLightDatabaseAccess();
+    cleanupLegacyAuditTrail(location, token).catch(() => null);
+    const response = await fetchWithTimeout(auditTrailRecentEndpoint(location, '', token), { method:'GET', headers:{Accept:'application/json'} }, 12000);
+    if (!response.ok) throw await firebaseError(response);
+    const payload = await response.json().catch(()=>null);
+    const rows = payload && typeof payload === 'object' ? Object.values(payload).filter(Boolean) : [];
+    return rows.sort((a,b)=>new Date(b.timestamp||0)-new Date(a.timestamp||0)).slice(0, Math.max(1, Number(limit)||100));
+  }
+
+  async function fetchAuditTrailHour(day, hour) {
+    const normalizedDay = /^\d{4}-\d{2}-\d{2}$/.test(String(day || '')) ? String(day) : new Date().toISOString().slice(0,10);
+    const normalizedHour = String(Math.max(0, Math.min(23, Number(hour || 0)))).padStart(2,'0');
+    const { token, location } = await openLightDatabaseAccess();
+    const response = await fetchWithTimeout(auditTrailEndpoint(location, normalizedDay, normalizedHour, '', token), { method: 'GET', headers: { Accept: 'application/json' } }, 12000);
+    if (!response.ok) throw await firebaseError(response);
+    const payload = await response.json().catch(() => null);
+    const rows = payload && typeof payload === 'object' ? Object.values(payload).filter(Boolean) : [];
+    return rows.sort((a,b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+  }
+
+  async function fetchAuditTrailDay(day) {
+    const normalizedDay = /^\d{4}-\d{2}-\d{2}$/.test(String(day || '')) ? String(day) : new Date().toISOString().slice(0,10);
+    const result = [];
+    for (let hour = 23; hour >= 0; hour -= 1) {
+      const rows = await fetchAuditTrailHour(normalizedDay, hour).catch(() => []);
+      result.push(...rows);
+    }
+    return result.sort((a,b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+  }
+
   function signOut() {
     rawStorage.remove(AUTH_KEY);
     writeState({ signedOutAt: Date.now() });
@@ -1668,6 +1788,10 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   window.CashtopFirebase = {
     syncAll,
     reconcileAll,
+    flushAuditTrailPending,
+    fetchAuditTrailDay,
+    fetchAuditTrailHour,
+    fetchAuditTrailRecent,
     flushPendingQueue,
     uploadDataset,
     pullAll,
@@ -1692,11 +1816,13 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   };
 
   window.addEventListener('cashtop:data-changed', () => scheduleSync(45));
+  window.addEventListener('cashtop:audit-pending', () => setTimeout(() => flushAuditTrailPending().catch(() => null), 80));
   window.addEventListener('cashtop:sync-now', () => scheduleSync(20));
   window.addEventListener('cashtop:sync-queue-restored', () => scheduleSync(35));
   window.addEventListener('online', () => {
     datasetRetryState.clear();
     scheduleSync(20);
+    flushAuditTrailPending({ limit: 120 }).catch(() => null);
   });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') scheduleSync(90);
@@ -1718,8 +1844,11 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     if (pollTimer) clearInterval(pollTimer);
   }, { once: true });
 
+  // تنظيف سجل التدقيق القديم مرة واحدة والاحتفاظ بآخر 100 حركة فقط.
+  setTimeout(async()=>{if(navigator.onLine===false)return;try{const {token,location}=await openLightDatabaseAccess();await pruneRemoteAuditTrailRecent(location,token,100);await cleanupLegacyAuditTrail(location,token)}catch(_){}},1800);
   // أول دخول: نحاول قاعدة البيانات مباشرة حتى لو كانت navigator.onLine غير دقيقة.
   scheduleSync(10);
+  setTimeout(() => flushAuditTrailPending({ limit: 120 }).catch(() => null), 350);
   if (!core.getSyncQueue().length) scheduleBackgroundFullPull(750);
 } else if (core) {
   console.warn('[CASH TOP 2] Firebase sync configuration is incomplete.');

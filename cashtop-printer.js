@@ -61,6 +61,9 @@
     return Number.isFinite(n) ? n : 0;
   }
 
+  function invoicePrintRoundingEnabled(){try{return JSON.parse(localStorage.getItem('cashtop_settings')||'{}').roundInvoicePrintTotals===true}catch(_){return false}}
+  function printAmount(value){const n=number(value);return invoicePrintRoundingEnabled()?Math.round(n):n}
+  function printMoney(value){return invoicePrintRoundingEnabled()?String(Math.round(number(value))):money(value)}
   function money(value) {
     return number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
@@ -75,6 +78,10 @@
   }
 
   function itemUnit(item) {
+    const chain = window.CashtopMulti?.normalizeProductChain?.(item) || [];
+    const selected = chain.find(level => String(level.id) === String(item?.selectedUnit))
+      || chain.find((_, index) => (item?.selectedUnit === 'piece' && index === 0) || (item?.selectedUnit === 'unit' && index === chain.length - 1));
+    if (selected?.name) return selected.name;
     if (item?.selectedUnit === 'unit') return item.unitName || 'وحدة';
     return item?.pieceName || 'حبة';
   }
@@ -183,6 +190,7 @@
     const total = number(invoice?.total ?? subtotal);
     const paid = number(invoice?.paid);
     const remaining = Math.max(0, number(invoice?.debt ?? (total - paid)));
+    const displaySubtotal=printAmount(subtotal), displayTotal=printAmount(total), displayPaid=printAmount(paid), displayRemaining=printAmount(remaining);
     const date = new Date(invoice?.date || Date.now());
     const firstItem = items[0] || {};
     const firstQty = number(firstItem.qty), firstPrice = number(firstItem.price);
@@ -202,12 +210,12 @@
       item_price: money(firstPrice),
       item_total: money(firstQty * firstPrice),
       items_count: items.length,
-      subtotal: money(subtotal),
+      subtotal: printMoney(displaySubtotal),
       discount: money(invoice?.discount || 0),
       tax: money(invoice?.tax || 0),
-      total: money(total),
-      paid: money(paid),
-      remaining: money(remaining),
+      total: printMoney(displayTotal),
+      paid: printMoney(displayPaid),
+      remaining: printMoney(displayRemaining),
       notes: invoice?.notes || ''
     };
 
@@ -282,6 +290,7 @@
     const total = number(invoice?.total ?? subtotal);
     const paid = number(invoice?.paid);
     const remaining = Math.max(0, number(invoice?.debt ?? (total - paid)));
+    const displaySubtotal=printAmount(subtotal), displayTotal=printAmount(total), displayPaid=printAmount(paid), displayRemaining=printAmount(remaining);
     const currency = currencyLabel(settings);
     const date = new Date(invoice?.date || Date.now());
     const dateText = Number.isFinite(date.getTime()) ? date.toLocaleDateString('en-GB') : '-';
@@ -315,10 +324,10 @@
         <table class="receipt-table"><thead><tr><th>الصنف</th><th>الوحدة</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead><tbody>${rows}</tbody></table>
         <div class="dashed-line"></div>
         <div class="totals-horizontal-box">
-          <div class="total-col"><span class="total-label">الإجمالي</span><span class="total-val">${money(subtotal)} ${escapeHtml(currency)}</span></div>
-          <div class="total-col"><span class="total-label">الصافي</span><span class="total-val">${money(total)} ${escapeHtml(currency)}</span></div>
-          <div class="total-col"><span class="total-label">المدفوع</span><span class="total-val">${money(paid)} ${escapeHtml(currency)}</span></div>
-          <div class="total-col"><span class="total-label">المتبقي</span><span class="total-val">${money(remaining)} ${escapeHtml(currency)}</span></div>
+          <div class="total-col"><span class="total-label">الإجمالي</span><span class="total-val">${printMoney(displaySubtotal)} ${escapeHtml(currency)}</span></div>
+          <div class="total-col"><span class="total-label">الصافي</span><span class="total-val">${printMoney(displayTotal)} ${escapeHtml(currency)}</span></div>
+          <div class="total-col"><span class="total-label">المدفوع</span><span class="total-val">${printMoney(displayPaid)} ${escapeHtml(currency)}</span></div>
+          <div class="total-col"><span class="total-label">المتبقي</span><span class="total-val">${printMoney(displayRemaining)} ${escapeHtml(currency)}</span></div>
         </div>
         <div class="receipt-footer">${footer}${barcode}</div>
       </div>`

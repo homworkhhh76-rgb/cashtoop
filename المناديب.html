@@ -175,11 +175,12 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Firebase sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=48">
-    <script src="cashtop-core.js?v=24"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=54">
+    <script src="cashtop-core.js?v=54"></script><script src="push-config.js?v=54"></script><script src="push-client.js?v=54"></script>
+    <script src="multi-system.js?v=51"></script>
     <script src="firebase-config.js?v=19"></script>
     <script src="accounting-engine.js"></script>
-    <script src="firebase-sync.js?v=23"></script>
+    <script src="firebase-sync.js?v=54"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -200,6 +201,7 @@
         <summary><i class="fa-solid fa-boxes-stacked"></i><span>المخزون</span><i class="fa-solid fa-chevron-down ct-menu-arrow"></i></summary>
         <div class="ct-submenu">
           <a href="products.html">المنتجات</a>
+          <a href="materials.html">الأصناف</a>
           <a href="warehouses.html">المخازن</a>
           <a href="branches.html">الفروع</a>
           <a href="units.html">الوحدات</a>
@@ -526,6 +528,10 @@
                         <input type="number" step="0.01" class="form-control" id="payAmountInput" required min="0.01">
                         <label>المبلغ ₪</label>
                     </div>
+                    <div class="form-group" id="payCurrencyGroup" style="display:none;">
+                        <select class="form-control" id="payCurrencySelect" onchange="handleAgentCurrencyChange('pay')"></select>
+                        <label>عملة التوريد</label>
+                    </div>
                     <div class="form-group">
                         <select class="form-control" id="payVaultSelect" required>
                             <!-- تعبأ الصناديق من قاعدة البيانات الحقيقية للصناديق -->
@@ -557,6 +563,10 @@
                     <div class="form-group">
                         <input type="number" step="0.01" class="form-control" id="payRepAmountInput" required min="0.01">
                         <label>المبلغ</label>
+                    </div>
+                    <div class="form-group" id="payRepCurrencyGroup" style="display:none;">
+                        <select class="form-control" id="payRepCurrencySelect" onchange="handleAgentCurrencyChange('payRep')"></select>
+                        <label>عملة الصرف</label>
                     </div>
                     <div class="form-group">
                         <select class="form-control" id="payRepVaultSelect" required>
@@ -651,17 +661,76 @@
             if(localFunds) fundsData = JSON.parse(localFunds);
             else fundsData = { accounts: [{id: 1, name: "صندوق الكاش الرئيسي", type: "كاش", balance: 0}] };
 
+            normalizeAgentAccountCurrencies();
+            populateAgentCurrencySelects();
             populateVaultSelects();
             renderAgentsTable(); 
         }
 
-        function populateVaultSelects() {
-            let optionsHtml = '';
-            fundsData.accounts.forEach(a => {
-                optionsHtml += `<option value="${a.id}">${a.name} [${a.type}]</option>`;
+        function agentCurrencyConfig() {
+            return window.CashtopMulti?.getCurrencyConfig?.() || {
+                enabled: false,
+                baseCurrencyId: 'base',
+                currencies: [{ id: 'base', name: 'العملة الأساسية', code: '', symbol: '₪', ratePer100Base: 100 }]
+            };
+        }
+
+        function normalizeAgentAccountCurrencies() {
+            const cfg = agentCurrencyConfig();
+            if (!Array.isArray(fundsData.accounts)) fundsData.accounts = [];
+            fundsData.accounts.forEach(account => {
+                if (!account.currencyId) account.currencyId = cfg.baseCurrencyId;
             });
-            document.getElementById('payVaultSelect').innerHTML = optionsHtml;
-            document.getElementById('payRepVaultSelect').innerHTML = optionsHtml;
+        }
+
+        function populateAgentCurrencySelects() {
+            const cfg = agentCurrencyConfig();
+            ['pay', 'payRep'].forEach(prefix => {
+                const select = document.getElementById(`${prefix}CurrencySelect`);
+                const group = document.getElementById(`${prefix}CurrencyGroup`);
+                if (!select || !group) return;
+                group.style.display = cfg.enabled ? '' : 'none';
+                select.innerHTML = cfg.currencies.map(currency =>
+                    `<option value="${currency.id}">${currency.name}${currency.code ? ` (${currency.code})` : ''}</option>`
+                ).join('');
+                select.value = cfg.baseCurrencyId;
+            });
+        }
+
+        function getAgentFlowCurrencyId(prefix) {
+            const cfg = agentCurrencyConfig();
+            if (!cfg.enabled) return cfg.baseCurrencyId;
+            return document.getElementById(`${prefix}CurrencySelect`)?.value || cfg.baseCurrencyId;
+        }
+
+        function populateVaultSelects() {
+            const cfg = agentCurrencyConfig();
+            [['pay', 'payVaultSelect'], ['payRep', 'payRepVaultSelect']].forEach(([prefix, selectId]) => {
+                const select = document.getElementById(selectId);
+                if (!select) return;
+                const currencyId = getAgentFlowCurrencyId(prefix);
+                const accounts = (fundsData.accounts || []);
+                select.innerHTML = accounts.length
+                    ? accounts.map(account => {
+                        const currency = window.CashtopMulti?.getCurrency?.(account.currencyId || cfg.baseCurrencyId, cfg);
+                        const suffix = cfg.enabled ? ` - ${currency?.symbol || currency?.code || ''}` : '';
+                        return `<option value="${account.id}">${account.name} [${account.type}]${suffix}</option>`;
+                    }).join('')
+                    : '<option value="">لا يوجد صندوق مالي</option>';
+            });
+        }
+
+        function handleAgentCurrencyChange(prefix) {
+            populateVaultSelects();
+            if (prefix === 'payRep') {
+                const id = document.getElementById('payRepAgentId')?.value;
+                const agent = agentsData.find(x => String(x.id) === String(id));
+                const currencyId = getAgentFlowCurrencyId('payRep');
+                if (agent) {
+                    const native = window.CashtopMulti?.fromBase?.(Number(agent.totalCommission || 0), currencyId) ?? Number(agent.totalCommission || 0);
+                    document.getElementById('payRepAmountInput').value = native.toFixed(2);
+                }
+            }
         }
 
         // ==========================================
@@ -850,14 +919,50 @@
             }
         }
 
+        function agentItemUnitChain(item) {
+            if (item?.isVariant) {
+                return [{ id: 'piece', name: item.pieceName || 'قطعة', factorToPrevious: 1, factorToBase: 1, salePrice: Number(item.price || 0) }];
+            }
+            const chain = window.CashtopMulti?.normalizeProductChain?.(item) || [];
+            return chain.length ? chain : [{ id: 'piece', name: item?.pieceName || 'قطعة', factorToPrevious: 1, factorToBase: 1, salePrice: Number(item?.price || 0) }];
+        }
+
+        function agentItemUnit(item, unitId) {
+            const chain = agentItemUnitChain(item);
+            return chain.find(level => String(level.id) === String(unitId))
+                || chain.find((_, index) => (unitId === 'piece' && index === 0) || (unitId === 'unit' && index === chain.length - 1))
+                || chain[0];
+        }
+
+        function agentItemUnitFactor(item, unitId) {
+            return Math.max(0.000001, Number(agentItemUnit(item, unitId)?.factorToBase || 1));
+        }
+
+        function agentItemUnitName(item, unitId) {
+            return agentItemUnit(item, unitId)?.name || item?.pieceName || 'قطعة';
+        }
+
+        function agentItemUnitPrice(item, unitId) {
+            const unit = agentItemUnit(item, unitId);
+            const chain = agentItemUnitChain(item);
+            if (item?.unitPrices && Number.isFinite(Number(item.unitPrices[unit.id]))) return Math.max(0, Number(item.unitPrices[unit.id]));
+            if (Number.isFinite(Number(unit.salePrice))) return Math.max(0, Number(unit.salePrice));
+            const basePrice = Number(item?.pricePiece ?? item?.price ?? 0);
+            return Math.max(0, basePrice * Number(unit.factorToBase || 1));
+        }
+
         function addProdToCartLoad(prod, availQty) {
             const existing = transferCart.find(item => item.id === prod.id && !item.isVariant);
             if(!existing) {
+                const unitChain = agentItemUnitChain(prod);
+                const defaultUnit = unitChain[unitChain.length - 1] || unitChain[0];
                 transferCart.push({
                     id: prod.id, name: prod.name, barcode: prod.barcode || `BC_${Date.now()}`, stockLimit: availQty,
-                    piecesPerUnit: prod.piecesPerUnit || 1, unitName: prod.unitName || 'وحدة', pieceName: prod.pieceName || 'قطعة',
-                    addType: prod.addType || 'piece', transferUnit: (prod.addType === 'unit' ? 'unit' : 'piece'), transferQty: 1, 
-                    price: parseFloat(prod.pricePiece || prod.priceUnit || 0), isVariant: false
+                    piecesPerUnit: Number(defaultUnit?.factorToBase || 1), unitName: defaultUnit?.name || prod.unitName || 'وحدة', pieceName: unitChain[0]?.name || prod.pieceName || 'قطعة',
+                    addType: unitChain.length > 1 ? 'unit' : 'piece', transferUnit: defaultUnit?.id || 'piece', transferQty: 1,
+                    unitChain: JSON.parse(JSON.stringify(unitChain)), unitPrices: { ...(prod.unitPrices || {}) },
+                    pricePiece: Number(prod.pricePiece ?? prod.price ?? 0), priceUnit: Number(prod.priceUnit || 0),
+                    price: agentItemUnitPrice(prod, defaultUnit?.id || 'piece'), isVariant: false
                 });
                 renderTransferCart();
             } else { showToast("المنتج موجود بالقائمة", "warning"); }
@@ -907,60 +1012,58 @@
                 tbody.innerHTML = `<tr><td colspan="4" style="color:#999; padding:15px; font-weight:bold;">الجدول فارغ. ابحث لإضافة المنتجات...</td></tr>`;
                 return;
             }
-            
-            transferCart.forEach((item, index) => {
-                let unitAndQtyHtml = '';
-                if(item.addType === 'unit' && !item.isVariant) {
-                    let maxAllowedUnits = Math.floor(item.stockLimit / item.piecesPerUnit);
-                    let currentMax = item.transferUnit === 'unit' ? maxAllowedUnits : item.stockLimit;
 
-                    unitAndQtyHtml = `
-                        <div style="display:flex; flex-direction:row; gap:8px; align-items:center;">
-                            <input type="number" class="form-control" value="${item.transferQty}" min="1" max="${currentMax}" onchange="updateTransferQty(${index}, this.value)" style="width:90px; padding:4px; text-align:center; height:32px; font-weight:bold; border-radius:4px;" placeholder="الكمية">
-                            <select class="form-control" style="padding:4px 8px; font-size:11px; height:32px; width:110px; border-radius:4px; border-color:#3b82f6;" onchange="updateTransferUnit(${index}, this.value)">
-                                <option value="unit" ${item.transferUnit === 'unit' ? 'selected' : ''}>كرتونة (${item.piecesPerUnit} ${item.pieceName})</option>
-                                <option value="piece" ${item.transferUnit === 'piece' ? 'selected' : ''}>حبة / ${item.pieceName}</option>
-                            </select>
-                        </div>
-                    `;
-                } else {
-                    let unitOptions = `<span style="background:#f1f5f9; padding:4px 8px; border-radius:4px; margin-bottom:5px; display:inline-block; font-size:11px;">بالـ ${item.pieceName}</span>`;
-                    unitAndQtyHtml = `
-                        <div style="display:flex; flex-direction:row; gap:8px; align-items:center;">
-                            <input type="number" class="form-control" value="${item.transferQty}" min="1" max="${item.stockLimit}" onchange="updateTransferQty(${index}, this.value)" style="width:90px; padding:4px; text-align:center; height:32px; font-weight:bold; border-radius:4px;">
+            transferCart.forEach((item, index) => {
+                const chain = agentItemUnitChain(item);
+                const selectedUnit = agentItemUnit(item, item.transferUnit);
+                const factor = Number(selectedUnit?.factorToBase || 1);
+                const maxAllowed = Number(item.stockLimit || 0) / factor;
+                const unitOptions = chain.map((unit, unitIndex) => {
+                    const detail = unitIndex === 0 ? '' : ` (${Number(unit.factorToBase || 1)} ${chain[0].name})`;
+                    return `<option value="${unit.id}" ${String(item.transferUnit) === String(unit.id) ? 'selected' : ''}>${unit.name}${detail}</option>`;
+                }).join('');
+                const unitAndQtyHtml = `
+                    <div style="display:flex; flex-direction:row; gap:8px; align-items:center;">
+                        <input type="number" step="any" class="form-control" value="${item.transferQty}" min="0.000001" max="${maxAllowed}" onchange="updateTransferQty(${index}, this.value)" style="width:90px; padding:4px; text-align:center; height:32px; font-weight:bold; border-radius:4px;" placeholder="الكمية">
+                        <select class="form-control" style="padding:4px 8px; font-size:11px; height:32px; min-width:125px; border-radius:4px; border-color:#3b82f6;" onchange="updateTransferUnit(${index}, this.value)">
                             ${unitOptions}
-                        </div>
-                    `;
-                }
+                        </select>
+                    </div>`;
 
                 tbody.innerHTML += `
                     <tr>
                         <td style="font-weight:bold; font-size:13px; color:#222; text-align:right;">${item.name}</td>
                         <td style="vertical-align: middle;">${unitAndQtyHtml}</td>
-                        <td style="color:#00a65a; font-weight:bold; font-size:14px; vertical-align: middle;">${item.stockLimit}</td>
+                        <td style="color:#00a65a; font-weight:bold; font-size:14px; vertical-align: middle;">${item.stockLimit} ${chain[0]?.name || 'قطعة'}</td>
                         <td style="vertical-align: middle;"><button type="button" class="action-btn btn-delete-act" onclick="removeTransferItem(${index})"><i class="fa-solid fa-trash-can"></i></button></td>
-                    </tr>
-                `;
+                    </tr>`;
             });
         }
 
-        function updateTransferUnit(index, val) { transferCart[index].transferUnit = val; transferCart[index].transferQty = 1; renderTransferCart(); }
-        function updateTransferQty(index, val) { transferCart[index].transferQty = parseFloat(val) || 1; }
+        function updateTransferUnit(index, val) {
+            const item = transferCart[index];
+            if (!item) return;
+            item.transferUnit = val;
+            item.transferQty = 1;
+            item.price = agentItemUnitPrice(item, val);
+            renderTransferCart();
+        }
+        function updateTransferQty(index, val) { transferCart[index].transferQty = Math.max(0, parseFloat(val) || 0); }
         function removeTransferItem(index) { transferCart.splice(index, 1); renderTransferCart(); }
 
         function processLoadAction(e) {
             e.preventDefault();
             let aId = document.getElementById('stockAgentId').value;
-            let a = agentsData.find(x => x.id === aId);
+            let a = agentsData.find(x => String(x.id) === String(aId));
             if(!a) return;
 
             if (transferCart.length === 0) { showToast("السلة فارغة!", "error"); return; }
 
             let hasError = false;
             transferCart.forEach(item => {
-                let piecesToMove = item.transferUnit === 'unit' ? (item.transferQty * item.piecesPerUnit) : item.transferQty;
-                if (piecesToMove > item.stockLimit) {
-                    showToast(`الكمية المطلوبة للصنف [${item.name}] تتجاوز المتوفر بالمخزن!`, "error");
+                const piecesToMove = Number(item.transferQty || 0) * agentItemUnitFactor(item, item.transferUnit);
+                if (piecesToMove <= 0 || piecesToMove > Number(item.stockLimit || 0) + 0.000001) {
+                    showToast(`الكمية المطلوبة للصنف [${item.name}] تتجاوز المتوفر بالمخزن أو غير صحيحة!`, "error");
                     hasError = true;
                 }
             });
@@ -970,45 +1073,47 @@
             let detailsArr = [];
 
             transferCart.forEach(item => {
-                let piecesToMove = item.transferUnit === 'unit' ? (item.transferQty * item.piecesPerUnit) : item.transferQty;
-                totalVal += item.transferQty * item.price;
-                let unitStr = item.transferUnit === 'unit' ? 'كرتونة' : item.pieceName;
+                const factor = agentItemUnitFactor(item, item.transferUnit);
+                const piecesToMove = Number(item.transferQty || 0) * factor;
+                item.price = agentItemUnitPrice(item, item.transferUnit);
+                totalVal += Number(item.transferQty || 0) * Number(item.price || 0);
+                const unitStr = agentItemUnitName(item, item.transferUnit);
                 detailsArr.push(`${item.name} (${item.transferQty} ${unitStr})`);
 
-                // الخصم من المخزن العام
-                let dbProd = productsData.find(p => p.id === item.id);
+                let dbProd = productsData.find(p => String(p.id) === String(item.id));
                 if (item.isVariant) dbProd.variants[item.vIndex].qty -= piecesToMove;
                 else dbProd.stockPieces = parseFloat(dbProd.stockPieces) - piecesToMove;
 
-                // الإضافة لسيارة المندوب
                 let carItemCode = item.isVariant ? `${item.id}_${item.vSize}_${item.vColor}` : item.id;
-                let existingInCar = a.carStock.find(c => c.cartId === carItemCode && c.transferUnit === item.transferUnit);
-                
+                let existingInCar = a.carStock.find(c => c.cartId === carItemCode && String(c.transferUnit) === String(item.transferUnit));
+
                 if(existingInCar) {
-                    existingInCar.qty += item.transferQty;
+                    existingInCar.qty = Number(existingInCar.qty || 0) + Number(item.transferQty || 0);
+                    existingInCar.price = agentItemUnitPrice(existingInCar, existingInCar.transferUnit);
                 } else {
                     let newItemForCar = JSON.parse(JSON.stringify(item));
                     newItemForCar.cartId = carItemCode;
-                    newItemForCar.qty = item.transferQty; 
+                    newItemForCar.qty = Number(item.transferQty || 0);
+                    newItemForCar.transferFactor = factor;
                     a.carStock.push(newItemForCar);
                 }
             });
 
-            // تسجيل حركة المندوب
             agentMovementsData.push({
                 id: `MOV_${Date.now()}`, agentId: aId, date: new Date().toLocaleString('ar-EG'),
                 type: 'تحميل بضاعة', details: detailsArr.join('، '), amount: totalVal
             });
             localStorage.setItem('cashtop_agent_movements', JSON.stringify(agentMovementsData));
-
             localStorage.setItem('cashtop_sales_agents', JSON.stringify(agentsData));
             localStorage.setItem('cashtop_products', JSON.stringify(productsData));
-            
+
             showToast(`تم تحميل البضاعة لسيارة المندوب وخصمها من المخزن بنجاح!`, "success");
             closeModal('stockModal');
-            renderAgentsTable(); 
+            renderAgentsTable();
         }
 
+        // ==========================================
+        // تسوية الجرد والمبيعات (نهاية اليوم)
         // ==========================================
         // تسوية الجرد والمبيعات (نهاية اليوم)
         // ==========================================
@@ -1039,95 +1144,82 @@
             }
 
             settleDataTemp.forEach((item, index) => {
-                let unitStr = item.transferUnit === 'unit' ? 'كرتونة' : item.pieceName;
-                if(!item.soldQty) item.soldQty = 0;
-                if(!item.soldUnit) item.soldUnit = item.transferUnit; 
-                if(!item.returnedQty) item.returnedQty = 0;
-                if(!item.returnedUnit) item.returnedUnit = item.transferUnit; 
-                
-                // حساب الكمية المتبقية
-                let returnedPieces = item.returnedUnit === 'unit' ? (item.returnedQty * item.piecesPerUnit) : item.returnedQty;
-                let originalPieces = item.transferUnit === 'unit' ? (item.qty * item.piecesPerUnit) : item.qty;
-                let soldPieces = item.soldUnit === 'unit' ? (item.soldQty * item.piecesPerUnit) : item.soldQty;
-                
-                let remainingPieces = originalPieces - soldPieces - returnedPieces;
-                let remainingDisplay = item.transferUnit === 'unit' ? (remainingPieces / item.piecesPerUnit).toFixed(1) : remainingPieces;
+                const chain = agentItemUnitChain(item);
+                if(!Number.isFinite(Number(item.soldQty))) item.soldQty = 0;
+                if(!item.soldUnit) item.soldUnit = item.transferUnit || chain[0].id;
+                if(!Number.isFinite(Number(item.returnedQty))) item.returnedQty = 0;
+                if(!item.returnedUnit) item.returnedUnit = item.transferUnit || chain[0].id;
+
+                const originalFactor = agentItemUnitFactor(item, item.transferUnit);
+                const returnedPieces = Number(item.returnedQty || 0) * agentItemUnitFactor(item, item.returnedUnit);
+                const originalPieces = Number(item.qty || 0) * originalFactor;
+                const soldPieces = Number(item.soldQty || 0) * agentItemUnitFactor(item, item.soldUnit);
+                const remainingPieces = originalPieces - soldPieces - returnedPieces;
+                const remainingDisplay = (remainingPieces / originalFactor).toFixed(3).replace(/\.?0+$/, '');
+                const unitStr = agentItemUnitName(item, item.transferUnit);
+                const options = chain.map(unit => `<option value="${unit.id}" ${String(item.soldUnit) === String(unit.id) ? 'selected' : ''}>${unit.name}</option>`).join('');
+                const returnOptions = chain.map(unit => `<option value="${unit.id}" ${String(item.returnedUnit) === String(unit.id) ? 'selected' : ''}>${unit.name}</option>`).join('');
 
                 tbody.innerHTML += `
                     <tr>
-                        <td style="text-align:right; font-weight:bold;">${item.name}<br><small style="color:#777; font-weight:normal;">السعر: ${item.price} ₪</small></td>
+                        <td style="text-align:right; font-weight:bold;">${item.name}<br><small style="color:#777; font-weight:normal;">سعر ${unitStr}: ${Number(agentItemUnitPrice(item, item.transferUnit)).toFixed(2)} ₪</small></td>
                         <td style="font-weight:bold; color:#333; font-size:14px;">${item.qty} <span style="font-size:10px;">${unitStr}</span></td>
                         <td>
                             <div style="display:flex; align-items:center; justify-content:center; gap: 8px;">
                                 <input type="number" min="0" step="any" class="settle-input" value="${item.soldQty}" oninput="updateSettleMath(${index}, 'sold', this.value)" style="border-radius:4px;">
-                                <select class="settle-unit-select" onchange="updateSettleMath(${index}, 'soldUnit', this.value)" style="border-radius:4px; border-left:1px solid #ccc;">
-                                    <option value="piece" ${item.soldUnit === 'piece' ? 'selected' : ''}>${item.pieceName}</option>
-                                    ${item.addType === 'unit' ? `<option value="unit" ${item.soldUnit === 'unit' ? 'selected' : ''}>كرتونة</option>` : ''}
-                                </select>
+                                <select class="settle-unit-select" onchange="updateSettleMath(${index}, 'soldUnit', this.value)" style="border-radius:4px; border-left:1px solid #ccc;">${options}</select>
                             </div>
                         </td>
                         <td>
                             <div style="display:flex; align-items:center; justify-content:center; gap: 8px;">
                                 <input type="number" min="0" step="any" class="settle-input" value="${item.returnedQty}" oninput="updateSettleMath(${index}, 'return', this.value)" style="border-radius:4px;">
-                                <select class="settle-unit-select" onchange="updateSettleMath(${index}, 'returnUnit', this.value)" style="border-radius:4px; border-left:1px solid #ccc;">
-                                    <option value="piece" ${item.returnedUnit === 'piece' ? 'selected' : ''}>${item.pieceName}</option>
-                                    ${item.addType === 'unit' ? `<option value="unit" ${item.returnedUnit === 'unit' ? 'selected' : ''}>كرتونة</option>` : ''}
-                                </select>
+                                <select class="settle-unit-select" onchange="updateSettleMath(${index}, 'returnUnit', this.value)" style="border-radius:4px; border-left:1px solid #ccc;">${returnOptions}</select>
                             </div>
                         </td>
                         <td style="font-weight:bold; color:${remainingPieces < 0 ? '#dd4b39' : '#00a65a'};" id="rem_${index}">${remainingDisplay} <span style="font-size:10px;">${unitStr}</span></td>
-                    </tr>
-                `;
+                    </tr>`;
             });
             updateSettleSummary();
         }
 
         function updateSettleMath(index, field, val) {
             let item = settleDataTemp[index];
-            
-            if (field === 'sold') item.soldQty = parseFloat(val) || 0;
+            if (!item) return;
+            if (field === 'sold') item.soldQty = Math.max(0, parseFloat(val) || 0);
             else if (field === 'soldUnit') item.soldUnit = val;
-            else if (field === 'return') item.returnedQty = parseFloat(val) || 0;
+            else if (field === 'return') item.returnedQty = Math.max(0, parseFloat(val) || 0);
             else if (field === 'returnUnit') item.returnedUnit = val;
 
-            let originalPieces = item.transferUnit === 'unit' ? (item.qty * item.piecesPerUnit) : item.qty;
-            let soldPieces = item.soldUnit === 'unit' ? (item.soldQty * item.piecesPerUnit) : item.soldQty;
-            let returnedPieces = item.returnedUnit === 'unit' ? (item.returnedQty * item.piecesPerUnit) : item.returnedQty;
-            
-            let remainingPieces = originalPieces - soldPieces - returnedPieces;
-            let remainingDisplay = item.transferUnit === 'unit' ? (remainingPieces / item.piecesPerUnit).toFixed(1) : remainingPieces;
-            let unitStr = item.transferUnit === 'unit' ? 'كرتونة' : item.pieceName;
+            const originalFactor = agentItemUnitFactor(item, item.transferUnit);
+            const originalPieces = Number(item.qty || 0) * originalFactor;
+            const soldPieces = Number(item.soldQty || 0) * agentItemUnitFactor(item, item.soldUnit);
+            const returnedPieces = Number(item.returnedQty || 0) * agentItemUnitFactor(item, item.returnedUnit);
+            const remainingPieces = originalPieces - soldPieces - returnedPieces;
+            const remainingDisplay = (remainingPieces / originalFactor).toFixed(3).replace(/\.?0+$/, '');
+            const unitStr = agentItemUnitName(item, item.transferUnit);
 
             let remTd = document.getElementById(`rem_${index}`);
             if(remTd) {
                 remTd.innerHTML = `${remainingDisplay} <span style="font-size:10px;">${unitStr}</span>`;
                 remTd.style.color = remainingPieces < 0 ? '#dd4b39' : '#00a65a';
             }
-
             updateSettleSummary();
         }
 
         function updateSettleSummary() {
-            let a = agentsData.find(x => x.id === currentSettleAgentId);
+            let a = agentsData.find(x => String(x.id) === String(currentSettleAgentId));
             let totalSalesVal = 0;
             let totalSoldItemsCount = 0;
 
             settleDataTemp.forEach(item => {
-                let unitPrice = item.transferUnit === 'unit' && item.soldUnit === 'piece' ? (item.price / item.piecesPerUnit) : item.price;
-                if(item.transferUnit === 'piece' && item.soldUnit === 'unit') unitPrice = item.price * item.piecesPerUnit; 
-                
-                totalSalesVal += (item.soldQty * unitPrice);
-                
-                let piecesSold = item.soldUnit === 'unit' ? (item.soldQty * item.piecesPerUnit) : item.soldQty;
-                totalSoldItemsCount += piecesSold;
+                const unitPrice = agentItemUnitPrice(item, item.soldUnit);
+                totalSalesVal += Number(item.soldQty || 0) * unitPrice;
+                totalSoldItemsCount += Number(item.soldQty || 0) * agentItemUnitFactor(item, item.soldUnit);
             });
 
             let commissionVal = 0;
-            if(a.commType === 'percent') {
-                commissionVal = totalSalesVal * (a.commValue / 100);
-            } else {
-                commissionVal = totalSoldItemsCount * a.commValue;
-            }
+            if(a?.commType === 'percent') commissionVal = totalSalesVal * (Number(a.commValue || 0) / 100);
+            else commissionVal = totalSoldItemsCount * Number(a?.commValue || 0);
 
             document.getElementById('settleTotalSalesValue').innerText = totalSalesVal.toFixed(2) + ' ₪';
             document.getElementById('settleTotalCommissionValue').innerText = commissionVal.toFixed(2) + ' ₪';
@@ -1139,9 +1231,9 @@
             
             let hasError = false;
             settleDataTemp.forEach(item => {
-                let originalPieces = item.transferUnit === 'unit' ? (item.qty * item.piecesPerUnit) : item.qty;
-                let soldPieces = item.soldUnit === 'unit' ? (item.soldQty * item.piecesPerUnit) : item.soldQty;
-                let returnedPieces = item.returnedUnit === 'unit' ? (item.returnedQty * item.piecesPerUnit) : item.returnedQty;
+                let originalPieces = Number(item.qty || 0) * agentItemUnitFactor(item, item.transferUnit);
+                let soldPieces = Number(item.soldQty || 0) * agentItemUnitFactor(item, item.soldUnit);
+                let returnedPieces = Number(item.returnedQty || 0) * agentItemUnitFactor(item, item.returnedUnit);
 
                 if (soldPieces + returnedPieces > originalPieces) {
                     showToast(`المباع والمرتجع للصنف [${item.name}] أكبر من المتوفر بالسيارة!`, "error");
@@ -1159,13 +1251,13 @@
                 let originalItemInCar = a.carStock[i];
                 let dbProd = productsData.find(p => p.id === item.id);
 
-                let originalPieces = item.transferUnit === 'unit' ? (item.qty * item.piecesPerUnit) : item.qty;
-                let soldPieces = item.soldUnit === 'unit' ? (item.soldQty * item.piecesPerUnit) : item.soldQty;
-                let returnedPieces = item.returnedUnit === 'unit' ? (item.returnedQty * item.piecesPerUnit) : item.returnedQty;
+                let originalPieces = Number(item.qty || 0) * agentItemUnitFactor(item, item.transferUnit);
+                let soldPieces = Number(item.soldQty || 0) * agentItemUnitFactor(item, item.soldUnit);
+                let returnedPieces = Number(item.returnedQty || 0) * agentItemUnitFactor(item, item.returnedUnit);
 
                 if (item.soldQty > 0) {
-                    let unitPrice = item.transferUnit === 'unit' && item.soldUnit === 'piece' ? (item.price / item.piecesPerUnit) : item.price;
-                    totalSalesVal += (item.soldQty * unitPrice);
+                    let unitPrice = agentItemUnitPrice(item, item.soldUnit);
+                    totalSalesVal += (Number(item.soldQty || 0) * unitPrice);
                     totalSoldItemsCount += soldPieces;
                     
                     let itemCost = dbProd ? parseFloat(dbProd.cost) : 0;
@@ -1173,7 +1265,7 @@
                         id: item.id,
                         name: item.name,
                         qty: soldPieces,
-                        price: item.transferUnit === 'unit' ? (item.price / item.piecesPerUnit) : item.price,
+                        price: agentItemUnitPrice(item, agentItemUnitChain(item)[0]?.id || 'piece'),
                         cost: itemCost
                     });
                 }
@@ -1189,7 +1281,7 @@
                 if (remainingPieces <= 0) {
                     a.carStock.splice(i, 1);
                 } else {
-                    originalItemInCar.qty = item.transferUnit === 'unit' ? (remainingPieces / item.piecesPerUnit) : remainingPieces;
+                    originalItemInCar.qty = remainingPieces / agentItemUnitFactor(item, item.transferUnit);
                 }
             }
 
@@ -1250,44 +1342,61 @@
         // توريد نقدية لخزينة المنشأة
         // ==========================================
         function openPayModal(id) {
-            let a = agentsData.find(x => x.id === id);
+            let a = agentsData.find(x => String(x.id) === String(id));
             if(!a) return;
+            document.getElementById('payForm').reset();
             document.getElementById('payAgentId').value = a.id;
             document.getElementById('payAgentNameTitle').innerText = a.name;
-            document.getElementById('payForm').reset();
+            const cfg = agentCurrencyConfig();
+            const currencySelect = document.getElementById('payCurrencySelect');
+            if (currencySelect) currencySelect.value = cfg.baseCurrencyId;
+            populateVaultSelects();
             openModal('payModal');
         }
 
         function processPayment(e) {
             e.preventDefault();
             let id = document.getElementById('payAgentId').value;
-            let amount = parseFloat(document.getElementById('payAmountInput').value) || 0;
-            let vaultId = parseInt(document.getElementById('payVaultSelect').value);
-            let vault = fundsData.accounts.find(v => v.id === vaultId);
+            const amountNative = parseFloat(document.getElementById('payAmountInput').value) || 0;
+            const currencyId = getAgentFlowCurrencyId('pay');
+            const amount = window.CashtopMulti?.toBase?.(amountNative, currencyId) ?? amountNative;
+            const vaultId = document.getElementById('payVaultSelect').value;
+            let vault = fundsData.accounts.find(v => String(v.id) === String(vaultId));
+            let a = agentsData.find(x => String(x.id) === String(id));
+            const cfg = agentCurrencyConfig();
 
-            let a = agentsData.find(x => x.id === id);
-            
-            if(a && vault) {
-                vault.balance += amount;
+            if(a && vault && amountNative > 0) {
+                const settlement = window.CashtopMulti?.settleToAccount?.(amountNative, currencyId, vault)
+                    || { accountAmount: amountNative, accountCurrencyId: vault.currencyId || currencyId, baseAmount: amount };
+                vault.balance = Number(vault.balance || 0) + Number(settlement.accountAmount || 0);
                 if(!fundsData.accountLogs) fundsData.accountLogs = [];
-                fundsData.accountLogs.push({ accountId: vault.id, date: new Date().toISOString().split('T')[0], type: "إيداع", amount: amount, notes: `استلام نقدية مبيعات من المندوب: ${a.name}` });
+                fundsData.accountLogs.push({
+                    accountId: vault.id, date: new Date().toISOString().split('T')[0], type: "إيداع",
+                    amount: Number(settlement.accountAmount || 0), baseAmount: amount, currencyId: settlement.accountCurrencyId,
+                    transactionAmount: amountNative, transactionCurrencyId: currencyId,
+                    notes: `استلام نقدية مبيعات من المندوب: ${a.name}`
+                });
                 localStorage.setItem('cashtop_funds_db', JSON.stringify(fundsData));
 
                 a.totalCollected = (parseFloat(a.totalCollected) || 0) + amount;
 
                 let expenses = JSON.parse(localStorage.getItem('cashtop_expenses')) || [];
-                expenses.push({ id: `INC_${Date.now()}`, date: new Date().toISOString(), type: 'توريد مناديب', amount: amount, notes: `استلام نقدية من المندوب: ${a.name} إلى ${vault.name}` });
+                expenses.push({
+                    id: `INC_${Date.now()}`, date: new Date().toISOString(), type: 'توريد مناديب', amount,
+                    amountNative, currencyId, accountAmountNative: Number(settlement.accountAmount || 0), accountCurrencyId: settlement.accountCurrencyId, accountId: vault.id,
+                    notes: `استلام نقدية من المندوب: ${a.name} إلى ${vault.name}`
+                });
                 localStorage.setItem('cashtop_expenses', JSON.stringify(expenses));
 
                 agentMovementsData.push({
                     id: `MOV_${Date.now()}`, agentId: id, date: new Date().toLocaleString('ar-EG'),
-                    type: 'توريد نقدية', details: `دفعة مبيعات محصلة تم توريدها لـ: ${vault.name}`, amount: amount
+                    type: 'توريد نقدية', details: `دفعة مبيعات محصلة تم توريدها لـ: ${vault.name}`,
+                    amount, amountNative, currencyId
                 });
                 localStorage.setItem('cashtop_agent_movements', JSON.stringify(agentMovementsData));
-
                 localStorage.setItem('cashtop_sales_agents', JSON.stringify(agentsData));
 
-                // تحديث الفواتير المسجلة כدين لتصبح مدفوعة (للمحاسبة الدقيقة)
+                // الفواتير وذمم المندوب محفوظة دائماً بقيمة العملة الأساسية.
                 let invoicesDB = JSON.parse(localStorage.getItem('cashtop_invoices')) || [];
                 let remainingPayment = amount;
                 for (let i = 0; i < invoicesDB.length; i++) {
@@ -1306,7 +1415,8 @@
                 }
                 localStorage.setItem('cashtop_invoices', JSON.stringify(invoicesDB));
 
-                showToast(`تم استلام ${amount.toFixed(2)} ₪ وتوريدها لـ ${vault.name}.`, 'success');
+                const currency = window.CashtopMulti?.getCurrency?.(currencyId, cfg);
+                showToast(`تم استلام ${amountNative.toFixed(2)} ${currency?.symbol || currency?.code || ''} وتوريدها لـ ${vault.name}.`, 'success');
                 closeModal('payModal');
                 renderAgentsTable(); 
             }
@@ -1316,50 +1426,73 @@
         // تسديد عمولة للمندوب (صرف)
         // ==========================================
         function openPayRepModal(id) {
-            let a = agentsData.find(x => x.id === id);
+            let a = agentsData.find(x => String(x.id) === String(id));
             if(!a) return;
+            document.getElementById('payRepForm').reset();
             document.getElementById('payRepAgentId').value = a.id;
             document.getElementById('payRepAgentNameTitle').innerText = a.name;
-            document.getElementById('payRepAmountInput').value = a.totalCommission.toFixed(2); 
-            document.getElementById('payRepForm').reset();
+            const cfg = agentCurrencyConfig();
+            const currencySelect = document.getElementById('payRepCurrencySelect');
+            if (currencySelect) currencySelect.value = cfg.baseCurrencyId;
+            const native = window.CashtopMulti?.fromBase?.(Number(a.totalCommission || 0), cfg.baseCurrencyId) ?? Number(a.totalCommission || 0);
+            document.getElementById('payRepAmountInput').value = native.toFixed(2);
+            populateVaultSelects();
             openModal('payRepModal');
         }
 
         function processPayRep(e) {
             e.preventDefault();
             let id = document.getElementById('payRepAgentId').value;
-            let amount = parseFloat(document.getElementById('payRepAmountInput').value) || 0;
-            let vaultId = parseInt(document.getElementById('payRepVaultSelect').value);
-            let vault = fundsData.accounts.find(v => v.id === vaultId);
+            const amountNative = parseFloat(document.getElementById('payRepAmountInput').value) || 0;
+            const currencyId = getAgentFlowCurrencyId('payRep');
+            const amount = window.CashtopMulti?.toBase?.(amountNative, currencyId) ?? amountNative;
+            const vaultId = document.getElementById('payRepVaultSelect').value;
+            let vault = fundsData.accounts.find(v => String(v.id) === String(vaultId));
+            let a = agentsData.find(x => String(x.id) === String(id));
+            const cfg = agentCurrencyConfig();
 
-            let a = agentsData.find(x => x.id === id);
-            
-            if(a && vault) {
-                if(vault.balance < amount) {
-                    showToast(`رصيد صندوق [${vault.name}] غير كافٍ لسحب الدفعة!`, "error");
+            if(a && vault && amountNative > 0) {
+                const settlement = window.CashtopMulti?.settleToAccount?.(amountNative, currencyId, vault)
+                    || { accountAmount: amountNative, accountCurrencyId: vault.currencyId || currencyId, baseAmount: amount };
+                if(Number(vault.balance || 0) < Number(settlement.accountAmount || 0)) {
+                    showToast(`رصيد صندوق [${vault.name}] غير كافٍ لسحب الدفعة بعد تحويل العملة!`, "error");
+                    return;
+                }
+                if (amount > Number(a.totalCommission || 0) + 0.000001) {
+                    showToast('قيمة الدفعة بعد التحويل أكبر من العمولة المستحقة للمندوب.', 'error');
                     return;
                 }
 
-                vault.balance -= amount;
+                vault.balance = Number(vault.balance || 0) - Number(settlement.accountAmount || 0);
                 if(!fundsData.accountLogs) fundsData.accountLogs = [];
-                fundsData.accountLogs.push({ accountId: vault.id, date: new Date().toISOString().split('T')[0], type: "سحب", amount: amount, notes: `تسديد عمولة للمندوب: ${a.name}` });
+                fundsData.accountLogs.push({
+                    accountId: vault.id, date: new Date().toISOString().split('T')[0], type: "سحب",
+                    amount: Number(settlement.accountAmount || 0), baseAmount: amount, currencyId: settlement.accountCurrencyId,
+                    transactionAmount: amountNative, transactionCurrencyId: currencyId,
+                    notes: `تسديد عمولة للمندوب: ${a.name}`
+                });
                 localStorage.setItem('cashtop_funds_db', JSON.stringify(fundsData));
 
-                a.totalCommission -= amount;
+                a.totalCommission = Math.max(0, Number(a.totalCommission || 0) - amount);
 
                 let expenses = JSON.parse(localStorage.getItem('cashtop_expenses')) || [];
-                expenses.push({ id: `EXP_${Date.now()}`, date: new Date().toISOString(), type: 'تسديد عمولة مندوب', amount: amount, notes: `تسديد عمولة للمندوب: ${a.name} من ${vault.name}` });
+                expenses.push({
+                    id: `EXP_${Date.now()}`, date: new Date().toISOString(), type: 'تسديد عمولة مندوب', amount,
+                    amountNative, currencyId, accountAmountNative: Number(settlement.accountAmount || 0), accountCurrencyId: settlement.accountCurrencyId, accountId: vault.id,
+                    notes: `تسديد عمولة للمندوب: ${a.name} من ${vault.name}`
+                });
                 localStorage.setItem('cashtop_expenses', JSON.stringify(expenses));
 
                 agentMovementsData.push({
                     id: `MOV_${Date.now()}`, agentId: id, date: new Date().toLocaleString('ar-EG'),
-                    type: 'صرف دفعة / عمولة', details: `تم صرف دفعة للمندوب من ${vault.name}`, amount: amount
+                    type: 'صرف دفعة / عمولة', details: `تم صرف دفعة للمندوب من ${vault.name}`,
+                    amount, amountNative, currencyId
                 });
                 localStorage.setItem('cashtop_agent_movements', JSON.stringify(agentMovementsData));
-
                 localStorage.setItem('cashtop_sales_agents', JSON.stringify(agentsData));
 
-                showToast(`تم صرف ${amount.toFixed(2)} ₪ للمندوب بنجاح.`, 'success');
+                const currency = window.CashtopMulti?.getCurrency?.(currencyId, cfg);
+                showToast(`تم صرف ${amountNative.toFixed(2)} ${currency?.symbol || currency?.code || ''} للمندوب بنجاح.`, 'success');
                 closeModal('payRepModal');
                 renderAgentsTable(); 
             }

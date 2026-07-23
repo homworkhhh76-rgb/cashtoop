@@ -16,11 +16,31 @@
     })[char]);
   }
 
+  function invoiceDocumentAmount(value){let enabled=false;try{enabled=JSON.parse(localStorage.getItem('cashtop_settings')||'{}').roundInvoicePrintTotals===true}catch(_){}const n=Number(value||0);return enabled?Math.round(n):n}
   function money(value) {
     return (Number(value) || 0).toLocaleString('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     });
+  }
+
+  function invoiceDocumentMoney(value) {
+    let enabled = false;
+    try { enabled = JSON.parse(localStorage.getItem('cashtop_settings') || '{}').roundInvoicePrintTotals === true; } catch (_) {}
+    return enabled ? String(Math.round(Number(value) || 0)) : money(value);
+  }
+
+  function documentItemChain(item) {
+    const chain = window.CashtopMulti?.normalizeProductChain?.(item) || [];
+    return chain.length ? chain : [{ id: 'piece', name: item?.pieceName || 'قطعة', factorToBase: 1 }];
+  }
+
+  function documentItemUnit(item, purchase = false) {
+    const chain = documentItemChain(item);
+    const unitId = purchase ? (item?.selectedUnitId || (item?.addType === 'unit' ? chain[chain.length - 1]?.id : chain[0]?.id)) : item?.selectedUnit;
+    return chain.find(level => String(level.id) === String(unitId))
+      || chain.find((_, index) => (unitId === 'piece' && index === 0) || (unitId === 'unit' && index === chain.length - 1))
+      || chain[0];
   }
 
   function currencySymbol() {
@@ -117,11 +137,19 @@
 
   function itemsTable(items, purchase = false) {
     const rows = (items || []).map((item, index) => {
-      const qty = purchase ? Number(item.quantityPieces || item.qty || 0) : Number(item.qty || 0);
-      const price = purchase ? Number(item.purchaseCost || item.price || 0) : Number(item.price || 0);
+      const selectedLevel = documentItemUnit(item, purchase);
+      const factor = Math.max(0.000001, Number(selectedLevel?.factorToBase || item.purchaseUnitFactor || 1));
+      const purchasePieces = Number(item.quantityPieces ?? item.stockPieces ?? item.qty ?? 0);
+      const qty = purchase
+        ? Number(item.purchaseQuantity ?? item.inputQty ?? (purchasePieces / factor))
+        : Number(item.qty || 0);
+      const fallbackUnitCost = Number(item.purchaseCost ?? item.cost ?? item.price ?? 0) * factor;
+      const price = purchase
+        ? Number(item.purchaseUnitCost ?? (Number(item.inputQty || 0) > 0 && Number(item.totalLineCost || 0) > 0 ? Number(item.totalLineCost) / Number(item.inputQty) : fallbackUnitCost))
+        : Number(item.price || 0);
       const unit = purchase
-        ? (item.addType === 'unit' ? (item.unitName || 'وحدة') : (item.pieceName || 'قطعة'))
-        : (item.selectedUnit === 'unit' ? (item.unitName || 'وحدة') : (item.pieceName || 'قطعة'));
+        ? (item.selectedUnitName || selectedLevel?.name || item.pieceName || 'قطعة')
+        : (selectedLevel?.name || item.pieceName || 'قطعة');
       const image = item.image || item.imageUrl || resolveProductImage(item.productId || item.id);
       const imageCell = image ? `<img class="ct-doc-product-image" src="${esc(image)}" alt="صورة المنتج">` : '';
       return `<tr>
@@ -161,10 +189,10 @@
           ['رصيد الحساب الحالي', `${money(currentBalance)} ${currency}`]
         ])}
         ${summaryTable([
-          ['مجموع الفاتورة', `${money(Number(invoice.total || 0) + Number(invoice.discount || 0) - Number(invoice.tax || 0))} ${currency}`],
-          ['دفعة نقدية', `${money(invoice.paid)} ${currency}`],
+          ['مجموع الفاتورة', `${invoiceDocumentMoney(invoiceDocumentAmount(Number(invoice.total || 0) + Number(invoice.discount || 0) - Number(invoice.tax || 0)))} ${currency}`],
+          ['دفعة نقدية', `${invoiceDocumentMoney(invoiceDocumentAmount(invoice.paid))} ${currency}`],
           ['الخصم/الإضافة', `${money(Number(invoice.tax || 0) - Number(invoice.discount || 0))} ${currency}`],
-          ['صافي الفاتورة', `${money(invoice.total)} ${currency}`]
+          ['صافي الفاتورة', `${invoiceDocumentMoney(invoiceDocumentAmount(invoice.total))} ${currency}`]
         ])}
       </div>
       <div class="ct-doc-note-row"><div class="note-value">${esc(invoice.notes || '')}</div><div class="note-label">ملاحظات</div></div>
@@ -193,14 +221,14 @@
         ${summaryTable([
           ['مجموع الكميات', `${money(itemCount)}`],
           ['عدد الأصناف', `${Number(invoice.itemsCount || (invoice.items || []).length)}`],
-          ['المدفوع', `${money(invoice.paid)} ${currency}`],
-          ['المتبقي للمورد', `${money(invoice.debt)} ${currency}`]
+          ['المدفوع', `${invoiceDocumentMoney(invoiceDocumentAmount(invoice.paid))} ${currency}`],
+          ['المتبقي للمورد', `${invoiceDocumentMoney(invoiceDocumentAmount(invoice.debt))} ${currency}`]
         ])}
         ${summaryTable([
-          ['مجموع الفاتورة', `${money(invoice.subtotal ?? invoice.total)} ${currency}`],
+          ['مجموع الفاتورة', `${invoiceDocumentMoney(invoiceDocumentAmount(invoice.subtotal ?? invoice.total))} ${currency}`],
           ['خصم المورد', `${money(invoice.discount)} ${currency}`],
           ['الضريبة/الإضافة', `${money(invoice.tax)} ${currency}`],
-          ['صافي الفاتورة', `${money(invoice.total)} ${currency}`]
+          ['صافي الفاتورة', `${invoiceDocumentMoney(invoiceDocumentAmount(invoice.total))} ${currency}`]
         ])}
       </div>
       <div class="ct-doc-note-row"><div class="note-value">${esc(invoice.notes || '')}</div><div class="note-label">ملاحظات</div></div>

@@ -46,7 +46,7 @@
   };
 
   const DATA_KEYS = [
-    'cashtop_products', 'cashtop_customers', 'cashtop_customer_groups',
+    'cashtop_products', 'cashtop_materials', 'cashtop_material_purchases', 'cashtop_customers', 'cashtop_customer_groups',
     'cashtop_suppliers', 'cashtop_supplier_movements', 'cashtop_invoices',
     'cashtop_purchases', 'cashtop_purchase_returns', 'cashtop_expenses',
     'cashtop_expense_types', 'cashtop_funds_db', 'cashtop_vouchers',
@@ -65,7 +65,7 @@
     { id: 'pages', title: 'صلاحيات الصفحات والأقسام', permissions: [
       ['dashboard.view', 'عرض لوحة التحكم'], ['pos.access', 'فتح الكاشير ونقطة البيع'],
       ['sales.invoices.view', 'عرض فواتير المبيعات'], ['purchases.view', 'عرض فواتير المشتريات'],
-      ['purchaseReturns.view', 'عرض مرتجع المشتريات'], ['products.view', 'عرض المنتجات'],
+      ['purchaseReturns.view', 'عرض مرتجع المشتريات'], ['products.view', 'عرض المنتجات'], ['materials.view', 'عرض الأصناف الخام'],
       ['warehouses.view', 'عرض المخازن'], ['branches.view', 'عرض الفروع'], ['units.view', 'عرض الوحدات'],
       ['shortages.view', 'عرض نواقص المخزون'], ['barcode.view', 'فتح مولد الباركود'],
       ['customers.view', 'عرض العملاء'], ['customerGroups.view', 'عرض مجموعات العملاء'],
@@ -74,7 +74,7 @@
       ['vouchers.view', 'عرض سندات القبض والصرف'], ['expenses.view', 'عرض المصاريف'],
       ['reports.view', 'عرض التقارير'], ['employees.view', 'عرض الموظفين'], ['workers.view', 'عرض العمال والأجور'],
       ['manufacturing.view', 'عرض إدارة التصنيع'], ['offers.view', 'عرض عروض المبيعات'],
-      ['notifications.view', 'عرض الإشعارات'], ['settings.system', 'فتح إعدادات النظام'],
+      ['notifications.view', 'عرض الإشعارات'], ['audit.view', 'عرض سجل النشاط والتدقيق'], ['settings.system', 'فتح إعدادات النظام'],
       ['settings.printer', 'فتح إعدادات الطابعة'], ['settings.tax', 'فتح إعدادات الضريبة'],
       ['settings.storage', 'فتح التخزين والأرشفة'], ['backup.manage', 'فتح النسخ الاحتياطي والاستعادة']
     ]},
@@ -97,7 +97,7 @@
     ]},
     { id: 'inventory', title: 'صلاحيات المنتجات والمخزون', permissions: [
       ['products.create', 'إضافة منتج'], ['products.edit', 'تعديل المنتجات'], ['products.delete', 'حذف المنتجات'],
-      ['products.export', 'تصدير المنتجات'], ['inventory.adjust', 'تعديل كميات المخزون'],
+      ['products.export', 'تصدير المنتجات'], ['materials.view', 'عرض الأصناف الخام'], ['materials.manage', 'إضافة وتعديل وتوريد الأصناف الخام'], ['materials.export', 'تصدير الأصناف الخام'], ['inventory.adjust', 'تعديل كميات المخزون'],
       ['inventory.transfer', 'نقل بين الفروع والمخازن (الموظف ينقل من فرعه فقط)'],
       ['inventory.importExport', 'استيراد وتصدير بيانات المخزون'],
       ['warehouses.manage', 'إضافة وتعديل وحذف المخازن'], ['branches.manage', 'إضافة وتعديل وحذف الفروع'],
@@ -122,7 +122,7 @@
       ['employees.manage', 'إضافة وتعديل وحذف وتعطيل الموظفين'], ['employees.export', 'تصدير بيانات الموظفين'],
       ['permissions.manage', 'تعديل صلاحيات الموظفين'],
       ['workers.manage', 'إضافة وتعديل وحذف العمال'], ['workers.payments', 'صرف رواتب ودفعات وديون العمال'],
-      ['workers.export', 'تصدير بيانات العمال'], ['agents.manage', 'إضافة وتعديل وحذف المناديب'],
+      ['workers.export', 'تصدير بيانات العمال'], ['audit.export', 'تصدير سجل النشاط والتدقيق'], ['agents.manage', 'إضافة وتعديل وحذف المناديب'],
       ['agents.stock', 'تحميل واسترجاع مخزون المناديب'], ['agents.settle', 'تسوية مبيعات المناديب'],
       ['agents.payments', 'دفعات وحسابات المناديب'], ['agents.export', 'تصدير بيانات وحركات المناديب'],
       ['manufacturing.manage', 'إدارة الوصفات وأوامر التصنيع']
@@ -138,13 +138,13 @@
 
   const PAGE_PERMISSIONS = {
     'لوحة التحكم.html': 'dashboard.view', 'cashier.html': 'pos.access', 'invoices.html': 'sales.invoices.view',
-    'المشتريات.html': 'purchases.view', 'مرجع المشتريات.html': 'purchaseReturns.view', 'products.html': 'products.view',
+    'المشتريات.html': 'purchases.view', 'مرجع المشتريات.html': 'purchaseReturns.view', 'products.html': 'products.view', 'materials.html': 'materials.view',
     'warehouses.html': 'warehouses.view', 'branches.html': ['branches.view', 'inventory.transfer'], 'units.html': 'units.view',
     'shortages.html': 'shortages.view', 'barcode-generator.html': 'barcode.view', 'customers.html': 'customers.view',
     'customer-groups.html': 'customerGroups.view', 'suppliers.html': 'suppliers.view', 'المناديب.html': 'agents.view',
     'accounts.html': 'accounts.view', 'journal.html': 'journal.view', 'sands.html': 'vouchers.view',
     'المصاريف.html': 'expenses.view', 'التقارير.html': 'reports.view', 'الموظفين.html': 'employees.view',
-    'العمال والاجور.html': 'workers.view', 'ادارة التصنيع.html': 'manufacturing.view', 'sales-offers.html': 'offers.view',
+    'العمال والاجور.html': 'workers.view', 'audit-trail.html': 'audit.view', 'ادارة التصنيع.html': 'manufacturing.view', 'sales-offers.html': 'offers.view',
     'notifications.html': 'notifications.view', 'setting.html': 'settings.system', 'printer-settings.html': 'settings.printer',
     'tax-settings.html': 'settings.tax', 'storage-settings.html': 'settings.storage',
     'استيراد وتصدير ل كل قسم.html': 'backup.manage'
@@ -196,6 +196,10 @@
       confirmTransferAction: 'inventory.transfer', addProdToTransfer: 'inventory.transfer', addVariantToTransferById: 'inventory.transfer',
       exportExcel: 'products.export', exportPDF: 'products.export', exportImage: 'products.export',
       exportTransferExcel: 'products.export', exportTransferPDF: 'products.export', exportTransferImage: 'products.export'
+    },
+    'materials.html': {
+      openMaterialModal: 'materials.manage', saveMaterialPurchase: 'materials.manage', editMaterial: 'materials.manage', deleteMaterial: 'materials.manage',
+      exportMaterialsExcel: 'materials.export', exportMaterialsPDF: 'materials.export'
     },
     'sales-offers.html': {
       'offerPage.openModal': 'offers.manage', 'offerPage.save': 'offers.manage', 'offerPage.edit': 'offers.manage',
@@ -298,12 +302,12 @@
   const LEGACY_PERMISSION_MAP = {
     dashboard: ['dashboard.view'],
     pos: ['pos.access', 'sales.create', 'sales.edit', 'sales.delete', 'sales.print', 'sales.image', 'sales.discount', 'sales.changePrice', 'sales.credit', 'sales.hold', 'sales.clearCart'],
-    products: ['products.view', 'warehouses.view', 'branches.view', 'units.view', 'shortages.view', 'barcode.view', 'products.create', 'products.edit', 'products.delete', 'products.export', 'inventory.adjust', 'inventory.transfer', 'inventory.importExport', 'warehouses.manage', 'branches.manage', 'units.manage', 'shortages.supply', 'barcode.manage'],
+    products: ['products.view', 'materials.view', 'warehouses.view', 'branches.view', 'units.view', 'shortages.view', 'barcode.view', 'products.create', 'products.edit', 'products.delete', 'products.export', 'materials.manage', 'materials.export', 'inventory.adjust', 'inventory.transfer', 'inventory.importExport', 'warehouses.manage', 'branches.manage', 'units.manage', 'shortages.supply', 'barcode.manage'],
     customers: ['customers.view', 'customerGroups.view', 'sales.invoices.view', 'customers.create', 'customers.edit', 'customers.delete', 'customers.balance', 'customers.export', 'customerGroups.manage'],
     suppliers: ['suppliers.view', 'purchases.view', 'purchaseReturns.view', 'purchases.create', 'purchases.edit', 'purchases.delete', 'purchases.export', 'purchases.discount', 'purchaseReturns.create', 'purchaseReturns.edit', 'purchaseReturns.delete', 'purchaseReturns.export', 'suppliers.create', 'suppliers.edit', 'suppliers.delete', 'suppliers.balance', 'suppliers.export'],
     funds: ['accounts.view', 'journal.view', 'vouchers.view', 'expenses.view', 'accounts.manage', 'finance.transactions', 'finance.deleteTransactions', 'finance.export', 'expenses.manage', 'expenses.export', 'vouchers.manage', 'vouchers.export', 'journal.manage', 'journal.export'],
     reports: ['reports.view', 'reports.export', 'reports.send'],
-    settings: ['employees.view', 'workers.view', 'agents.view', 'manufacturing.view', 'offers.view', 'notifications.view', 'settings.system', 'settings.printer', 'settings.tax', 'settings.storage', 'backup.manage', 'employees.manage', 'employees.export', 'permissions.manage', 'workers.manage', 'workers.payments', 'workers.export', 'agents.manage', 'agents.stock', 'agents.settle', 'agents.payments', 'agents.export', 'manufacturing.manage', 'settings.edit', 'settings.sms', 'printer.edit', 'tax.edit', 'storage.manage', 'offers.manage', 'notifications.manage', 'sync.run', 'backup.exportImport', 'app.install']
+    settings: ['employees.view', 'workers.view', 'agents.view', 'manufacturing.view', 'offers.view', 'notifications.view', 'settings.system', 'settings.printer', 'settings.tax', 'settings.storage', 'backup.manage', 'employees.manage', 'employees.export', 'permissions.manage', 'workers.manage', 'workers.payments', 'workers.export', 'audit.view', 'audit.export', 'agents.manage', 'agents.stock', 'agents.settle', 'agents.payments', 'agents.export', 'manufacturing.manage', 'settings.edit', 'settings.sms', 'printer.edit', 'tax.edit', 'storage.manage', 'offers.manage', 'notifications.manage', 'sync.run', 'backup.exportImport', 'app.install']
   };
 
   function normalizePermissions(input) {
@@ -330,13 +334,15 @@
   const NON_ARRAY_DEFAULTS = {
     cashtop_funds_db: { version: 5, accounts: [], accountLogs: [] },
     cashtop_settings: {},
+    cashtop_db: {},
+    cashtop_invoice_design: {},
     cashtop_company_access: {},
     cashtop_printer_settings: {},
     cashtop_barcode_settings: {},
     cashtop_sms_template: '',
     cashtop_invoice_message_template: 'مرحباً {name}، فاتورتك رقم {invoice} لدى {store}. الأصناف:\n{items}\nالإجمالي: {total}، المدفوع: {paid}، المتبقي: {balance}.',
     cashtop_tax_settings: { enabled: false, salesRate: 0, purchaseRate: 0, salesBearer: 'customer', purchaseBearer: 'business', pricesIncludeTax: false },
-    cashtop_notification_settings: { lowStockThreshold: 5, debtOverdueDays: 30, inactiveCustomerDays: 45, expiryWarningDays: 30, enabled: true },
+    cashtop_notification_settings: { lowStockThreshold: 5, debtOverdueDays: 30, inactiveCustomerDays: 45, expiryWarningDays: 30, enabled: false, dailySummaryEnabled: true },
     cashtop_archive_index: { lastCompactionAt: 0, archivedCounts: {} }
   };
 
@@ -986,7 +992,7 @@
 
   function appendAudit(key, oldValue, newValue, actionOverride) {
     const canonical = canonicalKey(key);
-    if (canonical === 'cashtop_audit_log' || canonical === 'cashtop_journal') return;
+    if (canonical === 'cashtop_audit_log') return;
     const session = getSession() || {};
     const auditNs = namespaceKey('cashtop_audit_log');
     const list = safeJson(rawGet(auditNs), []) || [];
@@ -998,6 +1004,7 @@
       else if (newParsed.length < oldParsed.length) action = 'delete';
     } else if (oldValue == null && newValue != null) action = 'create';
     else if (newValue == null) action = 'delete';
+    const entityInfo = auditEntityInfo(oldParsed, newParsed, action);
 
     list.push({
       id: crypto.randomUUID ? crypto.randomUUID() : `AUD_${Date.now()}_${Math.random().toString(36).slice(2)}`,
@@ -1006,17 +1013,172 @@
       companyId: session.tenantId || session.companyId || session.companyKey || null,
       branchId: branchIdFromSession(session),
       userId: session.uid || session.username || null,
-      username: session.username || session.displayName || 'غير معروف',
+      username: session.displayName || session.name || session.username || 'غير معروف',
       role: session.role || 'user',
       page: FILE,
       dataset: canonical,
       action,
+      entityId: entityInfo.entityId,
+      entityName: entityInfo.entityName,
+      details: entityInfo.details,
       oldSummary: summarizeValue(oldParsed),
       newSummary: summarizeValue(newParsed),
       deviceId: getDeviceId()
     });
-    if (list.length > 2000) list.splice(0, list.length - 2000);
+    // Keep only a small recent cache locally. Full history is uploaded as
+    // append-only day-sharded records by firebase-sync.js, so large audit logs
+    // never become one giant localStorage/Firebase dataset.
+    if (list.length > 100) list.splice(0, list.length - 100);
+    const record = list[list.length - 1];
     rawSet(auditNs, JSON.stringify(list));
+    const pendingKey = auditPendingStorageKey();
+    const pending = safeJson(rawGet(pendingKey), []) || [];
+    pending.push(record);
+    // Small synchronous fallback/recent queue. The durable offline queue is
+    // IndexedDB so months of audit activity do not fill localStorage or RAM.
+    if (pending.length > 100) pending.splice(0, pending.length - 100);
+    rawSet(pendingKey, JSON.stringify(pending));
+    const signalAuditPending = () => window.dispatchEvent(new CustomEvent('cashtop:audit-pending', { detail: { id: record.id } }));
+    auditQueuePut(record).then(() => pruneAuditQueueCompany(100)).then(signalAuditPending).catch(signalAuditPending);
+  }
+
+  function auditPendingStorageKey() {
+    return `ct_audit_pending::${encodeURIComponent(companyIdFromSession())}`;
+  }
+
+  function getAuditPending() {
+    return normalizeArrayValue(rawGet(auditPendingStorageKey()), []).slice(-100);
+  }
+
+  function completeAuditPending(ids = []) {
+    const set = new Set((ids || []).map(String));
+    if (!set.size) return 0;
+    const pending = getAuditPending();
+    const remaining = pending.filter(item => !set.has(String(item?.id || '')));
+    rawSet(auditPendingStorageKey(), JSON.stringify(remaining));
+    return pending.length - remaining.length;
+  }
+
+  function getRecentAuditCache() {
+    return normalizeArrayValue(rawGet(namespaceKey('cashtop_audit_log')), []).slice(-100);
+  }
+
+  const AUDIT_QUEUE_DB = 'cashtop-audit-queue-v1';
+  const AUDIT_QUEUE_STORE = 'pending';
+  let auditDbPromise = null;
+  function openAuditQueueDb() {
+    if (!('indexedDB' in window)) return Promise.reject(new Error('INDEXEDDB_UNAVAILABLE'));
+    if (auditDbPromise) return auditDbPromise;
+    auditDbPromise = new Promise((resolve, reject) => {
+      const req = indexedDB.open(AUDIT_QUEUE_DB, 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        const store = db.objectStoreNames.contains(AUDIT_QUEUE_STORE)
+          ? req.transaction.objectStore(AUDIT_QUEUE_STORE)
+          : db.createObjectStore(AUDIT_QUEUE_STORE, { keyPath: 'id' });
+        if (!store.indexNames.contains('companyId')) store.createIndex('companyId', 'companyId', { unique: false });
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error || new Error('AUDIT_DB_OPEN_FAILED'));
+      req.onblocked = () => reject(new Error('AUDIT_DB_BLOCKED'));
+    }).catch(error => { auditDbPromise = null; throw error; });
+    return auditDbPromise;
+  }
+
+  async function auditQueuePut(record) {
+    if (!record?.id) return false;
+    const db = await openAuditQueueDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(AUDIT_QUEUE_STORE, 'readwrite');
+      tx.objectStore(AUDIT_QUEUE_STORE).put({ ...record, companyId: String(record.companyId || companyIdFromSession()) });
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => reject(tx.error || new Error('AUDIT_DB_PUT_FAILED'));
+      tx.onabort = () => reject(tx.error || new Error('AUDIT_DB_PUT_ABORTED'));
+    });
+  }
+
+  async function pruneAuditQueueCompany(limit = 100) {
+    if (!('indexedDB' in window)) return 0;
+    try {
+      const db = await openAuditQueueDb();
+      const companyId = String(companyIdFromSession());
+      const rows = await new Promise((resolve, reject) => {
+        const tx = db.transaction(AUDIT_QUEUE_STORE, 'readonly');
+        const index = tx.objectStore(AUDIT_QUEUE_STORE).index('companyId');
+        const req = index.openCursor(IDBKeyRange.only(companyId));
+        const out = [];
+        req.onsuccess = () => { const c=req.result; if(!c) return resolve(out); out.push(c.value); c.continue(); };
+        req.onerror = () => reject(req.error || new Error('AUDIT_DB_READ_FAILED'));
+      });
+      rows.sort((a,b)=>normalizeDateValue(b.timestamp)-normalizeDateValue(a.timestamp));
+      const remove = rows.slice(Math.max(0, Number(limit)||100)).map(x=>String(x.id||'')).filter(Boolean);
+      if (!remove.length) return 0;
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(AUDIT_QUEUE_STORE, 'readwrite');
+        const store = tx.objectStore(AUDIT_QUEUE_STORE);
+        remove.forEach(id=>store.delete(id));
+        tx.oncomplete=()=>resolve(); tx.onerror=()=>reject(tx.error || new Error('AUDIT_DB_PRUNE_FAILED'));
+      });
+      return remove.length;
+    } catch (_) { return 0; }
+  }
+
+  async function getAuditPendingAsync(limit = 0) {
+    const fallback = getAuditPending();
+    try {
+      const db = await openAuditQueueDb();
+      const companyId = String(companyIdFromSession());
+      const max = Math.max(0, Number(limit || 0));
+      const rows = await new Promise((resolve, reject) => {
+        const tx = db.transaction(AUDIT_QUEUE_STORE, 'readonly');
+        const index = tx.objectStore(AUDIT_QUEUE_STORE).index('companyId');
+        const req = index.openCursor(IDBKeyRange.only(companyId));
+        const out = [];
+        req.onsuccess = () => {
+          const cursor = req.result;
+          if (!cursor || (max && out.length >= max)) return resolve(out);
+          out.push(cursor.value);
+          cursor.continue();
+        };
+        req.onerror = () => reject(req.error || new Error('AUDIT_DB_READ_FAILED'));
+      });
+      const map = new Map();
+      [...rows, ...fallback].forEach(item => item?.id && map.set(String(item.id), item));
+      const merged = [...map.values()].sort((a,b) => normalizeDateValue(a.timestamp) - normalizeDateValue(b.timestamp));
+      return max ? merged.slice(0, max) : merged;
+    } catch (_) {
+      return limit ? fallback.slice(0, Number(limit)) : fallback;
+    }
+  }
+
+  async function completeAuditPendingAsync(ids) {
+    const set = new Set((ids || []).map(String));
+    if (!set.size) return 0;
+    completeAuditPending([...set]);
+    try {
+      const db = await openAuditQueueDb();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(AUDIT_QUEUE_STORE, 'readwrite');
+        const store = tx.objectStore(AUDIT_QUEUE_STORE);
+        set.forEach(id => store.delete(id));
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error || new Error('AUDIT_DB_DELETE_FAILED'));
+      });
+    } catch (_) {}
+    return set.size;
+  }
+
+  async function getAuditPendingCountAsync() {
+    try {
+      const db = await openAuditQueueDb();
+      const companyId = String(companyIdFromSession());
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction(AUDIT_QUEUE_STORE, 'readonly');
+        const req = tx.objectStore(AUDIT_QUEUE_STORE).index('companyId').count(IDBKeyRange.only(companyId));
+        req.onsuccess = () => resolve(Number(req.result || 0));
+        req.onerror = () => reject(req.error || new Error('AUDIT_DB_COUNT_FAILED'));
+      });
+    } catch (_) { return getAuditPending().length; }
   }
 
   function summarizeValue(value) {
@@ -1024,6 +1186,37 @@
     if (value && typeof value === 'object') return { type: 'object', keys: Object.keys(value).slice(0, 30) };
     if (typeof value === 'string') return value.slice(0, 180);
     return value;
+  }
+
+  function auditEntityInfo(oldValue, newValue, action) {
+    const idOf = item => item && typeof item === 'object' ? String(item.id ?? item._id ?? item.uid ?? item.refNumber ?? item.number ?? '') : '';
+    const nameOf = item => item && typeof item === 'object'
+      ? String(item.name ?? item.title ?? item.employeeName ?? item.customer ?? item.supplierName ?? item.productName ?? item.refNumber ?? item.id ?? '')
+      : '';
+    let before = null, after = null;
+    if (Array.isArray(oldValue) && Array.isArray(newValue)) {
+      if (newValue.length > oldValue.length) {
+        const ids = new Set(oldValue.map(idOf).filter(Boolean));
+        after = newValue.find(item => { const id = idOf(item); return id && !ids.has(id); }) || newValue[newValue.length - 1] || null;
+      } else if (newValue.length < oldValue.length) {
+        const ids = new Set(newValue.map(idOf).filter(Boolean));
+        before = oldValue.find(item => { const id = idOf(item); return id && !ids.has(id); }) || oldValue[oldValue.length - 1] || null;
+      } else {
+        const limit = Math.min(oldValue.length, newValue.length);
+        for (let i = 0; i < limit; i += 1) {
+          const a = oldValue[i], b = newValue[i];
+          if (idOf(a) !== idOf(b) || JSON.stringify(a) !== JSON.stringify(b)) { before = a; after = b; break; }
+        }
+      }
+    } else if (oldValue && typeof oldValue === 'object' && newValue && typeof newValue === 'object') {
+      before = oldValue; after = newValue;
+    } else if (action === 'create') after = newValue;
+    else if (action === 'delete') before = oldValue;
+    const entity = after || before;
+    const entityId = idOf(entity);
+    const entityName = nameOf(entity);
+    const details = [entityName, entityId && entityId !== entityName ? `#${entityId}` : ''].filter(Boolean).join(' ');
+    return { entityId: entityId || null, entityName: entityName || null, details: details || null };
   }
 
   function dispatchLogicalStorageEvents(key, oldValue, newValue) {
@@ -1062,6 +1255,7 @@
       operationId
     };
     window.dispatchEvent(new CustomEvent('cashtop:data-changed', { detail }));
+    if (detail.key === 'cashtop_funds_db') window.dispatchEvent(new CustomEvent('cashtop:funds-changed', { detail }));
     if (channel) channel.postMessage({ type: 'data-change', ...detail });
   }
 
@@ -1563,18 +1757,143 @@
     const previous = pendingVirtualRenders.get(tbody);
     if (previous?.observer) previous.observer.disconnect();
     if (previous?.idleId) cancelWhenIdle(previous.idleId);
+    if (previous?.scrollCleanup) previous.scrollCleanup();
 
     const list = Array.isArray(records) ? records : [];
     const chunkSize = Math.max(25, Number(options.chunkSize || 100));
     const eagerLimit = Math.max(chunkSize, Number(options.eagerLimit || 180));
     const colspan = Math.max(1, Number(options.colspan || tbody.closest('table')?.querySelectorAll('thead th').length || 1));
-    const token = { cancelled: false, observer: null, idleId: null };
+    const token = { cancelled: false, observer: null, idleId: null, scrollCleanup: null };
     pendingVirtualRenders.set(tbody, token);
     tbody.innerHTML = '';
 
     if (!list.length) {
       if (options.emptyHtml) tbody.innerHTML = options.emptyHtml;
       return { rendered: 0, total: 0 };
+    }
+
+    /* For genuinely large tables keep only a moving DOM window. Rows above and
+       below the visible area are replaced by lightweight spacer rows, then are
+       recreated when the user scrolls back. This prevents long-running POS
+       sessions and multi-year logs from exhausting mobile RAM. */
+    const windowThreshold = Math.max(300, Number(options.windowThreshold || 500));
+    if (typeof IntersectionObserver === 'function' && list.length > windowThreshold) {
+      const rowHeight = Math.max(32, Number(options.rowHeight || 48));
+      const windowSize = Math.max(120, Number(options.windowSize || 260));
+      const shiftSize = Math.max(40, Math.min(windowSize - 40, Number(options.shiftSize || Math.floor(windowSize / 2))));
+      let start = 0;
+      let end = Math.min(list.length, windowSize);
+      let topSentinel = null;
+      let bottomSentinel = null;
+      let shifting = false;
+
+      const spacer = (height, cls) => {
+        const tr = document.createElement('tr');
+        tr.className = `ct-virtual-spacer ${cls}`;
+        const td = document.createElement('td');
+        td.colSpan = colspan;
+        td.style.cssText = `height:${Math.max(0, height)}px;padding:0!important;border:0!important;line-height:0!important;`;
+        tr.appendChild(td);
+        return tr;
+      };
+      const sentinel = cls => {
+        const tr = document.createElement('tr');
+        tr.className = `ct-virtual-window-sentinel ${cls}`;
+        tr.innerHTML = `<td colspan="${colspan}" style="height:1px;padding:0!important;border:0!important;line-height:0!important"></td>`;
+        return tr;
+      };
+      const observeEdges = () => {
+        token.observer?.disconnect();
+        if (topSentinel) token.observer?.observe(topSentinel);
+        if (bottomSentinel) token.observer?.observe(bottomSentinel);
+      };
+      const renderWindow = () => {
+        if (token.cancelled) return;
+        const fragment = document.createDocumentFragment();
+        if (start > 0) {
+          fragment.appendChild(spacer(start * rowHeight, 'ct-virtual-spacer-top'));
+          topSentinel = sentinel('ct-virtual-window-top');
+          fragment.appendChild(topSentinel);
+        } else topSentinel = null;
+        for (let index = start; index < end; index += 1) {
+          const row = rowFactory(list[index], index);
+          if (!row) continue;
+          try { row.style.contentVisibility = 'auto'; row.style.containIntrinsicSize = `${rowHeight}px`; } catch (_) {}
+          fragment.appendChild(row);
+        }
+        if (end < list.length) {
+          bottomSentinel = sentinel('ct-virtual-window-bottom');
+          fragment.appendChild(bottomSentinel);
+          fragment.appendChild(spacer((list.length - end) * rowHeight, 'ct-virtual-spacer-bottom'));
+        } else bottomSentinel = null;
+        tbody.replaceChildren(fragment);
+        options.onProgress?.({ rendered: end - start, total: list.length, start, end, windowed: true });
+        requestAnimationFrame(observeEdges);
+      };
+      token.observer = new IntersectionObserver(entries => {
+        if (shifting || token.cancelled) return;
+        const topHit = entries.some(entry => entry.isIntersecting && entry.target === topSentinel);
+        const bottomHit = entries.some(entry => entry.isIntersecting && entry.target === bottomSentinel);
+        if (!topHit && !bottomHit) return;
+        shifting = true;
+        if (bottomHit && end < list.length) {
+          const nextStart = Math.min(Math.max(0, list.length - windowSize), start + shiftSize);
+          start = nextStart;
+          end = Math.min(list.length, start + windowSize);
+        } else if (topHit && start > 0) {
+          start = Math.max(0, start - shiftSize);
+          end = Math.min(list.length, start + windowSize);
+        }
+        renderWindow();
+        requestAnimationFrame(() => { shifting = false; });
+      }, { root: null, rootMargin: '900px 0px' });
+
+      // Direct scrollbar jumps can skip the edge sentinels. Recenter the DOM
+      // window from the actual viewport offset so even jumping to year 10 of a
+      // huge log renders only the nearby rows instead of a blank spacer.
+      let scrollRoot = window;
+      let scrollRaf = 0;
+      const findScrollRoot = () => {
+        let node = tbody.parentElement;
+        while (node && node !== document.body && node !== document.documentElement) {
+          try {
+            const style = getComputedStyle(node);
+            if (/(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight + 8) return node;
+          } catch (_) {}
+          node = node.parentElement;
+        }
+        return window;
+      };
+      const recenterFromViewport = () => {
+        scrollRaf = 0;
+        if (token.cancelled || !tbody.isConnected) return;
+        const bodyRect = tbody.getBoundingClientRect();
+        const viewportTop = scrollRoot === window ? 0 : scrollRoot.getBoundingClientRect().top;
+        const visibleOffset = Math.max(0, viewportTop - bodyRect.top);
+        const targetIndex = Math.max(0, Math.min(list.length - 1, Math.floor(visibleOffset / rowHeight)));
+        const desiredStart = Math.max(0, Math.min(Math.max(0, list.length - windowSize), targetIndex - Math.floor(windowSize * .25)));
+        if (Math.abs(desiredStart - start) < Math.max(20, Math.floor(shiftSize / 3))) return;
+        start = desiredStart;
+        end = Math.min(list.length, start + windowSize);
+        renderWindow();
+      };
+      const onScroll = () => {
+        if (!scrollRaf) scrollRaf = requestAnimationFrame(recenterFromViewport);
+      };
+      const attachScroll = () => {
+        scrollRoot = findScrollRoot();
+        window.addEventListener('scroll', onScroll, { passive: true });
+        if (scrollRoot !== window) scrollRoot.addEventListener('scroll', onScroll, { passive: true });
+        token.scrollCleanup = () => {
+          token.cancelled = true;
+          if (scrollRaf) cancelAnimationFrame(scrollRaf);
+          window.removeEventListener('scroll', onScroll);
+          if (scrollRoot !== window) scrollRoot.removeEventListener('scroll', onScroll);
+        };
+      };
+      renderWindow();
+      requestAnimationFrame(attachScroll);
+      return { rendered: end - start, total: list.length, windowed: true };
     }
 
     let cursor = 0;
@@ -1808,7 +2127,7 @@
        still use their legacy render functions. */
     const style = document.createElement('style');
     style.id = 'ctPerformanceGuards';
-    style.textContent = 'tbody tr{content-visibility:auto;contain-intrinsic-size:auto 44px}.ct-lazy-table-sentinel{content-visibility:visible!important}';
+    style.textContent = 'tbody tr{content-visibility:auto;contain-intrinsic-size:auto 44px}.ct-lazy-table-sentinel,.ct-virtual-spacer,.ct-virtual-window-sentinel{content-visibility:visible!important;contain:none!important}';
     document.head.appendChild(style);
 
     /* Convert common inline search handlers to a 300ms debounced listener. */
@@ -1822,7 +2141,7 @@
       const fn = window[fnName];
       if (typeof fn !== 'function') return;
       input.removeAttribute('oninput');
-      input.addEventListener('input', debounce(() => window[fnName]?.(), 300));
+      input.addEventListener('input', debounce(() => window[fnName]?.(), 120));
       input.dataset.ctDebounced = 'true';
     });
   }
@@ -2067,7 +2386,6 @@
     session.companyId = companyId;
     if (access.status && access.status !== 'active') return { ok: false, reason: 'stopped' };
     if (access.deleted === true) return { ok: false, reason: 'deleted' };
-    if (access.maintenanceMode === true) return { ok: false, reason: 'maintenance' };
     const accessEnd = access.endAt ? new Date(access.endAt).getTime() : 0;
     if (accessEnd && Number.isFinite(accessEnd) && Date.now() >= accessEnd) return { ok: false, reason: 'expired' };
     if (session.status && session.status !== 'active') return { ok: false, reason: 'stopped' };
@@ -2126,7 +2444,6 @@
   function redirectToLogin(reason) {
     const params = new URLSearchParams();
     if (reason) params.set('reason', reason);
-    if (reason === 'maintenance') { const tenant = encodeURIComponent(companyIdFromSession() || ''); const target = `maintenance.html${tenant ? `?tenant=${tenant}` : ''}`; if (!location.pathname.endsWith('maintenance.html')) location.replace(target); return; }
     const target = `صفحة تسجيل الدخول.html${params.toString() ? `?${params}` : ''}`;
     if (!location.pathname.endsWith(encodeURI('صفحة تسجيل الدخول.html'))) location.replace(target);
   }
@@ -2148,11 +2465,6 @@
     } catch (_) {}
     const globalSession = safeJson(rawGet('cashtop_session'), null);
     if (!globalSession || sessionTenantId(globalSession) === sessionTenantId(currentSession)) rawRemove('cashtop_session');
-    if (reason === 'maintenance') {
-      const target = `maintenance.html${companyId ? `?tenant=${encodeURIComponent(companyId)}` : ''}`;
-      if (!location.pathname.endsWith('maintenance.html')) location.replace(target);
-      return;
-    }
     redirectToLogin(reason || 'logout');
   }
 
@@ -2246,7 +2558,7 @@
 
   const PAGE_TITLES = {
     'لوحة التحكم.html': 'لوحة التحكم', 'cashier.html': 'نقطة البيع والكاشير',
-    'products.html': 'المنتجات والمخزون', 'invoices.html': 'فواتير المبيعات',
+    'products.html': 'المنتجات والمخزون', 'materials.html': 'الأصناف الخام', 'invoices.html': 'فواتير المبيعات',
     'المشتريات.html': 'فواتير المشتريات', 'مرجع المشتريات.html': 'مرتجع المشتريات',
     'customers.html': 'العملاء', 'customer-groups.html': 'مجموعات العملاء',
     'suppliers.html': 'الموردون', 'accounts.html': 'الحسابات والصناديق',
@@ -2254,7 +2566,7 @@
     'warehouses.html': 'المخازن', 'branches.html': 'الفروع', 'units.html': 'الوحدات',
     'shortages.html': 'نواقص المخزون', 'barcode-generator.html': 'مولد الباركود',
     'المناديب.html': 'المناديب', 'الموظفين.html': 'الموظفون',
-    'العمال والاجور.html': 'العمال والأجور', 'التقارير.html': 'التقارير',
+    'العمال والاجور.html': 'العمال والأجور', 'audit-trail.html': 'سجل النشاط', 'التقارير.html': 'التقارير',
     'setting.html': 'إعدادات النظام', 'printer-settings.html': 'إعدادات الطابعة',
     'sales-offers.html': 'عروض المبيعات',
     'tax-settings.html': 'إعدادات الضريبة', 'notifications.html': 'الإشعارات',
@@ -2294,11 +2606,11 @@
       ['fa-house','الرئيسية', [['لوحة التحكم.html','لوحة التحكم']]],
       ['fa-cash-register','المبيعات', [['cashier.html','الكاشير'],['invoices.html','فواتير المبيعات'],['sales-offers.html','عروض المبيعات'],backupLink('sales')]],
       ['fa-cart-shopping','المشتريات', [['المشتريات.html','فواتير المشتريات'],['مرجع المشتريات.html','مرتجع المشتريات'],['suppliers.html','الموردون'],backupLink('purchases')]],
-      ['fa-boxes-stacked','المخزون والفروع', [['products.html','المنتجات'],['warehouses.html','المخازن'],['branches.html','الفروع'],['units.html','الوحدات'],['shortages.html','النواقص'],['barcode-generator.html','الباركود'],backupLink('inventory')]],
+      ['fa-boxes-stacked','المخزون والفروع', [['products.html','المنتجات'],['materials.html','الأصناف'],['warehouses.html','المخازن'],['branches.html','الفروع'],['units.html','الوحدات'],['shortages.html','النواقص'],['barcode-generator.html','الباركود'],backupLink('inventory')]],
       ['fa-industry','التصنيع', [['ادارة التصنيع.html','إدارة التصنيع'],backupLink('manufacturing')]],
       ['fa-handshake','العملاء والعلاقات', [['customers.html','العملاء'],['customer-groups.html','مجموعات العملاء'],['المناديب.html','المناديب'],backupLink('relationships')]],
       ['fa-calculator','المالية والمحاسبة', [['accounts.html','الصناديق والحسابات'],['sands.html','سندات القبض والصرف'],['journal.html','دفتر القيود'],['المصاريف.html','المصاريف'],backupLink('finance')]],
-      ['fa-users-gear','الموارد البشرية', [['الموظفين.html','الموظفون'],['العمال والاجور.html','العمال والأجور'],backupLink('hr')]],
+      ['fa-users-gear','الموارد البشرية', [['الموظفين.html','الموظفون'],['العمال والاجور.html','العمال والأجور'],['audit-trail.html','سجل النشاط'],backupLink('hr')]],
       ['fa-chart-line','التقارير والمتابعة', [['التقارير.html','التقارير'],['notifications.html','الإشعارات'],backupLink('reports')]],
       ['fa-gears','النظام والإعدادات', [['tax-settings.html','إعدادات الضريبة'],['storage-settings.html','التخزين والأرشفة'],['استيراد وتصدير ل كل قسم.html','النسخ الاحتياطي الشامل'],['setting.html','إعدادات النظام'],['printer-settings.html','إعدادات الطابعة'],backupLink('settings')]]
     ];
@@ -2372,6 +2684,307 @@
     return element.dataset?.ctPermission || null;
   }
 
+
+  /* ============================================================
+   * Revision 53 — resilient modal drafts + instant broadcast popup
+   * ============================================================ */
+  function modalDraftStorageKey(modal) {
+    const id = modal?.id || 'anonymous-modal';
+    const session = getSession() || {};
+    return `ct_modal_draft::${encodeURIComponent(companyIdFromSession())}::${encodeURIComponent(session.uid || session.username || 'user')}::${encodeURIComponent(FILE)}::${encodeURIComponent(id)}`;
+  }
+
+  function modalDraftRoot(node) {
+    const element = node instanceof Element ? node : null;
+    if (!element) return null;
+    return element.closest('.modal-overlay') || element.closest('.ct-modal') || element.closest('.modal');
+  }
+
+  function modalIsOpen(modal) {
+    if (!modal || !modal.isConnected) return false;
+    if (modal.getAttribute('aria-hidden') === 'true') return false;
+    if (modal.classList.contains('active') || modal.classList.contains('open') || modal.classList.contains('show')) return true;
+    if (modal.style?.display && modal.style.display !== 'none') return true;
+    try { return modal.getClientRects().length > 0 && getComputedStyle(modal).visibility !== 'hidden'; } catch (_) { return false; }
+  }
+
+  function modalControls(modal) {
+    return [...(modal?.querySelectorAll?.('input,select,textarea') || [])].filter(control => {
+      const type = String(control.type || '').toLowerCase();
+      return !['file','password','submit','button','reset','image'].includes(type) && control.dataset.ctNoDraft !== 'true';
+    });
+  }
+
+  function modalControlKey(control, index) {
+    return control.id ? `id:${control.id}` : control.name ? `name:${control.name}` : `idx:${index}`;
+  }
+
+  function captureModalDraft(modal) {
+    if (!modal || modal.dataset.ctNoDraft === 'true' || modal.dataset.ctDraftCancelled === 'true' || !modalIsOpen(modal)) return;
+    const values = {};
+    modalControls(modal).forEach((control, index) => {
+      const key = modalControlKey(control, index);
+      if (control.type === 'checkbox' || control.type === 'radio') values[key] = { checked: control.checked, value: control.value };
+      else values[key] = { value: control.value };
+    });
+    rawSet(modalDraftStorageKey(modal), JSON.stringify({ savedAt: Date.now(), values }));
+  }
+
+  function restoreModalDraft(modal) {
+    if (!modal || modal.dataset.ctNoDraft === 'true') return false;
+    const draft = safeJson(rawGet(modalDraftStorageKey(modal)), null);
+    if (!draft?.values) return false;
+    let changed = false;
+    modalControls(modal).forEach((control, index) => {
+      const item = draft.values[modalControlKey(control, index)];
+      if (!item) return;
+      if (control.type === 'checkbox' || control.type === 'radio') control.checked = Boolean(item.checked);
+      else if (item.value != null) control.value = item.value;
+      changed = true;
+      try { control.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+    });
+    return changed;
+  }
+
+  function clearModalDraft(modal) {
+    if (!modal) return;
+    rawRemove(modalDraftStorageKey(modal));
+  }
+
+  function markModalDraftSaveAttempt(modal) {
+    if (!modal) return;
+    modal.dataset.ctDraftSavePending = 'true';
+    // Local saves in CASH TOP close immediately. If validation failed and the
+    // dialog stayed open, cancel the pending-save marker so an accidental close
+    // still preserves the draft as requested.
+    setTimeout(() => {
+      if (modalIsOpen(modal)) modal.dataset.ctDraftSavePending = 'false';
+    }, 600);
+  }
+
+  function installModalDraftPersistence() {
+    if (document.documentElement.dataset.ctModalDrafts === 'true') return;
+    document.documentElement.dataset.ctModalDrafts = 'true';
+    const selector = '.modal-overlay,.ct-modal,.modal';
+    const save = debounce(modal => captureModalDraft(modal), 90);
+    document.addEventListener('input', event => {
+      const modal = modalDraftRoot(event.target);
+      if (modal && modalIsOpen(modal)) save(modal);
+    }, true);
+    document.addEventListener('change', event => {
+      const modal = modalDraftRoot(event.target);
+      if (modal && modalIsOpen(modal)) save(modal);
+    }, true);
+    document.addEventListener('submit', event => {
+      const modal = modalDraftRoot(event.target);
+      if (modal) markModalDraftSaveAttempt(modal);
+    }, true);
+    document.addEventListener('click', event => {
+      const button = event.target?.closest?.('button,[role="button"],a');
+      const modal = modalDraftRoot(button);
+      if (!button || !modal) return;
+      const text = String(button.textContent || '').trim();
+      if (button.classList.contains('btn-cancel') || button.classList.contains('btn-action-cancel') || /^إلغاء(?:\s|$)/.test(text)) {
+        clearModalDraft(modal);
+        modal.dataset.ctDraftCancelled = 'true';
+        return;
+      }
+      if (/حفظ|تأكيد|تنفيذ|إصدار|اعتماد/.test(text)) markModalDraftSaveAttempt(modal);
+      else captureModalDraft(modal); // X/close buttons: persist synchronously before legacy close handlers run.
+    }, true);
+    document.addEventListener('pointerdown', event => {
+      const modal = modalDraftRoot(event.target);
+      if (modal && event.target === modal) captureModalDraft(modal);
+    }, true);
+    document.addEventListener('keydown', event => {
+      if (event.key !== 'Escape') return;
+      document.querySelectorAll(selector).forEach(item => {
+        const modal = modalDraftRoot(item);
+        if (modal && modalIsOpen(modal)) captureModalDraft(modal);
+      });
+    }, true);
+
+    const observer = new MutationObserver(mutations => {
+      const modals = new Set();
+      mutations.forEach(mutation => {
+        const target = mutation.target instanceof Element ? mutation.target : null;
+        const modal = modalDraftRoot(target);
+        if (modal) modals.add(modal);
+      });
+      modals.forEach(modal => {
+        const open = modalIsOpen(modal);
+        const was = modal.dataset.ctDraftWasOpen === 'true';
+        if (open && !was) {
+          modal.dataset.ctDraftWasOpen = 'true';
+          modal.dataset.ctDraftCancelled = 'false';
+          setTimeout(() => restoreModalDraft(modal), 0);
+          setTimeout(() => restoreModalDraft(modal), 120);
+          setTimeout(() => restoreModalDraft(modal), 400);
+        } else if (!open && was) {
+          modal.dataset.ctDraftWasOpen = 'false';
+          if (modal.dataset.ctDraftSavePending === 'true' || modal.dataset.ctDraftCancelled === 'true') clearModalDraft(modal);
+          modal.dataset.ctDraftSavePending = 'false';
+        }
+      });
+    });
+    observer.observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ['class', 'style', 'aria-hidden'] });
+  }
+
+  function isManagerSession(session = getSession()) {
+    const role = String(session?.role || '').toLowerCase();
+    return ['admin','owner','superadmin','manager','branch-admin','branch_manager'].includes(role);
+  }
+
+  function migrateNotificationDefaultsV54() {
+    const markerKey = `ct_notification_defaults_v54::${companyIdFromSession()}`;
+    if (rawGet(markerKey) === '1') return;
+    const system = safeJson(localStorage.getItem('cashtop_settings'), {}) || {};
+    const notif = safeJson(localStorage.getItem('cashtop_notification_settings'), {}) || {};
+    if (system.notificationsEnabled === undefined) system.notificationsEnabled = false;
+    if (system.dailyProfitNotificationEnabled === undefined) system.dailyProfitNotificationEnabled = true;
+    notif.enabled = system.notificationsEnabled === true;
+    if (notif.dailySummaryEnabled === undefined) notif.dailySummaryEnabled = system.dailyProfitNotificationEnabled !== false;
+    localStorage.setItem('cashtop_settings', JSON.stringify(system));
+    localStorage.setItem('cashtop_notification_settings', JSON.stringify(notif));
+    rawSet(markerKey, '1');
+  }
+
+  function getNotificationSettings() {
+    const system = safeJson(localStorage.getItem('cashtop_settings'), {}) || {};
+    return Object.assign({ lowStockThreshold: 5, debtOverdueDays: 30, inactiveCustomerDays: 45, expiryWarningDays: 30, enabled: false, dailySummaryEnabled: true },
+      safeJson(localStorage.getItem('cashtop_notification_settings'), {}) || {},
+      system.notificationsEnabled !== undefined ? { enabled: system.notificationsEnabled === true } : {},
+      system.dailyProfitNotificationEnabled !== undefined ? { dailySummaryEnabled: system.dailyProfitNotificationEnabled !== false } : {});
+  }
+
+  async function requestNotificationPermission() {
+    if (!('Notification' in window)) return { ok:false, reason:'unsupported' };
+    try {
+      let permission = Notification.permission;
+      if (permission === 'default') permission = await Notification.requestPermission();
+      if (permission !== 'granted') return { ok:false, reason:permission };
+      try { await window.CashtopPush?.ensureSubscription?.(); } catch (_) {}
+      return { ok:true, permission };
+    } catch (error) { return { ok:false, reason:error?.message || 'error' }; }
+  }
+
+  async function showSystemNotification(title, options = {}) {
+    const cfg = getNotificationSettings();
+    if (cfg.enabled !== true || !isManagerSession()) return false;
+    if (!('Notification' in window) || Notification.permission !== 'granted') return false;
+    const payload = {
+      title: String(title || 'كاش توب'),
+      body: String(options.body || ''),
+      icon: options.icon || 'notification-icon.png',
+      badge: options.badge || 'notification-icon.png',
+      image: options.image || '',
+      tag: options.tag || `ct-${Date.now()}`,
+      renotify: options.renotify === true,
+      url: options.url || 'notifications.html',
+      data: { ...(options.data || {}), url: options.url || options.data?.url || 'notifications.html' }
+    };
+    try {
+      const registration = await navigator.serviceWorker?.ready;
+      if (registration?.active) {
+        registration.active.postMessage({ type:'SHOW_NOTIFICATION', payload });
+        return true;
+      }
+      if (registration?.showNotification) { await registration.showNotification(payload.title, payload); return true; }
+    } catch (_) {}
+    try { new Notification(payload.title, payload); return true; } catch (_) { return false; }
+  }
+
+  function invoiceDisplayTotal(invoice) {
+    return Number(invoice?.finalTotal ?? invoice?.grandTotal ?? invoice?.total ?? invoice?.netTotal ?? invoice?.subtotal ?? 0) || 0;
+  }
+
+  function invoiceProfit(invoice) {
+    const direct = Number(invoice?.netProfit ?? invoice?.totalProfit ?? invoice?.profit);
+    if (Number.isFinite(direct)) return direct;
+    return normalizeArrayValue(invoice?.items, []).reduce((sum,item)=>{
+      const qty=Number(item?.quantityPieces ?? item?.quantity ?? item?.qty ?? 0)||0;
+      const price=Number(item?.unitPrice ?? item?.price ?? 0)||0;
+      const cost=Number(item?.costPerPiece ?? item?.cost ?? 0)||0;
+      return sum + ((price-cost)*qty);
+    },0);
+  }
+
+  function todaySalesSummary() {
+    const dayKey = new Date().toISOString().slice(0,10);
+    const invoices = normalizeArrayValue(localStorage.getItem('cashtop_invoices'), []).filter(inv => inv && inv.status !== 'draft' && String(inv.date || inv.createdAt || '').slice(0,10) === dayKey);
+    const sales = invoices.reduce((s,inv)=>s+invoiceDisplayTotal(inv),0);
+    const profit = invoices.reduce((s,inv)=>s+invoiceProfit(inv),0);
+    const currencyCfg = window.CashtopMulti?.getCurrencyConfig?.() || { base:{symbol:'₪',code:'ILS'} };
+    const symbol = currencyCfg.base?.symbol || currencyCfg.base?.code || '₪';
+    return { dayKey, count: invoices.length, sales, profit, symbol };
+  }
+
+  async function showTodayProfitNotification(force = false) {
+    const cfg = getNotificationSettings();
+    if (cfg.enabled !== true || !isManagerSession()) return false;
+    const s = todaySalesSummary();
+    const key = `ct_daily_profit_notified::${companyIdFromSession()}::${s.dayKey}`;
+    if (!force && rawGet(key) === '1') return false;
+    const ok = await showSystemNotification('مبيعات اليوم والأرباح', {
+      body: `المبيعات: ${s.sales.toFixed(2)} ${s.symbol} — الأرباح: ${s.profit.toFixed(2)} ${s.symbol} — عدد الفواتير: ${s.count}`,
+      tag: `daily-profit-${companyIdFromSession()}-${s.dayKey}`,
+      url: 'التقارير.html',
+      data: { type:'daily-profit', day:s.dayKey }
+    });
+    if (ok) rawSet(key,'1');
+    return ok;
+  }
+
+  function syncNotificationSummaryToServiceWorker() {
+    if (!navigator.serviceWorker?.ready || !isManagerSession()) return;
+    const cfg=getNotificationSettings(), summary=todaySalesSummary();
+    navigator.serviceWorker.ready.then(reg=>{
+      reg.active?.postMessage?.({type:'CASHTOP_NOTIFICATION_META', payload:{
+        enabled:cfg.enabled===true, dailySummaryEnabled:cfg.dailySummaryEnabled!==false,
+        role:'manager', summary, companyId:companyIdFromSession(), updatedAt:Date.now()
+      }});
+      if (cfg.enabled===true && reg.periodicSync?.register) reg.periodicSync.register('cashtop-daily-summary',{minInterval:60*60*1000}).catch(()=>null);
+    }).catch(()=>null);
+  }
+
+  function installManagerNotificationSystem() {
+    if (document.documentElement.dataset.ctManagerNotificationsInstalled === 'true') return;
+    document.documentElement.dataset.ctManagerNotificationsInstalled = 'true';
+    if (!isManagerSession()) return;
+    let invoiceIds = new Set(normalizeArrayValue(localStorage.getItem('cashtop_invoices'), []).map(x=>String(x?.id||'')).filter(Boolean));
+    let smartSeen = new Set(normalizeArrayValue(rawGet(`ct_smart_notification_seen::${companyIdFromSession()}`), []).map(String));
+    const persistSmartSeen=()=>rawSet(`ct_smart_notification_seen::${companyIdFromSession()}`,JSON.stringify([...smartSeen].slice(-300)));
+    const scanInvoices = () => {
+      if (getNotificationSettings().enabled !== true) return;
+      const list=normalizeArrayValue(localStorage.getItem('cashtop_invoices'), []);
+      const fresh=list.filter(x=>x?.id && !invoiceIds.has(String(x.id)) && x.status!=='draft');
+      list.forEach(x=>x?.id&&invoiceIds.add(String(x.id)));
+      fresh.slice(-5).forEach(inv=>{
+        const customer=inv.customerName||inv.customer||inv.clientName||'عميل نقدي';
+        const who=inv.employeeName||inv.createdByName||inv.createdBy||inv.cashierName||inv.user||'مستخدم النظام';
+        const currencyCfg=window.CashtopMulti?.getCurrencyConfig?.()||{base:{symbol:'₪',code:'ILS'}}; const symbol=currencyCfg.base?.symbol||currencyCfg.base?.code||'₪';
+        showSystemNotification(`فاتورة جديدة - ${customer}`,{body:`المبلغ الإجمالي: ${invoiceDisplayTotal(inv).toFixed(2)} ${symbol} — بواسطة: ${who}`,tag:`invoice-${inv.id}`,url:'invoices.html',data:{type:'invoice',invoiceId:inv.id}});
+      });
+    };
+    const scanSmart = () => {
+      if (getNotificationSettings().enabled !== true) return;
+      const current = getSmartNotifications();
+      const activeIds = new Set(current.map(item=>String(item.id)));
+      smartSeen = new Set([...smartSeen].filter(id=>activeIds.has(String(id))));
+      current.forEach(item=>{
+        if (smartSeen.has(String(item.id))) return;
+        smartSeen.add(String(item.id));
+        showSystemNotification(item.title,{body:item.message,tag:`smart-${item.id}`,url:item.href||'notifications.html',data:{type:item.type,id:item.id}});
+      });
+      persistSmartSeen();
+    };
+    const dailyTick=()=>{ const now=new Date(), cfg=getNotificationSettings(); if(cfg.enabled===true&&cfg.dailySummaryEnabled!==false&&now.getHours()===23) showTodayProfitNotification(false); syncNotificationSummaryToServiceWorker(); };
+    const onData=event=>{const key=event?.detail?.key||''; if(key==='cashtop_invoices')scanInvoices(); if(['cashtop_products','cashtop_customers','cashtop_invoices','cashtop_employees','cashtop_workers','cashtop_salary_payments'].includes(key))scanSmart(); if(['cashtop_invoices','cashtop_settings','cashtop_notification_settings'].includes(key))syncNotificationSummaryToServiceWorker();};
+    window.addEventListener('cashtop:data-changed',onData); window.addEventListener('cashtop:remote-applied',onData); window.addEventListener('cashtop:external-change',onData);
+    setTimeout(()=>{scanSmart();syncNotificationSummaryToServiceWorker();},700);
+    setInterval(dailyTick,60*1000);
+  }
+
   function assignPermissionRequirement(element, requirement) {
     if (!element || !requirement) return;
     if (Array.isArray(requirement)) {
@@ -2430,7 +3043,9 @@
     root.querySelectorAll?.('.ct-sidebar a[href], .ct-bottom-nav a[href]').forEach(link => {
       const { file } = linkedPageInfo(link);
       const required = PAGE_PERMISSIONS[file];
-      link.hidden = file === 'setting.html' ? false : Boolean(required && !permissionAllowed(required, session));
+      const managerOnly = new Set(['audit-trail.html', 'العمال والاجور.html']);
+      const blockedForEmployee = session.role === 'employee' && managerOnly.has(file);
+      link.hidden = blockedForEmployee || (file === 'setting.html' ? false : Boolean(required && !permissionAllowed(required, session)));
     });
     root.querySelectorAll?.('[data-ct-permission], [data-ct-permission-any]').forEach(element => {
       const allowed = permissionAllowed(readPermissionRequirement(element), session);
@@ -2935,8 +3550,10 @@
   }
 
   function getSmartNotifications() {
-    const cfg = Object.assign({ lowStockThreshold: 5, debtOverdueDays: 30, inactiveCustomerDays: 45, enabled: true },
-      safeJson(localStorage.getItem('cashtop_notification_settings'), {}) || {});
+    if (!isManagerSession()) return [];
+    const cfg = getNotificationSettings();
+    const currencyCfg = window.CashtopMulti?.getCurrencyConfig?.() || { base: { symbol: '₪', code: 'ILS' } };
+    const baseCurrencySymbol = currencyCfg.base?.symbol || currencyCfg.base?.code || '₪';
     if (cfg.enabled === false) return [];
     const now = Date.now();
     const day = 86400000;
@@ -2991,7 +3608,7 @@
       if (balance > 0 && oldestDebt && now - normalizeDateValue(oldestDebt.date) >= Number(cfg.debtOverdueDays || 30) * day) {
         out.push({
           id: `debt_${customer.id}`, type: 'debt', severity: 'danger', title: 'تأخر في سداد الدين',
-          message: `${customer.name}: رصيد مستحق ${balance.toFixed(2)} ₪ منذ أكثر من ${cfg.debtOverdueDays} يوماً`,
+          message: `${customer.name}: رصيد مستحق ${balance.toFixed(2)} ${baseCurrencySymbol} منذ أكثر من ${cfg.debtOverdueDays} يوماً`,
           href: 'customers.html', date: normalizeDateValue(oldestDebt.date)
         });
       }
@@ -3018,12 +3635,37 @@
       if (today >= dueDate && startedBeforeThisDueDate && !alreadyPaid) {
         out.push({
           id: `salary_${employee.id}_${monthKey}`, type: 'salary', severity: 'warning', title: 'راتب موظف مستحق',
-          message: `${employee.name || 'موظف'}: راتب ${Number(employee.salary).toFixed(3).replace(/\.?0+$/, '')} ₪ مستحق للصرف`,
+          message: `${employee.name || 'موظف'}: راتب ${Number(employee.salary).toFixed(3).replace(/\.?0+$/, '')} ${baseCurrencySymbol} مستحق للصرف`,
           href: 'notifications.html', date: now, employeeId: employee.id, salaryMonth: monthKey,
           amount: Number(employee.salary), accountId: employee.salaryAccountId || ''
         });
       }
     });
+    const currentRole = String((getSession() || {}).role || '').toLowerCase();
+    if (currentRole !== 'employee') {
+      const workers = normalizeArrayValue(localStorage.getItem('cashtop_workers'), []);
+      const todayKey = new Date().toISOString().slice(0,10);
+      workers.forEach(worker => {
+        const type = String(worker.salaryType || '');
+        const amount = Math.max(0, Number(worker.salaryAmount || 0));
+        if (!amount || !['monthly','weekly','daily'].includes(type)) return;
+        let due = false, dueKey = '';
+        if (type === 'monthly') {
+          const payDay = Math.min(31, Math.max(1, Number(worker.payDay || 1)));
+          const currentMonth = todayKey.slice(0,7);
+          const lastMonth = String(worker.lastPaidAt || '').slice(0,7);
+          due = today.getDate() >= payDay && lastMonth !== currentMonth;
+          dueKey = currentMonth;
+        } else {
+          const target = String(worker.payDateRaw || '');
+          due = Boolean(target && target <= todayKey);
+          dueKey = target;
+        }
+        if (!due) return;
+        out.push({ id:`worker_salary_${worker.id}_${dueKey}`, type:'workerSalary', severity:'warning', title:'أجر عامل مستحق', message:`${worker.name || 'عامل'}: ${amount.toFixed(3).replace(/\.?0+$/,'')} ${baseCurrencySymbol} مستحق للقبض`, href:'notifications.html', date:now, workerId:worker.id, amount, accountId:worker.vaultId || '' });
+      });
+    }
+
     return out.sort((a, b) => (a.severity === 'danger' ? -1 : 0) - (b.severity === 'danger' ? -1 : 0));
   }
 
@@ -3037,6 +3679,7 @@
       <a href="cashier.html" class="ct-quick-button"><i class="fa-solid fa-file-invoice"></i><span>فاتورة</span></a>
       <a href="invoices.html" class="ct-quick-button"><i class="fa-solid fa-file-lines"></i><span>الفواتير</span></a>`;
     actions.insertBefore(quick, actions.firstChild);
+    const showManagerBell = isManagerSession();
     const bell = document.createElement('a');
     bell.href = 'notifications.html';
     bell.className = 'ct-icon-button ct-notification-button';
@@ -3058,9 +3701,11 @@
       sync.appendChild(progress);
       if (lastSyncProgressDetail.active && lastSyncProgressDetail.done !== true) setSyncProgress(lastSyncProgressDetail);
     }
-    if (sync) sync.insertAdjacentElement('afterend', bell);
-    else actions.insertBefore(bell, actions.firstChild);
-    updateNotificationBadge();
+    if (showManagerBell) {
+      if (sync) sync.insertAdjacentElement('afterend', bell);
+      else actions.insertBefore(bell, actions.firstChild);
+      updateNotificationBadge();
+    }
     updateSyncBadge();
   }
 
@@ -3208,7 +3853,7 @@
       runCounts[key] = candidates.length;
     }
     const audit = safeJson(localStorage.getItem('cashtop_audit_log'), []) || [];
-    if (audit.length > 1200) localStorage.setItem('cashtop_audit_log', JSON.stringify(audit.slice(-1200)));
+    if (audit.length > 100) localStorage.setItem('cashtop_audit_log', JSON.stringify(audit.slice(-100)));
     const result = { lastCompactionAt: Date.now(), archivedCounts, lastRunCounts: runCounts };
     localStorage.setItem('cashtop_archive_index', JSON.stringify(result));
     return result;
@@ -3497,7 +4142,9 @@
     getSyncQueue, enqueueSyncOperation, completeSyncOperation, clearSyncQueue, updateSyncBadge, restoreSyncQueueBackup, migrateLegacySyncQueues,
     setSyncProgress, restoreDurableCompanyData,
     getSystemSettings, getProfitRate, salePriceFromCost, applySystemBranding, recordIdentity, sortNewestFirstRecords,
-    debounce, runWhenIdle, renderVirtualRows, runWorkerTask, queryRecords, atomicSetItems, recoverAtomicTransactions
+    debounce, runWhenIdle, renderVirtualRows, runWorkerTask, queryRecords, atomicSetItems, recoverAtomicTransactions,
+    captureModalDraft, restoreModalDraft, clearModalDraft, getAuditPending, getAuditPendingAsync, getAuditPendingCountAsync, completeAuditPending, completeAuditPendingAsync, getRecentAuditCache,
+    getNotificationSettings, requestNotificationPermission, showSystemNotification, showTodayProfitNotification, todaySalesSummary
   });
 
   if (IS_APP_PAGE) {
@@ -3531,7 +4178,10 @@
     });
     window.addEventListener('pageshow', () => closeTransientUi(), { passive: true });
     document.addEventListener('DOMContentLoaded', () => {
+      migrateNotificationDefaultsV54();
       mountShell();
+      installModalDraftPersistence();
+      installManagerNotificationSystem();
       setTimeout(installGlobalPerformanceGuards, 0);
     }, { once: true });
 
@@ -3594,11 +4244,20 @@
       (async () => {
         try {
           const registration = await navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });
-          registration.update().catch(() => null);
-          const worker = registration.active || registration.waiting || registration.installing;
-          worker?.postMessage({ type: 'VERIFY_CACHE' });
+          // لا نفحص الشبكة عند فتح كل صفحة. فحص تحديث الـ SW مرة كل 30 دقيقة يكفي،
+          // بينما التنقل نفسه يبقى Cache First فورياً على الجوال واللابتوب.
+          const now = Date.now();
+          const lastUpdateCheck = Number(rawGet('ct_sw_update_checked_at') || 0);
+          if (now - lastUpdateCheck > 30 * 60 * 1000) {
+            rawSet('ct_sw_update_checked_at', String(now));
+            registration.update().catch(() => null);
+          }
           const ready = await navigator.serviceWorker.ready;
-          ready.active?.postMessage?.({ type: 'WARM_CACHE' });
+          if (!sessionStorage.getItem('ct_sw_cache_verified_session')) {
+            sessionStorage.setItem('ct_sw_cache_verified_session', '1');
+            ready.active?.postMessage?.({ type: 'VERIFY_CACHE' });
+            ready.active?.postMessage?.({ type: 'WARM_CACHE' });
+          }
         } catch (err) {
           console.warn('[CASH TOP 2] SW:', err);
         }

@@ -212,15 +212,19 @@
             .modal-footer { flex-direction: column-reverse; display: flex; gap: 10px;}
             .modal-footer button { width: 100%; justify-content: center;}
         }
+    
+        .purchase-currency-wrap{display:none}.purchase-currency-wrap.active{display:block}.purchase-currency-wrap small{display:block;color:#64748b;font-size:11px;margin-top:4px}
+        .purchase-unit-chain-box{margin:12px 0;padding:12px;border:1px solid #dbeafe;border-radius:10px;background:#f8fbff}.purchase-unit-chain-box .chain-caption{font-size:12px;font-weight:800;color:#475569;margin-bottom:8px}.purchase-unit-prices{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;margin-top:10px}.purchase-unit-price-item{position:relative}.purchase-unit-price-item label{display:block;font-size:11px;font-weight:800;color:#475569;margin-bottom:4px}.purchase-unit-price-item input{width:100%}
     </style>
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Firebase sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=48">
-    <script src="cashtop-core.js?v=24"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=54">
+    <script src="cashtop-core.js?v=54"></script><script src="push-config.js?v=54"></script><script src="push-client.js?v=54"></script>
+    <script src="multi-system.js?v=51"></script>
     <script src="firebase-config.js?v=19"></script>
     <script src="accounting-engine.js"></script>
-    <script src="firebase-sync.js?v=23"></script>
+    <script src="firebase-sync.js?v=54"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -241,6 +245,7 @@
         <summary><i class="fa-solid fa-boxes-stacked"></i><span>المخزون</span><i class="fa-solid fa-chevron-down ct-menu-arrow"></i></summary>
         <div class="ct-submenu">
           <a href="products.html">المنتجات</a>
+          <a href="materials.html">الأصناف</a>
           <a href="warehouses.html">المخازن</a>
           <a href="branches.html">الفروع</a>
           <a href="units.html">الوحدات</a>
@@ -372,6 +377,13 @@
                         <div class="form-group">
                             <input type="date" class="form-control" id="invDateBox" required>
                             <label>تاريخ الشراء</label>
+                        </div>
+                    </div>
+                    <div class="form-row purchase-currency-wrap" id="purchaseCurrencyWrap">
+                        <div class="form-group">
+                            <select class="form-control" id="purchaseCurrencySelect" onchange="handlePurchaseCurrencyChange()"></select>
+                            <label>عملة السداد</label>
+                            <small id="purchaseCurrencyHint"></small>
                         </div>
                     </div>
                 </div>
@@ -552,6 +564,7 @@
         let unitsDB = [];
         let storesDB = [];
         let unitsOptionsHtml = '';
+        let purchaseMethodOptionsHtml = '<option value="piece">قطعة</option>';
         let warehouseOptionsHtml = '';
         let productRowCounter = 0;
         let purchaseScannerController = null;
@@ -569,7 +582,7 @@
                 if(localFunds) fundsDB = JSON.parse(localFunds);
                 else fundsDB = { accounts: [{id: 1, name: "صندوق الكاش الرئيسي", type: "كاش", balance: 1000}], accountLogs: [] };
 
-                unitsDB = JSON.parse(localStorage.getItem('cashtop_units')) || [
+                unitsDB = window.CashtopMulti?.normalizeUnits?.(JSON.parse(localStorage.getItem('cashtop_units')) || []) || [
                     { id: "u1", unitName: "كرتونة", pieceName: "حبة", piecesCount: 24 },
                     { id: "u2", unitName: "شوال", pieceName: "كيلو", piecesCount: 1000 }
                 ];
@@ -589,6 +602,7 @@
         };
 
         function initLayout() {
+            populatePurchaseCurrencySelect();
             populateSelects();
             document.getElementById('invDateBox').value = new Date().toISOString().split('T')[0];
             document.getElementById('invIdBox').value = `INV-${Date.now().toString().slice(-5)}`;
@@ -620,9 +634,16 @@
         }
 
         function rebuildPurchaseOptions() {
-            unitsOptionsHtml = '<option value="">-- اختر نوع الوحدة --</option>';
-            unitsDB.forEach(unit => {
-                unitsOptionsHtml += `<option value="${escapePurchaseHtml(unit.id)}">${escapePurchaseHtml(unit.unitName)} (${Number(unit.piecesCount || 0)} ${escapePurchaseHtml(unit.pieceName)})</option>`;
+            unitsDB = window.CashtopMulti?.normalizeUnits?.(unitsDB) || unitsDB;
+            unitsOptionsHtml = '<option value="">-- اختر نظام الوحدات --</option>';
+            purchaseMethodOptionsHtml = '<option value="piece">قطعة</option>';
+            unitsDB.forEach(rawUnit => {
+                const unit = window.CashtopMulti?.normalizeUnitTemplate?.(rawUnit) || rawUnit;
+                const chain = Array.isArray(unit?.chain) ? unit.chain : [];
+                const topUnit = chain[chain.length - 1];
+                const unitLabel = topUnit?.name || unit.unitName || unit.name || 'وحدة';
+                unitsOptionsHtml += `<option value="${escapePurchaseHtml(unit.id)}">${escapePurchaseHtml(unitLabel)}</option>`;
+                purchaseMethodOptionsHtml += `<option value="unit:${escapePurchaseHtml(unit.id)}">${escapePurchaseHtml(unitLabel)}</option>`;
             });
             warehouseOptionsHtml = '<option value="shop">المحل / المخزون الرئيسي</option>' + storesDB.map(store =>
                 `<option value="${escapePurchaseHtml(store.id)}">${escapePurchaseHtml(store.name || 'مخزن بدون اسم')}</option>`
@@ -644,19 +665,58 @@
                 purchasesDB = readPurchaseArray('cashtop_purchases');
                 renderInvoicesTable();
             }
-            if (!key || key === 'cashtop_units') unitsDB = readPurchaseArray('cashtop_units');
+            if (!key || key === 'cashtop_units') unitsDB = window.CashtopMulti?.normalizeUnits?.(readPurchaseArray('cashtop_units')) || readPurchaseArray('cashtop_units');
             if (!key || key === 'cashtop_stores') storesDB = readPurchaseArray('cashtop_stores').filter(isRealWarehouse);
             if (!key || ['cashtop_units','cashtop_stores'].includes(key)) {
                 rebuildPurchaseOptions();
                 refreshWarehouseSelects();
             }
-            if (!key || ['cashtop_suppliers','cashtop_funds_db','cashtop_funds_db_v4'].includes(key)) {
+            if (!key || ['cashtop_suppliers','cashtop_funds_db','cashtop_funds_db_v4','cashtop_settings'].includes(key)) {
                 const localFunds = localStorage.getItem('cashtop_funds_db_v4');
                 if (localFunds) {
                     try { fundsDB = JSON.parse(localFunds) || fundsDB; } catch (_) {}
                 }
+                populatePurchaseCurrencySelect();
                 populateSelects();
             }
+        }
+
+        function purchaseCurrencyConfig() {
+            return window.CashtopMulti?.getCurrencyConfig?.() || { enabled:false, baseCurrencyId:'ILS', base:{id:'ILS',symbol:'₪',code:'ILS',ratePer100Base:100}, currencies:[{id:'ILS',name:'شيكل',symbol:'₪',code:'ILS',ratePer100Base:100}] };
+        }
+
+        function purchaseCurrencyId() {
+            const cfg = purchaseCurrencyConfig();
+            return document.getElementById('purchaseCurrencySelect')?.value || cfg.baseCurrencyId;
+        }
+
+        function purchaseBaseSymbol() { return purchaseCurrencyConfig().base?.symbol || purchaseCurrencyConfig().base?.code || '₪'; }
+
+        function normalizePurchaseAccountCurrencies() {
+            const cfg = purchaseCurrencyConfig();
+            if (!Array.isArray(fundsDB.accounts)) fundsDB.accounts = [];
+            fundsDB.accounts.forEach(acc => { if (!acc.currencyId) acc.currencyId = cfg.baseCurrencyId; });
+        }
+
+        function populatePurchaseCurrencySelect(preferredId = '') {
+            const cfg = purchaseCurrencyConfig();
+            const wrap = document.getElementById('purchaseCurrencyWrap');
+            const select = document.getElementById('purchaseCurrencySelect');
+            if (!select) return;
+            const previous = preferredId || select.value || cfg.baseCurrencyId;
+            select.innerHTML = cfg.currencies.map(cur => `<option value="${cur.id}">${cur.name} (${cur.symbol || cur.code})</option>`).join('');
+            select.value = cfg.currencies.some(cur => String(cur.id) === String(previous)) ? previous : cfg.baseCurrencyId;
+            if (wrap) wrap.classList.toggle('active', cfg.enabled === true);
+            const cur = window.CashtopMulti?.getCurrency?.(select.value) || cfg.base;
+            const hint = document.getElementById('purchaseCurrencyHint');
+            if (hint) hint.textContent = String(cur.id) === String(cfg.baseCurrencyId) ? 'العملة الأساسية' : `100 ${cfg.base.symbol || cfg.base.code} = ${Number(cur.ratePer100Base || 0)} ${cur.symbol || cur.code}`;
+            normalizePurchaseAccountCurrencies();
+        }
+
+        function handlePurchaseCurrencyChange() {
+            populatePurchaseCurrencySelect(purchaseCurrencyId());
+            populateSelects();
+            calculateInvoiceFinance();
         }
 
         function populateSelects() {
@@ -664,9 +724,19 @@
             suppliersDB.filter(s => s.active !== false).forEach(s => { supHtml += `<option value="${s.id}">${s.name}</option>`; });
             document.getElementById('supplierSelect').innerHTML = supHtml;
 
+            normalizePurchaseAccountCurrencies();
+            const cfg = purchaseCurrencyConfig();
+            const currencyId = cfg.enabled ? purchaseCurrencyId() : cfg.baseCurrencyId;
+            const accountSelect = document.getElementById('accountSelect');
+            const previous = accountSelect?.value || '';
+            const accounts = fundsDB.accounts;
             let fundHtml = '<option value="">-- حدد الصندوق المالي الدَافع --</option>';
-            fundsDB.accounts.forEach(f => { fundHtml += `<option value="${f.id}">${f.name} (متوفر: ${f.balance.toFixed(2)})</option>`; });
-            document.getElementById('accountSelect').innerHTML = fundHtml;
+            accounts.forEach(f => {
+                const cur = window.CashtopMulti?.getCurrency?.(f.currencyId || cfg.baseCurrencyId) || cfg.base;
+                fundHtml += `<option value="${f.id}">${f.name} (متوفر: ${Number(f.balance || 0).toFixed(2)} ${cur.symbol || cur.code})</option>`;
+            });
+            accountSelect.innerHTML = fundHtml;
+            if (accounts.some(acc => String(acc.id) === String(previous))) accountSelect.value = previous;
         }
 
         /* ========================================================== */
@@ -759,41 +829,123 @@
         /* ========================================================== */
         function toggleProductSections(selectEl) {
             const productCard = selectEl.closest('.product-item');
-            const type = selectEl.value;
-            
+            const method = selectEl.value || 'piece';
+            const unitMode = method !== 'piece';
             productCard.querySelector('.piece-section').classList.remove('active');
             productCard.querySelector('.unit-section').classList.remove('active');
-            
-            // إعادة تعيين مفتاح المقاسات إذا تم التبديل للوحدة
             const toggleCheckbox = productCard.querySelector('.var-toggle-checkbox');
-            if(type === 'unit') {
+            if (unitMode) {
                 toggleCheckbox.checked = false;
                 toggleVariantsSwitch(toggleCheckbox);
                 productCard.querySelector('.unit-section').classList.add('active');
+                const unitId = method.startsWith('unit:') ? method.slice(5) : '';
+                const template = unitsDB.find(unit => String(unit.id) === String(unitId));
+                const existing = productsDB.find(product => String(product.id) === String(productCard.dataset.existingId || ''));
+                const chain = template?.chain || (existing ? window.CashtopMulti?.normalizeProductChain?.(existing) : []);
+                const hidden = productCard.querySelector('.unit-select');
+                if (hidden) hidden.value = template?.id || (existing?.unitId || '__product__');
+                if (chain?.length) renderPurchaseUnitLevels(productCard, chain, chain[chain.length - 1]?.id);
             } else {
                 productCard.querySelector('.piece-section').classList.add('active');
             }
-            
             calculateInvoiceFinance();
         }
 
-        function applySelectedUnit(selectEl) {
-            let row = selectEl.closest('.unit-section');
-            let unitId = selectEl.value;
-            let unit = unitsDB.find(u => u.id === unitId);
-            
-            let nameInput = row.querySelector('.unit-name');
-            let pieceInput = row.querySelector('.piece-name-in-unit');
-            let ppuInput = row.querySelector('.ppu');
+        function setPurchaseCardChain(card, chain) {
+            if (!card) return [];
+            const normalized = window.CashtopMulti?.normalizeUnitTemplate?.({ id: card.dataset.existingId || 'PURCHASE', chain })?.chain || chain || [];
+            card.dataset.unitChain = JSON.stringify(normalized);
+            return normalized;
+        }
 
-            if (unit) {
-                nameInput.value = unit.unitName;
-                pieceInput.value = unit.pieceName;
-                ppuInput.value = unit.piecesCount;
+        function getPurchaseCardChain(card) {
+            try {
+                const chain = JSON.parse(card?.dataset?.unitChain || '[]');
+                if (Array.isArray(chain) && chain.length) return window.CashtopMulti?.normalizeUnitTemplate?.({ chain })?.chain || chain;
+            } catch (_) {}
+            return [];
+        }
+
+        function renderPurchaseUnitLevels(card, source, preferredUnitId = '') {
+            if (!card) return;
+            const chain = Array.isArray(source) ? setPurchaseCardChain(card, source) : setPurchaseCardChain(card, window.CashtopMulti?.normalizeProductChain?.(source) || window.CashtopMulti?.normalizeUnitTemplate?.(source)?.chain || []);
+            const levelSelect = card.querySelector('.purchase-unit-level');
+            if (!levelSelect || !chain.length) return;
+            levelSelect.innerHTML = chain.map(level => `<option value="${escapePurchaseHtml(level.id)}">${escapePurchaseHtml(level.name)} — يعادل ${Number(level.factorToBase || 1)} ${escapePurchaseHtml(chain[0].name)}</option>`).join('');
+            const preferred = chain.find(level => String(level.id) === String(preferredUnitId))?.id || chain[chain.length - 1].id;
+            levelSelect.value = preferred;
+            const priceZone = card.querySelector('.purchase-unit-prices');
+            if (priceZone) {
+                priceZone.innerHTML = chain.map(level => `<div class="purchase-unit-price-item"><label>${escapePurchaseHtml(level.name)}</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><input type="text" class="form-control purchase-chain-barcode" data-unit-id="${escapePurchaseHtml(level.id)}" placeholder="باركود ${escapePurchaseHtml(level.name)}" value="${escapePurchaseHtml(level.barcode || '')}"><input type="number" step="0.001" min="0" class="form-control purchase-chain-sale" data-unit-id="${escapePurchaseHtml(level.id)}" data-unit-index="${chain.indexOf(level)}" data-factor="${Number(level.factorToBase || 1)}" oninput="handlePurchaseChainPriceInput(this)" placeholder="سعر بيع ${escapePurchaseHtml(level.name)}" value="${Number(level.salePrice || 0) || ''}"></div></div>`).join('');
+            }
+            changePurchaseUnitLevel(levelSelect, false);
+        }
+
+        function changePurchaseUnitLevel(selectEl, recalc = true) {
+            const card = selectEl.closest('.product-item');
+            const chain = getPurchaseCardChain(card);
+            const selected = chain.find(level => String(level.id) === String(selectEl.value)) || chain[chain.length - 1];
+            if (!selected) return;
+            card.querySelector('.unit-name').value = selected.name;
+            card.querySelector('.piece-name-in-unit').value = chain[0]?.name || 'قطعة';
+            card.querySelector('.ppu').value = Number(selected.factorToBase || 1);
+            const selectedSale = card.querySelector(`.purchase-chain-sale[data-unit-id="${CSS.escape(String(selected.id))}"]`);
+            const baseSale = card.querySelector(`.purchase-chain-sale[data-unit-id="${CSS.escape(String(chain[0].id))}"]`);
+            if (selectedSale) card.querySelector('.unit-sale').value = selectedSale.value || '';
+            if (baseSale) card.querySelector('.piece-sale-in-unit').value = baseSale.value || '';
+            const selectedBarcode = card.querySelector(`.purchase-chain-barcode[data-unit-id="${CSS.escape(String(selected.id))}"]`);
+            const baseBarcode = card.querySelector(`.purchase-chain-barcode[data-unit-id="${CSS.escape(String(chain[0].id))}"]`);
+            if (selectedBarcode) card.querySelector('.unit-barcode').value = selectedBarcode.value || '';
+            if (baseBarcode) card.querySelector('.piece-barcode-in-unit').value = baseBarcode.value || '';
+            card.dataset.selectedPurchaseUnitId = selected.id;
+            if (recalc) calculateInvoiceFinance();
+        }
+
+        function collectPurchaseUnitPrices(card, chain) {
+            const prices = {};
+            card.querySelectorAll('.purchase-chain-sale').forEach(input => { prices[input.dataset.unitId] = Math.max(0, Number(input.value || 0)); });
+            const normalized = (chain || []).map(level => ({ ...level, salePrice: Number(prices[level.id] ?? level.salePrice ?? 0) }));
+            return { prices, chain: normalized };
+        }
+
+        function collectPurchaseUnitBarcodes(card) {
+            const barcodes = {};
+            card.querySelectorAll('.purchase-chain-barcode').forEach(input => { barcodes[input.dataset.unitId] = String(input.value || '').trim(); });
+            return barcodes;
+        }
+
+        function handlePurchaseChainPriceInput(input) {
+            const card = input.closest('.product-item');
+            const fields = [...card.querySelectorAll('.purchase-chain-sale')];
+            if (!fields.length) return;
+            const index = Number(input.dataset.unitIndex || 0);
+            const lastIndex = fields.length - 1;
+            if (index === lastIndex) {
+                const topPrice = Math.max(0, Number(input.value || 0));
+                const topFactor = Math.max(0.000001, Number(input.dataset.factor || 1));
+                fields.forEach((field, fieldIndex) => {
+                    if (fieldIndex === lastIndex || field.dataset.manual === 'true') return;
+                    const factor = Math.max(0.000001, Number(field.dataset.factor || 1));
+                    field.value = topPrice > 0 ? formatPurchaseAutoPrice(topPrice * factor / topFactor) : '';
+                });
             } else {
-                nameInput.value = '';
-                pieceInput.value = '';
-                ppuInput.value = '';
+                input.dataset.manual = 'true';
+            }
+            const level = card.querySelector('.purchase-unit-level');
+            if (level) changePurchaseUnitLevel(level, false);
+        }
+
+        function applySelectedUnit(selectEl) {
+            const card = selectEl.closest('.product-item');
+            const unit = unitsDB.find(u => String(u.id) === String(selectEl.value));
+            if (unit) renderPurchaseUnitLevels(card, unit.chain || window.CashtopMulti?.normalizeUnitTemplate?.(unit)?.chain || []);
+            else {
+                setPurchaseCardChain(card, []);
+                const level = card.querySelector('.purchase-unit-level'); if (level) level.innerHTML = '';
+                const prices = card.querySelector('.purchase-unit-prices'); if (prices) prices.innerHTML = '';
+                card.querySelector('.unit-name').value = '';
+                card.querySelector('.piece-name-in-unit').value = '';
+                card.querySelector('.ppu').value = '';
             }
             calculateInvoiceFinance();
         }
@@ -843,8 +995,7 @@
                         </div>
                         <div class="form-group">
                             <select class="form-control add-type-select" onchange="toggleProductSections(this)" required>
-                                <option value="piece" selected>قطعة (صنف مفرد)</option>
-                                <option value="unit">وحدة (كرتونة/دبل تحتوي قطع)</option>
+                                ${purchaseMethodOptionsHtml}
                             </select>
                             <label>طريقة الإضافة للمخزن</label>
                         </div>
@@ -921,25 +1072,30 @@
                     <!-- القسم الخاص بالوحدة (كرتونة) -->
                     <div class="unit-section conditional-section">
                         <div class="form-row">
-                            <div class="form-group">
-                                <select class="form-control unit-select" onchange="applySelectedUnit(this)">
-                                    ${unitsOptionsHtml}
-                                </select>
-                                <label>اختر نوع الوحدة</label>
+                            <input type="hidden" class="unit-select" value="">
+                            <div class="form-group" style="grid-column:1/-1">
+                                <select class="form-control purchase-unit-level" onchange="changePurchaseUnitLevel(this)"></select>
+                                <label>الوحدة المشتراة من التسلسل</label>
                             </div>
+                        </div>
+                        <div class="purchase-unit-chain-box">
+                            <div class="chain-caption">تفاصيل الوحدات — باركود وسعر بيع مستقل لكل وحدة</div>
+                            <div class="purchase-unit-prices"></div>
+                        </div>
+                        <div class="form-row">
                             <div class="form-group">
                                 <input type="text" class="form-control unit-name" placeholder="تلقائي..." readonly tabindex="-1">
-                                <label>اسم الوحدة التجارية</label>
+                                <label>الوحدة المختارة</label>
+                            </div>
+                            <div class="form-group">
+                                <input type="text" class="form-control piece-name-in-unit" placeholder="تلقائي..." readonly tabindex="-1">
+                                <label>الوحدة الأساسية</label>
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
-                                <input type="text" class="form-control piece-name-in-unit" placeholder="تلقائي..." readonly tabindex="-1">
-                                <label>اسم القطعة التي بداخلها</label>
-                            </div>
-                            <div class="form-group">
                                 <input type="number" class="form-control calc-trigger ppu" placeholder="0" min="1" readonly tabindex="-1">
-                                <label>عدد القطع بالوحدة</label>
+                                <label>معامل التحويل إلى الوحدة الأساسية</label>
                             </div>
                         </div>
                         <div class="form-row">
@@ -949,35 +1105,13 @@
                             </div>
                             <div class="form-group">
                                 <input type="number" step="0.001" class="form-control calc-trigger unit-buy" placeholder="0.00">
-                                <label>سعر الشراء للوحدة (الكرتونة)</label>
+                                <label>سعر الشراء للوحدة المختارة</label>
                             </div>
                         </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <input type="number" step="0.001" class="form-control unit-sale" placeholder="0.00">
-                                <label>سعر البيع للكرتونة</label>
-                            </div>
-                            <div class="form-group">
-                                <input type="number" step="0.001" class="form-control piece-sale-in-unit" placeholder="0.00">
-                                <label>سعر بيع القطعة (مفرق)</label>
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <div class="barcode-input-wrapper">
-                                    <input type="text" class="form-control unit-barcode" placeholder="باركود العبوة...">
-                                    <button type="button" class="btn-barcode-scan" onclick="openScanner(this)"><i class="fa-solid fa-barcode"></i></button>
-                                </div>
-                                <label>باركود الوحدة (الكرتونة)</label>
-                            </div>
-                            <div class="form-group">
-                                <div class="barcode-input-wrapper">
-                                    <input type="text" class="form-control piece-barcode-in-unit" placeholder="باركود الحبة..." oninput="checkBarcodeMatch(this, '${rowId}')">
-                                    <button type="button" class="btn-barcode-scan" onclick="openScanner(this)"><i class="fa-solid fa-barcode"></i></button>
-                                </div>
-                                <label>باركود القطعة الداخلية</label>
-                            </div>
-                        </div>
+                        <input type="hidden" class="unit-sale" value="0">
+                        <input type="hidden" class="piece-sale-in-unit" value="0">
+                        <input type="hidden" class="unit-barcode" value="">
+                        <input type="hidden" class="piece-barcode-in-unit" value="">
                     </div>
 
                     <!-- الحسابات الفرعية التلقائية -->
@@ -1051,7 +1185,8 @@
                 matched.forEach(product => {
                     const div = document.createElement('div');
                     div.className = 'suggestion-item';
-                    let subText = product.addType === 'unit' ? `[وحدة: ${product.unitName || 'وحدة'}]` : `[قطعة]`;
+                    const chainLabel = (window.CashtopMulti?.normalizeProductChain?.(product) || []).map(unit => unit.name).filter(Boolean).join(' ← ');
+                    let subText = chainLabel ? `[الوحدات: ${chainLabel}]` : `[قطعة]`;
                     if (product.hasVariants) subText += ` [متعدد المقاسات]`;
                     div.innerHTML = `<span style="font-weight:bold; color:#333;">${escapePurchaseHtml(product.name)}</span><span style="font-size:11px; color:#00a65a; font-weight:bold;">${escapePurchaseHtml(subText)} - متوفر: ${getProductTotalStock(product)}</span>`;
                     div.onmousedown = event => { event.preventDefault(); selectExistingProduct(product, rowId); box.style.display = 'none'; };
@@ -1080,7 +1215,16 @@
             row.querySelector('.prod-name').value = prod.name;
             
             let typeSelect = row.querySelector('.add-type-select');
-            typeSelect.value = prod.addType;
+            if (prod.addType === 'unit') {
+                const desired = prod.unitId ? `unit:${prod.unitId}` : '';
+                if (desired && [...typeSelect.options].some(option => option.value === desired)) typeSelect.value = desired;
+                else {
+                    const productChain = window.CashtopMulti?.normalizeProductChain?.(prod) || [];
+                    const topUnitName = productChain[productChain.length - 1]?.name || prod.unitName || 'الوحدة الكبيرة';
+                    typeSelect.insertAdjacentHTML('beforeend', `<option value="unit:__product__">${escapePurchaseHtml(topUnitName)}</option>`);
+                    typeSelect.value = 'unit:__product__';
+                }
+            } else typeSelect.value = 'piece';
             toggleProductSections(typeSelect);
 
             if (prod.addType === 'piece') {
@@ -1110,18 +1254,16 @@
                     toggleVariantsSwitch(toggleSwitch);
                 }
             } else {
-                // Unit
-                row.querySelector('.unit-name').value = prod.unitName || '';
-                row.querySelector('.piece-name-in-unit').value = prod.pieceName || '';
-                row.querySelector('.ppu').value = prod.piecesPerUnit || 1;
-                
-                let unitCost = (parseFloat(prod.cost) || 0) * (parseFloat(prod.piecesPerUnit) || 1);
+                // نظام وحدات متسلسل: اعرض جميع المستويات واختر الأعلى افتراضياً.
+                const chain = window.CashtopMulti?.normalizeProductChain?.(prod) || [];
+                const unitSystemSelect = row.querySelector('.unit-select');
+                if (unitSystemSelect) unitSystemSelect.value = prod.unitId || '__product__';
+                renderPurchaseUnitLevels(row, chain, chain[chain.length - 1]?.id);
+                const selected = chain[chain.length - 1] || { factorToBase: 1 };
+                let unitCost = (parseFloat(prod.cost) || 0) * Number(selected.factorToBase || 1);
                 row.querySelector('.unit-buy').value = Number(unitCost || 0).toFixed(3).replace(/\.?0+$/, '') || '';
-                row.querySelector('.unit-sale').value = prod.priceUnit || '';
-                row.querySelector('.piece-sale-in-unit').value = prod.pricePiece || '';
-                
-                row.querySelector('.unit-barcode').value = prod.barcode || '';
-                row.querySelector('.piece-barcode-in-unit').value = prod.pieceBarcode || '';
+                row.querySelector('.unit-barcode').value = selected.barcode || prod.barcode || '';
+                row.querySelector('.piece-barcode-in-unit').value = chain[0]?.barcode || prod.pieceBarcode || '';
             }
 
             calculateInvoiceFinance();
@@ -1247,6 +1389,13 @@
                 const pieceSale = card.querySelector('.piece-sale-in-unit');
                 if (unitSale) unitSale.value = unitBuy > 0 ? formatPurchaseAutoPrice(unitSaleValue) : '';
                 if (pieceSale) pieceSale.value = unitBuy > 0 ? formatPurchaseAutoPrice(unitSaleValue / ppu) : '';
+                const fields = [...card.querySelectorAll('.purchase-chain-sale')];
+                if (fields.length) {
+                    fields.forEach(field => field.dataset.manual = 'false');
+                    const top = fields[fields.length - 1];
+                    top.value = unitBuy > 0 ? formatPurchaseAutoPrice(unitSaleValue) : '';
+                    handlePurchaseChainPriceInput(top);
+                }
             }
             calculateInvoiceFinance();
         }
@@ -1256,7 +1405,7 @@
             const productCards = document.querySelectorAll('.product-item');
 
             productCards.forEach(card => {
-                const type = card.querySelector('.add-type-select').value;
+                const type = card.querySelector('.add-type-select').value === 'piece' ? 'piece' : 'unit';
                 let rowTotal = 0;
                 let pieceCost = 0;
 
@@ -1296,13 +1445,17 @@
             const taxInfo = window.Cashtop?.calculateTax?.(taxableSubtotal, 'purchase') || { tax: 0, charged: false, total: taxableSubtotal };
             const purchaseTax = Number(taxInfo.tax || 0);
             const payableTotal = Number(taxInfo.total ?? taxableSubtotal);
-            document.getElementById('purchaseSubtotalDisplay').textContent = moneyDisplay(grandTotal) + " ₪";
-            document.getElementById('purchaseDiscountDisplay').textContent = moneyDisplay(purchaseDiscount) + " ₪";
-            document.getElementById('purchaseTaxDisplay').textContent = moneyDisplay(purchaseTax) + " ₪";
-            document.getElementById('finalTotalRequired').textContent = moneyDisplay(payableTotal) + " ₪";
-            const paid = parseFloat(document.getElementById('moneyPaid').value) || 0;
+            const baseSymbol = purchaseBaseSymbol();
+            document.getElementById('purchaseSubtotalDisplay').textContent = moneyDisplay(grandTotal) + " " + baseSymbol;
+            document.getElementById('purchaseDiscountDisplay').textContent = moneyDisplay(purchaseDiscount) + " " + baseSymbol;
+            document.getElementById('purchaseTaxDisplay').textContent = moneyDisplay(purchaseTax) + " " + baseSymbol;
+            document.getElementById('finalTotalRequired').textContent = moneyDisplay(payableTotal) + " " + baseSymbol;
+            const cfg = purchaseCurrencyConfig();
+            const currencyId = cfg.enabled ? purchaseCurrencyId() : cfg.baseCurrencyId;
+            const paidNative = parseFloat(document.getElementById('moneyPaid').value) || 0;
+            const paid = window.CashtopMulti?.toBase?.(paidNative, currencyId) ?? paidNative;
             const debt = Math.max(0, payableTotal - paid);
-            document.getElementById('finalDebt').textContent = moneyDisplay(debt) + " ₪";
+            document.getElementById('finalDebt').textContent = moneyDisplay(debt) + " " + baseSymbol;
         }
 
         /* ========================================================== */
@@ -1314,7 +1467,10 @@
             const accountId = document.getElementById('accountSelect').value;
             const invDate = document.getElementById('invDateBox').value;
             const invId = document.getElementById('invIdBox').value;
-            const paidAmount = parseFloat(document.getElementById('moneyPaid').value) || 0;
+            const cfg = purchaseCurrencyConfig();
+            const currencyId = cfg.enabled ? purchaseCurrencyId() : cfg.baseCurrencyId;
+            const paidNative = parseFloat(document.getElementById('moneyPaid').value) || 0;
+            const paidAmount = window.CashtopMulti?.toBase?.(paidNative, currencyId) ?? paidNative;
             const cards = document.querySelectorAll('.product-item');
 
             if (!supplierId || !accountId) { showToast("يرجى تحديد المورد والصندوق المالي أولاً!", "error"); return; }
@@ -1330,8 +1486,10 @@
                 funds: JSON.parse(JSON.stringify(fundsDB)),
                 purchases: JSON.parse(JSON.stringify(purchasesDB))
             };
-            if (paidAmount > Number(vault.balance || 0)) {
-                showToast(`الرصيد في صندوق [${vault.name}] غير كافٍ لسداد هذا المبلغ!`, "error");
+            const paymentSettlement = window.CashtopMulti?.settleToAccount?.(paidNative, currencyId, vault)
+                || { accountAmount: paidNative, accountCurrencyId: vault.currencyId || currencyId, baseAmount: paidAmount };
+            if (Number(paymentSettlement.accountAmount || 0) > Number(vault.balance || 0)) {
+                showToast(`الرصيد في صندوق [${vault.name}] غير كافٍ لسداد هذا المبلغ بعد تحويل العملة!`, "error");
                 return;
             }
 
@@ -1341,7 +1499,8 @@
 
             cards.forEach(card => {
                 const pName = card.querySelector('.prod-name').value.trim();
-                const type = card.querySelector('.add-type-select').value;
+                const methodValue = card.querySelector('.add-type-select').value || 'piece';
+                const type = methodValue === 'piece' ? 'piece' : 'unit';
                 const existingId = card.dataset.existingId;
                 
                 if (!pName) { hasError = true; return; }
@@ -1375,6 +1534,10 @@
                     prodObj.barcode = barcode;
                     prodObj.pieceName = 'قطعة';
                     prodObj.piecesPerUnit = 1;
+                    prodObj.selectedPurchaseUnitId = 'piece';
+                    prodObj.selectedPurchaseUnitName = 'قطعة';
+                    prodObj.purchaseUnitFactor = 1;
+                    prodObj.purchaseUnitCost = cost;
 
                     if (isVariantsActive) {
                         prodObj.hasVariants = true;
@@ -1392,31 +1555,50 @@
                             }
                         });
                         prodObj.newStockPieces = totalVarQty;
+                        prodObj.purchaseQuantity = totalVarQty;
                         invoiceTotal += (totalVarQty * cost);
                     } else {
                         const qty = parseFloat(card.querySelector('.piece-qty').value) || 0;
                         prodObj.newStockPieces = qty;
+                        prodObj.purchaseQuantity = qty;
                         invoiceTotal += (qty * cost);
                     }
                 } else {
-                    const uName = card.querySelector('.unit-name').value.trim() || 'وحدة';
-                    const pNameIn = card.querySelector('.piece-name-in-unit').value.trim() || 'قطعة';
+                    const rawChain = getPurchaseCardChain(card);
+                    const selectedUnitId = card.querySelector('.purchase-unit-level')?.value || rawChain[rawChain.length - 1]?.id;
+                    const selectedLevel = rawChain.find(level => String(level.id) === String(selectedUnitId)) || rawChain[rawChain.length - 1] || { id:'piece', name:'قطعة', factorToBase:1 };
+                    const collected = collectPurchaseUnitPrices(card, rawChain.length ? rawChain : [selectedLevel]);
+                    const chain = collected.chain;
+                    const baseLevel = chain[0] || selectedLevel;
+                    const topLevel = chain[chain.length - 1] || selectedLevel;
+                    const uName = selectedLevel.name || 'وحدة';
+                    const pNameIn = baseLevel.name || 'قطعة';
                     const uQty = parseFloat(card.querySelector('.unit-qty').value) || 0;
-                    const ppu = parseFloat(card.querySelector('.ppu').value) || 1;
+                    const ppu = Math.max(0.000001, Number(selectedLevel.factorToBase || 1));
                     const uBuy = parseFloat(card.querySelector('.unit-buy').value) || 0;
-                    const uSale = parseFloat(card.querySelector('.unit-sale').value) || 0;
-                    const pSale = parseFloat(card.querySelector('.piece-sale-in-unit').value) || 0;
                     const uBar = card.querySelector('.unit-barcode').value.trim();
                     const pBar = card.querySelector('.piece-barcode-in-unit').value.trim();
+                    const basePrice = Number(collected.prices[baseLevel.id] ?? baseLevel.salePrice ?? 0);
+                    const topPrice = Number(collected.prices[topLevel.id] ?? topLevel.salePrice ?? 0);
 
-                    prodObj.unitName = uName;
-                    prodObj.pieceName = pNameIn;
-                    prodObj.piecesPerUnit = ppu;
+                    const methodUnitId = methodValue.startsWith('unit:') ? methodValue.slice(5) : '';
+                    prodObj.unitId = methodUnitId && methodUnitId !== '__product__' ? methodUnitId : (productsDB.find(p => String(p.id) === String(existingId))?.unitId || '');
+                    const chainBarcodes = collectPurchaseUnitBarcodes(card);
+                    prodObj.unitChain = chain.map(level => ({ ...level, barcode: chainBarcodes[level.id] || (String(level.id) === String(selectedLevel.id) && uBar ? uBar : (String(level.id) === String(baseLevel.id) && pBar ? pBar : (level.barcode || ''))) }));
+                    prodObj.unitPrices = collected.prices;
+                    prodObj.selectedPurchaseUnitId = selectedLevel.id;
+                    prodObj.selectedPurchaseUnitName = selectedLevel.name;
+                    prodObj.purchaseQuantity = uQty;
+                    prodObj.purchaseUnitFactor = ppu;
+                    prodObj.purchaseUnitCost = uBuy;
+                    prodObj.unitName = topLevel.name;
+                    prodObj.pieceName = baseLevel.name;
+                    prodObj.piecesPerUnit = topLevel.factorToBase;
                     prodObj.newCost = ppu > 0 ? (uBuy / ppu) : 0;
-                    prodObj.priceUnit = uSale;
-                    prodObj.pricePiece = pSale;
-                    prodObj.barcode = uBar;
-                    prodObj.pieceBarcode = pBar;
+                    prodObj.priceUnit = topPrice;
+                    prodObj.pricePiece = basePrice;
+                    prodObj.barcode = chainBarcodes[topLevel.id] || topLevel.barcode || uBar;
+                    prodObj.pieceBarcode = chainBarcodes[baseLevel.id] || baseLevel.barcode || pBar;
                     prodObj.newStockPieces = uQty * ppu;
 
                     invoiceTotal += (uQty * uBuy);
@@ -1462,6 +1644,9 @@
                 existing.unitName = newProduct.unitName || existing.unitName;
                 existing.pieceName = newProduct.pieceName || existing.pieceName;
                 existing.piecesPerUnit = newProduct.piecesPerUnit || existing.piecesPerUnit;
+                if (Array.isArray(newProduct.unitChain) && newProduct.unitChain.length) existing.unitChain = newProduct.unitChain;
+                if (newProduct.unitPrices && typeof newProduct.unitPrices === 'object') existing.unitPrices = newProduct.unitPrices;
+                if (newProduct.unitId) existing.unitId = newProduct.unitId;
                 existing.addType = newProduct.addType || existing.addType;
                 addPurchaseStockToDestination(existing, newProduct, invId);
                 productsDB[existingIndex] = existing;
@@ -1469,10 +1654,11 @@
 
             // 2. خصم الدفعة النقدية من الصندوق (إذا وُجدت)
             if (paidAmount > 0) {
-                vault.balance -= paidAmount;
+                vault.balance -= Number(paymentSettlement.accountAmount || 0);
                 fundsDB.accountLogs.push({
                     id: `LOG_PUR_${invId}_${Date.now()}`, sourceType: 'purchaseInvoice', sourceId: invId,
-                    accountId: vault.id, date: invDate, type: "سحب", amount: paidAmount, 
+                    accountId: vault.id, date: invDate, type: "سحب", amount: Number(paymentSettlement.accountAmount || 0), baseAmount: paidAmount, currencyId: paymentSettlement.accountCurrencyId,
+                    transactionAmount: paidNative, transactionCurrencyId: currencyId,
                     notes: `سداد جزء من فاتورة مشتريات [${invId}] للمورد [${supplier.name}]`
                 });
             }
@@ -1507,6 +1693,13 @@
                 taxSettings: window.Cashtop?.getTaxSettings?.() || {},
                 total: payableInvoiceTotal,
                 paid: paidAmount,
+                paidNative: paidNative,
+                accountAmountNative: Number(paymentSettlement.accountAmount || 0),
+                accountCurrencyId: paymentSettlement.accountCurrencyId,
+                currencyId: currencyId,
+                currencyName: (window.CashtopMulti?.getCurrency?.(currencyId) || cfg.base).name,
+                currencySymbol: (window.CashtopMulti?.getCurrency?.(currencyId) || cfg.base).symbol || (window.CashtopMulti?.getCurrency?.(currencyId) || cfg.base).code,
+                exchangeRatePer100Base: Number((window.CashtopMulti?.getCurrency?.(currencyId) || cfg.base).ratePer100Base || 100),
                 debt: debtAmount,
                 itemsCount: productsToSaveLog.length,
                 items: productsToSaveLog.map(item => ({
@@ -1518,6 +1711,12 @@
                     unitName: item.unitName || '',
                     pieceName: item.pieceName || '',
                     piecesPerUnit: parseFloat(item.piecesPerUnit) || 1,
+                    selectedUnitId: item.selectedPurchaseUnitId || '',
+                    selectedUnitName: item.selectedPurchaseUnitName || item.unitName || '',
+                    purchaseQuantity: Number(item.purchaseQuantity ?? item.newStockPieces ?? 0),
+                    purchaseUnitFactor: Number(item.purchaseUnitFactor || 1),
+                    purchaseUnitCost: Number(item.purchaseUnitCost ?? ((item.newCost || 0) * (item.purchaseUnitFactor || 1))),
+                    unitChain: Array.isArray(item.unitChain) ? item.unitChain : [],
                     warehouseId: item.destinationStoreId || 'shop',
                     warehouseName: item.destinationStoreName || 'المحل / المخزون الرئيسي',
                     expiryDate: item.expiryDate || '',
@@ -1746,13 +1945,18 @@
 
             // 2. إرجاع المال المسحوب للصندوق
             if(inv.paid > 0) {
-                let vault = fundsDB.accounts.find(a => a.id === inv.accountId);
+                let vault = fundsDB.accounts.find(a => String(a.id) === String(inv.accountId));
                 if(vault) {
-                    vault.balance += inv.paid;
+                    const reversalCurrencyId = inv.accountCurrencyId || vault.currencyId || (window.CashtopMulti?.getCurrencyConfig?.().baseCurrencyId || 'base');
+                    const reversalNative = Number.isFinite(Number(inv.accountAmountNative))
+                        ? Number(inv.accountAmountNative)
+                        : (window.CashtopMulti?.accountAmountFromBase?.(Number(inv.paid || 0), reversalCurrencyId) ?? window.CashtopMulti?.fromBase?.(Number(inv.paid || 0), reversalCurrencyId) ?? Number(inv.paid || 0));
+                    vault.balance = Number(vault.balance || 0) + reversalNative;
                     fundsDB.accountLogs = (fundsDB.accountLogs || []).filter(log => !(String(log?.sourceType || '') === 'purchaseInvoice' && String(log?.sourceId || '') === String(inv.id)));
                     fundsDB.accountLogs.push({
                         id: `LOG_PUR_REV_${inv.id}_${Date.now()}`, sourceType: 'purchaseInvoiceReversal', sourceId: inv.id,
-                        accountId: vault.id, date: new Date().toISOString().split('T')[0], type: "إيداع", amount: inv.paid, 
+                        accountId: vault.id, date: new Date().toISOString().split('T')[0], type: "إيداع", amount: reversalNative,
+                        baseAmount: Number(inv.paid || 0), currencyId: reversalCurrencyId,
                         notes: `عكس قيد: استرداد نقدية إثر إلغاء فاتورة مشتريات [${inv.id}]`
                     });
                 }

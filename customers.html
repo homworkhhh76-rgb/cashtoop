@@ -237,15 +237,18 @@
             .actions-wrapper, .export-group { display: none !important; }
         }
     .customer-row .fa-spinner,.customer-row .fa-circle-notch,.customer-row .spinner,.customer-row [class*="loading-spinner"]{display:none!important;animation:none!important}
-</style>
+
+        .customer-payment-currency{display:none}.customer-payment-currency.active{display:flex}.customer-payment-currency small{font-size:11px;color:#64748b}
+    </style>
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Firebase sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=48">
-    <script src="cashtop-core.js?v=24"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=54">
+    <script src="cashtop-core.js?v=54"></script><script src="push-config.js?v=54"></script><script src="push-client.js?v=54"></script>
+    <script src="multi-system.js?v=51"></script>
     <script src="firebase-config.js?v=19"></script>
     <script src="accounting-engine.js"></script>
-    <script src="firebase-sync.js?v=23"></script>
+    <script src="firebase-sync.js?v=54"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -266,6 +269,7 @@
         <summary><i class="fa-solid fa-boxes-stacked"></i><span>المخزون</span><i class="fa-solid fa-chevron-down ct-menu-arrow"></i></summary>
         <div class="ct-submenu">
           <a href="products.html">المنتجات</a>
+          <a href="materials.html">الأصناف</a>
           <a href="warehouses.html">المخازن</a>
           <a href="branches.html">الفروع</a>
           <a href="units.html">الوحدات</a>
@@ -518,6 +522,13 @@
                         <div class="summary-item"><span>العميل</span><strong id="paymentCustomerName">-</strong></div>
                         <div class="summary-item"><span>الرصيد الحالي</span><strong id="paymentCurrentBalance">0.00 ₪</strong></div>
                         <div class="summary-item"><span>الصندوق المختار</span><strong id="paymentSelectedAccountName">-</strong></div>
+                    </div>
+                    <div class="form-row customer-payment-currency" id="customerPaymentCurrencyWrap">
+                        <div class="form-group">
+                            <select class="form-control" id="paymentCurrencySelect" onchange="handleCustomerPaymentCurrencyChange()"></select>
+                            <label>عملة الدفعة</label>
+                            <small id="customerPaymentCurrencyHint"></small>
+                        </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
@@ -996,14 +1007,25 @@
             };
         }
 
+        function customerPaymentCurrencyConfig(){ return window.CashtopMulti?.getCurrencyConfig?.() || {enabled:false,baseCurrencyId:'ILS',base:{id:'ILS',symbol:'₪',code:'ILS',ratePer100Base:100},currencies:[{id:'ILS',name:'شيكل',symbol:'₪',code:'ILS',ratePer100Base:100}]}; }
+        function customerPaymentCurrencyId(){ const cfg=customerPaymentCurrencyConfig(); return document.getElementById('paymentCurrencySelect')?.value || cfg.baseCurrencyId; }
+        function populateCustomerPaymentCurrency(preferredId=''){
+            const cfg=customerPaymentCurrencyConfig(), select=document.getElementById('paymentCurrencySelect'), wrap=document.getElementById('customerPaymentCurrencyWrap'); if(!select)return;
+            const previous=preferredId||select.value||cfg.baseCurrencyId; select.innerHTML=cfg.currencies.map(c=>`<option value="${c.id}">${c.name} (${c.symbol||c.code})</option>`).join(''); select.value=cfg.currencies.some(c=>String(c.id)===String(previous))?previous:cfg.baseCurrencyId; wrap?.classList.toggle('active',cfg.enabled===true);
+            const cur=window.CashtopMulti?.getCurrency?.(select.value)||cfg.base; const hint=document.getElementById('customerPaymentCurrencyHint'); if(hint)hint.textContent=String(cur.id)===String(cfg.baseCurrencyId)?'العملة الأساسية':`100 ${cfg.base.symbol||cfg.base.code} = ${Number(cur.ratePer100Base||0)} ${cur.symbol||cur.code}`;
+        }
+        function handleCustomerPaymentCurrencyChange(){ populatePaymentAccounts(); updatePaymentPreview(); }
+
         function populatePaymentAccounts(selectedId = '') {
             const select = document.getElementById('paymentAccount');
             if (!select) return [];
             const funds = getFundsDb();
+            const cfg=customerPaymentCurrencyConfig(), cid=cfg.enabled?customerPaymentCurrencyId():cfg.baseCurrencyId;
+            funds.accounts.forEach(account=>{if(!account.currencyId)account.currencyId=cfg.baseCurrencyId;});
             const accounts = funds.accounts.filter(account => account && account.id != null);
             select.innerHTML = accounts.length
-                ? accounts.map(account => `<option value="${escapeHtml(String(account.id))}">${escapeHtml(String(account.name || 'صندوق بدون اسم'))} — ${numeric(account.balance).toFixed(2)} ₪</option>`).join('')
-                : '<option value="">لا يوجد صندوق متاح</option>';
+                ? accounts.map(account => { const cur=window.CashtopMulti?.getCurrency?.(account.currencyId||cfg.baseCurrencyId)||cfg.base; return `<option value="${escapeHtml(String(account.id))}">${escapeHtml(String(account.name || 'صندوق بدون اسم'))} — ${numeric(account.balance).toFixed(2)} ${escapeHtml(cur.symbol||cur.code)}</option>`; }).join('')
+                : '<option value="">لا يوجد صندوق مالي</option>';
             const preferred = accounts.find(account => String(account.id) === String(selectedId))
                 || accounts.find(account => account.isDefaultCash === true)
                 || accounts[0];
@@ -1015,6 +1037,7 @@
         function openCustomerPaymentModal(id) {
             const customer = customersData.find(item => String(item?.id) === String(id));
             if (!customer) return showToast('تعذر العثور على العميل.', 'error');
+            populateCustomerPaymentCurrency(customerPaymentCurrencyConfig().baseCurrencyId);
             const accounts = populatePaymentAccounts();
             if (!accounts.length) {
                 showToast('لا يوجد صندوق مالي متاح. أنشئ صندوقاً أولاً من صفحة الصناديق والحسابات.', 'error');
@@ -1045,7 +1068,9 @@
 
         function updatePaymentPreview() {
             const customer = customersData.find(item => String(item?.id) === String(document.getElementById('paymentCustomerId')?.value || ''));
-            const amount = Math.max(0, numeric(document.getElementById('paymentAmount')?.value));
+            const amountNative = Math.max(0, numeric(document.getElementById('paymentAmount')?.value));
+            const cfg=customerPaymentCurrencyConfig(), cid=cfg.enabled?customerPaymentCurrencyId():cfg.baseCurrencyId;
+            const amount = window.CashtopMulti?.toBase?.(amountNative,cid) ?? amountNative;
             const nextBalance = numeric(customer?.balance) - amount;
             const preview = document.getElementById('paymentBalancePreview');
             if (preview) preview.textContent = customerBalanceLabel(nextBalance);
@@ -1056,12 +1081,14 @@
             if (customerPaymentBusy) return;
             const customerId = String(document.getElementById('paymentCustomerId')?.value || '');
             const customerIndex = customersData.findIndex(item => String(item?.id) === customerId);
-            const amount = Math.max(0, numeric(document.getElementById('paymentAmount')?.value));
+            const cfg=customerPaymentCurrencyConfig(), currencyId=cfg.enabled?customerPaymentCurrencyId():cfg.baseCurrencyId;
+            const amountNative = Math.max(0, numeric(document.getElementById('paymentAmount')?.value));
+            const amount = window.CashtopMulti?.toBase?.(amountNative,currencyId) ?? amountNative;
             const accountId = String(document.getElementById('paymentAccount')?.value || '');
             const date = String(document.getElementById('paymentDate')?.value || todayIsoDate());
             const notes = String(document.getElementById('paymentNotes')?.value || '').trim();
             if (customerIndex < 0) return showToast('تعذر العثور على العميل.', 'error');
-            if (!(amount > 0)) return showToast('أدخل مبلغ دفعة صحيحاً أكبر من صفر.', 'error');
+            if (!(amountNative > 0)) return showToast('أدخل مبلغ دفعة صحيحاً أكبر من صفر.', 'error');
 
             const funds = getFundsDb();
             const account = funds.accounts.find(item => String(item?.id) === accountId);
@@ -1093,7 +1120,7 @@
                     relationType: 'client',
                     relationId: customer.id,
                     relationName: customer.name || 'عميل',
-                    amount,
+                    amount, amountNative, currencyId, currencyName:(window.CashtopMulti?.getCurrency?.(currencyId)||cfg.base).name, currencySymbol:(window.CashtopMulti?.getCurrency?.(currencyId)||cfg.base).symbol || (window.CashtopMulti?.getCurrency?.(currencyId)||cfg.base).code, exchangeRatePer100Base:Number((window.CashtopMulti?.getCurrency?.(currencyId)||cfg.base).ratePer100Base||100),
                     notes: notes || 'دفعة عميل مسجلة من شاشة العملاء',
                     source: 'customers-payment',
                     ...operator,
@@ -1101,7 +1128,9 @@
                     updatedAt: now
                 });
 
-                account.balance = numeric(account.balance) + amount;
+                const settlement = window.CashtopMulti?.settleToAccount?.(amountNative, currencyId, account)
+                    || { accountAmount: amountNative, accountCurrencyId: account.currencyId || currencyId, baseAmount: amount };
+                account.balance = numeric(account.balance) + Number(settlement.accountAmount || 0);
                 funds.accountLogs.push({
                     id: makeOperationId('LOG_CP'),
                     sourceType: 'voucher',
@@ -1109,7 +1138,8 @@
                     accountId: account.id,
                     date,
                     type: 'إيداع',
-                    amount,
+                    amount: Number(settlement.accountAmount || 0), baseAmount: amount, currencyId: settlement.accountCurrencyId,
+                    transactionAmount: amountNative, transactionCurrencyId: currencyId,
                     notes: `دفعة عميل [${refNumber}] | ${customer.name || 'عميل'}${notes ? ` | ${notes}` : ''}`,
                     relationType: 'client',
                     relationId: customer.id,
@@ -1125,7 +1155,7 @@
                 customersData = nextCustomers;
                 filterTable();
                 closeCustomerPaymentModal();
-                showToast(`تم تسجيل دفعة ${amount.toFixed(2)} ₪ وإضافتها إلى ${account.name || 'الصندوق'} وتحديث حساب العميل.`, 'success');
+                showToast(`تم تسجيل دفعة ${amountNative.toFixed(2)} ${(window.CashtopMulti?.currencySymbol?.(currencyId)||'')} وإضافتها إلى ${account.name || 'الصندوق'} وتحديث حساب العميل.`, 'success');
                 window.CashtopFirebase?.syncAll?.()?.catch?.(() => {});
             } catch (error) {
                 customersData = originalCustomers;

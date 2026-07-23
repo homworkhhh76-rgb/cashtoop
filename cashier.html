@@ -228,18 +228,24 @@
         @media (max-width: 480px) { 
             .form-row { grid-template-columns: 1fr; } 
         }
+    
+        .ct-currency-compact { display:none; }
+        .ct-currency-compact.active { display:block; }
+        .ct-currency-compact select { min-height:38px; font-weight:700; border-color:#d9e2ec; background:#fff; }
+        .ct-currency-hint { display:block; margin-top:4px; font-size:11px; color:#6b7280; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     </style>
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Firebase sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=48">
+    <link rel="stylesheet" href="cashtop-core.css?v=54">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="barcode-tools.js?v=20"></script>
-    <script src="cashtop-core.js?v=24"></script>
+    <script src="cashtop-core.js?v=54"></script><script src="push-config.js?v=54"></script><script src="push-client.js?v=54"></script>
+    <script src="multi-system.js?v=51"></script>
     <script src="firebase-config.js?v=19"></script>
     <script src="accounting-engine.js"></script>
     <script src="cashtop-printer.js?v=48"></script>
-    <script src="firebase-sync.js?v=23"></script>
+    <script src="firebase-sync.js?v=54"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -260,6 +266,7 @@
         <summary><i class="fa-solid fa-boxes-stacked"></i><span>المخزون</span><i class="fa-solid fa-chevron-down ct-menu-arrow"></i></summary>
         <div class="ct-submenu">
           <a href="products.html">المنتجات</a>
+          <a href="materials.html">الأصناف</a>
           <a href="warehouses.html">المخازن</a>
           <a href="branches.html">الفروع</a>
           <a href="units.html">الوحدات</a>
@@ -369,6 +376,11 @@
                         <div id="customerSuggestions" class="suggestions-box"></div>
                     </div>
                     <div class="form-group"><label>رقم الجوال</label><input type="text" id="customerPhoneInput" class="form-control" placeholder="اختياري..."></div>
+                    <div class="form-group ct-currency-compact" id="invoiceCurrencyWrap">
+                        <label>عملة التحصيل</label>
+                        <select class="form-control" id="invoiceCurrencySelect" onchange="handleInvoiceCurrencyChange()"></select>
+                        <small class="ct-currency-hint" id="invoiceCurrencyHint"></small>
+                    </div>
                     <div class="form-group"><label>المبلغ المدفوع</label><input type="number" step="0.001" id="invoicePaidAmount" class="form-control" oninput="handlePaidInput()" value="0.00"></div>
                     <div class="form-group">
                         <label>الحساب الخصمي</label>
@@ -644,6 +656,7 @@
             // ربط التبويبات أولاً حتى تبقى السلة وبطاقة البيانات قابلة للفتح
             // حتى لو كانت إحدى مجموعات البيانات القديمة تالفة.
             runCashierStep('tabs', () => { bindPosTabs(); switchPosTab('products'); });
+            runCashierStep('currency', populateInvoiceCurrencySelect);
             runCashierStep('accounts', populateAccountsSelect);
             runCashierStep('products', renderProductsGrid);
             runCashierStep('date', setCurrentDate);
@@ -687,6 +700,9 @@
             if (!key || key === 'cashtop_customers') customersData = readArray('cashtop_customers');
             if (!key || key === 'cashtop_customer_groups') customerGroupsData = readArray('cashtop_customer_groups');
             if (!key || key === 'cashtop_branches') branchesData = readArray('cashtop_branches');
+            if (!key || key === 'cashtop_settings') {
+                populateInvoiceCurrencySelect();
+            }
             if (!key || key === 'cashtop_funds_db') {
                 fundsDB = readObject('cashtop_funds_db', { accounts: [], accountLogs: [] });
                 if (!Array.isArray(fundsDB.accounts)) fundsDB.accounts = [];
@@ -699,22 +715,97 @@
 
         window.addEventListener('storage', event => {
             const key = String(event.key || '').replace(/^.*::(cashtop_[^:]+)$/, '$1');
-            if (['cashtop_products','cashtop_customers','cashtop_customer_groups','cashtop_branches','cashtop_funds_db'].includes(key)) refreshCashierDataFromStorage(key);
+            if (['cashtop_products','cashtop_customers','cashtop_customer_groups','cashtop_branches','cashtop_funds_db','cashtop_settings'].includes(key)) refreshCashierDataFromStorage(key);
         });
         window.addEventListener('cashtop:remote-applied', event => {
-            if (['cashtop_products','cashtop_customers','cashtop_customer_groups','cashtop_branches','cashtop_funds_db'].includes(event.detail?.key)) refreshCashierDataFromStorage(event.detail.key);
+            if (['cashtop_products','cashtop_customers','cashtop_customer_groups','cashtop_branches','cashtop_funds_db','cashtop_settings'].includes(event.detail?.key)) refreshCashierDataFromStorage(event.detail.key);
         });
+
+        function refreshCashierFundsNow() {
+            if (invoiceSaveInProgress) return;
+            fundsDB = readObject('cashtop_funds_db', { accounts: [], accountLogs: [] });
+            if (!Array.isArray(fundsDB.accounts)) fundsDB.accounts = [];
+            if (!Array.isArray(fundsDB.accountLogs)) fundsDB.accountLogs = [];
+            runCashierStep('live funds', populateAccountsSelect);
+        }
+
+        window.addEventListener('cashtop:funds-changed', refreshCashierFundsNow);
+        window.addEventListener('cashtop:data-changed', event => {
+            if (event.detail?.key === 'cashtop_funds_db') refreshCashierFundsNow();
+        });
+        document.addEventListener('pointerdown', event => {
+            if (event.target?.id === 'accountSelectBox') refreshCashierFundsNow();
+        }, true);
+        document.addEventListener('focusin', event => {
+            if (event.target?.id === 'accountSelectBox') refreshCashierFundsNow();
+        });
+
+        function getCashierCurrencyConfig() {
+            return window.CashtopMulti?.getCurrencyConfig?.() || { enabled: false, baseCurrencyId: 'ILS', base: { id: 'ILS', name: 'شيكل', symbol: '₪', ratePer100Base: 100 }, currencies: [{ id: 'ILS', name: 'شيكل', symbol: '₪', ratePer100Base: 100 }] };
+        }
+
+        function getInvoiceCurrencyId() {
+            const cfg = getCashierCurrencyConfig();
+            return document.getElementById('invoiceCurrencySelect')?.value || cfg.baseCurrencyId;
+        }
+
+        function cashierBaseSymbol() {
+            const cfg = getCashierCurrencyConfig();
+            return cfg.base?.symbol || cfg.base?.code || '₪';
+        }
+
+        function populateInvoiceCurrencySelect(preferredId = '') {
+            const cfg = getCashierCurrencyConfig();
+            const wrap = document.getElementById('invoiceCurrencyWrap');
+            const select = document.getElementById('invoiceCurrencySelect');
+            const hint = document.getElementById('invoiceCurrencyHint');
+            if (!select) return;
+            const previous = preferredId || select.value || cfg.baseCurrencyId;
+            select.innerHTML = cfg.currencies.map(cur => `<option value="${cur.id}">${cur.name} (${cur.symbol || cur.code})</option>`).join('');
+            select.value = cfg.currencies.some(cur => String(cur.id) === String(previous)) ? previous : cfg.baseCurrencyId;
+            if (wrap) wrap.classList.toggle('active', cfg.enabled === true);
+            const current = window.CashtopMulti?.getCurrency?.(select.value) || cfg.base;
+            if (hint) hint.textContent = String(current.id) === String(cfg.baseCurrencyId) ? 'العملة الأساسية' : `100 ${cfg.base.symbol || cfg.base.code} = ${Number(current.ratePer100Base || 0)} ${current.symbol || current.code}`;
+            normalizeFundsAccountCurrencies();
+            populateAccountsSelect();
+        }
+
+        function normalizeFundsAccountCurrencies() {
+            const cfg = getCashierCurrencyConfig();
+            (fundsDB.accounts || []).forEach(acc => { if (!acc.currencyId) acc.currencyId = cfg.baseCurrencyId; });
+        }
+
+        function handleInvoiceCurrencyChange() {
+            const cfg = getCashierCurrencyConfig();
+            const currencyId = getInvoiceCurrencyId();
+            const current = window.CashtopMulti?.getCurrency?.(currencyId) || cfg.base;
+            const hint = document.getElementById('invoiceCurrencyHint');
+            if (hint) hint.textContent = String(current.id) === String(cfg.baseCurrencyId) ? 'العملة الأساسية' : `100 ${cfg.base.symbol || cfg.base.code} = ${Number(current.ratePer100Base || 0)} ${current.symbol || current.code}`;
+            isPaidManuallyEdited = false;
+            populateAccountsSelect();
+            calculateTotals(true);
+        }
 
         function populateAccountsSelect() {
             const select = document.getElementById('accountSelectBox');
             if (!select) return;
-            select.innerHTML = fundsDB.accounts.map(acc => `<option value="${acc.id}">${acc.name} — ${(parseFloat(acc.balance)||0).toFixed(2)} ₪</option>`).join('');
-            if (!select.value && fundsDB.accounts[0]) select.value = fundsDB.accounts[0].id;
+            normalizeFundsAccountCurrencies();
+            const cfg = getCashierCurrencyConfig();
+            const currencyId = cfg.enabled ? getInvoiceCurrencyId() : cfg.baseCurrencyId;
+            const previous = select.value;
+            const visible = (fundsDB.accounts || []);
+            select.innerHTML = visible.map(acc => {
+                const cur = window.CashtopMulti?.getCurrency?.(acc.currencyId || cfg.baseCurrencyId) || cfg.base;
+                return `<option value="${acc.id}">${acc.name} — ${(parseFloat(acc.balance)||0).toFixed(2)} ${cur.symbol || cur.code}</option>`;
+            }).join('');
+            if (visible.some(acc => String(acc.id) === String(previous))) select.value = previous;
+            else if (visible[0]) select.value = visible[0].id;
+            if (!visible.length) select.innerHTML = '<option value="">لا يوجد صندوق مالي</option>';
         }
 
         function getSelectedAccount() {
             const select = document.getElementById('accountSelectBox');
-            return fundsDB.accounts.find(acc => String(acc.id) === String(select?.value)) || fundsDB.accounts[0];
+            return fundsDB.accounts.find(acc => String(acc.id) === String(select?.value)) || null;
         }
 
         function isMainStockBranch(branchId) {
@@ -734,10 +825,59 @@
             return Math.max(0, Number(number.toFixed(6)));
         }
 
+        function cashierUnitChainForProduct(product) {
+            return window.CashtopMulti?.normalizeProductChain(product) || [{ id: 'piece', name: product?.pieceName || 'قطعة', factorToBase: 1, salePrice: Number(product?.pricePiece || product?.price || 0) }];
+        }
+
+        function cashierNormalizeUnitId(product, unitId) {
+            const chain = cashierUnitChainForProduct(product);
+            if (!chain.length) return 'piece';
+            if (unitId === 'piece') return chain[0].id;
+            if (unitId === 'unit') return chain[chain.length - 1].id;
+            return chain.some(level => String(level.id) === String(unitId)) ? unitId : chain[0].id;
+        }
+
+        function cashierUnitForItem(item) {
+            if (!item || item.isCustom || item.isVariant) return { id: 'piece', name: item?.pieceName || 'قطعة', factorToBase: 1, salePrice: Number(item?.price || 0) };
+            const product = productsData.find(product => String(product.id) === String(item.id)) || item;
+            const chain = cashierUnitChainForProduct(product);
+            const normalizedId = cashierNormalizeUnitId(product, item.selectedUnit);
+            return chain.find(level => String(level.id) === String(normalizedId)) || chain[0];
+        }
+
+        function cashierUnitFactor(item) {
+            return Math.max(0.000001, Number(cashierUnitForItem(item)?.factorToBase || 1));
+        }
+
+        function cashierAddToBasketByUnit(productId, unitId) {
+            const product = productsData.find(item => String(item.id) === String(productId));
+            if (!product) return false;
+            const chain = cashierUnitChainForProduct(product);
+            const normalizedId = cashierNormalizeUnitId(product, unitId);
+            const unit = chain.find(level => String(level.id) === String(normalizedId)) || chain[0];
+            const factor = Math.max(0.000001, Number(unit.factorToBase || 1));
+            const availablePieces = getAvailableStock(product.id);
+            if (availablePieces + 1e-9 < factor) {
+                showToast(`المخزون لا يحتوي ${factor} ${chain[0]?.name || 'قطعة'} لإضافة ${unit.name}.`, 'error');
+                return false;
+            }
+            const existing = basketItems.find(item => String(item.id) === String(product.id) && String(cashierNormalizeUnitId(product, item.selectedUnit)) === String(normalizedId) && !item.isCustom && !item.isVariant);
+            const unitPrice = getEffectiveProductPrice(product, normalizedId);
+            if (existing) existing.qty = normalizeQuantity(Number(existing.qty || 0) + 1);
+            else basketItems.push({
+                id: product.id, name: product.name, price: unitPrice, referencePrice: unitPrice,
+                costPerPiece: Number(product.cost || 0), cost: Number(product.cost || 0) * factor, qty: 1,
+                selectedUnit: normalizedId, unitName: unit.name, pieceName: chain[0]?.name || 'قطعة',
+                piecesPerUnit: factor, unitChain: chain, hasSaleUnit: chain.length > 1,
+                isCustom: false, isVariant: false
+            });
+            renderBasket();
+            return true;
+        }
+
         function itemQuantityInPieces(item) {
             const quantity = roundStockQuantity(item?.qty || 0);
-            const piecesPerUnit = Math.max(0.000001, Number(item?.piecesPerUnit || 1));
-            return roundStockQuantity(item?.selectedUnit === 'unit' ? quantity * piecesPerUnit : quantity);
+            return roundStockQuantity(quantity * cashierUnitFactor(item));
         }
 
         function getBranchDisplayName(branchId) {
@@ -947,13 +1087,19 @@
                 customer.balance = (parseFloat(customer.balance) || 0) - parseFloat(invoice.debt);
                 removeCustomerInvoiceDebt(customer, invoice.id);
             }
-            const account = fundsDB.accounts.find(acc => String(acc.id) === String(invoice.accountId)) || fundsDB.accounts[0];
-            if (account && parseFloat(invoice.paid) > 0) {
-                account.balance = (parseFloat(account.balance) || 0) - parseFloat(invoice.paid);
+            const account = fundsDB.accounts.find(acc => String(acc.id) === String(invoice.accountId)) || null;
+            const cfg = getCashierCurrencyConfig();
+            const accountCurrencyId = account?.currencyId || invoice.accountCurrencyId || invoice.currencyId || cfg.baseCurrencyId;
+            const reversalNative = Number.isFinite(Number(invoice.accountAmountNative))
+                ? Number(invoice.accountAmountNative)
+                : (window.CashtopMulti?.accountAmountFromBase?.(Number(invoice.paid || 0), accountCurrencyId) ?? window.CashtopMulti?.fromBase?.(Number(invoice.paid || 0), accountCurrencyId) ?? Number(invoice.paid || 0));
+            if (account && reversalNative > 0) {
+                account.balance = (parseFloat(account.balance) || 0) - reversalNative;
                 fundsDB.accountLogs.push({
                     id: `LOG_REV_${invoice.id}_${Date.now()}`,
                     sourceType: 'sale-reversal', sourceId: invoice.id,
-                    accountId: account.id, date: new Date().toISOString(), type: 'سحب', amount: parseFloat(invoice.paid),
+                    accountId: account.id, date: new Date().toISOString(), type: 'سحب', amount: reversalNative,
+                    baseAmount: Number(invoice.paid || 0), currencyId: accountCurrencyId,
                     notes: `عكس قيد فاتورة بيع [${invoice.id}] بسبب التعديل`
                 });
             }
@@ -1013,9 +1159,8 @@
             if (!product) return 0;
             const group = getCustomerGroup(selectedCustomer);
             const groupPrice = group?.prices?.[product.id] || group?.prices?.[String(product.id)] || product.groupPrices?.[group?.id];
-            const normal = unit === 'unit' ? Number(product.priceUnit || 0) : Number(product.pricePiece || product.price || 0);
-            const special = unit === 'unit' ? Number(groupPrice?.unit) : Number(groupPrice?.piece);
-            return Number.isFinite(special) && special >= 0 ? special : normal;
+            const unitId = cashierNormalizeUnitId(product, unit);
+            return window.CashtopMulti?.getProductUnitPrice(product, unitId, groupPrice) ?? Number(product.pricePiece || product.price || 0);
         }
 
         function showCustomerSuggestions() {
@@ -1122,19 +1267,27 @@
                 } else {
                     if (prod.hasVariants) {
                         stockStr = `المقاسات: ${availStock}`;
-                    } else if (prod.piecesPerUnit > 1) {
-                        let units = Math.floor(availStock / prod.piecesPerUnit);
-                        let rem = availStock % prod.piecesPerUnit;
-                        stockStr = `المخزون: ${units > 0 ? units + ' ' + (prod.unitName||'وحدة') : ''} ${rem > 0 ? rem + ' ' + (prod.pieceName||'قطعة') : ''}`.trim();
                     } else {
-                        stockStr = `المخزون: ${availStock}`;
+                        const chain = cashierUnitChainForProduct(prod);
+                        let remaining = Number(availStock || 0);
+                        const parts = [];
+                        [...chain].reverse().forEach((level, reverseIndex) => {
+                            const factor = Math.max(0.000001, Number(level.factorToBase || 1));
+                            if (reverseIndex === chain.length - 1) {
+                                if (remaining > 0 || !parts.length) parts.push(`${quantityDisplay(remaining)} ${level.name}`);
+                            } else {
+                                const count = Math.floor((remaining + 1e-9) / factor);
+                                if (count > 0) { parts.push(`${count} ${level.name}`); remaining = roundStockQuantity(remaining - count * factor); }
+                            }
+                        });
+                        stockStr = `المخزون: ${parts.join(' + ')}`;
                     }
                 }
 
                 card.innerHTML = `
                     <div class="product-icon-box"><i class="fa-solid fa-box"></i></div>
                     <div class="product-item-title">${prod.name}</div>
-                    <div class="product-item-price">₪ ${moneyDisplay(getEffectiveProductPrice(prod, 'piece'))}</div>
+                    <div class="product-item-price">${cashierBaseSymbol()} ${moneyDisplay(getEffectiveProductPrice(prod, 'piece'))}</div>
                     <div class="stock-text">${stockStr}</div>
                 `;
                 container.appendChild(card);
@@ -1230,27 +1383,20 @@
         function addToBasket(productId) {
             const product = productsData.find(p => String(p.id) === String(productId));
             if (!product) { refreshCashierDataFromStorage('cashtop_products'); showToast('تعذر العثور على الصنف. تم تحديث قائمة المنتجات.', 'error'); return false; }
-
+            const chain = cashierUnitChainForProduct(product);
+            const baseUnit = chain[0];
             let avail = getAvailableStock(productId);
-            if (avail + 1e-9 < getQuantitySettings().step) {
-                showToast('الكمية انتهت من المخزون!', 'error');
-                return;
-            }
-
-            const existingItem = basketItems.find(item => String(item.id) === String(productId) && item.selectedUnit === 'piece' && !item.isCustom && !item.isVariant);
-            
-            let itemPrice = getEffectiveProductPrice(product, 'piece');
-
+            if (avail + 1e-9 < getQuantitySettings().step) { showToast('الكمية انتهت من المخزون!', 'error'); return; }
+            const existingItem = basketItems.find(item => String(item.id) === String(productId) && String(cashierNormalizeUnitId(product, item.selectedUnit)) === String(baseUnit.id) && !item.isCustom && !item.isVariant);
+            const itemPrice = getEffectiveProductPrice(product, baseUnit.id);
             const incrementQty = normalizeQuantity(Math.min(1, avail));
-            if (existingItem) {
-                existingItem.qty = normalizeQuantity(Number(existingItem.qty || 0) + incrementQty);
-            } else {
-                basketItems.push({ 
-                    id: product.id, name: product.name, price: itemPrice, referencePrice: itemPrice, cost: product.cost, qty: incrementQty, 
-                    selectedUnit: 'piece', unitName: product.unitName || '', pieceName: product.pieceName || 'قطعة',
-                    piecesPerUnit: product.piecesPerUnit || 1, hasSaleUnit: productSupportsSaleUnit(product), isCustom: false, isVariant: false
-                });
-            }
+            if (existingItem) existingItem.qty = normalizeQuantity(Number(existingItem.qty || 0) + incrementQty);
+            else basketItems.push({
+                id: product.id, name: product.name, price: itemPrice, referencePrice: itemPrice, costPerPiece: Number(product.cost || 0), cost: product.cost, qty: incrementQty,
+                selectedUnit: baseUnit.id, unitName: chain[chain.length - 1]?.name || '', pieceName: baseUnit.name || 'قطعة',
+                piecesPerUnit: Number(chain[chain.length - 1]?.factorToBase || 1), unitChain: chain,
+                hasSaleUnit: chain.length > 1, isCustom: false, isVariant: false
+            });
             renderBasket();
             return true;
         }
@@ -1298,15 +1444,13 @@
                 } else if (item.isVariant) {
                     unitSelectorHtml = `<span class="badge-variant-info">مخصص</span>`;
                 } else {
-                    const hasSaleUnit = basketItemSupportsSaleUnit(item);
-                    item.hasSaleUnit = hasSaleUnit;
-                    if (!hasSaleUnit && item.selectedUnit !== 'piece') item.selectedUnit = 'piece';
-                    unitSelectorHtml = `
-                        <select class="unit-select" onchange="updateItemUnit(${index}, this.value)">
-                            <option value="piece" ${item.selectedUnit === 'piece' ? 'selected' : ''}>${item.pieceName || 'قطعة'}</option>
-                            ${hasSaleUnit ? `<option value="unit" ${item.selectedUnit === 'unit' ? 'selected' : ''}>${item.unitName || 'وحدة'}</option>` : ''}
-                        </select>
-                    `;
+                    const product = productsData.find(product => String(product.id) === String(item.id)) || item;
+                    const chain = cashierUnitChainForProduct(product);
+                    item.unitChain = chain;
+                    item.hasSaleUnit = chain.length > 1;
+                    item.selectedUnit = cashierNormalizeUnitId(product, item.selectedUnit);
+                    const options = chain.map(level => `<option value="${String(level.id)}" ${String(item.selectedUnit) === String(level.id) ? 'selected' : ''}>${String(level.name)}</option>`).join('');
+                    unitSelectorHtml = `<select class="unit-select" onchange="updateItemUnit(${index}, this.value)">${options}</select>`;
                 }
 
                 const itemDiv = document.createElement('div');
@@ -1327,7 +1471,7 @@
                         </div>
                         <div class="editable-price-control">
                             <input type="number" step="0.001" value="${(getQuantitySettings().qtyByPrice ? Number(item.price || 0) * Number(item.qty || 0) : Number(item.price || 0)).toFixed(3).replace(/\.?0+$/, '')}" onchange="changePriceDirect(${index}, this.value)" title="${getQuantitySettings().qtyByPrice ? 'أدخل المبلغ المطلوب لتتغير الكمية تلقائياً' : 'سعر الوحدة'}">
-                            <span class="currency-black">₪</span>
+                            <span class="currency-black">${cashierBaseSymbol()}</span>
                         </div>
                     </div>
                 `;
@@ -1338,31 +1482,26 @@
             renderProductsGrid(); 
         }
 
-        function updateItemUnit(index, value) { 
-            let item = basketItems[index];
-            if(item.isCustom || item.isVariant) return;
-            if (value === 'unit' && !basketItemSupportsSaleUnit(item)) {
-                item.selectedUnit = 'piece';
-                renderBasket();
-                return;
+        function updateItemUnit(index, value) {
+            const item = basketItems[index];
+            if (!item || item.isCustom || item.isVariant) return;
+            const product = productsData.find(product => String(product.id) === String(item.id)) || item;
+            const oldId = cashierNormalizeUnitId(product, item.selectedUnit);
+            const newId = cashierNormalizeUnitId(product, value);
+            if (String(oldId) === String(newId)) return;
+            const chain = cashierUnitChainForProduct(product);
+            const oldFactor = Number(chain.find(level => String(level.id) === String(oldId))?.factorToBase || 1);
+            const newFactor = Number(chain.find(level => String(level.id) === String(newId))?.factorToBase || 1);
+            const diff = Number(item.qty || 0) * (newFactor - oldFactor);
+            if (diff > 0 && getAvailableStock(item.id) + 1e-9 < diff) {
+                showToast('المخزون لا يكفي للتحويل إلى هذه الوحدة!', 'error'); renderBasket(); return;
             }
-
-            let oldUnit = item.selectedUnit;
-            if(oldUnit === value) return;
-
-            // حساب هل المخزون المتبقي يكفي لتغيير الوحدة
-            let currentPieces = oldUnit === 'unit' ? item.qty * item.piecesPerUnit : item.qty;
-            let newPieces = value === 'unit' ? item.qty * item.piecesPerUnit : item.qty;
-            let diff = newPieces - currentPieces;
-
-            if (diff > 0 && getAvailableStock(item.id) < diff) {
-                showToast('المخزون لا يكفي لتحويلها لهذه الوحدة!', 'error');
-                renderBasket(); // يعيد الـ select لما كانت عليه
-                return;
-            }
-
-            item.selectedUnit = value;
-            recalculateBasketPrices(); 
+            item.selectedUnit = newId;
+            item.piecesPerUnit = newFactor;
+            item.unitName = chain.find(level => String(level.id) === String(newId))?.name || item.unitName;
+            item.costPerPiece = Number(product.cost || item.costPerPiece || 0);
+            item.cost = item.costPerPiece * newFactor;
+            recalculateBasketPrices();
         }
 
         function canUseQuantity(item, newQty) {
@@ -1376,7 +1515,7 @@
                 const available = getAvailableVariantStock(item.id, item.variantSize, item.variantColor, Number(variant?.qty || 0));
                 return available + 1e-9 >= diffQty;
             }
-            const diffPieces = item.selectedUnit === 'unit' ? diffQty * Number(item.piecesPerUnit || 1) : diffQty;
+            const diffPieces = diffQty * cashierUnitFactor(item);
             return getAvailableStock(item.id) + 1e-9 >= diffPieces;
         }
 
@@ -1475,7 +1614,7 @@
             discountMode = type;
             document.getElementById('typeFixedBtn').classList.toggle('active', type === 'fixed');
             document.getElementById('typePercentBtn').classList.toggle('active', type === 'percent');
-            document.getElementById('discountInputLabel').innerText = type === 'fixed' ? 'قيمة الخصم (₪)' : 'نسبة الخصم المئوية (%)';
+            document.getElementById('discountInputLabel').innerText = type === 'fixed' ? `قيمة الخصم (${cashierBaseSymbol()})` : 'نسبة الخصم المئوية (%)';
             calculateTotals(false); 
         }
 
@@ -1566,9 +1705,13 @@
             const taxInfo = window.Cashtop?.calculateTax?.(taxable, 'sales') || { tax: 0, total: taxable };
             const tax = Number(taxInfo.tax || 0);
             const total = Math.max(0, Number(taxInfo.total ?? taxable));
-            const paidInput = Math.max(0, Number(document.getElementById('invoicePaidAmount')?.value || 0));
-            const paid = Math.min(total, paidInput);
-            return { subtotal, manualDiscount, offerDiscount, discount, taxable, tax, total, paid, debt: Math.max(0, total - paid) };
+            const cfg = getCashierCurrencyConfig();
+            const currencyId = cfg.enabled ? getInvoiceCurrencyId() : cfg.baseCurrencyId;
+            const paidNativeInput = Math.max(0, Number(document.getElementById('invoicePaidAmount')?.value || 0));
+            const paidBaseInput = window.CashtopMulti?.toBase?.(paidNativeInput, currencyId) ?? paidNativeInput;
+            const paid = Math.min(total, paidBaseInput);
+            const paidNative = window.CashtopMulti?.fromBase?.(paid, currencyId) ?? paid;
+            return { subtotal, manualDiscount, offerDiscount, discount, taxable, tax, total, paid, paidNative, currencyId, debt: Math.max(0, total - paid) };
         }
 
         function calculateTotals(updatePaidInput = true) {
@@ -1578,15 +1721,17 @@
             globalDiscountCalculated = totals.discount;
             salesTaxCalculated = totals.tax;
             const paidInput = document.getElementById('invoicePaidAmount');
-            if (updatePaidInput && !isPaidManuallyEdited) {
-                paidInput.value = moneyDisplay(totals.total);
+            if (updatePaidInput && !isPaidManuallyEdited && paidInput) {
+                const nativeTotal = window.CashtopMulti?.fromBase?.(totals.total, totals.currencyId) ?? totals.total;
+                paidInput.value = moneyDisplay(nativeTotal);
                 totals = computeInvoiceTotals();
             }
-            document.querySelectorAll('.summarySubtotalText').forEach(el => el.innerText = moneyDisplay(totals.subtotal) + ' ₪');
-            document.querySelectorAll('.summaryDiscountText').forEach(el => el.innerText = moneyDisplay(totals.discount) + ' ₪');
-            document.querySelectorAll('.summaryTaxText').forEach(el => el.innerText = moneyDisplay(totals.tax) + ' ₪');
-            document.querySelectorAll('.summaryTotalText').forEach(el => el.innerText = moneyDisplay(totals.total) + ' ₪');
-            document.querySelectorAll('.summaryDebtText').forEach(el => el.innerText = moneyDisplay(totals.debt) + ' ₪');
+            const symbol = cashierBaseSymbol();
+            document.querySelectorAll('.summarySubtotalText').forEach(el => el.innerText = moneyDisplay(totals.subtotal) + ' ' + symbol);
+            document.querySelectorAll('.summaryDiscountText').forEach(el => el.innerText = moneyDisplay(totals.discount) + ' ' + symbol);
+            document.querySelectorAll('.summaryTaxText').forEach(el => el.innerText = moneyDisplay(totals.tax) + ' ' + symbol);
+            document.querySelectorAll('.summaryTotalText').forEach(el => el.innerText = moneyDisplay(totals.total) + ' ' + symbol);
+            document.querySelectorAll('.summaryDebtText').forEach(el => el.innerText = moneyDisplay(totals.debt) + ' ' + symbol);
             return totals;
         }
 
@@ -1690,14 +1835,21 @@
             // خصم المخزون الحقيقي من الفرع الذي دخل منه المدير أو الموظف.
             adjustProductStock(basketItems, -1, stockBranchId);
 
-            // ترحيل المبلغ المقبوض إلى الحساب المختار
-            const selectedAccount = fundsDB.accounts.find(acc => String(acc.id) === String(invoiceObj.accountId)) || fundsDB.accounts[0];
+            // ترحيل المبلغ المقبوض إلى الحساب المختار بعملة الصندوق، مع حفظ المقابل بالعملة الأساسية.
+            const selectedAccount = fundsDB.accounts.find(acc => String(acc.id) === String(invoiceObj.accountId)) || null;
+            if (invoiceObj.paid > 0 && !selectedAccount) { showToast('اختر صندوقاً للتحصيل قبل الحفظ.', 'error'); return; }
             if (selectedAccount && invoiceObj.paid > 0) {
-                selectedAccount.balance = (parseFloat(selectedAccount.balance) || 0) + invoiceObj.paid;
+                const settlement = window.CashtopMulti?.settleToAccount?.(Number(invoiceObj.paidNative || 0), invoiceObj.currencyId, selectedAccount)
+                    || { accountAmount: Number(invoiceObj.paidNative || 0), accountCurrencyId: selectedAccount.currencyId || invoiceObj.currencyId, baseAmount: Number(invoiceObj.paid || 0) };
+                selectedAccount.balance = (parseFloat(selectedAccount.balance) || 0) + Number(settlement.accountAmount || 0);
+                invoiceObj.accountCurrencyId = settlement.accountCurrencyId;
+                invoiceObj.accountAmountNative = Number(settlement.accountAmount || 0);
                 fundsDB.accountLogs.push({
                     id: `LOG_SALE_${invoiceObj.id}_${Date.now()}`,
                     sourceType: 'sale', sourceId: invoiceObj.id,
-                    accountId: selectedAccount.id, date: invoiceObj.date, type: 'إيداع', amount: invoiceObj.paid,
+                    accountId: selectedAccount.id, date: invoiceObj.date, type: 'إيداع', amount: Number(settlement.accountAmount || 0),
+                    baseAmount: Number(invoiceObj.paid || 0), currencyId: settlement.accountCurrencyId,
+                    transactionAmount: Number(invoiceObj.paidNative || 0), transactionCurrencyId: invoiceObj.currencyId,
                     notes: `تحصيل فاتورة بيع [${invoiceObj.id}] من [${invoiceObj.customer}]`
                 });
             }
@@ -1768,6 +1920,7 @@
             } finally {
                 invoiceSaveInProgress = false;
                 setInvoiceSaveBusy(false);
+                refreshCashierFundsNow();
             }
         }
 
@@ -1779,6 +1932,7 @@
             const paid = totals.paid;
             const debt = totals.debt;
             const account = getSelectedAccount();
+            const currency = window.CashtopMulti?.getCurrency?.(totals.currencyId) || getCashierCurrencyConfig().base;
             const session = window.Cashtop?.getSession?.() || {};
 
             return {
@@ -1804,6 +1958,11 @@
                 taxSettings: window.Cashtop?.getTaxSettings?.() || {},
                 total: total,
                 paid: paid,
+                paidNative: totals.paidNative,
+                currencyId: totals.currencyId,
+                currencyName: currency.name,
+                currencySymbol: currency.symbol || currency.code,
+                exchangeRatePer100Base: Number(currency.ratePer100Base || 100),
                 debt: debt,
                 notes: document.getElementById('invoiceNotesInput').value
             };
@@ -1826,7 +1985,7 @@
                     div.innerHTML = `
                         <div>
                             <strong>${inv.customer}</strong><br>
-                            <span style="font-size:11px; color:#666;">${dateStr} - المبلغ: ${inv.total} ₪</span>
+                            <span style="font-size:11px; color:#666;">${dateStr} - المبلغ: ${inv.total} ${cashierBaseSymbol()}</span>
                         </div>
                         <button onclick="loadInvoiceForEdit('${inv.id}')">استدعاء</button>
                     `;
@@ -1856,6 +2015,7 @@
                 }
                 basketItems = (inv.items || []).map(item => ({...item}));
                 selectedCustomer = customersData.find(c => String(c.id) === String(inv.customerId)) || customersData.find(c => c.name === inv.customer) || null;
+                populateInvoiceCurrencySelect(inv.currencyId || getCashierCurrencyConfig().baseCurrencyId);
                 if (inv.accountId && document.getElementById('accountSelectBox')) document.getElementById('accountSelectBox').value = inv.accountId;
                 
                 let hasExceeded = false;
@@ -1885,7 +2045,8 @@
                 renderBasket();
                 setTimeout(() => {
                     isPaidManuallyEdited = true;
-                    document.getElementById('invoicePaidAmount').value = inv.paid;
+                    const editCurrencyId = inv.currencyId || getCashierCurrencyConfig().baseCurrencyId;
+                    document.getElementById('invoicePaidAmount').value = Number.isFinite(Number(inv.paidNative)) ? inv.paidNative : (window.CashtopMulti?.fromBase?.(Number(inv.paid || 0), editCurrencyId) ?? Number(inv.paid || 0));
                     calculateTotals(false);
                 }, 100);
 
@@ -1905,83 +2066,43 @@
         function findBarcodeMatch(code) {
             const normalized = normalizeBarcode(code);
             if (!normalized) return null;
-
-            // أولوية القراءة دائماً للقطعة. إذا كان نفس الباركود مستخدماً للقطعة
-            // والكرتونة/الوحدة (حتى عبر بيانات قديمة)، نضيف قطعة ولا نحوّله لكرتونة.
             for (const product of productsData) {
-                const pieceCodes = [product.barcode, product.pieceBarcode]
-                    .filter(Boolean)
-                    .map(value => normalizeBarcode(value));
-                if (pieceCodes.includes(normalized)) {
-                    return { type: product.hasVariants ? 'variants' : 'piece', product };
-                }
+                const chain = cashierUnitChainForProduct(product);
+                const base = chain[0];
+                const pieceCodes = [product.barcode, product.pieceBarcode, base?.barcode].filter(Boolean).map(normalizeBarcode);
+                if (pieceCodes.includes(normalized)) return { type: product.hasVariants ? 'variants' : 'chain', product, unitId: base.id };
             }
-
-            // باركود المقاس/اللون يعتبر بيعاً بالقطعة أيضاً، لذلك يسبق باركود الكرتونة.
             for (const product of productsData) {
                 if (product.hasVariants && Array.isArray(product.variants)) {
-                    const variantIndex = product.variants.findIndex(
-                        variant => normalizeBarcode(variant?.barcode) === normalized
-                    );
+                    const variantIndex = product.variants.findIndex(variant => normalizeBarcode(variant?.barcode) === normalized);
                     if (variantIndex >= 0) return { type: 'variant', product, variantIndex };
                 }
             }
-
-            // لا نختار الكرتونة/الوحدة إلا عندما لا يوجد أي تطابق لنفس الباركود كقطعة.
             for (const product of productsData) {
-                const unitCodes = [product.unitBarcode]
-                    .filter(Boolean)
-                    .map(value => normalizeBarcode(value));
-                if (unitCodes.includes(normalized)) return { type: 'unit', product };
+                const chain = cashierUnitChainForProduct(product);
+                for (const level of chain.slice(1)) {
+                    const codes = [level.barcode, (level === chain[chain.length - 1] ? product.unitBarcode : '')].filter(Boolean).map(normalizeBarcode);
+                    if (codes.includes(normalized)) return { type: 'chain', product, unitId: level.id };
+                }
             }
             return null;
         }
 
         function productSupportsSaleUnit(product) {
-            if (!product) return false;
-            if (String(product.addType || '').toLowerCase() === 'unit') return true;
-            // دعم البيانات القديمة التي سبقت حقل addType إذا كانت الوحدة معرفة فعلياً بأكثر من قطعة.
-            if (!product.addType && Number(product.piecesPerUnit || 1) > 1 && String(product.unitName || '').trim()) return true;
-            return false;
+            return cashierUnitChainForProduct(product).length > 1;
         }
 
         function basketItemSupportsSaleUnit(item) {
             if (!item || item.isCustom || item.isVariant) return false;
-            if (item.selectedUnit === 'unit') return true;
-            if (typeof item.hasSaleUnit === 'boolean') return item.hasSaleUnit;
-            const product = productsData.find(product => String(product.id) === String(item.id));
-            return productSupportsSaleUnit(product);
+            const product = productsData.find(product => String(product.id) === String(item.id)) || item;
+            return cashierUnitChainForProduct(product).length > 1;
         }
 
         function addToBasketUnit(productId) {
             const product = productsData.find(item => String(item.id) === String(productId));
             if (!product) return false;
-            const piecesPerUnit = Math.max(1, Number(product.piecesPerUnit || 1));
-            const availablePieces = getAvailableStock(product.id);
-            if (availablePieces + 1e-9 < piecesPerUnit) {
-                showToast(`المخزون لا يحتوي ${piecesPerUnit} ${product.pieceName || 'قطعة'} لإضافة ${product.unitName || 'الوحدة'}.`, 'error');
-                return false;
-            }
-            const existing = basketItems.find(item => String(item.id) === String(product.id) && item.selectedUnit === 'unit' && !item.isCustom && !item.isVariant);
-            const unitPrice = getEffectiveProductPrice(product, 'unit');
-            if (existing) existing.qty = normalizeQuantity(Number(existing.qty || 0) + 1);
-            else basketItems.push({
-                id: product.id,
-                name: product.name,
-                price: unitPrice,
-                referencePrice: unitPrice,
-                cost: Number(product.cost || 0) * piecesPerUnit,
-                qty: 1,
-                selectedUnit: 'unit',
-                unitName: product.unitName || 'وحدة',
-                pieceName: product.pieceName || 'قطعة',
-                piecesPerUnit,
-                hasSaleUnit: true,
-                isCustom: false,
-                isVariant: false
-            });
-            renderBasket();
-            return true;
+            const chain = cashierUnitChainForProduct(product);
+            return cashierAddToBasketByUnit(productId, chain[chain.length - 1]?.id);
         }
 
         function processBarcodeCode(rawCode, source = 'hardware') {
@@ -1993,8 +2114,7 @@
                 return false;
             }
             let added = false;
-            if (match.type === 'unit') added = addToBasketUnit(match.product.id);
-            else if (match.type === 'piece') added = addToBasket(match.product.id) === true;
+            if (match.type === 'chain') added = cashierAddToBasketByUnit(match.product.id, match.unitId);
             else if (match.type === 'variants') { openVariantModal(match.product.id); added = true; }
             else if (match.type === 'variant') added = addToBasketVariant(match.product.id, match.variantIndex) === true;
             if (added && source === 'camera') showToast(`تمت قراءة وإضافة [${match.product.name}]`, 'success');

@@ -211,15 +211,18 @@
             .btn-submit, .btn-cancel { width: 100%; justify-content: center;}
             .modal-box { padding: 15px; }
         }
+    
+        .voucher-currency-wrap{display:none}.voucher-currency-wrap.active{display:block}.voucher-currency-wrap small{display:block;font-size:11px;color:#64748b;margin-top:4px}
     </style>
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Firebase sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=48">
-    <script src="cashtop-core.js?v=24"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=54">
+    <script src="cashtop-core.js?v=54"></script><script src="push-config.js?v=54"></script><script src="push-client.js?v=54"></script>
+    <script src="multi-system.js?v=51"></script>
     <script src="firebase-config.js?v=19"></script>
     <script src="accounting-engine.js"></script>
-    <script src="firebase-sync.js?v=23"></script>
+    <script src="firebase-sync.js?v=54"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -240,6 +243,7 @@
         <summary><i class="fa-solid fa-boxes-stacked"></i><span>المخزون</span><i class="fa-solid fa-chevron-down ct-menu-arrow"></i></summary>
         <div class="ct-submenu">
           <a href="products.html">المنتجات</a>
+          <a href="materials.html">الأصناف</a>
           <a href="warehouses.html">المخازن</a>
           <a href="branches.html">الفروع</a>
           <a href="units.html">الوحدات</a>
@@ -412,6 +416,14 @@
                     </div>
                 </div>
 
+                <div class="form-row voucher-currency-wrap" id="voucherCurrencyWrap">
+                    <div class="form-group">
+                        <label>عملة السند</label>
+                        <select class="form-control" id="vCurrencySelect" onchange="handleVoucherCurrencyChange()"></select>
+                        <small id="voucherCurrencyHint"></small>
+                    </div>
+                </div>
+
                 <div class="form-row">
                     <div class="form-group">
                         <label>الصندوق / الحساب المالي (الرصيد)</label>
@@ -475,7 +487,7 @@
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label>المبلغ (₪)</label>
+                        <label id="vAmountLabel">المبلغ</label>
                         <input type="number" step="0.01" class="form-control" id="vAmount" placeholder="0.00" required min="0.01">
                     </div>
                 </div>
@@ -579,7 +591,7 @@
                     <span class="v-amount" id="vPrintAmountBadge">0.00 ₪</span>
                 </div>
                 <div class="v-row" style="margin-top: 15px;">
-                    <span>مبلغاً وقدره (بالأرقام): <strong id="vPrintAmount"></strong> شيكل فقط لا غير.</span>
+                    <span>مبلغاً وقدره (بالأرقام): <strong id="vPrintAmount"></strong> فقط لا غير.</span>
                 </div>
                 <div class="v-row">
                     <span>وذلك عن / البيان: <span style="font-weight:normal;" id="vPrintNotes"></span></span>
@@ -661,33 +673,74 @@
 
         window.addEventListener('storage', function(e) {
             const key = String(e.key || '').replace(/^.*::(cashtop_[^:]+)$/, '$1');
-            if (['cashtop_funds_db','cashtop_customers','cashtop_suppliers','cashtop_vouchers'].includes(key)) {
+            if (['cashtop_funds_db','cashtop_customers','cashtop_suppliers','cashtop_vouchers','cashtop_settings'].includes(key)) {
                 reloadVoucherData();
                 initLayout();
             }
         });
         window.addEventListener('cashtop:remote-applied', function(e) {
-            if (['cashtop_funds_db','cashtop_customers','cashtop_suppliers','cashtop_vouchers'].includes(e.detail?.key)) {
+            if (['cashtop_funds_db','cashtop_customers','cashtop_suppliers','cashtop_vouchers','cashtop_settings'].includes(e.detail?.key)) {
                 reloadVoucherData();
                 initLayout();
             }
         });
 
         function initLayout() {
+            populateVoucherCurrencySelect();
             populateSelects();
             renderTable();
             renderStats();
         }
 
+        function refreshVoucherFundsNow() {
+            fundsDB = readFunds();
+            populateVoucherCurrencySelect(voucherCurrencyId());
+            populateSelects();
+            renderStats();
+        }
+        window.addEventListener('cashtop:funds-changed', refreshVoucherFundsNow);
+        window.addEventListener('cashtop:data-changed', function(e) {
+            if (e.detail?.key === 'cashtop_funds_db') refreshVoucherFundsNow();
+        });
+        document.addEventListener('pointerdown', function(e) {
+            if (e.target?.closest?.('#vAccountInput, #accountDropdownList, #accountOptionsContainer')) refreshVoucherFundsNow();
+        }, true);
+        document.addEventListener('focusin', function(e) {
+            if (e.target?.id === 'vAccountInput') refreshVoucherFundsNow();
+        });
+
         /* ========================================================== */
         /*   تعبئة القوائم المنسدلة الذكية                            */
         /* ========================================================== */
+        function voucherCurrencyConfig() {
+            return window.CashtopMulti?.getCurrencyConfig?.() || {enabled:false,baseCurrencyId:'ILS',base:{id:'ILS',symbol:'₪',code:'ILS',ratePer100Base:100},currencies:[{id:'ILS',name:'شيكل',symbol:'₪',code:'ILS',ratePer100Base:100}]};
+        }
+        function voucherCurrencyId(){ const cfg=voucherCurrencyConfig(); return document.getElementById('vCurrencySelect')?.value || cfg.baseCurrencyId; }
+        function normalizeVoucherAccountCurrencies(){ const cfg=voucherCurrencyConfig(); (fundsDB.accounts||[]).forEach(a=>{if(!a.currencyId)a.currencyId=cfg.baseCurrencyId;}); }
+        function populateVoucherCurrencySelect(preferredId=''){
+            const cfg=voucherCurrencyConfig(), select=document.getElementById('vCurrencySelect'), wrap=document.getElementById('voucherCurrencyWrap');
+            if(!select)return; const previous=preferredId||select.value||cfg.baseCurrencyId;
+            select.innerHTML=cfg.currencies.map(c=>`<option value="${c.id}">${c.name} (${c.symbol||c.code})</option>`).join('');
+            select.value=cfg.currencies.some(c=>String(c.id)===String(previous))?previous:cfg.baseCurrencyId;
+            wrap?.classList.toggle('active',cfg.enabled===true);
+            const cur=window.CashtopMulti?.getCurrency?.(select.value)||cfg.base;
+            const hint=document.getElementById('voucherCurrencyHint'); if(hint)hint.textContent=String(cur.id)===String(cfg.baseCurrencyId)?'العملة الأساسية':`100 ${cfg.base.symbol||cfg.base.code} = ${Number(cur.ratePer100Base||0)} ${cur.symbol||cur.code}`;
+            const label=document.getElementById('vAmountLabel'); if(label)label.textContent=`المبلغ (${cur.symbol||cur.code})`;
+            normalizeVoucherAccountCurrencies();
+        }
+        function handleVoucherCurrencyChange(){ document.getElementById('vAccountId').value=''; document.getElementById('vAccountInput').value=''; populateVoucherCurrencySelect(voucherCurrencyId()); populateSelects(); }
+        function voucherNativeAmount(v){ const cfg=voucherCurrencyConfig(); const cid=v?.currencyId||cfg.baseCurrencyId; return Number.isFinite(Number(v?.amountNative))?Number(v.amountNative):(window.CashtopMulti?.fromBase?.(Number(v?.amount||0),cid)??Number(v?.amount||0)); }
+        function voucherDisplayAmount(v){ const cfg=voucherCurrencyConfig(); const cid=v?.currencyId||cfg.baseCurrencyId; const cur=window.CashtopMulti?.getCurrency?.(cid)||cfg.base; return `${voucherNativeAmount(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:3})} ${cur.symbol||cur.code}`; }
+
         function populateSelects() {
             const accContainer = document.getElementById('accountOptionsContainer');
             accContainer.innerHTML = '';
+            normalizeVoucherAccountCurrencies();
+            const cfg=voucherCurrencyConfig(); const cid=cfg.enabled?voucherCurrencyId():cfg.baseCurrencyId;
             if(fundsDB.accounts) {
                 fundsDB.accounts.forEach(a => {
-                    accContainer.innerHTML += `<div class="select-option-item" data-value="${a.id}">${a.name} [${a.type}]</div>`;
+                    const cur=window.CashtopMulti?.getCurrency?.(a.currencyId||cfg.baseCurrencyId)||cfg.base;
+                    accContainer.innerHTML += `<div class="select-option-item" data-value="${a.id}">${a.name} [${a.type}] — ${Number(a.balance||0).toFixed(2)} ${cur.symbol||cur.code}</div>`;
                 });
             }
 
@@ -790,7 +843,7 @@
             });
 
             let safeBalance = 0;
-            if(fundsDB.accounts) fundsDB.accounts.forEach(a => safeBalance += parseFloat(a.balance));
+            if(fundsDB.accounts) fundsDB.accounts.forEach(a => safeBalance += (window.CashtopMulti?.toBase?.(parseFloat(a.balance)||0, a.currencyId || voucherCurrencyConfig().baseCurrencyId) ?? (parseFloat(a.balance)||0)));
 
             document.getElementById('statReceipts').innerText = receipts.toLocaleString('en-US', {minimumFractionDigits: 2});
             document.getElementById('statPayments').innerText = payments.toLocaleString('en-US', {minimumFractionDigits: 2});
@@ -812,7 +865,7 @@
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td><strong>${v.refNumber}</strong></td><td>${badgeType}</td><td>${v.date}</td><td>${account?.name || '-'}</td><td>${relBadge}</td>
-                    <td style="${amountStyle}">${parseFloat(v.amount).toLocaleString('en-US',{minimumFractionDigits:2})}</td>
+                    <td style="${amountStyle}">${voucherDisplayAmount(v)}</td>
                     <td><div class="actions-wrapper">
                         <button class="action-btn btn-pdf-act" title="تحميل PDF" onclick="exportVoucherPDF('${v.id}')"><i class="fa-solid fa-file-pdf"></i></button>
                         <button class="action-btn btn-image-act" title="تحميل صورة" onclick="exportVoucherImage('${v.id}')"><i class="fa-solid fa-image"></i></button>
@@ -846,6 +899,8 @@
             document.getElementById('voucherForm').reset();
             document.getElementById('editVoucherId').value = '';
             document.getElementById('vDate').value = new Date().toISOString().split('T')[0];
+            populateVoucherCurrencySelect(voucherCurrencyConfig().baseCurrencyId);
+            populateSelects();
             document.getElementById('vAccountInput').value = ''; document.getElementById('vAccountId').value = '';
             document.getElementById('vClientInput').value = ''; document.getElementById('vClientId').value = '';
             document.getElementById('vSupplierInput').value = ''; document.getElementById('vSupplierId').value = '';
@@ -856,24 +911,30 @@
         }
 
         function applyFinancialImpact(voucher, isReversal = false) {
-            const amount = Math.max(0, Number(voucher?.amount || 0));
-            if (!amount) throw new Error('INVALID_VOUCHER_AMOUNT');
+            const amount = Math.max(0, Number(voucher?.amount || 0)); // بالعملة الأساسية للذمم والتقارير
+            const transactionNativeAmount = Math.max(0, voucherNativeAmount(voucher)); // بعملة السند
             const account = fundsDB.accounts.find(item => String(item?.id) === String(voucher.accountId));
             if (!account) throw new Error('ACCOUNT_NOT_FOUND');
+            const accountCurrencyId = voucher.accountCurrencyId || account.currencyId || voucherCurrencyConfig().baseCurrencyId;
+            const nativeAmount = Math.max(0, Number.isFinite(Number(voucher.accountAmountNative))
+                ? Number(voucher.accountAmountNative)
+                : (window.CashtopMulti?.accountAmountFromBase?.(amount, accountCurrencyId) ?? transactionNativeAmount));
+            if (!amount || !nativeAmount) throw new Error('INVALID_VOUCHER_AMOUNT');
 
             if (isReversal) {
-                if (voucher.type === 'قبض') account.balance = Number(account.balance || 0) - amount;
-                else account.balance = Number(account.balance || 0) + amount;
+                if (voucher.type === 'قبض') account.balance = Number(account.balance || 0) - nativeAmount;
+                else account.balance = Number(account.balance || 0) + nativeAmount;
                 fundsDB.accountLogs = (fundsDB.accountLogs || []).filter(log => !(String(log?.sourceType || '') === 'voucher' && String(log?.sourceId || '') === String(voucher.id)));
             } else {
-                if (voucher.type === 'قبض') account.balance = Number(account.balance || 0) + amount;
-                else account.balance = Number(account.balance || 0) - amount;
+                if (voucher.type === 'قبض') account.balance = Number(account.balance || 0) + nativeAmount;
+                else account.balance = Number(account.balance || 0) - nativeAmount;
                 if (account.balance < -0.0001) throw new Error('INSUFFICIENT_FUNDS');
                 fundsDB.accountLogs.push({
                     id: `LOG_V_${voucher.id}_${Date.now()}`,
                     sourceType: 'voucher', sourceId: voucher.id,
                     accountId: account.id, date: voucher.date,
-                    type: voucher.type === 'قبض' ? 'إيداع' : 'سحب', amount,
+                    type: voucher.type === 'قبض' ? 'إيداع' : 'سحب', amount: nativeAmount, baseAmount: amount, currencyId: accountCurrencyId,
+                    transactionAmount: transactionNativeAmount, transactionCurrencyId: voucher.currencyId || voucherCurrencyConfig().baseCurrencyId,
                     notes: `${voucher.type === 'قبض' ? 'سند قبض' : 'سند صرف'} [${voucher.refNumber}] | ${voucher.relationName} | ${voucher.notes || ''}`
                 });
             }
@@ -910,9 +971,12 @@
             const date = document.getElementById('vDate').value;
             const accountId = document.getElementById('vAccountId').value;
             const relType = document.getElementById('relationType').value;
-            const amount = Math.max(0, Number(document.getElementById('vAmount').value || 0));
+            const cfg = voucherCurrencyConfig();
+            const currencyId = cfg.enabled ? voucherCurrencyId() : cfg.baseCurrencyId;
+            const amountNative = Math.max(0, Number(document.getElementById('vAmount').value || 0));
+            const amount = window.CashtopMulti?.toBase?.(amountNative, currencyId) ?? amountNative;
             const notes = document.getElementById('vNotes').value.trim();
-            if (!accountId || amount <= 0) { showToast('اختر الصندوق وأدخل مبلغاً صحيحاً.', 'error'); return; }
+            if (!accountId || amountNative <= 0) { showToast('اختر الصندوق وأدخل مبلغاً صحيحاً.', 'error'); return; }
 
             let relId = '', relName = '';
             if (relType === 'client') {
@@ -928,11 +992,18 @@
                 if (!relName) { showToast('يجب كتابة اسم الجهة!', 'error'); return; }
             }
 
+            const chosenAccount = fundsDB.accounts.find(a => String(a.id) === String(accountId));
+            if (!chosenAccount) { showToast('اختر صندوقاً مالياً صحيحاً.', 'error'); return; }
             const oldVoucher = isEdit ? vouchersDB.find(v => String(v.id) === String(editId)) : null;
+            const cur = window.CashtopMulti?.getCurrency?.(currencyId) || cfg.base;
+            const settlement = window.CashtopMulti?.settleToAccount?.(amountNative, currencyId, chosenAccount)
+                || { accountAmount: amountNative, accountCurrencyId: chosenAccount.currencyId || currencyId, baseAmount: amount };
             const newVoucher = {
                 id: isEdit ? editId : `V_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
                 refNumber: oldVoucher?.refNumber || `#SND-${Date.now().toString().slice(-7)}`,
-                type, date, accountId, relationType: relType, relationId: relId, relationName: relName, amount, notes,
+                type, date, accountId, relationType: relType, relationId: relId, relationName: relName, amount, amountNative, currencyId,
+                accountAmountNative: Number(settlement.accountAmount || 0), accountCurrencyId: settlement.accountCurrencyId,
+                currencyName: cur.name, currencySymbol: cur.symbol || cur.code, exchangeRatePer100Base: Number(cur.ratePer100Base || 100), notes,
                 updatedAt: new Date().toISOString()
             };
             const snapshots = {
@@ -965,6 +1036,8 @@
                 document.getElementById('editVoucherId').value = v.id;
                 document.getElementById('vType').value = v.type;
                 document.getElementById('vDate').value = v.date;
+                populateVoucherCurrencySelect(v.currencyId || voucherCurrencyConfig().baseCurrencyId);
+                populateSelects();
                 
                 let acc = fundsDB.accounts.find(a => a.id == v.accountId);
                 if(acc) {
@@ -985,7 +1058,7 @@
                     document.getElementById('vOtherName').value = v.relationName;
                 }
 
-                document.getElementById('vAmount').value = v.amount;
+                document.getElementById('vAmount').value = voucherNativeAmount(v);
                 document.getElementById('vNotes').value = v.notes || '';
 
                 document.getElementById('voucherModalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square"></i> تعديل بيانات السند ومعالجة القيود';
@@ -1148,10 +1221,10 @@
             document.getElementById('vPrintTarget').innerText = v.relationName;
             
             let badge = document.getElementById('vPrintAmountBadge');
-            badge.innerText = parseFloat(v.amount).toLocaleString('en-US',{minimumFractionDigits:2}) + ' ₪';
+            badge.innerText = voucherDisplayAmount(v);
             if(isR) { badge.classList.remove('payment'); } else { badge.classList.add('payment'); }
 
-            document.getElementById('vPrintAmount').innerText = parseFloat(v.amount).toLocaleString('en-US',{minimumFractionDigits:2});
+            document.getElementById('vPrintAmount').innerText = voucherDisplayAmount(v);
             document.getElementById('vPrintNotes').innerText = v.notes || 'دفعة مالية';
             document.getElementById('vPrintAccount').innerText = accName;
 

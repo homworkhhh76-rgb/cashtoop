@@ -58,6 +58,27 @@ function money(value) {
   });
 }
 
+function invoiceItemUnitChain(item) {
+  if (item?.isVariant) return [{ id: 'piece', name: item.pieceName || 'قطعة', factorToBase: 1 }];
+  const chain = window.CashtopMulti?.normalizeProductChain?.(item) || [];
+  return chain.length ? chain : [{ id: 'piece', name: item?.pieceName || 'قطعة', factorToBase: 1 }];
+}
+
+function invoiceItemSelectedUnit(item) {
+  const chain = invoiceItemUnitChain(item);
+  return chain.find(level => String(level.id) === String(item?.selectedUnit))
+    || chain.find((_, index) => (item?.selectedUnit === 'piece' && index === 0) || (item?.selectedUnit === 'unit' && index === chain.length - 1))
+    || chain[0];
+}
+
+function invoiceItemUnitName(item) {
+  return invoiceItemSelectedUnit(item)?.name || item?.pieceName || 'قطعة';
+}
+
+function invoiceItemFactor(item) {
+  return Math.max(0.000001, Number(invoiceItemSelectedUnit(item)?.factorToBase || 1));
+}
+
 function getSystemSettings() {
   return readJson('cashtop_settings', {});
 }
@@ -373,7 +394,7 @@ function invoiceMarkup(invoice, options = {}) {
     const variant = item.isVariant
       ? ` <small>(${escapeHtml(item.variantSize || '')}${item.variantColor ? ` - ${escapeHtml(item.variantColor)}` : ''})</small>`
       : '';
-    const unit = item.selectedUnit === 'unit' ? 'وحدة' : 'قطعة';
+    const unit = invoiceItemUnitName(item);
     return `<tr>
       <td>${escapeHtml(item.name || 'صنف')}${variant}</td>
       <td>${escapeHtml(item.qty)} ${unit}</td>
@@ -590,9 +611,7 @@ function reverseInvoiceMovements(invoice) {
     const product = products.find(entry => String(entry.id) === String(item.id));
     if (!product) return;
     const quantity = Number(item.qty) || 0;
-    const pieces = item.selectedUnit === 'unit'
-      ? quantity * (Number(item.piecesPerUnit) || 1)
-      : quantity;
+    const pieces = quantity * invoiceItemFactor(item);
 
     if (item.isVariant && Array.isArray(product.variants)) {
       const variant = product.variants.find(entry =>
@@ -634,7 +653,12 @@ function reverseInvoiceMovements(invoice) {
   const account = funds.accounts.find(entry => String(entry.id) === String(invoice.accountId)) ||
     (!invoice.accountId ? funds.accounts[0] : null);
   if (account && Number(invoice.paid) > 0) {
-    account.balance = (Number(account.balance) || 0) - Number(invoice.paid);
+    const currencyCfg = window.CashtopMulti?.getCurrencyConfig?.() || { baseCurrencyId: 'ILS' };
+    const accountCurrencyId = account.currencyId || invoice.accountCurrencyId || currencyCfg.baseCurrencyId;
+    const reversalNative = Number.isFinite(Number(invoice.accountAmountNative))
+      ? Number(invoice.accountAmountNative)
+      : (window.CashtopMulti?.accountAmountFromBase?.(Number(invoice.paid), accountCurrencyId) ?? Number(invoice.paid));
+    account.balance = (Number(account.balance) || 0) - reversalNative;
     funds.accountLogs.push({
       id: `LOG_DELETE_SALE_${invoice.id}_${Date.now()}`,
       sourceType: 'sale-delete',
@@ -642,7 +666,11 @@ function reverseInvoiceMovements(invoice) {
       accountId: account.id,
       date: new Date().toISOString(),
       type: 'سحب',
-      amount: Number(invoice.paid),
+      amount: reversalNative,
+      baseAmount: Number(invoice.paid),
+      currencyId: accountCurrencyId,
+      transactionAmount: Number(invoice.paidNative ?? invoice.paid),
+      transactionCurrencyId: invoice.currencyId || currencyCfg.baseCurrencyId,
       notes: `عكس تحصيل فاتورة بيع محذوفة [${invoice.id}]`
     });
   }
@@ -1359,7 +1387,14 @@ function saveBatchInvoices() {
 
       batchRecordCustomerDebt(customerInfo.customer, invoice, debt);
       if (account && paid > 0) {
-        account.balance = (Number(account.balance) || 0) + paid;
+        const currencyCfg = window.CashtopMulti?.getCurrencyConfig?.() || { baseCurrencyId: 'ILS' };
+        const settlement = window.CashtopMulti?.settleToAccount?.(paid, currencyCfg.baseCurrencyId, account)
+          || { accountAmount: paid, accountCurrencyId: account.currencyId || currencyCfg.baseCurrencyId, baseAmount: paid };
+        account.balance = (Number(account.balance) || 0) + Number(settlement.accountAmount || 0);
+        invoice.accountCurrencyId = settlement.accountCurrencyId;
+        invoice.accountAmountNative = Number(settlement.accountAmount || 0);
+        invoice.currencyId = currencyCfg.baseCurrencyId;
+        invoice.paidNative = paid;
         funds.accountLogs.push({
           id: `LOG_SALE_${id}_${baseSeed + index}`,
           sourceType: 'sale',
@@ -1367,7 +1402,11 @@ function saveBatchInvoices() {
           accountId: account.id,
           date: invoiceDate,
           type: 'إيداع',
-          amount: paid,
+          amount: Number(settlement.accountAmount || 0),
+          baseAmount: paid,
+          currencyId: settlement.accountCurrencyId,
+          transactionAmount: paid,
+          transactionCurrencyId: currencyCfg.baseCurrencyId,
           notes: `تحصيل فاتورة بيع مرحلة [${id}] من [${customerInfo.name}]`
         });
       }

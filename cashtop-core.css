@@ -1136,9 +1136,15 @@ textarea:focus, textarea:active,
    rules keep animations compositor-only and remove hidden dialogs from layout,
    paint and GPU-layer work until they are actually opened. */
 :root {
-  --ct-fast-motion: 110ms;
+  --ct-fast-motion: 90ms;
   --ct-frame-budget-120hz: 8.333ms;
 }
+
+/* Revision 52: keep touch interactions and scrolling on the compositor path where possible. */
+html { scroll-behavior: auto; }
+body { overscroll-behavior-y: none; }
+a, button, [role="button"], input, select { touch-action: manipulation; }
+.ct-page-host, .ct-original-page, .table-responsive-box, .table-wrap { -webkit-overflow-scrolling: touch; }
 
 /* Hidden dialogs must be truly dormant. The previous opacity-only hiding kept
    large forms/tables in layout and, together with will-change, could retain many
@@ -1591,3 +1597,29 @@ html, body {
     box-shadow: 0 3px 12px rgba(15, 23, 42, .08) !important;
   }
 }
+
+
+/* ===== Revision 53: stable phone dialogs (no opening shake) ===== */
+@media (max-width: 768px) {
+  .ct-page-host .modal-overlay.active,
+  .ct-original-page .modal-overlay.active,
+  .ct-page-host .modal-overlay.active > .modal-box,
+  .ct-original-page .modal-overlay.active > .modal-box,
+  .ct-page-host .ct-modal.open,
+  .ct-original-page .ct-modal.open,
+  .ct-page-host .ct-modal.open > .ct-modal-box,
+  .ct-original-page .ct-modal.open > .ct-modal-box,
+  .ct-page-host .modal.show,
+  .ct-original-page .modal.show {
+    animation: none !important;
+    transition: none !important;
+  }
+  .ct-page-host .modal-overlay > .modal-box,
+  .ct-original-page .modal-overlay > .modal-box,
+  .ct-page-host .ct-modal > .ct-modal-box {
+    transform: none !important;
+    will-change: auto !important;
+  }
+}
+
+/* Revision 53: instant company broadcast popup. */

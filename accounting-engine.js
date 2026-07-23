@@ -33,8 +33,13 @@
   function invoiceCost(invoice) {
     return (invoice.items || []).reduce((sum, item) => {
       const quantity = n(item.qty);
-      const pieces = item.selectedUnit === 'unit' ? quantity * n(item.piecesPerUnit || 1) : quantity;
-      return sum + pieces * n(item.cost || item.costPrice || 0);
+      const factor = window.CashtopMulti?.factorForUnit?.(item, item.selectedUnit)
+        ?? (item.selectedUnit === 'unit' ? n(item.piecesPerUnit || 1) : 1);
+      const pieces = quantity * Math.max(0.000001, n(factor) || 1);
+      const costPerPiece = Number.isFinite(Number(item.costPerPiece))
+        ? n(item.costPerPiece)
+        : n(item.cost || item.costPrice || 0);
+      return sum + pieces * costPerPiece;
     }, 0);
   }
 

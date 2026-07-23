@@ -166,11 +166,12 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Firebase sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=48">
-    <script src="cashtop-core.js?v=24"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=54">
+    <script src="cashtop-core.js?v=54"></script><script src="push-config.js?v=54"></script><script src="push-client.js?v=54"></script>
+    <script src="multi-system.js?v=51"></script>
     <script src="firebase-config.js?v=19"></script>
     <script src="accounting-engine.js"></script>
-    <script src="firebase-sync.js?v=23"></script>
+    <script src="firebase-sync.js?v=54"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -191,6 +192,7 @@
         <summary><i class="fa-solid fa-boxes-stacked"></i><span>المخزون</span><i class="fa-solid fa-chevron-down ct-menu-arrow"></i></summary>
         <div class="ct-submenu">
           <a href="products.html">المنتجات</a>
+          <a href="materials.html">الأصناف</a>
           <a href="warehouses.html">المخازن</a>
           <a href="branches.html">الفروع</a>
           <a href="units.html">الوحدات</a>
@@ -372,8 +374,12 @@
                     <input type="text" id="accTypeOther" class="form-control" style="display:none; margin-top:10px;" placeholder="اكتب نوع الحساب المخصص هنا...">
                 </div>
                 <div class="form-group">
-                    <label>الرصيد الافتتاحي (₪)</label>
+                    <label id="accBalanceLabel">الرصيد الافتتاحي</label>
                     <input type="number" step="0.01" id="accBalance" class="form-control" placeholder="0.00" required>
+                </div>
+                <div class="form-group" id="accCurrencyGroup" style="display:none;">
+                    <label>عملة الصندوق / الحساب</label>
+                    <select id="accCurrency" class="form-control"></select>
                 </div>
                 <div class="form-group">
                     <label>ملاحظات إضافية (اختياري)</label>
@@ -404,7 +410,7 @@
                     <select id="transferToSelect" class="form-control" required></select>
                 </div>
                 <div class="form-group">
-                    <label>المبلغ المراد تحويله (₪)</label>
+                    <label>المبلغ المراد تحويله (بعملة الحساب المرسل)</label>
                     <input type="number" step="0.01" id="transferAmount" class="form-control" placeholder="0.00" required min="0.01">
                 </div>
                 <div class="form-group">
@@ -573,6 +579,27 @@
         let cashtop_funds_db = { accounts: [], accountLogs: [] };
         let currentDeleteId = null; // متغير لحفظ الـ ID المطلوب حذفه
 
+        function getCurrencyConfig() { return window.CashtopMulti?.getCurrencyConfig?.() || { enabled:false, baseCurrencyId:'ILS', base:{id:'ILS',symbol:'₪',code:'ILS'}, currencies:[{id:'ILS',symbol:'₪',code:'ILS',name:'شيكل'}] }; }
+        function normalizeAccountCurrencies() {
+            const cfg = getCurrencyConfig();
+            (cashtop_funds_db.accounts || []).forEach(account => { if (!account.currencyId) account.currencyId = cfg.baseCurrencyId; });
+        }
+        function accountCurrency(account) { const cfg=getCurrencyConfig(); return window.CashtopMulti?.getCurrency?.(account?.currencyId || cfg.baseCurrencyId) || cfg.base; }
+        function accountMoney(amount, account) { const cur=accountCurrency(account); return `${Number(amount || 0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:3})} ${cur.symbol || cur.code || ''}`; }
+        function accountBalanceBase(account) { return window.CashtopMulti?.toBase?.(Number(account?.balance || 0), account?.currencyId) ?? Number(account?.balance || 0); }
+        function populateAccountCurrencySelect(selectedId = '') {
+            const cfg = getCurrencyConfig();
+            const group = document.getElementById('accCurrencyGroup');
+            const select = document.getElementById('accCurrency');
+            if (!select || !group) return;
+            group.style.display = cfg.enabled ? 'block' : 'none';
+            select.innerHTML = cfg.currencies.map(cur => `<option value="${String(cur.id)}">${String(cur.name)} (${String(cur.symbol || cur.code)})</option>`).join('');
+            select.value = selectedId && cfg.currencies.some(cur => String(cur.id) === String(selectedId)) ? selectedId : cfg.baseCurrencyId;
+            const label = document.getElementById('accBalanceLabel');
+            if (label) label.textContent = `الرصيد الافتتاحي (${accountCurrency({currencyId:select.value}).symbol || accountCurrency({currencyId:select.value}).code})`;
+            select.onchange = () => { if (label) label.textContent = `الرصيد الافتتاحي (${accountCurrency({currencyId:select.value}).symbol || accountCurrency({currencyId:select.value}).code})`; };
+        }
+
         window.onload = function() {
             try { window.Cashtop?.ensureSystemDefaults?.(); } catch (_) {}
             try {
@@ -583,6 +610,8 @@
             } catch(e) {
                 console.error("خطأ في قراءة البيانات", e);
             }
+            normalizeAccountCurrencies();
+            localStorage.setItem('cashtop_funds_db_v4', JSON.stringify(cashtop_funds_db));
             initLayout();
         };
 
@@ -590,6 +619,7 @@
         window.addEventListener('storage', function(e) {
             if (e.key === 'cashtop_funds_db_v4' && e.newValue) {
                 cashtop_funds_db = JSON.parse(e.newValue);
+                normalizeAccountCurrencies();
                 initLayout();
             }
         });
@@ -604,16 +634,15 @@
         /*   حساب الإحصائيات العلوية                                  */
         /* ========================================================== */
         function calculateStats() {
-            let accounts = cashtop_funds_db.accounts || [];
-            let cashTotal = accounts.filter(a => a.type === "كاش").reduce((sum, a) => sum + parseFloat(a.balance), 0);
-            let bankTotal = accounts.filter(a => a.type === "بنكي").reduce((sum, a) => sum + parseFloat(a.balance), 0);
-            // المجمل يجمع الكل بما فيها المحافظ والأنواع المخصصة
-            let totalVal = accounts.reduce((sum, a) => sum + parseFloat(a.balance), 0); 
-
-            document.getElementById('statCashMain').innerText = cashTotal.toLocaleString('en-US', { minimumFractionDigits: 2 });
-            document.getElementById('statBankMain').innerText = bankTotal.toLocaleString('en-US', { minimumFractionDigits: 2 });
+            const accounts = cashtop_funds_db.accounts || [];
+            const cashTotal = accounts.filter(a => a.type === 'كاش').reduce((sum, a) => sum + accountBalanceBase(a), 0);
+            const bankTotal = accounts.filter(a => a.type === 'بنكي').reduce((sum, a) => sum + accountBalanceBase(a), 0);
+            const totalVal = accounts.reduce((sum, a) => sum + accountBalanceBase(a), 0);
+            const baseSymbol = getCurrencyConfig().base.symbol || getCurrencyConfig().base.code || '';
+            document.getElementById('statCashMain').innerText = `${cashTotal.toLocaleString('en-US',{minimumFractionDigits:2})} ${baseSymbol}`;
+            document.getElementById('statBankMain').innerText = `${bankTotal.toLocaleString('en-US',{minimumFractionDigits:2})} ${baseSymbol}`;
             document.getElementById('statAccountsCount').innerText = accounts.length;
-            document.getElementById('statTotalFunds').innerText = totalVal.toLocaleString('en-US', { minimumFractionDigits: 2 });
+            document.getElementById('statTotalFunds').innerText = `${totalVal.toLocaleString('en-US',{minimumFractionDigits:2})} ${baseSymbol}`;
         }
 
         /* ========================================================== */
@@ -631,7 +660,7 @@
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td><span class="badge-account-name">${item.name}</span></td><td>${typeBadge}</td>
-                    <td><span class="badge-balance-val">${parseFloat(item.balance).toLocaleString('en-US',{minimumFractionDigits:2})}</span></td>
+                    <td><span class="badge-balance-val">${accountMoney(item.balance, item)}</span></td>
                     <td style="white-space:normal;font-size:12px;color:#666;">${item.notes || '-'}</td>
                     <td><div class="actions-wrapper">
                         <button class="action-btn btn-log" title="معاينة الحركات" onclick="viewAccountLogs(${item.id}, '${String(item.name || '').replace(/'/g, "\\'")}')"><i class="fa-solid fa-clock-history"></i></button>
@@ -650,7 +679,8 @@
         /*   معاينة الحركات السريعة (Log)                             */
         /* ========================================================== */
         function viewAccountLogs(accountId, accountName) {
-            document.getElementById('logAccountTitle').innerText = accountName;
+            const logAccount = cashtop_funds_db.accounts.find(a => String(a.id) === String(accountId));
+            document.getElementById('logAccountTitle').innerText = `${accountName} — ${accountCurrency(logAccount).name || accountCurrency(logAccount).code}`;
             const logTbody = document.getElementById('logTableBody');
             logTbody.innerHTML = "";
 
@@ -668,7 +698,7 @@
                         <tr>
                             <td style="font-size:12px;" dir="ltr">${l.date}</td>
                             <td>${typeBadge}</td>
-                            <td style="font-weight:700;">${parseFloat(l.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                            <td style="font-weight:700;">${accountMoney(l.amount, logAccount)}</td>
                             <td style="white-space:normal; font-size:12px;">${l.notes}</td>
                         </tr>
                     `;
@@ -688,7 +718,7 @@
 
             if(!cashtop_funds_db.accounts) return;
             cashtop_funds_db.accounts.forEach(a => {
-                let optHtml = `<option value="${a.id}">${a.name} [${a.type}] (الرصيد: ${parseFloat(a.balance).toLocaleString('en-US', {minimumFractionDigits: 2})})</option>`;
+                let optHtml = `<option value="${a.id}">${a.name} [${a.type}] — ${accountMoney(a.balance, a)}</option>`;
                 fromSelect.innerHTML += optHtml;
                 toSelect.innerHTML += optHtml;
             });
@@ -719,6 +749,8 @@
             document.getElementById('accName').disabled = false;
             document.getElementById('accType').disabled = false;
             document.getElementById('accBalance').disabled = false;
+            populateAccountCurrencySelect(getCurrencyConfig().baseCurrencyId);
+            document.getElementById('accCurrency').disabled = false;
             toggleOtherType();
             document.getElementById('accountModalTitle').innerHTML = '<i class="fa-solid fa-wallet"></i> إضافة صندوق مالي جديد';
             openModal('accountModal');
@@ -750,6 +782,8 @@
                 if (isDefaultCash) { select.value = 'كاش'; select.disabled = true; } else { select.disabled = false; }
                 document.getElementById('accBalance').value = acc.balance;
                 document.getElementById('accBalance').disabled = true; // منع التلاعب بالرصيد أثناء التعديل
+                populateAccountCurrencySelect(acc.currencyId || getCurrencyConfig().baseCurrencyId);
+                document.getElementById('accCurrency').disabled = Math.abs(Number(acc.balance || 0)) > 0;
                 document.getElementById('accNotes').value = acc.notes || '';
                 
                 document.getElementById('accountModalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square"></i> تعديل بيانات الحساب المالي';
@@ -793,14 +827,16 @@
                 if (acc) {
                     acc.name = usernameToSave;
                     acc.type = finalType;
+                    if (!document.getElementById('accCurrency').disabled) acc.currencyId = document.getElementById('accCurrency').value || getCurrencyConfig().baseCurrencyId;
                     acc.notes = notes;
                     showToast('تم تعديل بيانات الحساب بنجاح.', 'success');
                 }
             } else {
                 const balance = parseFloat(document.getElementById('accBalance').value) || 0;
                 const newId = Date.now();
-                cashtop_funds_db.accounts.push({ id: newId, name: usernameToSave, type: finalType, balance: balance, notes: notes });
-                cashtop_funds_db.accountLogs.push({ accountId: newId, date: new Date().toLocaleString('en-GB'), type: "إيداع", amount: balance, notes: "رصيد افتتاحي عند الإنشاء" });
+                const currencyId = getCurrencyConfig().enabled ? (document.getElementById('accCurrency').value || getCurrencyConfig().baseCurrencyId) : getCurrencyConfig().baseCurrencyId;
+                cashtop_funds_db.accounts.push({ id: newId, name: usernameToSave, type: finalType, balance: balance, currencyId, notes: notes });
+                cashtop_funds_db.accountLogs.push({ accountId: newId, date: new Date().toLocaleString('en-GB'), type: "إيداع", amount: balance, baseAmount: window.CashtopMulti?.toBase?.(balance, currencyId) ?? balance, currencyId, notes: "رصيد افتتاحي عند الإنشاء" });
                 showToast('تم إنشاء الصندوق وحفظه بنجاح!', 'success');
             }
 
@@ -858,18 +894,21 @@
                 showToast(`عجز مالي: الرصيد في [${fromAcc.name}] لا يغطي مبلغ التحويل!`, 'warning');
                 return;
             }
-
+            const fromCurrencyId = fromAcc.currencyId || getCurrencyConfig().baseCurrencyId;
+            const toCurrencyId = toAcc.currencyId || getCurrencyConfig().baseCurrencyId;
+            const baseAmount = window.CashtopMulti?.toBase?.(amount, fromCurrencyId) ?? amount;
+            const creditedAmount = window.CashtopMulti?.fromBase?.(baseAmount, toCurrencyId) ?? amount;
             fromAcc.balance -= amount;
-            toAcc.balance += amount;
+            toAcc.balance += creditedAmount;
 
-            cashtop_funds_db.accountLogs.push({ accountId: fromId, date: logDate, type: "سحب", amount: amount, notes: `تحويل صادر إلى حساب [${toAcc.name}] | ${notes}` });
-            cashtop_funds_db.accountLogs.push({ accountId: toId, date: logDate, type: "إيداع", amount: amount, notes: `تحويل وارد من حساب [${fromAcc.name}] | ${notes}` });
+            cashtop_funds_db.accountLogs.push({ accountId: fromId, date: logDate, type: "سحب", amount, baseAmount, currencyId: fromCurrencyId, exchangeToCurrencyId: toCurrencyId, notes: `تحويل صادر إلى حساب [${toAcc.name}] | ${notes}` });
+            cashtop_funds_db.accountLogs.push({ accountId: toId, date: logDate, type: "إيداع", amount: creditedAmount, baseAmount, currencyId: toCurrencyId, exchangeFromCurrencyId: fromCurrencyId, notes: `تحويل وارد من حساب [${fromAcc.name}] | ${notes}` });
 
             localStorage.setItem('cashtop_funds_db_v4', JSON.stringify(cashtop_funds_db));
             document.getElementById('transferForm').reset();
             closeModal('transferModal');
             initLayout();
-            showToast('تمت عملية التحويل بنجاح وترحيل القيود.', 'success');
+            showToast(`تم التحويل: ${accountMoney(amount, fromAcc)} ← ${accountMoney(creditedAmount, toAcc)} وتم ترحيل فرق العملة حسب سعر الصرف.`, 'success');
         }
 
         /* ========================================================== */

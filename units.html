@@ -68,6 +68,17 @@
         .btn-submit { background-color: #00a65a; color: white; border: none; padding: 8px 22px; border-radius: 3px; cursor: pointer; font-size: 13px; font-weight: 600; }
         .btn-cancel { background-color: #f4f4f4; color: #444; border: 1px solid #ddd; padding: 8px 22px; border-radius: 3px; cursor: pointer; font-size: 13px; font-weight: 600; }
 
+
+        .unit-chain-preview { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:6px; white-space:normal; }
+        .unit-chain-chip { background:#eef2ff; color:#4f46e5; border:1px solid #c7d2fe; border-radius:999px; padding:4px 9px; font-weight:700; font-size:11px; }
+        .unit-chain-arrow { color:#94a3b8; font-size:11px; }
+        .larger-units-list { display:flex; flex-direction:column; gap:10px; margin-top:8px; }
+        .larger-unit-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(110px,.55fr) auto; gap:8px; align-items:center; padding:10px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc; }
+        .larger-unit-row .relation-note { grid-column:1/-1; font-size:10px; color:#64748b; }
+        .btn-add-level { border:1px dashed #00a65a; background:#ecfdf5; color:#047857; padding:9px 14px; border-radius:7px; cursor:pointer; font-weight:700; width:100%; margin-top:8px; }
+        .btn-remove-level { width:34px; height:34px; border:0; border-radius:7px; background:#fee2e2; color:#dc2626; cursor:pointer; }
+        @media (max-width:768px){ .larger-unit-row{grid-template-columns:1fr 110px auto;} }
+
         @media (max-width: 768px) {
             body { padding: 10px; }
             .action-bar { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px; }
@@ -84,11 +95,12 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Firebase sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=48">
-    <script src="cashtop-core.js?v=24"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=54">
+    <script src="cashtop-core.js?v=54"></script><script src="push-config.js?v=54"></script><script src="push-client.js?v=54"></script>
+    <script src="multi-system.js?v=51"></script>
     <script src="firebase-config.js?v=19"></script>
     <script src="accounting-engine.js"></script>
-    <script src="firebase-sync.js?v=23"></script>
+    <script src="firebase-sync.js?v=54"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -109,6 +121,7 @@
         <summary><i class="fa-solid fa-boxes-stacked"></i><span>المخزون</span><i class="fa-solid fa-chevron-down ct-menu-arrow"></i></summary>
         <div class="ct-submenu">
           <a href="products.html">المنتجات</a>
+          <a href="materials.html">الأصناف</a>
           <a href="warehouses.html">المخازن</a>
           <a href="branches.html">الفروع</a>
           <a href="units.html">الوحدات</a>
@@ -195,18 +208,17 @@
     <main class="ct-page-host" id="ctPageHost"><div class="ct-original-page" id="ctOriginalPage">
 
     <div class="dashboard-container">
-        
         <div class="action-bar">
             <div class="search-box">
                 <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" id="searchInput" class="search-control" placeholder="ابحث باسم الوحدة، الرمز البنيوي، أو اسم القطعة القياسي..." oninput="filterTable()">
+                <input type="text" id="searchInput" class="search-control" placeholder="ابحث باسم أي وحدة داخل التسلسل..." oninput="filterTable()">
             </div>
-            <button class="btn-add-unit" onclick="openModal()"><i class="fa-solid fa-plus"></i> إضافة وحدة جديدة</button>
+            <button class="btn-add-unit" onclick="openModal()"><i class="fa-solid fa-plus"></i> إضافة نظام وحدات</button>
         </div>
 
         <div class="table-container" id="unitsExportArea">
             <div class="table-header-wrapper">
-                <div class="table-title">سجل قياس وجرد وحدات العبوات بالأصناف</div>
+                <div class="table-title">تسلسل وحدات الأصناف من الأصغر إلى الأكبر</div>
                 <div class="export-group">
                     <button class="btn-export excel" onclick="exportUnitsExcel()"><i class="fa-solid fa-file-excel"></i> اكسل</button>
                     <button class="btn-export pdf" onclick="exportUnitsPDF()"><i class="fa-solid fa-file-pdf"></i> PDF</button>
@@ -214,22 +226,10 @@
                     <button class="btn-export" onclick="window.print()"><i class="fa-solid fa-print"></i> طباعة</button>
                 </div>
             </div>
-            
             <div class="table-responsive-box">
                 <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>اسم الوحدة</th>
-                            <th>رمز الوحدة (مقياس)</th>
-                            <th>اسم القطعة</th>
-                            <th>رمز القطعة (مقياس)</th>
-                            <th>كم قطعة في الوحدة؟</th>
-                            <th>الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody id="unitsTableBody">
-                        <!-- تملأ ديناميكياً -->
-                    </tbody>
+                    <thead><tr><th>التسلسل</th><th>الوحدة الأساسية</th><th>أكبر وحدة</th><th>معامل الأكبر للأساسية</th><th>الإجراءات</th></tr></thead>
+                    <tbody id="unitsTableBody"></tbody>
                 </table>
             </div>
         </div>
@@ -238,211 +238,202 @@
     <div class="modal-overlay" id="unitModal">
         <div class="modal-box">
             <div class="modal-header">
-                <div class="modal-title" id="modalTitle"><i class="fa-solid fa-boxes-packing"></i> تعريف وترحيل مقاييس الوحدات الجديدة</div>
+                <div class="modal-title" id="modalTitle"><i class="fa-solid fa-boxes-stacked"></i> بناء تسلسل وحدات جديد</div>
                 <button class="modal-close" onclick="closeModal()">&times;</button>
             </div>
             <form id="unitForm" onsubmit="saveUnit(event)">
                 <input type="hidden" id="editingId">
-                <div class="form-row">
-                    <div class="form-group">
-                        <input type="text" class="form-control" placeholder="مثال: كرتونة، كرتون، رول..." required id="unitNameInput" autocomplete="off">
-                        <label for="unitNameInput">اسم الوحدة</label>
-                    </div>
-                    <div class="form-group">
-                        <input type="text" class="form-control" placeholder="مثال: قطعة، غرام، حبة..." required id="pieceNameInput" autocomplete="off">
-                        <label for="pieceNameInput">اسم القطعة</label>
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <input type="text" class="form-control ltr-input" placeholder="مثال: kg, m, box..." required id="unitCodeInput" autocomplete="off">
-                        <label for="unitCodeInput">رمز الوحدة</label>
-                    </div>
-                    <div class="form-group">
-                        <input type="text" class="form-control ltr-input" placeholder="مثال: g, cm, pcs..." required id="pieceCodeInput" autocomplete="off">
-                        <label for="pieceCodeInput">رمز القطعة</label>
-                    </div>
-                </div>
-
                 <div class="form-row" style="grid-template-columns:1fr;">
                     <div class="form-group">
-                        <input type="number" step="any" class="form-control" placeholder="مثال: 12" min="1" required id="piecesCountInput" autocomplete="off">
-                        <label for="piecesCountInput">كم قطعة داخل هذه الوحدة؟</label>
+                        <input type="text" class="form-control" placeholder="مثال: قطعة أو كيلو" required id="baseUnitNameInput" autocomplete="off" oninput="refreshLevelRelations()">
+                        <label for="baseUnitNameInput">الوحدة السفلية / الأساسية</label>
                     </div>
                 </div>
-
+                <div style="font-size:12px;font-weight:700;color:#475569;margin:8px 0 4px;"><i class="fa-solid fa-arrow-up-wide-short" style="color:#605ca8"></i> الوحدات الأكبر بالترتيب</div>
+                <div id="largerUnitsContainer" class="larger-units-list"></div>
+                <button type="button" class="btn-add-level" onclick="addLargerUnitRow()"><i class="fa-solid fa-plus"></i> إضافة وحدة أكبر</button>
+                <div style="margin-top:10px;padding:9px 11px;background:#f8fafc;border-radius:7px;font-size:11px;color:#64748b;line-height:1.9;">
+                    مثال: قطعة ← كرتونة (24 قطعة) ← مشطاح (24 كرتونة). النظام يحسب المشطاح تلقائياً = 576 قطعة.
+                </div>
                 <div class="modal-footer">
                     <button type="button" class="btn-cancel" onclick="closeModal()">إلغاء</button>
-                    <button type="submit" class="btn-submit">حفظ الوحدة</button>
+                    <button type="submit" class="btn-submit">حفظ التسلسل</button>
                 </div>
             </form>
         </div>
     </div>
 
     <script>
-        let unitsData = JSON.parse(localStorage.getItem('cashtop_units')) || [
-            { id: "u1", unitName: "كرتونة", pieceName: "حبة", unitCode: "box", pieceCode: "pcs", piecesCount: 24 },
-            { id: "u2", unitName: "شوال", pieceName: "كيلو", unitCode: "kg", pieceCode: "g", piecesCount: 1000 }
+        const legacyDefaults = [
+            { id: "u1", unitName: "كرتونة", pieceName: "قطعة", piecesCount: 24 },
+            { id: "u2", unitName: "شوال", pieceName: "كيلو", piecesCount: 50 }
         ];
+        let unitsData = window.CashtopMulti?.normalizeUnits(JSON.parse(localStorage.getItem('cashtop_units') || 'null') || legacyDefaults) || legacyDefaults;
+        let levelCounter = 0;
 
-        window.onload = () => { renderTable(); };
+        window.addEventListener('load', () => {
+            persistUnits();
+            renderTable();
+        });
+        window.addEventListener('cashtop:remote-applied', event => {
+            if (event.detail?.key !== 'cashtop_units') return;
+            unitsData = window.CashtopMulti?.normalizeUnits(JSON.parse(localStorage.getItem('cashtop_units') || '[]')) || [];
+            renderTable();
+        });
+
+        function persistUnits() {
+            localStorage.setItem('cashtop_units', JSON.stringify(unitsData));
+        }
+
+        function esc(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
         function renderTable(data = unitsData) {
             const tbody = document.getElementById('unitsTableBody');
             const records = Array.isArray(data) ? data : [];
-            const createRow = unit => {
+            const createRow = raw => {
+                const unit = window.CashtopMulti?.normalizeUnitTemplate(raw) || raw;
+                const chain = unit.chain || [];
+                const base = chain[0] || { name: 'قطعة', factorToBase: 1 };
+                const top = chain[chain.length - 1] || base;
+                const chainHtml = chain.map((level, index) => `${index ? '<span class="unit-chain-arrow">←</span>' : ''}<span class="unit-chain-chip">${esc(level.name)}${index ? ` ×${Number(level.factorToPrevious || 1)}` : ''}</span>`).join('');
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td><span class="badge-unit-style">${unit.unitName}</span></td>
-                    <td><span class="badge-metric">${unit.unitCode}</span></td>
-                    <td><span class="badge-piece-style">${unit.pieceName}</span></td>
-                    <td><span class="badge-metric">${unit.pieceCode}</span></td>
-                    <td><span class="badge-quantity">${unit.piecesCount} قطعة</span></td>
+                    <td><div class="unit-chain-preview">${chainHtml}</div></td>
+                    <td><span class="badge-piece-style">${esc(base.name)}</span></td>
+                    <td><span class="badge-unit-style">${esc(top.name)}</span></td>
+                    <td><span class="badge-quantity">1 ${esc(top.name)} = ${Number(top.factorToBase || 1)} ${esc(base.name)}</span></td>
                     <td><div class="actions-wrapper">
-                        <button class="action-btn btn-edit-act" onclick="editUnit('${unit.id}')" title="تعديل الموازين"><i class="fa-solid fa-pen-to-square"></i></button>
-                        <button class="action-btn btn-delete-act" onclick="deleteUnit('${unit.id}')" title="حذف الرابط"><i class="fa-solid fa-trash-can"></i></button>
+                        <button class="action-btn btn-edit-act" onclick="editUnit('${esc(unit.id)}')" title="تعديل التسلسل"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button class="action-btn btn-delete-act" onclick="deleteUnit('${esc(unit.id)}')" title="حذف التسلسل"><i class="fa-solid fa-trash-can"></i></button>
                     </div></td>`;
                 return tr;
             };
-            if (window.Cashtop?.renderVirtualRows) window.Cashtop.renderVirtualRows(tbody, records, createRow, { chunkSize: 100, eagerLimit: 200, colspan: 6, emptyHtml: `<tr><td colspan="6" style="padding:20px;color:#999;">لا توجد وحدات مسجلة.</td></tr>` });
-            else { tbody.innerHTML=''; if (!records.length) tbody.innerHTML=`<tr><td colspan="6" style="padding:20px;color:#999;">لا توجد وحدات مسجلة.</td></tr>`; else records.forEach(unit=>tbody.appendChild(createRow(unit))); }
+            if (window.Cashtop?.renderVirtualRows) window.Cashtop.renderVirtualRows(tbody, records, createRow, { chunkSize: 100, eagerLimit: 200, colspan: 5, emptyHtml: '<tr><td colspan="5" style="padding:20px;color:#999;">لا توجد أنظمة وحدات مسجلة.</td></tr>' });
+            else { tbody.innerHTML=''; if (!records.length) tbody.innerHTML='<tr><td colspan="5" style="padding:20px;color:#999;">لا توجد أنظمة وحدات مسجلة.</td></tr>'; else records.forEach(unit => tbody.appendChild(createRow(unit))); }
         }
 
-        async function filterTable() {
-            const query = String(document.getElementById('searchInput').value || '').trim();
-            const sequence = filterTable._sequence = (filterTable._sequence || 0) + 1;
-            const fallback = () => !query ? unitsData : unitsData.filter(u => {
-                const q=query.toLowerCase(); return String(u?.unitName||'').toLowerCase().includes(q)||String(u?.pieceName||'').toLowerCase().includes(q)||String(u?.unitCode||'').toLowerCase().includes(q);
+        function filterTable() {
+            const q = String(document.getElementById('searchInput').value || '').trim().toLowerCase();
+            renderTable(!q ? unitsData : unitsData.filter(unit => (unit.chain || []).some(level => String(level.name || '').toLowerCase().includes(q))));
+        }
+
+        function addLargerUnitRow(data = {}) {
+            const container = document.getElementById('largerUnitsContainer');
+            const row = document.createElement('div');
+            row.className = 'larger-unit-row';
+            row.dataset.levelKey = String(++levelCounter);
+            row.innerHTML = `
+                <input type="text" class="form-control level-name" placeholder="اسم الوحدة الأكبر" value="${esc(data.name || '')}" required oninput="refreshLevelRelations()">
+                <input type="number" min="0.000001" step="any" class="form-control level-factor" placeholder="العدد" value="${Number(data.factorToPrevious || data.factor || 1)}" required oninput="refreshLevelRelations()">
+                <button type="button" class="btn-remove-level" onclick="this.closest('.larger-unit-row').remove();refreshLevelRelations()" title="حذف المستوى"><i class="fa-solid fa-trash"></i></button>
+                <div class="relation-note"></div>`;
+            container.appendChild(row);
+            refreshLevelRelations();
+        }
+
+        function refreshLevelRelations() {
+            let previous = String(document.getElementById('baseUnitNameInput')?.value || 'الوحدة الأساسية').trim() || 'الوحدة الأساسية';
+            let total = 1;
+            document.querySelectorAll('#largerUnitsContainer .larger-unit-row').forEach(row => {
+                const name = String(row.querySelector('.level-name')?.value || 'وحدة أكبر').trim() || 'وحدة أكبر';
+                const factor = Math.max(0.000001, Number(row.querySelector('.level-factor')?.value || 1));
+                total *= factor;
+                row.querySelector('.relation-note').textContent = `1 ${name} = ${factor} ${previous} = ${total} ${document.getElementById('baseUnitNameInput')?.value || 'وحدة أساسية'}`;
+                previous = name;
             });
-            const filtered = query && unitsData.length >= 800 && window.Cashtop?.runWorkerTask
-                ? await window.Cashtop.runWorkerTask('filter-records',{records:unitsData,query,fields:['unitName','pieceName','unitCode']},fallback)
-                : fallback();
-            if (sequence !== filterTable._sequence) return;
-            renderTable(filtered);
-        }
-
-        function exportUnitsExcel() {
-            const wsData = [
-                ['كاش توب 2 - سجل وحدات الأصناف'],
-                ['تاريخ التقرير', new Date().toLocaleString('en-GB')],
-                [],
-                ['#', 'اسم الوحدة', 'رمز الوحدة', 'اسم القطعة', 'رمز القطعة', 'عدد القطع في الوحدة']
-            ];
-            unitsData.forEach((unit, index) => wsData.push([
-                index + 1,
-                unit.unitName || '-',
-                unit.unitCode || '-',
-                unit.pieceName || '-',
-                unit.pieceCode || '-',
-                Number(unit.piecesCount || 0)
-            ]));
-            const ws = XLSX.utils.aoa_to_sheet(wsData);
-            ws['!cols'] = [{wch:6},{wch:24},{wch:18},{wch:24},{wch:18},{wch:22}];
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'الوحدات');
-            XLSX.writeFile(wb, `سجل_الوحدات_${Date.now()}.xlsx`);
-        }
-
-        async function exportUnitsPDF() {
-            try {
-                await CashtopExport.exportDataTablePDF({
-                    title: 'سجل قياس وجرد وحدات العبوات بالأصناف',
-                    subtitle: `عدد الوحدات: ${unitsData.length} — تاريخ التقرير: ${new Date().toLocaleString('en-GB')}`,
-                    columns: ['#', 'اسم الوحدة', 'رمز الوحدة', 'اسم القطعة', 'رمز القطعة', 'عدد القطع في الوحدة'],
-                    rows: unitsData.map((unit, index) => [
-                        index + 1,
-                        unit.unitName || '-',
-                        unit.unitCode || '-',
-                        unit.pieceName || '-',
-                        unit.pieceCode || '-',
-                        Number(unit.piecesCount || 0)
-                    ]),
-                    filename: `سجل_الوحدات_${Date.now()}.pdf`,
-                    orientation: 'landscape'
-                });
-            } catch (error) {
-                console.error(error);
-                alert('تعذر إنشاء ملف PDF للوحدات.');
-            }
-        }
-
-        async function exportUnitsImage() {
-            const area = document.getElementById('unitsExportArea');
-            const actions = Array.from(area.querySelectorAll('.actions-wrapper, .export-group'));
-            const previous = actions.map(node => node.style.display);
-            actions.forEach(node => { node.style.display = 'none'; });
-            try {
-                const canvas = await html2canvas(area, { scale: 2, backgroundColor: '#ffffff' });
-                const link = document.createElement('a');
-                link.download = `سجل_الوحدات_${Date.now()}.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-            } finally {
-                actions.forEach((node, index) => { node.style.display = previous[index]; });
-            }
         }
 
         function openModal() {
             document.getElementById('unitForm').reset();
             document.getElementById('editingId').value = '';
-            document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-boxes-packing"></i> تعريف وترحيل مقاييس الوحدات الجديدة';
+            document.getElementById('largerUnitsContainer').innerHTML = '';
+            document.getElementById('baseUnitNameInput').value = 'قطعة';
+            addLargerUnitRow({ name: 'كرتونة', factorToPrevious: 24 });
+            document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-boxes-stacked"></i> بناء تسلسل وحدات جديد';
             document.getElementById('unitModal').classList.add('active');
         }
 
-        function closeModal() {
-            document.getElementById('unitModal').classList.remove('active');
+        function closeModal() { document.getElementById('unitModal').classList.remove('active'); }
+
+        function collectChain(id) {
+            const baseName = String(document.getElementById('baseUnitNameInput').value || '').trim();
+            if (!baseName) return null;
+            const chain = [{ id: `${id}_L0`, name: baseName, factorToPrevious: 1, factorToBase: 1 }];
+            let total = 1;
+            document.querySelectorAll('#largerUnitsContainer .larger-unit-row').forEach((row, index) => {
+                const name = String(row.querySelector('.level-name')?.value || '').trim();
+                const factor = Math.max(0.000001, Number(row.querySelector('.level-factor')?.value || 1));
+                if (!name) return;
+                total *= factor;
+                chain.push({ id: `${id}_L${index + 1}`, name, factorToPrevious: factor, factorToBase: total });
+            });
+            return chain;
         }
 
-        function saveUnit(e) {
-            e.preventDefault();
-            const id = document.getElementById('editingId').value || `U_${Date.now()}`;
-            const newUnit = {
-                id: id,
-                unitName: document.getElementById('unitNameInput').value.trim(),
-                pieceName: document.getElementById('pieceNameInput').value.trim(),
-                unitCode: document.getElementById('unitCodeInput').value.trim(),
-                pieceCode: document.getElementById('pieceCodeInput').value.trim(),
-                piecesCount: parseFloat(document.getElementById('piecesCountInput').value)
-            };
-
-            if(document.getElementById('editingId').value) {
-                const index = unitsData.findIndex(u => u.id === id);
-                if(index > -1) unitsData[index] = newUnit;
-            } else {
-                unitsData.push(newUnit);
-            }
-
-            localStorage.setItem('cashtop_units', JSON.stringify(unitsData));
+        function saveUnit(event) {
+            event.preventDefault();
+            const editingId = String(document.getElementById('editingId').value || '');
+            const id = editingId || `U_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+            const chain = collectChain(id);
+            if (!chain || !chain.length) return;
+            const normalized = window.CashtopMulti.normalizeUnitTemplate({ id, chain, updatedAt: new Date().toISOString() });
+            const index = unitsData.findIndex(unit => String(unit.id) === id);
+            if (index >= 0) unitsData[index] = normalized; else unitsData.push(normalized);
+            persistUnits();
             renderTable();
             closeModal();
+            window.Cashtop?.showToast?.(editingId ? 'تم تحديث تسلسل الوحدات' : 'تم حفظ تسلسل الوحدات', 'success');
         }
 
         function editUnit(id) {
-            const unit = unitsData.find(u => u.id === id);
-            if(unit) {
-                document.getElementById('editingId').value = unit.id;
-                document.getElementById('unitNameInput').value = unit.unitName;
-                document.getElementById('pieceNameInput').value = unit.pieceName;
-                document.getElementById('unitCodeInput').value = unit.unitCode;
-                document.getElementById('pieceCodeInput').value = unit.pieceCode;
-                document.getElementById('piecesCountInput').value = unit.piecesCount;
-                document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square"></i> تعديل بيانات الوحدة';
-                document.getElementById('unitModal').classList.add('active');
-            }
+            const unit = unitsData.find(item => String(item.id) === String(id));
+            if (!unit) return;
+            const normalized = window.CashtopMulti.normalizeUnitTemplate(unit);
+            document.getElementById('unitForm').reset();
+            document.getElementById('editingId').value = normalized.id;
+            document.getElementById('largerUnitsContainer').innerHTML = '';
+            document.getElementById('baseUnitNameInput').value = normalized.chain[0]?.name || 'قطعة';
+            normalized.chain.slice(1).forEach(level => addLargerUnitRow(level));
+            document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square"></i> تعديل تسلسل الوحدات';
+            refreshLevelRelations();
+            document.getElementById('unitModal').classList.add('active');
         }
 
         function deleteUnit(id) {
-            if(confirm("هل أنت متأكد من حذف هذه الوحدة نهائياً؟")) {
-                unitsData = unitsData.filter(u => u.id !== id);
-                localStorage.setItem('cashtop_units', JSON.stringify(unitsData));
-                renderTable();
-            }
+            if (!confirm('هل أنت متأكد من حذف تسلسل الوحدات؟ المنتجات الحالية ستحتفظ بنسخة الوحدات المخزنة داخلها.')) return;
+            unitsData = unitsData.filter(unit => String(unit.id) !== String(id));
+            persistUnits();
+            renderTable();
         }
 
-        document.getElementById('unitModal').addEventListener('click', function(e) {
-            if(e.target === this) closeModal();
-        });
+        function exportUnitsExcel() {
+            const rows = [['كاش توب 2 - تسلسل الوحدات'], ['تاريخ التقرير', new Date().toLocaleString('en-GB')], [], ['#','الوحدة الأساسية','أكبر وحدة','المعامل الكلي','التسلسل']];
+            unitsData.forEach((raw, index) => {
+                const unit = window.CashtopMulti.normalizeUnitTemplate(raw), chain = unit.chain, base = chain[0], top = chain[chain.length - 1];
+                rows.push([index + 1, base.name, top.name, top.factorToBase, window.CashtopMulti.chainText(chain)]);
+            });
+            const ws = XLSX.utils.aoa_to_sheet(rows); ws['!cols']=[{wch:6},{wch:20},{wch:20},{wch:18},{wch:60}];
+            const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'الوحدات'); XLSX.writeFile(wb,`تسلسل_الوحدات_${Date.now()}.xlsx`);
+        }
+
+        async function exportUnitsPDF() {
+            try {
+                await CashtopExport.exportDataTablePDF({
+                    title:'تسلسل وحدات الأصناف', subtitle:`عدد الأنظمة: ${unitsData.length}`,
+                    columns:['#','الوحدة الأساسية','أكبر وحدة','المعامل الكلي','التسلسل'],
+                    rows:unitsData.map((raw,index)=>{const unit=window.CashtopMulti.normalizeUnitTemplate(raw),c=unit.chain,b=c[0],t=c[c.length-1];return[index+1,b.name,t.name,t.factorToBase,window.CashtopMulti.chainText(c)];}),
+                    filename:`تسلسل_الوحدات_${Date.now()}.pdf`, orientation:'landscape'
+                });
+            } catch(error){ console.error(error); alert('تعذر إنشاء ملف PDF للوحدات.'); }
+        }
+
+        async function exportUnitsImage() {
+            const area=document.getElementById('unitsExportArea'); const actions=[...area.querySelectorAll('.actions-wrapper,.export-group')]; const previous=actions.map(n=>n.style.display); actions.forEach(n=>n.style.display='none');
+            try { const canvas=await html2canvas(area,{scale:2,backgroundColor:'#ffffff'}); const link=document.createElement('a'); link.download=`تسلسل_الوحدات_${Date.now()}.png`; link.href=canvas.toDataURL('image/png'); link.click(); }
+            finally { actions.forEach((n,i)=>n.style.display=previous[i]); }
+        }
+
+        document.getElementById('unitModal').addEventListener('click', function(event){ if(event.target===this) closeModal(); });
     </script>
 </div></main>
 

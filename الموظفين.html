@@ -206,11 +206,12 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Firebase sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=48">
-    <script src="cashtop-core.js?v=24"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=54">
+    <script src="cashtop-core.js?v=54"></script><script src="push-config.js?v=54"></script><script src="push-client.js?v=54"></script>
+    <script src="multi-system.js?v=51"></script>
     <script src="firebase-config.js?v=19"></script>
     <script src="accounting-engine.js"></script>
-    <script src="firebase-sync.js?v=23"></script>
+    <script src="firebase-sync.js?v=54"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -231,6 +232,7 @@
         <summary><i class="fa-solid fa-boxes-stacked"></i><span>المخزون</span><i class="fa-solid fa-chevron-down ct-menu-arrow"></i></summary>
         <div class="ct-submenu">
           <a href="products.html">المنتجات</a>
+          <a href="materials.html">الأصناف</a>
           <a href="warehouses.html">المخازن</a>
           <a href="branches.html">الفروع</a>
           <a href="units.html">الوحدات</a>
@@ -704,8 +706,11 @@
             const select = document.getElementById('eSalaryAccountSelect');
             if (!select) return;
             const funds = readFundsDatabase();
-            select.innerHTML = '<option value="">اختر حساب صرف الراتب</option>' + (funds.accounts || []).map(account =>
-                `<option value="${account.id}">${account.name} — الرصيد ${Number(account.balance || 0).toFixed(3).replace(/\.?0+$/, '')} ₪</option>`).join('');
+            const cfg = window.CashtopMulti?.getCurrencyConfig?.() || { baseCurrencyId: 'base', base: { symbol: '₪' } };
+            select.innerHTML = '<option value="">اختر حساب صرف الراتب</option>' + (funds.accounts || []).map(account => {
+                const currency = window.CashtopMulti?.getCurrency?.(account.currencyId || cfg.baseCurrencyId, cfg) || cfg.base;
+                return `<option value="${account.id}">${account.name} — الرصيد ${Number(account.balance || 0).toFixed(3).replace(/\.?0+$/, '')} ${currency.symbol || currency.code || ''}</option>`;
+            }).join('');
             select.value = selectedAccountId || '';
         }
 

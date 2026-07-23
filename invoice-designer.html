@@ -222,7 +222,8 @@
     </div>
 
     <script src="firebase-config.js"></script>
-    <script src="cashtop-core.js"></script>
+    <script src="cashtop-core.js"></script><script src="push-config.js?v=54"></script><script src="push-client.js?v=54"></script>
+    <script src="multi-system.js?v=51"></script>
     <script src="firebase-sync.js"></script>
     <script>
         let selectedElements = new Set();
@@ -567,6 +568,13 @@
             };
         }
 
+        function designerItemUnit(item) {
+            const chain = window.CashtopMulti?.normalizeProductChain?.(item) || [];
+            const selected = chain.find(level => String(level.id) === String(item?.selectedUnit))
+                || chain.find((_, index) => (item?.selectedUnit === 'piece' && index === 0) || (item?.selectedUnit === 'unit' && index === chain.length - 1));
+            return selected?.name || (item?.selectedUnit === 'unit' ? (item.unitName || 'وحدة') : (item?.pieceName || 'حبة'));
+        }
+
         function syncMockDataFromCashTop() {
             const inv = getLatestInvoiceForPreview();
             const d = new Date(inv.date || Date.now());
@@ -582,7 +590,7 @@
             const firstItem = Array.isArray(inv.items) && inv.items[0] ? inv.items[0] : {};
             mockData.company_name = settings.companyName || 'كاش توب';
             mockData.item_name = firstItem.name || 'صنف';
-            mockData.item_unit = firstItem.selectedUnit === 'unit' ? (firstItem.unitName || 'وحدة') : (firstItem.pieceName || 'حبة');
+            mockData.item_unit = designerItemUnit(firstItem);
             mockData.item_qty = Number(firstItem.qty || 0);
             mockData.item_price = Number(firstItem.price || 0).toFixed(2);
             mockData.item_total = (Number(firstItem.qty || 0) * Number(firstItem.price || 0)).toFixed(2);
@@ -644,7 +652,7 @@
                 const items = Array.isArray(inv.items) ? inv.items : [];
                 table.innerHTML = '<tr><th>الصنف</th><th>الوحدة</th><th>الكمية</th><th>السعر</th><th>الاجمالي</th></tr>' + items.map(item => {
                     const q = Number(item.qty || 0), p = Number(item.price || 0);
-                    const unit = item.selectedUnit === 'unit' ? (item.unitName || 'وحدة') : (item.pieceName || 'حبة');
+                    const unit = designerItemUnit(item);
                     return `<tr><td>${item.name || 'صنف'}</td><td>${unit}</td><td>${q}</td><td>${p.toFixed(2)}</td><td>${(q*p).toFixed(2)}</td></tr>`;
                 }).join('');
                 const tableEl = document.querySelector('.type-table[data-role="items"]');

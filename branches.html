@@ -155,11 +155,12 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Firebase sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=48">
-    <script src="cashtop-core.js?v=24"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=54">
+    <script src="cashtop-core.js?v=54"></script><script src="push-config.js?v=54"></script><script src="push-client.js?v=54"></script>
+    <script src="multi-system.js?v=51"></script>
     <script src="firebase-config.js?v=19"></script>
     <script src="accounting-engine.js"></script>
-    <script src="firebase-sync.js?v=23"></script>
+    <script src="firebase-sync.js?v=54"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -180,6 +181,7 @@
         <summary><i class="fa-solid fa-boxes-stacked"></i><span>المخزون</span><i class="fa-solid fa-chevron-down ct-menu-arrow"></i></summary>
         <div class="ct-submenu">
           <a href="products.html">المنتجات</a>
+          <a href="materials.html">الأصناف</a>
           <a href="warehouses.html">المخازن</a>
           <a href="branches.html">الفروع</a>
           <a href="units.html">الوحدات</a>
@@ -1231,10 +1233,11 @@
         function addProdToTransferCart(prod, availQty) {
             const existing = transferCart.find(item => String(item.id) === String(prod.id) && !item.isVariant);
             if (!existing) {
+                const unitChain = window.CashtopMulti?.normalizeProductChain?.(prod) || [{ id:'piece', name:prod.pieceName||'قطعة', factorToBase:1 }];
                 transferCart.push({
                     id: prod.id, name: prod.name, stockInSource: Number(availQty || 0),
-                    piecesPerUnit: Math.max(1, Number(prod.piecesPerUnit || 1)), unitName: prod.unitName || 'وحدة', pieceName: prod.pieceName || 'قطعة',
-                    addType: prod.addType || 'piece', transferUnit: (prod.addType === 'unit' ? 'unit' : 'piece'), transferQty: 1, isVariant: false
+                    piecesPerUnit: Math.max(1, Number(prod.piecesPerUnit || 1)), unitName: prod.unitName || unitChain[unitChain.length-1]?.name || 'وحدة', pieceName: unitChain[0]?.name || prod.pieceName || 'قطعة',
+                    unitChain, addType: prod.addType || 'piece', transferUnit: unitChain[unitChain.length-1]?.id || 'piece', transferQty: 1, isVariant: false
                 });
                 renderTransferCart();
             } else showToast('المنتج موجود مسبقاً بالقائمة', 'warning');
@@ -1268,17 +1271,15 @@
             if (!prod || !variant) return;
             const existing = transferCart.find(item => String(item.id) === String(prod.id) && item.isVariant && item.vIndex === vIndex);
             if (!existing) {
-                const piecesPerUnit = Math.max(1, Number(prod.piecesPerUnit || 1));
-                const addType = prod.addType || 'piece';
                 transferCart.push({
                     id: prod.id,
                     name: `${prod.name} (مقاس: ${variant.size || '-'} - لون: ${variant.color || '-'})`,
                     stockInSource: Number(availQty || 0),
-                    piecesPerUnit,
-                    unitName: prod.unitName || 'وحدة',
-                    pieceName: prod.pieceName || 'قطعة',
-                    addType,
-                    transferUnit: addType === 'unit' ? 'unit' : 'piece',
+                    piecesPerUnit: 1,
+                    unitName: 'وحدة',
+                    pieceName: 'قطعة',
+                    addType: 'piece',
+                    transferUnit: 'piece',
                     transferQty: 1,
                     isVariant: true,
                     vIndex
@@ -1303,17 +1304,16 @@
 
             transferCart.forEach((item, index) => {
                 let unitAndQtyHtml = '';
-                if (item.addType === 'unit' && Number(item.piecesPerUnit || 1) > 1) {
-                    const maxAllowedUnits = Math.floor(Number(item.stockInSource || 0) / Number(item.piecesPerUnit || 1));
-                    const maxAllowedPieces = Number(item.stockInSource || 0);
-                    const currentMax = item.transferUnit === 'unit' ? maxAllowedUnits : maxAllowedPieces;
+                if (!item.isVariant) {
+                    const chain = Array.isArray(item.unitChain) && item.unitChain.length ? item.unitChain : [{id:'piece',name:item.pieceName||'قطعة',factorToBase:1}];
+                    const selected = chain.find(level => String(level.id) === String(item.transferUnit)) || chain[0];
+                    const factor = Math.max(0.000001, Number(selected.factorToBase || 1));
+                    const currentMax = Number(item.stockInSource || 0) / factor;
+                    const options = chain.map(level => `<option value="${level.id}" ${String(item.transferUnit)===String(level.id)?'selected':''}>${level.name} (×${Number(level.factorToBase||1)} ${chain[0].name})</option>`).join('');
                     unitAndQtyHtml = `
                         <div style="display:flex;flex-direction:column;gap:5px;align-items:center;">
-                            <select class="form-control" style="padding:4px 8px;font-size:11px;height:28px;width:140px;border-color:#3b82f6;" onchange="updateTransferUnit(${index}, this.value)">
-                                <option value="unit" ${item.transferUnit === 'unit' ? 'selected' : ''}>كرتونة (${item.piecesPerUnit} ${item.pieceName})</option>
-                                <option value="piece" ${item.transferUnit === 'piece' ? 'selected' : ''}>قطعة / ${item.pieceName}</option>
-                            </select>
-                            <input type="number" class="form-control" value="${item.transferQty}" min="1" max="${Math.max(0, currentMax)}" onchange="updateTransferQty(${index}, this.value)" style="width:140px;padding:4px;text-align:center;height:28px;font-weight:bold;" placeholder="أدخل الكمية">
+                            <select class="form-control" style="padding:4px 8px;font-size:11px;height:28px;width:150px;border-color:#3b82f6;" onchange="updateTransferUnit(${index}, this.value)">${options}</select>
+                            <input type="number" step="any" class="form-control" value="${item.transferQty}" min="0.000001" max="${Math.max(0, currentMax)}" onchange="updateTransferQty(${index}, this.value)" style="width:140px;padding:4px;text-align:center;height:28px;font-weight:bold;" placeholder="أدخل الكمية">
                         </div>`;
                 } else {
                     unitAndQtyHtml = `
@@ -1338,7 +1338,7 @@
             transferCart[index].transferQty = 1;
             renderTransferCart();
         }
-        function updateTransferQty(index, val) { if (transferCart[index]) transferCart[index].transferQty = Math.max(1, parseInt(val, 10) || 1); }
+        function updateTransferQty(index, val) { if (transferCart[index]) transferCart[index].transferQty = Math.max(0.000001, Number(val) || 1); }
         function removeTransferItem(index) { transferCart.splice(index, 1); renderTransferCart(); }
 
         function processTransfer() {
@@ -1361,9 +1361,10 @@
             for (const item of transferCart) {
                 const product = fullProducts.find(productItem => String(productItem.id) === String(item.id));
                 if (!product) return showToast(`تعذر العثور على المنتج [${item.name}]`, 'error');
-                const qty = Math.max(1, Number(item.transferQty || 0));
-                const piecesPerUnit = Math.max(1, Number(item.piecesPerUnit || 1));
-                const pieces = item.transferUnit === 'unit' ? qty * piecesPerUnit : qty;
+                const qty = Math.max(0.000001, Number(item.transferQty || 0));
+                const chain = Array.isArray(item.unitChain) && item.unitChain.length ? item.unitChain : (window.CashtopMulti?.normalizeProductChain?.(product) || [{id:'piece',name:item.pieceName||'قطعة',factorToBase:1}]);
+                const selectedLevel = chain.find(level => String(level.id) === String(item.transferUnit)) || chain[0];
+                const pieces = qty * Math.max(0.000001, Number(selectedLevel.factorToBase || 1));
                 const availableNow = getLocationQty(product, sourceBranchId, sourceLocationId, item.isVariant ? item.vIndex : null);
                 if (!Number.isFinite(pieces) || pieces <= 0) return showToast(`أدخل كمية صحيحة للصنف [${item.name}]`, 'error');
                 if (pieces > availableNow + 1e-9) return showToast(`الكمية المطلوبة للصنف [${item.name}] تتجاوز المتوفر حالياً في المصدر (${availableNow})`, 'error');
@@ -1397,7 +1398,8 @@
                     fromStore: getLocationName(sourceBranchId, sourceLocationId),
                     toStore: getLocationName(destinationBranchId, destinationLocationId),
                     items: transferCart.map(item => {
-                        const unit = item.transferUnit === 'unit' ? `كرتونة (${item.piecesPerUnit} ${item.pieceName})` : item.pieceName;
+                        const chain = Array.isArray(item.unitChain) && item.unitChain.length ? item.unitChain : [{id:'piece',name:item.pieceName||'قطعة',factorToBase:1}];
+                        const unit = chain.find(level => String(level.id) === String(item.transferUnit))?.name || item.pieceName;
                         return `${item.name} | الكمية: ${item.transferQty} ${unit}`;
                     }),
                     user: sessionUser.username || sessionUser.displayName || '',

@@ -88,6 +88,13 @@
         .modal-search-wrapper input { padding-right: 32px !important; }
         .modal-search-wrapper i { position: absolute; right: 10px; color: #999; font-size: 13px; }
 
+
+        .group-unit-prices { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; min-width:320px; }
+        .group-unit-price { border:1px solid #e2e8f0; background:#f8fafc; border-radius:7px; padding:6px 8px; min-width:125px; }
+        .group-unit-price b { display:block; font-size:10px; color:#475569; margin-bottom:4px; }
+        .group-unit-price small { display:block; font-size:9px; color:#94a3b8; margin-top:3px; }
+        .group-unit-price input { width:100%; text-align:center; }
+
         @media (max-width: 768px) {
             body { padding: 10px; }
             .top-cards-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px; }
@@ -111,11 +118,12 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Firebase sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=48">
-    <script src="cashtop-core.js?v=24"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=54">
+    <script src="cashtop-core.js?v=54"></script><script src="push-config.js?v=54"></script><script src="push-client.js?v=54"></script>
+    <script src="multi-system.js?v=51"></script>
     <script src="firebase-config.js?v=19"></script>
     <script src="accounting-engine.js"></script>
-    <script src="firebase-sync.js?v=23"></script>
+    <script src="firebase-sync.js?v=54"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -136,6 +144,7 @@
         <summary><i class="fa-solid fa-boxes-stacked"></i><span>المخزون</span><i class="fa-solid fa-chevron-down ct-menu-arrow"></i></summary>
         <div class="ct-submenu">
           <a href="products.html">المنتجات</a>
+          <a href="materials.html">الأصناف</a>
           <a href="warehouses.html">المخازن</a>
           <a href="branches.html">الفروع</a>
           <a href="units.html">الوحدات</a>
@@ -318,10 +327,7 @@
                         <thead>
                             <tr>
                                 <th>اسم المنتج</th>
-                                <th>السعر الافتراضي (قطعة)</th>
-                                <th>السعر المخصص (قطعة)</th>
-                                <th>السعر الافتراضي (وحدة)</th>
-                                <th>السعر المخصص (وحدة)</th>
+                                <th>أسعار البيع المخصصة حسب تسلسل الوحدات</th>
                             </tr>
                         </thead>
                         <tbody id="modalProductsTableBody"></tbody>
@@ -469,25 +475,29 @@
             if (!tbody) return;
             tbody.innerHTML = '';
             if (!systemProducts.length) {
-                tbody.innerHTML = '<tr><td colspan="5" style="padding:16px;color:#999;">لا توجد منتجات مسجلة لتخصيص أسعارها.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="2" style="padding:16px;color:#999;">لا توجد منتجات مسجلة لتخصيص أسعارها.</td></tr>';
                 return;
             }
             systemProducts.forEach(product => {
                 const productId = String(product.id || '');
-                const defaultPiece = Number(product.pricePiece || product.price || 0);
-                const defaultUnit = Number(product.priceUnit || 0);
+                const chain = window.CashtopMulti?.normalizeProductChain(product) || [{id:'piece',name:product.pieceName||'قطعة',factorToBase:1,salePrice:Number(product.pricePiece||product.price||0)}];
                 const saved = groupPrices?.[productId] || {};
-                const currentPiece = Number.isFinite(Number(saved.piece)) ? Number(saved.piece) : defaultPiece;
-                const currentUnit = Number.isFinite(Number(saved.unit)) ? Number(saved.unit) : defaultUnit;
+                const unitSaved = saved.units && typeof saved.units === 'object' ? saved.units : {};
+                const controls = chain.map((level,index) => {
+                    let value = Number(unitSaved[level.id]);
+                    if (!Number.isFinite(value) && index === 0) value = Number(saved.piece);
+                    if (!Number.isFinite(value) && index === chain.length - 1) value = Number(saved.unit);
+                    if (!Number.isFinite(value)) value = Number(level.salePrice || 0);
+                    return `<div class="group-unit-price">
+                        <b>${escapeHtml(level.name)}</b>
+                        <input type="number" min="0" step="0.001" class="form-control prod-group-unit-price-input" data-prod-id="${escapeHtml(productId)}" data-unit-id="${escapeHtml(level.id)}" data-unit-index="${index}" value="${value}">
+                        <small>الافتراضي: ${Number(level.salePrice || 0).toFixed(3).replace(/\.?0+$/,'')} | ×${Number(level.factorToBase || 1)}</small>
+                    </div>`;
+                }).join('');
                 const row = document.createElement('tr');
                 row.id = `modal_prod_row_${CSS.escape(productId)}`;
                 row.className = 'modal-product-tr';
-                row.innerHTML = `
-                    <td><strong class="modal-pname-target">${escapeHtml(product.name || 'منتج بدون اسم')}</strong></td>
-                    <td style="color:#777;">${defaultPiece.toFixed(2)}</td>
-                    <td><input type="number" min="0" step="0.01" class="form-control prod-group-piece-input" data-prod-id="${escapeHtml(productId)}" value="${currentPiece}" style="width:90px;text-align:center;margin:0 auto;"></td>
-                    <td style="color:#777;">${defaultUnit.toFixed(2)}</td>
-                    <td><input type="number" min="0" step="0.01" class="form-control prod-group-unit-input" data-prod-id="${escapeHtml(productId)}" value="${currentUnit}" style="width:90px;text-align:center;margin:0 auto;"></td>`;
+                row.innerHTML = `<td><strong class="modal-pname-target">${escapeHtml(product.name || 'منتج بدون اسم')}</strong></td><td><div class="group-unit-prices">${controls}</div></td>`;
                 tbody.appendChild(row);
             });
         }
@@ -539,13 +549,17 @@
             const priceMap = {};
             systemProducts.forEach(product => {
                 const productId = String(product.id || '');
-                const pieceInput = document.querySelector(`.prod-group-piece-input[data-prod-id="${CSS.escape(productId)}"]`);
-                const unitInput = document.querySelector(`.prod-group-unit-input[data-prod-id="${CSS.escape(productId)}"]`);
-                const pieceValue = Number(pieceInput?.value);
-                const unitValue = Number(unitInput?.value);
+                const chain = window.CashtopMulti?.normalizeProductChain(product) || [];
+                const units = {};
+                chain.forEach((level, index) => {
+                    const input = document.querySelector(`.prod-group-unit-price-input[data-prod-id="${CSS.escape(productId)}"][data-unit-id="${CSS.escape(String(level.id))}"]`);
+                    const value = Number(input?.value);
+                    units[level.id] = Number.isFinite(value) && value >= 0 ? value : Number(level.salePrice || 0);
+                });
                 priceMap[productId] = {
-                    piece: Number.isFinite(pieceValue) && pieceValue >= 0 ? pieceValue : Number(product.pricePiece || product.price || 0),
-                    unit: Number.isFinite(unitValue) && unitValue >= 0 ? unitValue : Number(product.priceUnit || 0)
+                    units,
+                    piece: Number(units[chain[0]?.id] ?? product.pricePiece ?? product.price ?? 0),
+                    unit: Number(units[chain[chain.length - 1]?.id] ?? product.priceUnit ?? 0)
                 };
             });
 

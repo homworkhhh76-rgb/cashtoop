@@ -12,8 +12,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<link rel="icon" href="icon-192.png"><link rel="stylesheet" href="cashtop-core.css?v=48">
-<script src="cashtop-core.js?v=24"></script><script src="firebase-config.js?v=19"></script><script src="accounting-engine.js"></script><script src="firebase-sync.js?v=23"></script>
+<link rel="icon" href="icon-192.png"><link rel="stylesheet" href="cashtop-core.css?v=54">
+<script src="cashtop-core.js?v=54"></script><script src="push-config.js?v=54"></script><script src="push-client.js?v=54"></script>
+    <script src="multi-system.js?v=51"></script><script src="firebase-config.js?v=19"></script><script src="accounting-engine.js"></script><script src="firebase-sync.js?v=54"></script>
 <style>
         * {
             box-sizing: border-box;
@@ -269,7 +270,7 @@
 <nav class="ct-sidebar-nav">
 <a class="ct-menu-link" href="لوحة التحكم.html"><i class="fa-solid fa-house"></i><span>لوحة التحكم</span></a>
 <a class="ct-menu-link" href="cashier.html"><i class="fa-solid fa-cash-register"></i><span>الكاشير</span></a>
-<details class="ct-menu-group"><summary><i class="fa-solid fa-boxes-stacked"></i><span>المخزون</span><i class="fa-solid fa-chevron-down ct-menu-arrow"></i></summary><div class="ct-submenu"><a href="products.html">المنتجات</a><a href="warehouses.html">المخازن</a><a href="branches.html">الفروع</a><a href="units.html">الوحدات</a><a href="shortages.html">النواقص</a><a href="barcode-generator.html">الباركود</a><a href="ادارة التصنيع.html">التصنيع</a></div></details>
+<details class="ct-menu-group"><summary><i class="fa-solid fa-boxes-stacked"></i><span>المخزون</span><i class="fa-solid fa-chevron-down ct-menu-arrow"></i></summary><div class="ct-submenu"><a href="products.html">المنتجات</a><a href="materials.html">الأصناف</a><a href="warehouses.html">المخازن</a><a href="branches.html">الفروع</a><a href="units.html">الوحدات</a><a href="shortages.html">النواقص</a><a href="barcode-generator.html">الباركود</a><a href="ادارة التصنيع.html">التصنيع</a></div></details>
 <details class="ct-menu-group"><summary><i class="fa-solid fa-file-invoice-dollar"></i><span>الفواتير</span><i class="fa-solid fa-chevron-down ct-menu-arrow"></i></summary><div class="ct-submenu"><a href="invoices.html">فواتير المبيعات</a><a href="المشتريات.html">المشتريات</a><a href="مرجع المشتريات.html">مرتجع المشتريات</a></div></details>
 <details class="ct-menu-group">
         <summary><i class="fa-solid fa-users"></i><span>العملاء والموردون</span><i class="fa-solid fa-chevron-down ct-menu-arrow"></i></summary>

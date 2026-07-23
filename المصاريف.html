@@ -170,15 +170,18 @@
             
             .data-table { min-width: 800px; }
         }
+    
+        .expense-currency-wrap{display:none}.expense-currency-wrap.active{display:flex}.expense-currency-wrap small{display:block;font-size:11px;color:#64748b;margin-top:4px}
     </style>
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Firebase sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=48">
-    <script src="cashtop-core.js?v=24"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=54">
+    <script src="cashtop-core.js?v=54"></script><script src="push-config.js?v=54"></script><script src="push-client.js?v=54"></script>
+    <script src="multi-system.js?v=51"></script>
     <script src="firebase-config.js?v=19"></script>
     <script src="accounting-engine.js"></script>
-    <script src="firebase-sync.js?v=23"></script>
+    <script src="firebase-sync.js?v=54"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -199,6 +202,7 @@
         <summary><i class="fa-solid fa-boxes-stacked"></i><span>المخزون</span><i class="fa-solid fa-chevron-down ct-menu-arrow"></i></summary>
         <div class="ct-submenu">
           <a href="products.html">المنتجات</a>
+          <a href="materials.html">الأصناف</a>
           <a href="warehouses.html">المخازن</a>
           <a href="branches.html">الفروع</a>
           <a href="units.html">الوحدات</a>
@@ -365,10 +369,18 @@
                     </div>
                 </div>
 
+                <div class="form-row expense-currency-wrap" id="expenseCurrencyWrap">
+                    <div class="form-group">
+                        <select class="form-control" id="expCurrencySelect" onchange="handleExpenseCurrencyChange()"></select>
+                        <label>عملة المصروف</label>
+                        <small id="expenseCurrencyHint"></small>
+                    </div>
+                </div>
+
                 <div class="form-row">
                     <div class="form-group">
                         <input type="number" step="0.01" min="0.01" class="form-control" id="expAmount" placeholder="0.00" required>
-                        <label>المبلغ المستحق (₪)</label>
+                        <label id="expAmountLabel">المبلغ المستحق</label>
                     </div>
                     <div class="form-group">
                         <select class="form-control" id="expAccountSelect" required>
@@ -504,6 +516,7 @@
 
         function initLayout() {
             populateTypesSelect();
+            populateExpenseCurrencySelect();
             populateAccountsSelect();
             renderTable();
         }
@@ -520,12 +533,25 @@
             document.getElementById('filterTypeSelect').innerHTML = filterOptions;
         }
 
+        function expenseCurrencyConfig(){ return window.CashtopMulti?.getCurrencyConfig?.() || {enabled:false,baseCurrencyId:'ILS',base:{id:'ILS',symbol:'₪',code:'ILS',ratePer100Base:100},currencies:[{id:'ILS',name:'شيكل',symbol:'₪',code:'ILS',ratePer100Base:100}]}; }
+        function expenseCurrencyId(){ const cfg=expenseCurrencyConfig(); return document.getElementById('expCurrencySelect')?.value || cfg.baseCurrencyId; }
+        function expenseNativeAmount(exp){ const cfg=expenseCurrencyConfig(), cid=exp?.currencyId||cfg.baseCurrencyId; return Number.isFinite(Number(exp?.amountNative))?Number(exp.amountNative):(window.CashtopMulti?.fromBase?.(Number(exp?.amount||0),cid)??Number(exp?.amount||0)); }
+        function normalizeExpenseAccountCurrencies(){ const cfg=expenseCurrencyConfig(); (fundsDB.accounts||[]).forEach(a=>{if(!a.currencyId)a.currencyId=cfg.baseCurrencyId;}); }
+        function populateExpenseCurrencySelect(preferredId=''){
+            const cfg=expenseCurrencyConfig(), select=document.getElementById('expCurrencySelect'), wrap=document.getElementById('expenseCurrencyWrap'); if(!select)return;
+            const previous=preferredId||select.value||cfg.baseCurrencyId; select.innerHTML=cfg.currencies.map(c=>`<option value="${c.id}">${c.name} (${c.symbol||c.code})</option>`).join('');
+            select.value=cfg.currencies.some(c=>String(c.id)===String(previous))?previous:cfg.baseCurrencyId; wrap?.classList.toggle('active',cfg.enabled===true);
+            const cur=window.CashtopMulti?.getCurrency?.(select.value)||cfg.base; const hint=document.getElementById('expenseCurrencyHint'); if(hint)hint.textContent=String(cur.id)===String(cfg.baseCurrencyId)?'العملة الأساسية':`100 ${cfg.base.symbol||cfg.base.code} = ${Number(cur.ratePer100Base||0)} ${cur.symbol||cur.code}`;
+            const label=document.getElementById('expAmountLabel'); if(label)label.textContent=`المبلغ المستحق (${cur.symbol||cur.code})`; normalizeExpenseAccountCurrencies();
+        }
+        function handleExpenseCurrencyChange(){ populateExpenseCurrencySelect(expenseCurrencyId()); populateAccountsSelect(); }
         function populateAccountsSelect() {
+            normalizeExpenseAccountCurrencies();
+            const cfg=expenseCurrencyConfig(), cid=cfg.enabled?expenseCurrencyId():cfg.baseCurrencyId, select=document.getElementById('expAccountSelect'), previous=select?.value||'';
             let options = '<option value="">اختر الخزينة المستقطعة...</option>';
-            fundsDB.accounts.forEach(a => {
-                options += `<option value="${a.id}">${a.name} (المتاح: ${parseFloat(a.balance).toFixed(2)})</option>`;
-            });
-            document.getElementById('expAccountSelect').innerHTML = options;
+            const accounts=(fundsDB.accounts||[]);
+            accounts.forEach(a => { const cur=window.CashtopMulti?.getCurrency?.(a.currencyId||cfg.baseCurrencyId)||cfg.base; options += `<option value="${a.id}">${a.name} (المتاح: ${parseFloat(a.balance||0).toFixed(2)} ${cur.symbol||cur.code})</option>`; });
+            select.innerHTML = options; if(accounts.some(a=>String(a.id)===String(previous)))select.value=previous;
         }
 
         // ==========================================
@@ -545,7 +571,7 @@
                 if(safeDate.startsWith(currentMonth)) sumMonth += parseFloat(exp.amount) || 0;
             });
 
-            let totalFunds = fundsDB.accounts.reduce((sum, acc) => sum + (parseFloat(acc.balance) || 0), 0);
+            let totalFunds = fundsDB.accounts.reduce((sum, acc) => sum + (window.CashtopMulti?.toBase?.(parseFloat(acc.balance)||0, acc.currencyId || expenseCurrencyConfig().baseCurrencyId) ?? (parseFloat(acc.balance)||0)), 0);
 
             document.getElementById('statToday').innerText = sumToday.toLocaleString('en-US', {minimumFractionDigits: 2});
             document.getElementById('statMonth').innerText = sumMonth.toLocaleString('en-US', {minimumFractionDigits: 2});
@@ -639,6 +665,8 @@
             document.getElementById('expName').value = '';
             document.getElementById('expTypeSelect').value = '';
             document.getElementById('expAmount').value = '';
+            populateExpenseCurrencySelect(expenseCurrencyConfig().baseCurrencyId);
+            populateAccountsSelect();
             document.getElementById('expAccountSelect').value = '';
             document.getElementById('expDate').value = new Date().toISOString().split('T')[0];
             document.getElementById('expNotes').value = '';
@@ -652,12 +680,13 @@
             let exp = expensesDB.find(x => x.id === id);
             if(!exp) return;
             
+            populateExpenseCurrencySelect(exp.currencyId || expenseCurrencyConfig().baseCurrencyId);
             populateAccountsSelect(); // تحديث الأرصدة
             
             document.getElementById('editExpId').value = exp.id;
             document.getElementById('expName').value = exp.name || exp.title || '';
             document.getElementById('expTypeSelect').value = exp.typeId || '';
-            document.getElementById('expAmount').value = exp.amount;
+            document.getElementById('expAmount').value = expenseNativeAmount(exp);
             document.getElementById('expAccountSelect').value = exp.accountId || '';
             document.getElementById('expDate').value = exp.date ? exp.date.split('T')[0] : new Date().toISOString().split('T')[0];
             document.getElementById('expNotes').value = exp.notes || exp.note || '';
@@ -671,53 +700,59 @@
             const editId = document.getElementById('editExpId').value;
             const name = document.getElementById('expName').value.trim();
             const typeId = document.getElementById('expTypeSelect').value;
-            const amount = parseFloat(document.getElementById('expAmount').value);
-            const accountId = parseInt(document.getElementById('expAccountSelect').value);
+            const cfg = expenseCurrencyConfig();
+            const currencyId = cfg.enabled ? expenseCurrencyId() : cfg.baseCurrencyId;
+            const amountNative = parseFloat(document.getElementById('expAmount').value);
+            const amount = window.CashtopMulti?.toBase?.(amountNative, currencyId) ?? amountNative;
+            const accountId = document.getElementById('expAccountSelect').value;
             const date = document.getElementById('expDate').value;
             const notes = document.getElementById('expNotes').value.trim();
 
-            if(!name || !typeId || isNaN(amount) || amount <= 0 || !accountId) {
+            if(!name || !typeId || isNaN(amountNative) || amountNative <= 0 || !accountId) {
                 showToast("الرجاء تعبئة جميع الحقول بشكل صحيح", "error"); return;
             }
 
-            let newAccount = fundsDB.accounts.find(a => a.id === accountId);
+            let newAccount = fundsDB.accounts.find(a => String(a.id) === String(accountId));
             if(!newAccount) { showToast("الصندوق المحدد غير موجود!", "error"); return; }
+            const newSettlement = window.CashtopMulti?.settleToAccount?.(amountNative, currencyId, newAccount)
+                || { accountAmount: amountNative, accountCurrencyId: newAccount.currencyId || currencyId, baseAmount: amount };
 
             if (editId) {
                 // وضع التعديل (عكس القيد القديم وتطبيق الجديد)
                 let oldExp = expensesDB.find(x => x.id === editId);
                 let oldAccount = fundsDB.accounts.find(a => a.id == oldExp.accountId);
 
-                if(oldExp.accountId == accountId) {
-                    // نفس الصندوق، تحقق من فرق المبلغ
-                    let diff = amount - oldExp.amount;
-                    if(diff > newAccount.balance) {
+                const oldAccountCurrencyId = oldExp.accountCurrencyId || oldAccount?.currencyId || cfg.baseCurrencyId;
+                const oldAccountAmount = Number.isFinite(Number(oldExp.accountAmountNative))
+                    ? Number(oldExp.accountAmountNative)
+                    : (window.CashtopMulti?.accountAmountFromBase?.(Number(oldExp.amount || 0), oldAccountCurrencyId) ?? expenseNativeAmount(oldExp));
+                if(String(oldExp.accountId) === String(accountId)) {
+                    const diff = Number(newSettlement.accountAmount || 0) - oldAccountAmount;
+                    if(diff > Number(newAccount.balance || 0)) {
                         showToast(`رصيد [${newAccount.name}] غير كافٍ لزيادة المصروف!`, "error"); return;
                     }
-                    newAccount.balance -= diff; // خصم أو إضافة الفرق
-                    
-                    if(diff !== 0) {
-                        fundsDB.accountLogs.push({
-                            accountId: newAccount.id, date: date, type: diff > 0 ? "سحب" : "إيداع", amount: Math.abs(diff),
-                            notes: `تسوية تعديل مصروف: ${name}`
-                        });
+                    newAccount.balance -= diff;
+                    if(Math.abs(diff) > 1e-9) {
+                        const baseDiff = amount - Number(oldExp.amount || 0);
+                        fundsDB.accountLogs.push({ accountId: newAccount.id, date: date, type: diff > 0 ? "سحب" : "إيداع", amount: Math.abs(diff), baseAmount: Math.abs(baseDiff), currencyId: newSettlement.accountCurrencyId, transactionAmount: Math.abs(amountNative - expenseNativeAmount(oldExp)), transactionCurrencyId: currencyId, notes: `تسوية تعديل مصروف: ${name}` });
                     }
                 } else {
-                    // تغير الصندوق: نرجع الفلوس للصندوق القديم، ونسحب من الجديد
-                    if(amount > newAccount.balance) {
-                        showToast(`رصيد الصندوق الجديد [${newAccount.name}] غير كافٍ!`, "error"); return;
-                    }
+                    if(Number(newSettlement.accountAmount || 0) > Number(newAccount.balance || 0)) { showToast(`رصيد الصندوق الجديد [${newAccount.name}] غير كافٍ!`, "error"); return; }
                     if(oldAccount) {
-                        oldAccount.balance += oldExp.amount;
-                        fundsDB.accountLogs.push({ accountId: oldAccount.id, date: date, type: "إيداع", amount: oldExp.amount, notes: `استرداد إثر نقل المصروف [${name}] لصندوق آخر` });
+                        oldAccount.balance += oldAccountAmount;
+                        fundsDB.accountLogs.push({ accountId: oldAccount.id, date: date, type: "إيداع", amount: oldAccountAmount, baseAmount: Number(oldExp.amount||0), currencyId: oldAccountCurrencyId, notes: `استرداد إثر نقل المصروف [${name}] لصندوق آخر` });
                     }
-                    newAccount.balance -= amount;
-                    fundsDB.accountLogs.push({ accountId: newAccount.id, date: date, type: "سحب", amount: amount, notes: `صرف مصروف منقول: ${name}` });
+                    newAccount.balance -= Number(newSettlement.accountAmount || 0);
+                    fundsDB.accountLogs.push({ accountId: newAccount.id, date: date, type: "سحب", amount: Number(newSettlement.accountAmount || 0), baseAmount: amount, currencyId: newSettlement.accountCurrencyId, transactionAmount: amountNative, transactionCurrencyId: currencyId, notes: `صرف مصروف منقول: ${name}` });
                 }
 
                 oldExp.name = name;
                 oldExp.typeId = typeId;
                 oldExp.amount = amount;
+                oldExp.amountNative = amountNative;
+                oldExp.currencyId = currencyId;
+                oldExp.accountAmountNative = Number(newSettlement.accountAmount || 0);
+                oldExp.accountCurrencyId = newSettlement.accountCurrencyId;
                 oldExp.accountId = accountId;
                 oldExp.date = date;
                 oldExp.notes = notes;
@@ -726,13 +761,14 @@
 
             } else {
                 // وضع الإضافة الجديدة
-                if (amount > newAccount.balance) {
-                    showToast(`الرصيد في صندوق [${newAccount.name}] غير كافٍ لصرف هذا المبلغ!`, "error"); return;
+                if (Number(newSettlement.accountAmount || 0) > Number(newAccount.balance || 0)) {
+                    showToast(`الرصيد في صندوق [${newAccount.name}] غير كافٍ لصرف هذا المبلغ بعد تحويل العملة!`, "error"); return;
                 }
 
-                newAccount.balance -= amount;
+                newAccount.balance -= Number(newSettlement.accountAmount || 0);
                 fundsDB.accountLogs.push({
-                    accountId: newAccount.id, date: date, type: "سحب", amount: amount,
+                    accountId: newAccount.id, date: date, type: "سحب", amount: Number(newSettlement.accountAmount || 0), baseAmount: amount, currencyId: newSettlement.accountCurrencyId,
+                    transactionAmount: amountNative, transactionCurrencyId: currencyId,
                     notes: `مستند صرف: ${name}`
                 });
 
@@ -741,6 +777,10 @@
                     name: name,
                     typeId: typeId,
                     amount: amount,
+                    amountNative: amountNative,
+                    currencyId: currencyId,
+                    accountAmountNative: Number(newSettlement.accountAmount || 0),
+                    accountCurrencyId: newSettlement.accountCurrencyId,
                     accountId: accountId,
                     date: date,
                     notes: notes
@@ -766,7 +806,7 @@
             let accName = acc ? acc.name : "صندوق محذوف";
 
             document.getElementById('deleteExpId').value = id;
-            document.getElementById('delExpAmount').innerText = parseFloat(exp.amount).toFixed(2);
+            document.getElementById('delExpAmount').innerText = expenseNativeAmount(exp).toFixed(2) + ' ' + (window.CashtopMulti?.currencySymbol?.(exp.currencyId || expenseCurrencyConfig().baseCurrencyId) || '');
             document.getElementById('delExpAccount').innerText = accName;
             
             openModal('deleteModal');
@@ -781,9 +821,11 @@
                 let acc = fundsDB.accounts.find(a => a.id == exp.accountId);
                 
                 if(acc) {
-                    acc.balance += exp.amount;
+                    const accountCurrencyId = exp.accountCurrencyId || acc.currencyId || expenseCurrencyConfig().baseCurrencyId;
+                    const nativeAmount = Number.isFinite(Number(exp.accountAmountNative)) ? Number(exp.accountAmountNative) : (window.CashtopMulti?.accountAmountFromBase?.(Number(exp.amount||0), accountCurrencyId) ?? expenseNativeAmount(exp));
+                    acc.balance += nativeAmount;
                     fundsDB.accountLogs.push({
-                        accountId: acc.id, date: new Date().toISOString().split('T')[0], type: "إيداع", amount: exp.amount,
+                        accountId: acc.id, date: new Date().toISOString().split('T')[0], type: "إيداع", amount: nativeAmount, baseAmount: Number(exp.amount||0), currencyId: accountCurrencyId,
                         notes: `عكس قيد: إلغاء مصروف [${exp.name || exp.title || 'محذوف'}] واسترداد المبلغ.`
                     });
                     localStorage.setItem('cashtop_funds_db_v4', JSON.stringify(fundsDB));
