@@ -67,8 +67,41 @@
         .editable-price-control input { width: 100%; border: none; outline: none; font-size: 13px; font-weight: bold; text-align: center; color: #333; padding: 3px 0; }
         .currency-black { font-size: 12px; font-weight: bold; margin-right: 2px; }
 
+        .item-top-actions { display: flex; align-items: center; gap: 5px; }
+        .btn-item-info { width: 30px; height: 30px; border: 1px solid #cbd5e1; border-radius: 50%; background: #eef2ff; color: #4f46e5; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; transition: transform .16s ease, background-color .16s ease, color .16s ease, border-color .16s ease; }
+        .btn-item-info:hover { background: #4f46e5; color: #fff; border-color: #4f46e5; transform: translateY(-1px); }
         .btn-delete-item { background: none; border: none; color: #dd4b39; cursor: pointer; font-size: 14px; padding: 4px; }
+        .price-total-wrap { display: flex; align-items: center; gap: 10px; direction: rtl; min-width: 0; }
+        .item-line-total { color: #00a65a; font-size: 12px; font-weight: 800; font-family: 'Cairo', sans-serif; white-space: nowrap; }
+        .item-line-total strong { font-size: 13px; color: #008d4c; }
         .basket-fast-actions-mobile { display: none; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 5px; }
+
+        .product-type-badge { display:inline-flex; align-items:center; gap:4px; padding:2px 7px; border-radius:999px; background:#eef2ff; color:#4f46e5; font-size:9px; font-weight:800; }
+        #itemInfoModal .modal-box { border-top: 4px solid #605ca8; max-width: 430px; transform: translateY(8px) scale(.985); opacity: 0; transition: transform .2s ease, opacity .2s ease; }
+        #itemInfoModal.active .modal-box { transform: none; opacity: 1; }
+        .item-insight-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+        .item-insight-card { border:1px solid #e2e8f0; border-radius:8px; padding:12px; background:#f8fafc; min-height:86px; display:flex; flex-direction:column; gap:5px; }
+        .item-insight-card .label { font-size:10px; color:#64748b; font-weight:700; display:flex; align-items:center; gap:6px; }
+        .item-insight-card .value { font-size:17px; color:#1e293b; font-weight:800; }
+        .item-insight-card.cost { background:#eff6ff; border-color:#bfdbfe; }
+        .item-insight-card.cost .label, .item-insight-card.cost .value { color:#1d4ed8; }
+        .item-insight-card.sale { background:#f0fdf4; border-color:#bbf7d0; }
+        .item-insight-card.sale .label, .item-insight-card.sale .value { color:#15803d; }
+        .item-insight-card.profit { background:#ecfdf3; border-color:#a7f3d0; }
+        .item-insight-card.profit .label, .item-insight-card.profit .value { color:#067647; }
+        .item-insight-card.loss { background:#fff1f2; border-color:#fecdd3; }
+        .item-insight-card.loss .label, .item-insight-card.loss .value { color:#be123c; }
+        .item-insight-note { margin-top:10px; padding:10px 12px; border-radius:7px; background:#fff7ed; color:#9a3412; font-size:10px; line-height:1.8; border:1px solid #fed7aa; }
+        @media (max-width: 520px) {
+            .item-row-controls { gap:6px; }
+            .price-total-wrap { gap:6px; }
+            .item-line-total { font-size:10px; }
+            .item-line-total strong { font-size:11px; }
+            .editable-price-control { max-width:82px; }
+            .item-insight-grid { grid-template-columns:1fr 1fr; gap:7px; }
+            .item-insight-card { padding:10px 8px; min-height:80px; }
+            .item-insight-card .value { font-size:14px; }
+        }
 
         /* شريط الحسابات السفلي الاحترافي للابتوب */
         .desktop-fixed-footer { position: fixed; bottom: 0; left: 0; right: 0; background-color: #f8fafc; color: #334155; padding: 12px 25px; box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.08); border-top: 2px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; z-index: 999; }
@@ -237,15 +270,15 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Firebase sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=54">
+    <link rel="stylesheet" href="cashtop-core.css?v=56">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="barcode-tools.js?v=20"></script>
-    <script src="cashtop-core.js?v=54"></script><script src="push-config.js?v=54"></script><script src="push-client.js?v=54"></script>
+    <script src="cashtop-core.js?v=56"></script><script src="push-config.js?v=56"></script><script src="push-client.js?v=56"></script><script src="transient-notifications.js?v=56"></script>
     <script src="multi-system.js?v=51"></script>
     <script src="firebase-config.js?v=19"></script>
     <script src="accounting-engine.js"></script>
     <script src="cashtop-printer.js?v=48"></script>
-    <script src="firebase-sync.js?v=54"></script>
+    <script src="firebase-sync.js?v=56"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -540,6 +573,37 @@
         </div>
     </div>
 
+    <!-- نافذة معلومات الصنف داخل السلة -->
+    <div class="modal-overlay" id="itemInfoModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fa-solid fa-circle-info" style="color:#605ca8;"></i> معلومات الصنف والربح المتوقع</div>
+                <button class="modal-close" type="button" onclick="closeModal('itemInfoModal')">&times;</button>
+            </div>
+            <div style="font-size:13px;font-weight:800;color:#334155;margin-bottom:10px;" id="itemInfoName">الصنف</div>
+            <div class="item-insight-grid">
+                <div class="item-insight-card cost">
+                    <div class="label"><i class="fa-solid fa-coins"></i><span id="itemInfoCostLabel">تكلفة الوحدة المحددة</span></div>
+                    <div class="value" id="itemInfoCost">0.00</div>
+                </div>
+                <div class="item-insight-card sale">
+                    <div class="label"><i class="fa-solid fa-tag"></i> سعر البيع الحالي</div>
+                    <div class="value" id="itemInfoSale">0.00</div>
+                </div>
+                <div class="item-insight-card" id="itemInfoProfitCard">
+                    <div class="label"><i class="fa-solid fa-chart-line"></i><span id="itemInfoProfitLabel">الربح المقدر للوحدة</span></div>
+                    <div class="value" id="itemInfoProfit">0.00</div>
+                </div>
+                <div class="item-insight-card" id="itemInfoLineProfitCard">
+                    <div class="label"><i class="fa-solid fa-calculator"></i><span id="itemInfoLineProfitLabel">ربح الكمية الحالية</span></div>
+                    <div class="value" id="itemInfoLineProfit">0.00</div>
+                </div>
+            </div>
+            <div class="item-insight-note"><i class="fa-solid fa-wand-magic-sparkles"></i> القيم تقديرية وتتغير مباشرة حسب سعر البيع والكمية والوحدة المختارة في السلة.</div>
+            <div class="modal-footer"><button type="button" class="btn-submit" onclick="closeModal('itemInfoModal')">تم</button></div>
+        </div>
+    </div>
+
     <!-- حاوية التنبيهات -->
     <div id="toast-container"></div>
 
@@ -588,6 +652,8 @@
 
         // أي قيمة قديمة أو تالفة لن توقف الكاشير أو تمنع أزرار السلة والبيانات.
         let productsData = readArray('cashtop_products');
+        let materialsData = readArray('cashtop_materials');
+        let manufacturingRecipesData = readArray('cashtop_manufacturing_recipes');
         let customersData = readArray('cashtop_customers');
         let branchesData = readArray('cashtop_branches');
         const cashierSession = window.Cashtop?.getSession?.() || readObject('cashtop_session', {});
@@ -697,6 +763,8 @@
                 // لا نستبدله بتحديث خارجي قبل الحفظ أو الإلغاء.
                 if (!(editingOriginalInvoice && editingInventoryRestored)) productsData = readArray('cashtop_products');
             }
+            if (!key || key === 'cashtop_materials') materialsData = readArray('cashtop_materials');
+            if (!key || key === 'cashtop_manufacturing_recipes') manufacturingRecipesData = readArray('cashtop_manufacturing_recipes');
             if (!key || key === 'cashtop_customers') customersData = readArray('cashtop_customers');
             if (!key || key === 'cashtop_customer_groups') customerGroupsData = readArray('cashtop_customer_groups');
             if (!key || key === 'cashtop_branches') branchesData = readArray('cashtop_branches');
@@ -715,10 +783,10 @@
 
         window.addEventListener('storage', event => {
             const key = String(event.key || '').replace(/^.*::(cashtop_[^:]+)$/, '$1');
-            if (['cashtop_products','cashtop_customers','cashtop_customer_groups','cashtop_branches','cashtop_funds_db','cashtop_settings'].includes(key)) refreshCashierDataFromStorage(key);
+            if (['cashtop_products','cashtop_materials','cashtop_manufacturing_recipes','cashtop_customers','cashtop_customer_groups','cashtop_branches','cashtop_funds_db','cashtop_settings'].includes(key)) refreshCashierDataFromStorage(key);
         });
         window.addEventListener('cashtop:remote-applied', event => {
-            if (['cashtop_products','cashtop_customers','cashtop_customer_groups','cashtop_branches','cashtop_funds_db','cashtop_settings'].includes(event.detail?.key)) refreshCashierDataFromStorage(event.detail.key);
+            if (['cashtop_products','cashtop_materials','cashtop_manufacturing_recipes','cashtop_customers','cashtop_customer_groups','cashtop_branches','cashtop_funds_db','cashtop_settings'].includes(event.detail?.key)) refreshCashierDataFromStorage(event.detail.key);
         });
 
         function refreshCashierFundsNow() {
@@ -1008,25 +1076,36 @@
         }
 
         function validateStockBeforeIssue(items, branchId = stockBranchId) {
-            const requirements = collectStockRequirements(items);
-            for (const [productId, requiredPieces] of requirements.products) {
+            const productReq = new Map(), materialReq = new Map(), variants = new Map();
+            (items || []).forEach(item => {
+                if (!item || item.isCustom) return;
+                const product = productsData.find(prod => String(prod.id) === String(item.id));
+                if (!product) return;
+                if (isCompositeProduct(product) && !item.isVariant) {
+                    compositeRequirements(product.id, itemQuantityInPieces(item)).forEach(row => {
+                        const map = row.sourceType === 'material' ? materialReq : productReq;
+                        map.set(String(row.itemId), roundStockQuantity((map.get(String(row.itemId)) || 0) + row.quantityPieces));
+                    });
+                } else if (item.isVariant) {
+                    const key = `${item.id}::${item.variantSize || ''}::${item.variantColor || ''}`;
+                    variants.set(key, roundStockQuantity((variants.get(key) || 0) + Number(item.qty || 0)));
+                } else productReq.set(String(item.id), roundStockQuantity((productReq.get(String(item.id)) || 0) + itemQuantityInPieces(item)));
+            });
+            for (const [productId, requiredPieces] of productReq) {
                 const product = productsData.find(prod => String(prod.id) === productId);
-                if (!product) return { ok: false, message: 'أحد أصناف السلة لم يعد موجوداً في المخزون.' };
                 const available = roundStockQuantity(getProductStockForBranch(product, branchId));
-                if (available + 1e-9 < requiredPieces) {
-                    return { ok: false, message: `المخزون غير كافٍ للصنف [${product.name || productId}]. المتاح ${quantityDisplay(available)} والمطلوب ${quantityDisplay(requiredPieces)}.` };
-                }
+                if (!product || available + 1e-9 < requiredPieces) return { ok:false, message:`المخزون غير كافٍ للمكون [${product?.name || productId}]. المتاح ${quantityDisplay(available)} والمطلوب ${quantityDisplay(requiredPieces)}.` };
             }
-            for (const [key, requiredQuantity] of requirements.variants) {
-                const [productId, size, color] = key.split('::');
-                const product = productsData.find(prod => String(prod.id) === productId);
-                const variant = product?.variants?.find(item => String(item.size || '') === size && String(item.color || '') === color);
-                const available = roundStockQuantity(getVariantStockForBranch(variant, branchId));
-                if (!product || !variant || available + 1e-9 < requiredQuantity) {
-                    return { ok: false, message: `المخزون غير كافٍ للمقاس المحدد من [${product?.name || productId}].` };
-                }
+            for (const [materialId, requiredPieces] of materialReq) {
+                const material = materialsData.find(row => String(row.id) === materialId);
+                const available = roundStockQuantity(componentBaseStock(material, branchId));
+                if (!material || available + 1e-9 < requiredPieces) return { ok:false, message:`مخزون الصنف التصنيعي غير كافٍ [${material?.name || materialId}]. المتاح ${quantityDisplay(available)} والمطلوب ${quantityDisplay(requiredPieces)}.` };
             }
-            return { ok: true, requirements };
+            for (const [key, requiredQuantity] of variants) {
+                const [productId, size, color] = key.split('::'), product = productsData.find(prod => String(prod.id) === productId), variant = product?.variants?.find(v => String(v.size || '') === size && String(v.color || '') === color), available = roundStockQuantity(getVariantStockForBranch(variant, branchId));
+                if (!product || !variant || available + 1e-9 < requiredQuantity) return {ok:false,message:`المخزون غير كافٍ للمقاس المحدد من [${product?.name || productId}].`};
+            }
+            return { ok:true };
         }
 
         function verifyPersistedStock(expectedProducts, touchedItems) {
@@ -1053,7 +1132,10 @@
             (items || []).forEach(item => {
                 if (item.isCustom) return;
                 const product = productsData.find(prod => String(prod.id) === String(item.id));
-                if (product) changeProductStockForBranch(product, item, direction, branchId);
+                if (product) {
+                    if (isCompositeProduct(product) && !item.isVariant) changeCompositeStock(product, item, direction, branchId);
+                    else changeProductStockForBranch(product, item, direction, branchId);
+                }
             });
         }
 
@@ -1105,6 +1187,75 @@
             }
         }
 
+        function manufacturingRecipeForProduct(productId) {
+            const product = productsData.find(item => String(item.id) === String(productId));
+            return manufacturingRecipesData.find(recipe => String(recipe.finishedProductId) === String(productId) && (recipe.consumptionMode === 'onSale' || recipe.virtualStock === true || product?.manufacturingMode === 'components-on-sale' || product?.generatedByManufacturing === true)) || null;
+        }
+
+        function isCompositeProduct(product) { return Boolean(product && manufacturingRecipeForProduct(product.id)); }
+
+        function inventoryComponent(type, id) {
+            return type === 'material' ? materialsData.find(x => String(x.id) === String(id)) : productsData.find(x => String(x.id) === String(id));
+        }
+
+        function componentBaseStock(item, branchId = stockBranchId) {
+            if (!item) return 0;
+            if (isMainStockBranch(branchId)) return Math.max(0, Number(item.stockPieces || 0));
+            return Math.max(0, Number(item.branchStocks?.[branchId] ?? item.stockPieces ?? 0));
+        }
+
+        function componentUnitFactor(component, unitId) {
+            const chain = window.CashtopMulti?.normalizeProductChain?.(component) || component?.unitChain || [{id:'piece',factorToBase:1}];
+            return Math.max(0.000001, Number(chain.find(level => String(level.id) === String(unitId))?.factorToBase || 1));
+        }
+
+        function compositeRequirements(productId, soldFinishedPieces) {
+            const recipe = manufacturingRecipeForProduct(productId);
+            if (!recipe) return [];
+            return (recipe.ingredients || []).map(ingredient => {
+                const sourceType = ingredient.sourceType === 'material' ? 'material' : 'product';
+                const itemId = ingredient.itemId || ingredient.productId;
+                const component = inventoryComponent(sourceType, itemId);
+                const factor = componentUnitFactor(component, ingredient.unitId);
+                const quantityPieces = roundStockQuantity(Number(ingredient.qty ?? ingredient.qtyPerUnit ?? 0) * Number(soldFinishedPieces || 0) * factor);
+                return { sourceType, itemId, component, quantityPieces, unitId: ingredient.unitId || '', name: component?.name || ingredient.name || '' };
+            }).filter(x => x.itemId && x.quantityPieces > 0);
+        }
+
+        function compositeAvailablePieces(productId, branchId = stockBranchId) {
+            const req = compositeRequirements(productId, 1);
+            if (!req.length) return Number.POSITIVE_INFINITY;
+            return req.reduce((max, row) => Math.min(max, componentBaseStock(row.component, branchId) / Math.max(0.000001, row.quantityPieces)), Number.POSITIVE_INFINITY);
+        }
+
+        function changeComponentBaseStock(row, direction, branchId = stockBranchId) {
+            const component = row.component || inventoryComponent(row.sourceType, row.itemId);
+            if (!component) return;
+            const qty = roundStockQuantity(row.quantityPieces || 0);
+            if (row.sourceType === 'product') {
+                const chain = cashierUnitChainForProduct(component), baseUnit = chain[0]?.id || 'piece';
+                const fake = { id: component.id, qty, selectedUnit: baseUnit, isCustom: false, isVariant: false, lotAllocations: row.lotAllocations || [] };
+                changeProductStockForBranch(component, fake, direction, branchId);
+                if (direction < 0) row.lotAllocations = fake.lotAllocations || [];
+                return;
+            }
+            if (isMainStockBranch(branchId)) component.stockPieces = roundStockQuantity(Number(component.stockPieces || 0) + direction * qty);
+            else {
+                if (!component.branchStocks || typeof component.branchStocks !== 'object') component.branchStocks = {};
+                const next = roundStockQuantity(Number(component.branchStocks[branchId] ?? component.stockPieces ?? 0) + direction * qty);
+                component.branchStocks[branchId] = next;
+                component.stockPieces = next;
+            }
+        }
+
+        function changeCompositeStock(product, item, direction, branchId = stockBranchId) {
+            let rows = direction > 0 && Array.isArray(item.componentAllocations) && item.componentAllocations.length
+                ? item.componentAllocations.map(row => ({...row, component: inventoryComponent(row.sourceType, row.itemId)}))
+                : compositeRequirements(product.id, itemQuantityInPieces(item));
+            rows.forEach(row => changeComponentBaseStock(row, direction, branchId));
+            if (direction < 0) item.componentAllocations = rows.map(({component, ...row}) => row);
+        }
+
         // ==========================================
         // المخزون الوهمي في السلة
         // ==========================================
@@ -1121,6 +1272,7 @@
         function getAvailableStock(id) {
             const prod = productsData.find(p => String(p.id) === String(id));
             if(!prod) return 0;
+            if (isCompositeProduct(prod)) return compositeAvailablePieces(prod.id) - getBasketPiecesForProduct(id);
             return getProductStockForBranch(prod) - getBasketPiecesForProduct(id);
         }
 
@@ -1263,7 +1415,7 @@
                 
                 let stockStr = '';
                 if (isOutOfStock) {
-                    stockStr = 'نفد';
+                    stockStr = isCompositeProduct(prod) ? 'المخزون نفد' : 'نفد';
                 } else {
                     if (prod.hasVariants) {
                         stockStr = `المقاسات: ${availStock}`;
@@ -1287,6 +1439,7 @@
                 card.innerHTML = `
                     <div class="product-icon-box"><i class="fa-solid fa-box"></i></div>
                     <div class="product-item-title">${prod.name}</div>
+                    ${isCompositeProduct(prod) ? '<div class="product-type-badge"><i class="fa-solid fa-cube"></i> غير متعدد</div>' : ''}
                     <div class="product-item-price">${cashierBaseSymbol()} ${moneyDisplay(getEffectiveProductPrice(prod, 'piece'))}</div>
                     <div class="stock-text">${stockStr}</div>
                 `;
@@ -1461,7 +1614,10 @@
                             <span class="item-title">${item.name}</span>
                             ${unitSelectorHtml}
                         </div>
-                        <button class="btn-delete-item" onclick="removeBasketItem(${index})"><i class="fa-solid fa-trash-can"></i></button>
+                        <div class="item-top-actions">
+                            <button type="button" class="btn-item-info" onclick="openBasketItemInfo(${index})" title="معلومات التكلفة والربح"><i class="fa-solid fa-circle-exclamation"></i></button>
+                            <button class="btn-delete-item" onclick="removeBasketItem(${index})" title="حذف الصنف"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>
                     </div>
                     <div class="item-row-controls">
                         <div class="quantity-control">
@@ -1469,9 +1625,12 @@
                             <input type="number" step="${getQuantitySettings().qtyByPrice ? 'any' : getQuantitySettings().step}" min="0.000001" class="qty-num" value="${quantityDisplay(item.qty)}" onchange="changeQtyDirect(${index}, this.value)">
                             <button type="button" class="btn-qty" onclick="updateQty(${index}, 1)" title="زيادة 1"><i class="fa-solid fa-plus"></i></button>
                         </div>
-                        <div class="editable-price-control">
-                            <input type="number" step="0.001" value="${(getQuantitySettings().qtyByPrice ? Number(item.price || 0) * Number(item.qty || 0) : Number(item.price || 0)).toFixed(3).replace(/\.?0+$/, '')}" onchange="changePriceDirect(${index}, this.value)" title="${getQuantitySettings().qtyByPrice ? 'أدخل المبلغ المطلوب لتتغير الكمية تلقائياً' : 'سعر الوحدة'}">
-                            <span class="currency-black">${cashierBaseSymbol()}</span>
+                        <div class="price-total-wrap">
+                            <span class="item-line-total">الإجمالي: <strong>${moneyDisplay(Number(item.price || 0) * Number(item.qty || 0))} ${cashierBaseSymbol()}</strong></span>
+                            <div class="editable-price-control">
+                                <input type="number" step="0.001" value="${(getQuantitySettings().qtyByPrice ? Number(item.price || 0) * Number(item.qty || 0) : Number(item.price || 0)).toFixed(3).replace(/\.?0+$/, '')}" onchange="changePriceDirect(${index}, this.value)" title="${getQuantitySettings().qtyByPrice ? 'أدخل المبلغ المطلوب لتتغير الكمية تلقائياً' : 'سعر الوحدة'}">
+                                <span class="currency-black">${cashierBaseSymbol()}</span>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -1578,8 +1737,48 @@
             } else {
                 item.price = enteredValue;
                 item.referencePrice = enteredValue;
-                calculateTotals(false);
+                renderBasket();
             }
+        }
+
+        function selectedBasketItemUnitMeta(item) {
+            if (!item) return { name: 'وحدة', factor: 1, cost: 0 };
+            if (item.isCustom) return { name: item.unitName || 'وحدة', factor: 1, cost: Number(item.cost || 0) };
+            if (item.isVariant) return { name: item.unitName || item.pieceName || 'قطعة', factor: 1, cost: Number(item.cost || item.costPerPiece || 0) };
+            const product = productsData.find(product => String(product.id) === String(item.id)) || item;
+            const chain = cashierUnitChainForProduct(product);
+            const unitId = cashierNormalizeUnitId(product, item.selectedUnit);
+            const unit = chain.find(level => String(level.id) === String(unitId)) || chain[0] || { name: 'قطعة', factorToBase: 1 };
+            const factor = Math.max(0.000001, Number(unit.factorToBase || 1));
+            const baseCost = Number(product.cost ?? item.costPerPiece ?? 0);
+            return { name: unit.name || 'قطعة', factor, cost: baseCost * factor };
+        }
+
+        function openBasketItemInfo(index) {
+            const item = basketItems[index];
+            if (!item) return;
+            const meta = selectedBasketItemUnitMeta(item);
+            const sale = Number(item.price || 0);
+            const qty = Number(item.qty || 0);
+            const unitProfit = sale - Number(meta.cost || 0);
+            const lineProfit = unitProfit * qty;
+            const isLoss = unitProfit < -1e-9;
+            const lineIsLoss = lineProfit < -1e-9;
+            document.getElementById('itemInfoName').textContent = `${item.name} — ${meta.name}`;
+            document.getElementById('itemInfoCostLabel').textContent = `تكلفة ${meta.name}`;
+            document.getElementById('itemInfoCost').textContent = `${moneyDisplay(meta.cost)} ${cashierBaseSymbol()}`;
+            document.getElementById('itemInfoSale').textContent = `${moneyDisplay(sale)} ${cashierBaseSymbol()}`;
+            document.getElementById('itemInfoProfitLabel').textContent = isLoss ? `الخسارة المقدرة لكل ${meta.name}` : `الربح المقدر لكل ${meta.name}`;
+            document.getElementById('itemInfoProfit').textContent = `${moneyDisplay(Math.abs(unitProfit))} ${cashierBaseSymbol()}`;
+            document.getElementById('itemInfoLineProfitLabel').textContent = lineIsLoss ? 'خسارة الكمية الحالية' : 'ربح الكمية الحالية';
+            document.getElementById('itemInfoLineProfit').textContent = `${moneyDisplay(Math.abs(lineProfit))} ${cashierBaseSymbol()}`;
+            const unitCard = document.getElementById('itemInfoProfitCard');
+            const lineCard = document.getElementById('itemInfoLineProfitCard');
+            unitCard.classList.remove('profit', 'loss');
+            lineCard.classList.remove('profit', 'loss');
+            unitCard.classList.add(isLoss ? 'loss' : 'profit');
+            lineCard.classList.add(lineIsLoss ? 'loss' : 'profit');
+            openModal('itemInfoModal');
         }
 
         function removeBasketItem(index) { basketItems.splice(index, 1); renderBasket(); }
@@ -1783,7 +1982,7 @@
             if (invoiceSaveInProgress) { showToast('جاري حفظ الفاتورة، انتظر لحظة.', 'warning'); return; }
             invoiceSaveInProgress = true;
             setInvoiceSaveBusy(true);
-            const snapshotKeys = ['cashtop_products','cashtop_customers','cashtop_funds_db','cashtop_invoices','cashtop_sales_offers'];
+            const snapshotKeys = ['cashtop_products','cashtop_materials','cashtop_customers','cashtop_funds_db','cashtop_invoices','cashtop_sales_offers'];
             const snapshots = Object.fromEntries(snapshotKeys.map(key => [key, localStorage.getItem(key)]));
             try {
             const requiredPermission = editingOriginalInvoice ? 'sales.edit' : 'sales.create';
@@ -1869,6 +2068,7 @@
             });
             const invoiceChanges = {
                 cashtop_products: productsData,
+                cashtop_materials: materialsData,
                 cashtop_customers: customersData,
                 cashtop_funds_db: fundsDB,
                 cashtop_invoices: invoicesDB
@@ -1877,6 +2077,7 @@
             if (window.Cashtop?.atomicSetItems) window.Cashtop.atomicSetItems(invoiceChanges, { label: 'save-sales-invoice' });
             else Object.entries(invoiceChanges).forEach(([key, value]) => localStorage.setItem(key, JSON.stringify(value)));
             productsData = verifyPersistedStock(productsData, basketItems);
+            window.CashtopTransientNotifications?.notifyInvoice?.(invoiceObj).catch?.(()=>null);
 
             if(printStatus) {
                 showToast('تم حفظ الفاتورة محلياً، وجاري تجهيز الطباعة.', 'success');
@@ -1913,6 +2114,7 @@
                     if (value == null) localStorage.removeItem(key); else localStorage.setItem(key, value);
                 });
                 productsData = readArray('cashtop_products');
+                materialsData = readArray('cashtop_materials');
                 customersData = readArray('cashtop_customers');
                 fundsDB = readObject('cashtop_funds_db', { accounts: [], accountLogs: [] });
                 showToast('تعذر حفظ الفاتورة بالكامل، وتم التراجع عن أي حركة جزئية لحماية المخزون والحسابات.', 'error');

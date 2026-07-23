@@ -74,7 +74,7 @@
       ['vouchers.view', 'عرض سندات القبض والصرف'], ['expenses.view', 'عرض المصاريف'],
       ['reports.view', 'عرض التقارير'], ['employees.view', 'عرض الموظفين'], ['workers.view', 'عرض العمال والأجور'],
       ['manufacturing.view', 'عرض إدارة التصنيع'], ['offers.view', 'عرض عروض المبيعات'],
-      ['notifications.view', 'عرض الإشعارات'], ['audit.view', 'عرض سجل النشاط والتدقيق'], ['settings.system', 'فتح إعدادات النظام'],
+      ['notifications.view', 'عرض الإشعارات'], ['settings.system', 'فتح إعدادات النظام'],
       ['settings.printer', 'فتح إعدادات الطابعة'], ['settings.tax', 'فتح إعدادات الضريبة'],
       ['settings.storage', 'فتح التخزين والأرشفة'], ['backup.manage', 'فتح النسخ الاحتياطي والاستعادة']
     ]},
@@ -122,7 +122,7 @@
       ['employees.manage', 'إضافة وتعديل وحذف وتعطيل الموظفين'], ['employees.export', 'تصدير بيانات الموظفين'],
       ['permissions.manage', 'تعديل صلاحيات الموظفين'],
       ['workers.manage', 'إضافة وتعديل وحذف العمال'], ['workers.payments', 'صرف رواتب ودفعات وديون العمال'],
-      ['workers.export', 'تصدير بيانات العمال'], ['audit.export', 'تصدير سجل النشاط والتدقيق'], ['agents.manage', 'إضافة وتعديل وحذف المناديب'],
+      ['workers.export', 'تصدير بيانات العمال'], ['agents.manage', 'إضافة وتعديل وحذف المناديب'],
       ['agents.stock', 'تحميل واسترجاع مخزون المناديب'], ['agents.settle', 'تسوية مبيعات المناديب'],
       ['agents.payments', 'دفعات وحسابات المناديب'], ['agents.export', 'تصدير بيانات وحركات المناديب'],
       ['manufacturing.manage', 'إدارة الوصفات وأوامر التصنيع']
@@ -144,7 +144,7 @@
     'customer-groups.html': 'customerGroups.view', 'suppliers.html': 'suppliers.view', 'المناديب.html': 'agents.view',
     'accounts.html': 'accounts.view', 'journal.html': 'journal.view', 'sands.html': 'vouchers.view',
     'المصاريف.html': 'expenses.view', 'التقارير.html': 'reports.view', 'الموظفين.html': 'employees.view',
-    'العمال والاجور.html': 'workers.view', 'audit-trail.html': 'audit.view', 'ادارة التصنيع.html': 'manufacturing.view', 'sales-offers.html': 'offers.view',
+    'العمال والاجور.html': 'workers.view', 'ادارة التصنيع.html': 'manufacturing.view', 'sales-offers.html': 'offers.view',
     'notifications.html': 'notifications.view', 'setting.html': 'settings.system', 'printer-settings.html': 'settings.printer',
     'tax-settings.html': 'settings.tax', 'storage-settings.html': 'settings.storage',
     'استيراد وتصدير ل كل قسم.html': 'backup.manage'
@@ -307,7 +307,7 @@
     suppliers: ['suppliers.view', 'purchases.view', 'purchaseReturns.view', 'purchases.create', 'purchases.edit', 'purchases.delete', 'purchases.export', 'purchases.discount', 'purchaseReturns.create', 'purchaseReturns.edit', 'purchaseReturns.delete', 'purchaseReturns.export', 'suppliers.create', 'suppliers.edit', 'suppliers.delete', 'suppliers.balance', 'suppliers.export'],
     funds: ['accounts.view', 'journal.view', 'vouchers.view', 'expenses.view', 'accounts.manage', 'finance.transactions', 'finance.deleteTransactions', 'finance.export', 'expenses.manage', 'expenses.export', 'vouchers.manage', 'vouchers.export', 'journal.manage', 'journal.export'],
     reports: ['reports.view', 'reports.export', 'reports.send'],
-    settings: ['employees.view', 'workers.view', 'agents.view', 'manufacturing.view', 'offers.view', 'notifications.view', 'settings.system', 'settings.printer', 'settings.tax', 'settings.storage', 'backup.manage', 'employees.manage', 'employees.export', 'permissions.manage', 'workers.manage', 'workers.payments', 'workers.export', 'audit.view', 'audit.export', 'agents.manage', 'agents.stock', 'agents.settle', 'agents.payments', 'agents.export', 'manufacturing.manage', 'settings.edit', 'settings.sms', 'printer.edit', 'tax.edit', 'storage.manage', 'offers.manage', 'notifications.manage', 'sync.run', 'backup.exportImport', 'app.install']
+    settings: ['employees.view', 'workers.view', 'agents.view', 'manufacturing.view', 'offers.view', 'notifications.view', 'settings.system', 'settings.printer', 'settings.tax', 'settings.storage', 'backup.manage', 'employees.manage', 'employees.export', 'permissions.manage', 'workers.manage', 'workers.payments', 'workers.export', 'agents.manage', 'agents.stock', 'agents.settle', 'agents.payments', 'agents.export', 'manufacturing.manage', 'settings.edit', 'settings.sms', 'printer.edit', 'tax.edit', 'storage.manage', 'offers.manage', 'notifications.manage', 'sync.run', 'backup.exportImport', 'app.install']
   };
 
   function normalizePermissions(input) {
@@ -2566,7 +2566,7 @@
     'warehouses.html': 'المخازن', 'branches.html': 'الفروع', 'units.html': 'الوحدات',
     'shortages.html': 'نواقص المخزون', 'barcode-generator.html': 'مولد الباركود',
     'المناديب.html': 'المناديب', 'الموظفين.html': 'الموظفون',
-    'العمال والاجور.html': 'العمال والأجور', 'audit-trail.html': 'سجل النشاط', 'التقارير.html': 'التقارير',
+    'العمال والاجور.html': 'العمال والأجور', 'التقارير.html': 'التقارير',
     'setting.html': 'إعدادات النظام', 'printer-settings.html': 'إعدادات الطابعة',
     'sales-offers.html': 'عروض المبيعات',
     'tax-settings.html': 'إعدادات الضريبة', 'notifications.html': 'الإشعارات',
@@ -2610,7 +2610,7 @@
       ['fa-industry','التصنيع', [['ادارة التصنيع.html','إدارة التصنيع'],backupLink('manufacturing')]],
       ['fa-handshake','العملاء والعلاقات', [['customers.html','العملاء'],['customer-groups.html','مجموعات العملاء'],['المناديب.html','المناديب'],backupLink('relationships')]],
       ['fa-calculator','المالية والمحاسبة', [['accounts.html','الصناديق والحسابات'],['sands.html','سندات القبض والصرف'],['journal.html','دفتر القيود'],['المصاريف.html','المصاريف'],backupLink('finance')]],
-      ['fa-users-gear','الموارد البشرية', [['الموظفين.html','الموظفون'],['العمال والاجور.html','العمال والأجور'],['audit-trail.html','سجل النشاط'],backupLink('hr')]],
+      ['fa-users-gear','الموارد البشرية', [['الموظفين.html','الموظفون'],['العمال والاجور.html','العمال والأجور'],backupLink('hr')]],
       ['fa-chart-line','التقارير والمتابعة', [['التقارير.html','التقارير'],['notifications.html','الإشعارات'],backupLink('reports')]],
       ['fa-gears','النظام والإعدادات', [['tax-settings.html','إعدادات الضريبة'],['storage-settings.html','التخزين والأرشفة'],['استيراد وتصدير ل كل قسم.html','النسخ الاحتياطي الشامل'],['setting.html','إعدادات النظام'],['printer-settings.html','إعدادات الطابعة'],backupLink('settings')]]
     ];
@@ -2868,6 +2868,12 @@
     } catch (error) { return { ok:false, reason:error?.message || 'error' }; }
   }
 
+
+  function notificationBrandIcon() {
+    const settings = safeJson(localStorage.getItem('cashtop_settings'), {}) || {};
+    return String(settings.logo || '').trim() || 'app-icon.png';
+  }
+
   async function showSystemNotification(title, options = {}) {
     const cfg = getNotificationSettings();
     if (cfg.enabled !== true || !isManagerSession()) return false;
@@ -2875,8 +2881,8 @@
     const payload = {
       title: String(title || 'كاش توب'),
       body: String(options.body || ''),
-      icon: options.icon || 'notification-icon.png',
-      badge: options.badge || 'notification-icon.png',
+      icon: options.icon || notificationBrandIcon(),
+      badge: options.badge || options.icon || notificationBrandIcon(),
       image: options.image || '',
       tag: options.tag || `ct-${Date.now()}`,
       renotify: options.renotify === true,
@@ -2941,7 +2947,7 @@
     navigator.serviceWorker.ready.then(reg=>{
       reg.active?.postMessage?.({type:'CASHTOP_NOTIFICATION_META', payload:{
         enabled:cfg.enabled===true, dailySummaryEnabled:cfg.dailySummaryEnabled!==false,
-        role:'manager', summary, companyId:companyIdFromSession(), updatedAt:Date.now()
+        role:'manager', summary, companyId:companyIdFromSession(), icon:notificationBrandIcon(), updatedAt:Date.now()
       }});
       if (cfg.enabled===true && reg.periodicSync?.register) reg.periodicSync.register('cashtop-daily-summary',{minInterval:60*60*1000}).catch(()=>null);
     }).catch(()=>null);
@@ -2979,7 +2985,7 @@
       persistSmartSeen();
     };
     const dailyTick=()=>{ const now=new Date(), cfg=getNotificationSettings(); if(cfg.enabled===true&&cfg.dailySummaryEnabled!==false&&now.getHours()===23) showTodayProfitNotification(false); syncNotificationSummaryToServiceWorker(); };
-    const onData=event=>{const key=event?.detail?.key||''; if(key==='cashtop_invoices')scanInvoices(); if(['cashtop_products','cashtop_customers','cashtop_invoices','cashtop_employees','cashtop_workers','cashtop_salary_payments'].includes(key))scanSmart(); if(['cashtop_invoices','cashtop_settings','cashtop_notification_settings'].includes(key))syncNotificationSummaryToServiceWorker();};
+    const onData=event=>{const key=event?.detail?.key||''; if(['cashtop_products','cashtop_customers','cashtop_invoices','cashtop_employees','cashtop_workers','cashtop_salary_payments'].includes(key))scanSmart(); if(['cashtop_invoices','cashtop_settings','cashtop_notification_settings'].includes(key))syncNotificationSummaryToServiceWorker();};
     window.addEventListener('cashtop:data-changed',onData); window.addEventListener('cashtop:remote-applied',onData); window.addEventListener('cashtop:external-change',onData);
     setTimeout(()=>{scanSmart();syncNotificationSummaryToServiceWorker();},700);
     setInterval(dailyTick,60*1000);
@@ -3043,7 +3049,7 @@
     root.querySelectorAll?.('.ct-sidebar a[href], .ct-bottom-nav a[href]').forEach(link => {
       const { file } = linkedPageInfo(link);
       const required = PAGE_PERMISSIONS[file];
-      const managerOnly = new Set(['audit-trail.html', 'العمال والاجور.html']);
+      const managerOnly = new Set(['العمال والاجور.html']);
       const blockedForEmployee = session.role === 'employee' && managerOnly.has(file);
       link.hidden = blockedForEmployee || (file === 'setting.html' ? false : Boolean(required && !permissionAllowed(required, session)));
     });
@@ -4144,7 +4150,8 @@
     getSystemSettings, getProfitRate, salePriceFromCost, applySystemBranding, recordIdentity, sortNewestFirstRecords,
     debounce, runWhenIdle, renderVirtualRows, runWorkerTask, queryRecords, atomicSetItems, recoverAtomicTransactions,
     captureModalDraft, restoreModalDraft, clearModalDraft, getAuditPending, getAuditPendingAsync, getAuditPendingCountAsync, completeAuditPending, completeAuditPendingAsync, getRecentAuditCache,
-    getNotificationSettings, requestNotificationPermission, showSystemNotification, showTodayProfitNotification, todaySalesSummary
+    getNotificationSettings, requestNotificationPermission, showSystemNotification,
+    notificationBrandIcon, showTodayProfitNotification, todaySalesSummary
   });
 
   if (IS_APP_PAGE) {

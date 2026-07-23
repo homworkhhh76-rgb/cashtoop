@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v64-r54-audit100-notifications-no-maintenance-cache-first';
+const CACHE_VERSION = 'v66-r56-item-total-insights-composite-stock-sidebar-cache-first';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = `cash-top-2-remote-static-${CACHE_VERSION}`;
 
@@ -13,7 +13,6 @@ const LOCAL_ASSETS = [
   './accounts.html',
   './admin.html',
   './admin.js',
-  './audit-trail.html',
   './app-icon.png',
   './barcode-generator.html',
   './barcode-tools.js',
@@ -46,7 +45,7 @@ const LOCAL_ASSETS = [
   './admin-notifications.html',
   './push-client.js',
   './push-config.js',
-  './notification-icon.png',
+  './transient-notifications.js',
   './offline.html',
   './printer-settings.html',
   './invoice-designer.html',
@@ -379,10 +378,10 @@ const NOTIFICATION_META_CACHE = 'cash-top-2-notification-meta-v1';
 const NOTIFICATION_META_KEY = new URL('./__cashtop_notification_meta__', self.registration.scope).href;
 async function saveNotificationMeta(payload){const c=await caches.open(NOTIFICATION_META_CACHE);await c.put(NOTIFICATION_META_KEY,new Response(JSON.stringify(payload||{}),{headers:{'Content-Type':'application/json'}}));}
 async function readNotificationMeta(){try{const c=await caches.open(NOTIFICATION_META_CACHE),r=await c.match(NOTIFICATION_META_KEY);return r?await r.json():{};}catch(_){return{}}}
-async function displayNotification(payload={}){const title=String(payload.title||'كاش توب');const options={body:String(payload.body||''),icon:payload.icon||'notification-icon.png',badge:payload.badge||'notification-icon.png',image:payload.image||undefined,tag:payload.tag||`ct-${Date.now()}`,renotify:payload.renotify===true,data:{...(payload.data||{}),url:payload.url||payload.data?.url||'notifications.html'}};return self.registration.showNotification(title,options)}
+async function displayNotification(payload={}){const title=String(payload.title||'كاش توب');const options={body:String(payload.body||''),icon:payload.icon||'app-icon.png',badge:payload.badge||payload.icon||'app-icon.png',image:payload.image||undefined,tag:payload.tag||`ct-${Date.now()}`,renotify:payload.renotify===true,data:{...(payload.data||{}),url:payload.url||payload.data?.url||'notifications.html'}};return self.registration.showNotification(title,options)}
 self.addEventListener('push',event=>{event.waitUntil((async()=>{let payload={};try{payload=event.data?.json?.()||{body:event.data?.text?.()||''}}catch(_){payload={body:event.data?.text?.()||''}}await displayNotification(payload)})())});
 self.addEventListener('notificationclick',event=>{event.notification.close();event.waitUntil((async()=>{const target=new URL(event.notification?.data?.url||'notifications.html',self.registration.scope).href;const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});const existing=windows.find(c=>c.url===target)||windows.find(c=>c.url.startsWith(self.registration.scope));if(existing){await existing.focus();try{existing.navigate(target)}catch(_){}return}await self.clients.openWindow(target)})())});
-self.addEventListener('periodicsync',event=>{if(event.tag!=='cashtop-daily-summary')return;event.waitUntil((async()=>{const meta=await readNotificationMeta();const now=new Date();if(meta.enabled!==true||meta.dailySummaryEnabled===false||meta.role!=='manager'||now.getHours()<23)return;const s=meta.summary||{};const today=now.toISOString().slice(0,10);if(s.dayKey!==today)return;const c=await caches.open(NOTIFICATION_META_CACHE),sentKey=new URL(`./__ct_daily_sent_${encodeURIComponent(meta.companyId||'company')}_${today}`,self.registration.scope).href;if(await c.match(sentKey))return;await displayNotification({title:'مبيعات اليوم والأرباح',body:`المبيعات: ${Number(s.sales||0).toFixed(2)} ${s.symbol||''} — الأرباح: ${Number(s.profit||0).toFixed(2)} ${s.symbol||''} — عدد الفواتير: ${Number(s.count||0)}`,tag:`daily-profit-${meta.companyId||'company'}-${today}`,url:'التقارير.html'});await c.put(sentKey,new Response('1'))})())});
+self.addEventListener('periodicsync',event=>{if(event.tag!=='cashtop-daily-summary')return;event.waitUntil((async()=>{const meta=await readNotificationMeta();const now=new Date();if(meta.enabled!==true||meta.dailySummaryEnabled===false||meta.role!=='manager'||now.getHours()<23)return;const s=meta.summary||{};const today=now.toISOString().slice(0,10);if(s.dayKey!==today)return;const c=await caches.open(NOTIFICATION_META_CACHE),sentKey=new URL(`./__ct_daily_sent_${encodeURIComponent(meta.companyId||'company')}_${today}`,self.registration.scope).href;if(await c.match(sentKey))return;await displayNotification({title:'مبيعات اليوم والأرباح',icon:meta.icon||'app-icon.png',badge:meta.icon||'app-icon.png',body:`المبيعات: ${Number(s.sales||0).toFixed(2)} ${s.symbol||''} — الأرباح: ${Number(s.profit||0).toFixed(2)} ${s.symbol||''} — عدد الفواتير: ${Number(s.count||0)}`,tag:`daily-profit-${meta.companyId||'company'}-${today}`,url:'التقارير.html'});await c.put(sentKey,new Response('1'))})())});
 
 self.addEventListener('message', event => {
   const data = event.data || {};

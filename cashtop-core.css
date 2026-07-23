@@ -1623,3 +1623,20 @@ html, body {
 }
 
 /* Revision 53: instant company broadcast popup. */
+
+/* ===== Revision 56: sidebar always above bottom navigation and fixed page chrome ===== */
+.ct-sidebar { z-index: 9200 !important; }
+.ct-sidebar-overlay { z-index: 9100 !important; }
+@media (min-width: 769px) {
+  .ct-sidebar { z-index: 9200 !important; }
+}
+@media (max-width: 768px) {
+  .ct-sidebar { z-index: 9200 !important; }
+  .ct-sidebar-overlay { z-index: 9100 !important; }
+}
+html.ct-cashier-page .ct-sidebar { z-index: 9200 !important; }
+html.ct-cashier-page .ct-sidebar-overlay { z-index: 9100 !important; }
+
+/* Revision 56: keep the basket insight dialog light and smooth without reintroducing layout shake. */
+#itemInfoModal.modal-overlay > .modal-box { opacity: 0; transition: opacity .18s ease !important; }
+#itemInfoModal.modal-overlay.active > .modal-box { opacity: 1 !important; transition: opacity .18s ease !important; }

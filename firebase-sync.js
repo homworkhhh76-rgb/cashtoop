@@ -538,7 +538,6 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       'sales-offers.html': ['cashtop_sales_offers', 'cashtop_products'],
       'sands.html': ['cashtop_vouchers', 'cashtop_funds_db'],
       'notifications.html': ['cashtop_notification_settings', 'cashtop_products', 'cashtop_invoices', 'cashtop_funds_db'],
-      'audit-trail.html': ['cashtop_employees'],
       'barcode-generator.html': ['cashtop_products', 'cashtop_barcode_settings', 'cashtop_settings'],
       'printer-settings.html': ['cashtop_printer_settings', 'cashtop_barcode_settings', 'cashtop_settings', 'cashtop_invoice_design'],
       'invoice-designer.html': ['cashtop_invoice_design', 'cashtop_printer_settings', 'cashtop_settings', 'cashtop_invoices'],
