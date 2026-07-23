@@ -3,61 +3,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>إشعارات Cash Top</title>
+    <title>لوحة إشعارات Cash Top</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
             display: flex;
             justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f4f4f9;
-            margin: 0;
         }
-        button {
-            padding: 15px 30px;
+        .dashboard {
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+        .dashboard h2 {
+            text-align: center;
+            color: #0044cc; /* لون مقارب لشعار كاش توب */
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        .form-group input[type="text"], .form-group input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+        .btn-row {
+            display: flex;
+            gap: 10px;
+        }
+        .btn-row .form-group {
+            flex: 1;
+        }
+        .send-btn {
+            width: 100%;
+            padding: 15px;
             font-size: 18px;
             color: #fff;
-            background-color: #007bff;
+            background-color: #0044cc;
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            font-weight: bold;
+            margin-top: 10px;
+            transition: background-color 0.3s;
+        }
+        .send-btn:hover {
+            background-color: #003399;
         }
     </style>
 </head>
 <body>
 
-    <button onclick="sendAdvancedNotification()">إرسال إشعار بصورة</button>
+    <div class="dashboard">
+        <h2>إرسال إشعار مخصص</h2>
+        
+        <div class="form-group">
+            <label>عنوان الإشعار:</label>
+            <input type="text" id="notifTitle" placeholder="مثال: خصم جديد في المتجر!" value="تحديث جديد من Cash Top">
+        </div>
+
+        <div class="form-group">
+            <label>نص الإشعار:</label>
+            <input type="text" id="notifBody" placeholder="اكتب تفاصيل الإشعار هنا..." value="تم إضافة ميزات جديدة للنظام، اكتشفها الآن.">
+        </div>
+
+        <div class="form-group">
+            <label>صورة الإشعار (اختياري - من الجهاز):</label>
+            <input type="file" id="notifImage" accept="image/*">
+        </div>
+
+        <div class="form-group">
+            <label>رابط عند الضغط على الإشعار نفسه:</label>
+            <input type="text" id="mainUrl" placeholder="https://..." value="https://google.com">
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+
+        <!-- إعدادات الأزرار الإضافية -->
+        <div class="btn-row">
+            <div class="form-group">
+                <label>اسم الزر الأول:</label>
+                <input type="text" id="btn1Text" placeholder="مثال: عرض التفاصيل" value="عرض التفاصيل">
+            </div>
+            <div class="form-group">
+                <label>رابط الزر الأول:</label>
+                <input type="text" id="btn1Url" placeholder="https://..." value="https://github.com">
+            </div>
+        </div>
+
+        <div class="btn-row">
+            <div class="form-group">
+                <label>اسم الزر الثاني:</label>
+                <input type="text" id="btn2Text" placeholder="مثال: تجاهل" value="الدعم الفني">
+            </div>
+            <div class="form-group">
+                <label>رابط الزر الثاني:</label>
+                <input type="text" id="btn2Url" placeholder="https://...">
+            </div>
+        </div>
+
+        <button class="send-btn" onclick="buildAndSendNotification()">إطلاق الإشعار 🚀</button>
+    </div>
 
     <script>
-        // 1. تسجيل الـ Service Worker عند تحميل الصفحة
+        // تسجيل Service Worker
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js')
-            .then(() => console.log("تم تسجيل Service Worker بنجاح"))
-            .catch(err => console.error("فشل التسجيل:", err));
+            .then(() => console.log("Service Worker جاهز للروابط والأزرار"))
+            .catch(err => console.error("خطأ:", err));
         }
 
-        // 2. دالة إرسال الإشعار
-        function sendAdvancedNotification() {
-            Notification.requestPermission().then(permission => {
-                if (permission === 'granted') {
-                    // استخدام Service Worker لعرض الإشعار (إلزامي للهواتف)
-                    navigator.serviceWorker.ready.then(registration => {
-                        registration.showNotification("تنبيه من Cash Top 🎉", {
-                            body: "هذا النص الخاص بالإشعار، والصورة موجودة بالأسفل!",
-                            icon: "https://cdn-icons-png.flaticon.com/512/843/843260.png", // الأيقونة الصغيرة
-                            image: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=500", // الصورة الكبيرة داخل الإشعار
-                            vibrate: [200, 100, 200], // اهتزاز الجهاز (للهواتف)
-                            badge: "https://cdn-icons-png.flaticon.com/512/843/843260.png"
-                        });
-                    });
-                } else {
-                    alert("لم يتم السماح بالإشعارات.");
-                }
+        async function buildAndSendNotification() {
+            // طلب الصلاحية أولاً
+            let permission = Notification.permission;
+            if (permission !== 'granted') {
+                permission = await Notification.requestPermission();
+            }
+
+            if (permission !== 'granted') {
+                alert("يرجى السماح بالإشعارات أولاً!");
+                return;
+            }
+
+            // جلب البيانات من الحقول
+            const title = document.getElementById('notifTitle').value || 'إشعار جديد';
+            const body = document.getElementById('notifBody').value || '';
+            const mainUrl = document.getElementById('mainUrl').value;
+            
+            const btn1Text = document.getElementById('btn1Text').value;
+            const btn1Url = document.getElementById('btn1Url').value;
+            const btn2Text = document.getElementById('btn2Text').value;
+            const btn2Url = document.getElementById('btn2Url').value;
+
+            // معالجة الصورة المرفوعة من الجهاز
+            const imageFile = document.getElementById('notifImage').files[0];
+            let imageUrl = null;
+            if (imageFile) {
+                // تحويل الصورة المرفوعة إلى رابط محلي مؤقت لعرضها في الإشعار
+                imageUrl = URL.createObjectURL(imageFile);
+            }
+
+            // تجهيز الأزرار
+            let actions = [];
+            if (btn1Text) actions.push({ action: 'btn1', title: btn1Text });
+            if (btn2Text) actions.push({ action: 'btn2', title: btn2Text });
+
+            // إرسال الإشعار عبر الـ Service Worker
+            navigator.serviceWorker.ready.then(registration => {
+                registration.showNotification(title, {
+                    body: body,
+                    icon: '1000085180.png', // تم استخدام شعارك كأيقونة للإشعار
+                    badge: '1000085180.png', // الأيقونة الصغيرة في شريط الهاتف العلوي
+                    image: imageUrl, // الصورة الكبيرة المستوردة من الجهاز
+                    actions: actions, // الأزرار
+                    data: { // نمرر الروابط هنا ليستخدمها ملف sw.js عند الضغط
+                        mainUrl: mainUrl,
+                        btn1Url: btn1Url,
+                        btn2Url: btn2Url
+                    }
+                });
             });
         }
     </script>
-
 </body>
 </html>
