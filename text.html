@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تجربة الإشعارات</title>
+    <title>إشعارات Cash Top</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -23,55 +23,39 @@
             border-radius: 8px;
             cursor: pointer;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: background-color 0.3s;
-        }
-        button:hover {
-            background-color: #0056b3;
         }
     </style>
 </head>
 <body>
 
-    <button onclick="sendNotification()">إرسال إشعار</button>
+    <button onclick="sendAdvancedNotification()">إرسال إشعار بصورة</button>
 
     <script>
-        function sendNotification() {
-            // 1. التحقق مما إذا كان المتصفح يدعم الإشعارات أساساً
-            if (!("Notification" in window)) {
-                alert("متصفحك لا يدعم إشعارات الويب.");
-                return;
-            }
-
-            // 2. إذا كان المستخدم قد أعطى الإذن مسبقاً، نعرض الإشعار
-            if (Notification.permission === "granted") {
-                createNotification();
-            } 
-            // 3. إذا لم يتم تحديد الإذن بعد، نطلب الصلاحية من المستخدم
-            else if (Notification.permission !== "denied") {
-                Notification.requestPermission().then(permission => {
-                    if (permission === "granted") {
-                        createNotification();
-                    }
-                });
-            } 
-            // 4. إذا قام المستخدم بحظر الإشعارات مسبقاً
-            else {
-                alert("لقد قمت بحظر الإشعارات. يرجى تفعيلها من إعدادات المتصفح (علامة القفل بجانب الرابط).");
-            }
+        // 1. تسجيل الـ Service Worker عند تحميل الصفحة
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+            .then(() => console.log("تم تسجيل Service Worker بنجاح"))
+            .catch(err => console.error("فشل التسجيل:", err));
         }
 
-        // وظيفة بناء الإشعار وتفاصيله
-        function createNotification() {
-            const notification = new Notification("نجاح العملية! 🎉", {
-                body: "هذا إشعار تجريبي يعمل بشكل ممتاز من صفحة الويب.",
-                icon: "https://cdn-icons-png.flaticon.com/512/843/843260.png" // رابط لأيقونة اختيارية
+        // 2. دالة إرسال الإشعار
+        function sendAdvancedNotification() {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    // استخدام Service Worker لعرض الإشعار (إلزامي للهواتف)
+                    navigator.serviceWorker.ready.then(registration => {
+                        registration.showNotification("تنبيه من Cash Top 🎉", {
+                            body: "هذا النص الخاص بالإشعار، والصورة موجودة بالأسفل!",
+                            icon: "https://cdn-icons-png.flaticon.com/512/843/843260.png", // الأيقونة الصغيرة
+                            image: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=500", // الصورة الكبيرة داخل الإشعار
+                            vibrate: [200, 100, 200], // اهتزاز الجهاز (للهواتف)
+                            badge: "https://cdn-icons-png.flaticon.com/512/843/843260.png"
+                        });
+                    });
+                } else {
+                    alert("لم يتم السماح بالإشعارات.");
+                }
             });
-
-            // إجراء عند الضغط على الإشعار نفسه (مثلاً إعادة التركيز على الصفحة)
-            notification.onclick = function() {
-                window.focus();
-                this.close();
-            };
         }
     </script>
 
