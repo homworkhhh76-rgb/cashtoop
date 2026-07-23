@@ -58,25 +58,12 @@
         .send-btn:hover {
             background-color: #003399;
         }
-        .warning-note {
-            background-color: #fff3cd;
-            color: #856404;
-            padding: 10px;
-            border-radius: 6px;
-            font-size: 14px;
-            margin-bottom: 15px;
-            border: 1px solid #ffeeba;
-        }
     </style>
 </head>
 <body>
 
     <div class="dashboard">
         <h2>إرسال إشعار مخصص</h2>
-        
-        <div class="warning-note">
-            ⚠️ <b>ملاحظة:</b> هذه النسخة تعمل بملف واحد. الأزرار غير مدعومة هنا، وقد تختلف استجابة الجوال مقارنة بالكمبيوتر.
-        </div>
         
         <div class="form-group">
             <label>عنوان الإشعار:</label>
@@ -102,60 +89,54 @@
     </div>
 
     <script>
+        // تسجيل Service Worker لكي يرضى متصفح الجوال
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+            .then(() => console.log("تم تسجيل ملف sw.js بنجاح"))
+            .catch(err => console.error("فشل تسجيل sw.js:", err));
+        }
+
         async function buildAndSendNotification() {
-            // 1. التحقق من دعم المتصفح
             if (!('Notification' in window)) {
                 alert("متصفحك لا يدعم الإشعارات.");
                 return;
             }
 
-            // 2. طلب الصلاحية إذا لم يتم منحها
             let permission = Notification.permission;
             if (permission === 'default' || permission === 'prompt') {
                 permission = await Notification.requestPermission();
             }
 
             if (permission === 'denied') {
-                alert("❌ لقد قمت برفض الإشعارات مسبقاً. يرجى تفعيلها من إعدادات المتصفح.");
+                alert("لقد قمت برفض الإشعارات مسبقاً. يرجى تفعيلها من إعدادات المتصفح.");
                 return;
             }
 
-            if (permission !== 'granted') {
-                alert("لم يتم منح الصلاحية للإشعارات.");
-                return;
-            }
-
-            // 3. جلب البيانات من الحقول
             const title = document.getElementById('notifTitle').value || 'إشعار جديد';
             const body = document.getElementById('notifBody').value || '';
             const mainUrl = document.getElementById('mainUrl').value;
             
-            // 4. معالجة الصورة المرفوعة من الجهاز
             const imageFile = document.getElementById('notifImage').files[0];
             let imageUrl = null;
             if (imageFile) {
                 imageUrl = URL.createObjectURL(imageFile);
             }
 
-            // 5. بناء الإشعار وعرضه
-            try {
-                const notification = new Notification(title, {
-                    body: body,
-                    icon: '1000085180.png', // أيقونة كاش توب المرفقة
-                    image: imageUrl // الصورة الكبيرة
+            // استخدام الطريقة الإجبارية للجوال (Service Worker Registration)
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.ready.then(registration => {
+                    registration.showNotification(title, {
+                        body: body,
+                        icon: '1000085180.png',
+                        badge: '1000085180.png',
+                        image: imageUrl,
+                        data: {
+                            url: mainUrl // تمرير الرابط ليتم فتحه عند الضغط
+                        }
+                    }).catch(err => alert("حدث خطأ أثناء عرض الإشعار: " + err));
                 });
-
-                // 6. التعامل مع حدث الضغط على الإشعار لفتح الرابط
-                notification.onclick = function(event) {
-                    event.preventDefault(); // منع السلوك الافتراضي
-                    if (mainUrl) {
-                        window.open(mainUrl, '_blank'); // فتح الرابط في نافذة جديدة
-                    }
-                    notification.close(); // إغلاق الإشعار بعد الضغط عليه
-                };
-
-            } catch (error) {
-                alert("حدث خطأ أثناء عرض الإشعار. تذكر أنه على بعض أجهزة الجوال، قد يُطلب ملف Service Worker منفصل. الخطأ: " + error.message);
+            } else {
+                alert("Service Worker غير مدعوم في متصفحك.");
             }
         }
     </script>
