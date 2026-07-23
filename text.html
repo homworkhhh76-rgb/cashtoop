@@ -23,7 +23,7 @@
         }
         .dashboard h2 {
             text-align: center;
-            color: #0044cc; /* لون مقارب لشعار كاش توب */
+            color: #0044cc;
             margin-bottom: 20px;
         }
         .form-group {
@@ -42,13 +42,6 @@
             border-radius: 6px;
             box-sizing: border-box;
         }
-        .btn-row {
-            display: flex;
-            gap: 10px;
-        }
-        .btn-row .form-group {
-            flex: 1;
-        }
         .send-btn {
             width: 100%;
             padding: 15px;
@@ -59,11 +52,20 @@
             border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
-            margin-top: 10px;
+            margin-top: 20px;
             transition: background-color 0.3s;
         }
         .send-btn:hover {
             background-color: #003399;
+        }
+        .warning-note {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 15px;
+            border: 1px solid #ffeeba;
         }
     </style>
 </head>
@@ -71,6 +73,10 @@
 
     <div class="dashboard">
         <h2>إرسال إشعار مخصص</h2>
+        
+        <div class="warning-note">
+            ⚠️ <b>ملاحظة:</b> هذه النسخة تعمل بملف واحد. الأزرار غير مدعومة هنا، وقد تختلف استجابة الجوال مقارنة بالكمبيوتر.
+        </div>
         
         <div class="form-group">
             <label>عنوان الإشعار:</label>
@@ -88,96 +94,69 @@
         </div>
 
         <div class="form-group">
-            <label>رابط عند الضغط على الإشعار نفسه:</label>
+            <label>الرابط عند الضغط على الإشعار:</label>
             <input type="text" id="mainUrl" placeholder="https://..." value="https://google.com">
-        </div>
-
-        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-
-        <!-- إعدادات الأزرار الإضافية -->
-        <div class="btn-row">
-            <div class="form-group">
-                <label>اسم الزر الأول:</label>
-                <input type="text" id="btn1Text" placeholder="مثال: عرض التفاصيل" value="عرض التفاصيل">
-            </div>
-            <div class="form-group">
-                <label>رابط الزر الأول:</label>
-                <input type="text" id="btn1Url" placeholder="https://..." value="https://github.com">
-            </div>
-        </div>
-
-        <div class="btn-row">
-            <div class="form-group">
-                <label>اسم الزر الثاني:</label>
-                <input type="text" id="btn2Text" placeholder="مثال: تجاهل" value="الدعم الفني">
-            </div>
-            <div class="form-group">
-                <label>رابط الزر الثاني:</label>
-                <input type="text" id="btn2Url" placeholder="https://...">
-            </div>
         </div>
 
         <button class="send-btn" onclick="buildAndSendNotification()">إطلاق الإشعار 🚀</button>
     </div>
 
     <script>
-        // تسجيل Service Worker
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js')
-            .then(() => console.log("Service Worker جاهز للروابط والأزرار"))
-            .catch(err => console.error("خطأ:", err));
-        }
-
         async function buildAndSendNotification() {
-            // طلب الصلاحية أولاً
-            let permission = Notification.permission;
-            if (permission !== 'granted') {
-                permission = await Notification.requestPermission();
-            }
-
-            if (permission !== 'granted') {
-                alert("يرجى السماح بالإشعارات أولاً!");
+            // 1. التحقق من دعم المتصفح
+            if (!('Notification' in window)) {
+                alert("متصفحك لا يدعم الإشعارات.");
                 return;
             }
 
-            // جلب البيانات من الحقول
+            // 2. طلب الصلاحية إذا لم يتم منحها
+            let permission = Notification.permission;
+            if (permission === 'default' || permission === 'prompt') {
+                permission = await Notification.requestPermission();
+            }
+
+            if (permission === 'denied') {
+                alert("❌ لقد قمت برفض الإشعارات مسبقاً. يرجى تفعيلها من إعدادات المتصفح.");
+                return;
+            }
+
+            if (permission !== 'granted') {
+                alert("لم يتم منح الصلاحية للإشعارات.");
+                return;
+            }
+
+            // 3. جلب البيانات من الحقول
             const title = document.getElementById('notifTitle').value || 'إشعار جديد';
             const body = document.getElementById('notifBody').value || '';
             const mainUrl = document.getElementById('mainUrl').value;
             
-            const btn1Text = document.getElementById('btn1Text').value;
-            const btn1Url = document.getElementById('btn1Url').value;
-            const btn2Text = document.getElementById('btn2Text').value;
-            const btn2Url = document.getElementById('btn2Url').value;
-
-            // معالجة الصورة المرفوعة من الجهاز
+            // 4. معالجة الصورة المرفوعة من الجهاز
             const imageFile = document.getElementById('notifImage').files[0];
             let imageUrl = null;
             if (imageFile) {
-                // تحويل الصورة المرفوعة إلى رابط محلي مؤقت لعرضها في الإشعار
                 imageUrl = URL.createObjectURL(imageFile);
             }
 
-            // تجهيز الأزرار
-            let actions = [];
-            if (btn1Text) actions.push({ action: 'btn1', title: btn1Text });
-            if (btn2Text) actions.push({ action: 'btn2', title: btn2Text });
-
-            // إرسال الإشعار عبر الـ Service Worker
-            navigator.serviceWorker.ready.then(registration => {
-                registration.showNotification(title, {
+            // 5. بناء الإشعار وعرضه
+            try {
+                const notification = new Notification(title, {
                     body: body,
-                    icon: '1000085180.png', // تم استخدام شعارك كأيقونة للإشعار
-                    badge: '1000085180.png', // الأيقونة الصغيرة في شريط الهاتف العلوي
-                    image: imageUrl, // الصورة الكبيرة المستوردة من الجهاز
-                    actions: actions, // الأزرار
-                    data: { // نمرر الروابط هنا ليستخدمها ملف sw.js عند الضغط
-                        mainUrl: mainUrl,
-                        btn1Url: btn1Url,
-                        btn2Url: btn2Url
-                    }
+                    icon: '1000085180.png', // أيقونة كاش توب المرفقة
+                    image: imageUrl // الصورة الكبيرة
                 });
-            });
+
+                // 6. التعامل مع حدث الضغط على الإشعار لفتح الرابط
+                notification.onclick = function(event) {
+                    event.preventDefault(); // منع السلوك الافتراضي
+                    if (mainUrl) {
+                        window.open(mainUrl, '_blank'); // فتح الرابط في نافذة جديدة
+                    }
+                    notification.close(); // إغلاق الإشعار بعد الضغط عليه
+                };
+
+            } catch (error) {
+                alert("حدث خطأ أثناء عرض الإشعار. تذكر أنه على بعض أجهزة الجوال، قد يُطلب ملف Service Worker منفصل. الخطأ: " + error.message);
+            }
         }
     </script>
 </body>
