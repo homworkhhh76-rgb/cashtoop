@@ -1,0 +1,9 @@
+{
+  "name": "cash-top-push-api",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "mongodb": "^6.8.0",
+    "web-push": "^3.6.7"
+  }
+}
