@@ -100,9 +100,10 @@
         #thermalPrintArea { display: none; }
         
         @media print {
-            body *, .dashboard-container, .main-card, script { display: none !important; }
-            #thermalPrintArea, #thermalPrintArea * { display: grid !important; }
+            body * { visibility: hidden !important; }
+            #thermalPrintArea, #thermalPrintArea * { visibility: visible !important; }
             #thermalPrintArea {
+                display: grid !important;
                 position: absolute; left: 0; top: 0; margin: 0; padding: 0;
                 background: white; width: 100% !important; gap: var(--p-gap, 2mm); 
                 justify-content: center !important;
@@ -141,7 +142,7 @@
     <link rel="icon" href="icon-192.png">
     <link rel="stylesheet" href="cashtop-core.css?v=56">
     <script src="cashtop-core.js?v=56"></script><script src="push-config.js?v=56"></script><script src="push-client.js?v=56"></script><script src="transient-notifications.js?v=56"></script>
-    <script src="multi-system.js?v=51"></script>
+    <script src="multi-system.js?v=57"></script>
     <script src="firebase-config.js?v=19"></script>
     <script src="accounting-engine.js"></script>
     <script src="firebase-sync.js?v=56"></script>
@@ -576,6 +577,8 @@
             if (labelsGridQueue.length === 0) { showToast('لوحة المعاينة فارغة، يرجى إضافة ملصقات أولاً!', 'error'); return; }
 
             const printArea = document.getElementById('thermalPrintArea');
+            // يجب أن يكون عنصر الطباعة ابناً مباشراً للـ body؛ إخفاء حاويات التطبيق في وضع الطباعة كان يجعل الصفحة بيضاء.
+            if (printArea.parentElement !== document.body) document.body.appendChild(printArea);
             printArea.innerHTML = ""; 
 
             const rowCount = document.getElementById('labelsPerRow').value;
@@ -644,7 +647,7 @@
                 }
             });
 
-            setTimeout(() => { window.print(); }, 300);
+            requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => { window.print(); }, 120)));
         }
 
         // حفظ كصورة

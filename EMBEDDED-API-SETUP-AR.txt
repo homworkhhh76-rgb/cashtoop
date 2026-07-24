@@ -1,0 +1,22 @@
+CASH TOP - النسخة المدمجة مع MongoDB API
+========================================
+
+تمت إعادة api/rtdb.js داخل المشروع.
+رابط الواجهة مضبوط على:
+https://cash-top-33.vercel.app/api/rtdb
+
+حتى يعمل الحفظ:
+1) انشر هذه الحزمة نفسها على مشروع Vercel باسم cash-top-33 (أو المشروع المرتبط بهذا الرابط).
+2) في Environment Variables ضع:
+   MONGODB_URI = رابط MongoDB Atlas الصحيح
+   MONGODB_DB = cash
+   MONGODB_COLLECTION = yop
+   CASHTOP_ALLOWED_ORIGINS = *
+   ويمكن بدل * وضع نطاق استضافة واجهة Cash Top فقط لزيادة التقييد.
+3) اعمل Redeploy.
+4) اختبر:
+   https://cash-top-33.vercel.app/api/rtdb?path=cashTopExchange
+   يجب أن يرجع JSON أو null، وليس 404.
+
+ملاحظة:
+رفع ملفات HTML فقط على استضافة ثابتة لا يشغّل api/rtdb.js. يجب أن تكون نسخة المشروع التي تحتوي مجلد api منشورة أيضًا على Vercel، بينما يمكن أن تبقى الواجهة على أي استضافة أخرى.

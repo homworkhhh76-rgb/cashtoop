@@ -196,7 +196,7 @@
     <link rel="icon" href="icon-192.png">
     <link rel="stylesheet" href="cashtop-core.css?v=56">
     <script src="cashtop-core.js?v=56"></script><script src="push-config.js?v=56"></script><script src="push-client.js?v=56"></script><script src="transient-notifications.js?v=56"></script>
-    <script src="multi-system.js?v=51"></script>
+    <script src="multi-system.js?v=57"></script>
     <script src="firebase-config.js?v=19"></script>
     <script src="accounting-engine.js"></script>
     <script src="firebase-sync.js?v=56"></script>
@@ -437,7 +437,7 @@
                     </div>
                     <div class="form-group">
                         <label>الحساب المصروف منه (الصندوق)</label>
-                        <select class="form-control" id="payVaultSelect" required>
+                        <select class="form-control" id="payVaultSelect" required onchange="handleSupplierVaultChange()">
                             <!-- تعبأ ديناميكياً من fundsDB -->
                         </select>
                     </div>
@@ -641,6 +641,8 @@
         /* ========================================================== */
         let suppliersDB = [];
         let fundsDB = { accounts: [], accountLogs: [] };
+        let supplierMultiPayments = [];
+        const SUPPLIER_MULTI_PAYMENT_VALUE = window.CashtopMulti?.MULTI_PAYMENT_VALUE || '__MULTI_PAYMENT__';
         let currentSupIdForHistory = null;
         let currentSupIdToDelete = null;
 
@@ -684,16 +686,21 @@
         function supplierPayCurrencyConfig(){ return window.CashtopMulti?.getCurrencyConfig?.() || {enabled:false,baseCurrencyId:'ILS',base:{id:'ILS',symbol:'₪',code:'ILS',ratePer100Base:100},currencies:[{id:'ILS',name:'شيكل',symbol:'₪',code:'ILS',ratePer100Base:100}]}; }
         function supplierPayCurrencyId(){ const cfg=supplierPayCurrencyConfig(); return document.getElementById('payCurrencySelect')?.value || cfg.baseCurrencyId; }
         function populateSupplierPayCurrency(preferredId=''){ const cfg=supplierPayCurrencyConfig(),select=document.getElementById('payCurrencySelect'),wrap=document.getElementById('supplierPayCurrencyWrap');if(!select)return;const previous=preferredId||select.value||cfg.baseCurrencyId;select.innerHTML=cfg.currencies.map(c=>`<option value="${c.id}">${c.name} (${c.symbol||c.code})</option>`).join('');select.value=cfg.currencies.some(c=>String(c.id)===String(previous))?previous:cfg.baseCurrencyId;wrap?.classList.toggle('active',cfg.enabled===true);const cur=window.CashtopMulti?.getCurrency?.(select.value)||cfg.base;const hint=document.getElementById('supplierPayCurrencyHint');if(hint)hint.textContent=String(cur.id)===String(cfg.baseCurrencyId)?'العملة الأساسية':`100 ${cfg.base.symbol||cfg.base.code} = ${Number(cur.ratePer100Base||0)} ${cur.symbol||cur.code}`;}
-        function handleSupplierPayCurrencyChange(){ populateVaults(); }
+        function handleSupplierPayCurrencyChange(){ supplierMultiPayments=[]; populateVaults(); }
         function populateVaults() {
             const select = document.getElementById('payVaultSelect');
-            if(!select)return; const cfg=supplierPayCurrencyConfig(),cid=cfg.enabled?supplierPayCurrencyId():cfg.baseCurrencyId;
+            if(!select)return; const cfg=supplierPayCurrencyConfig(),previous=select.value||'';
             select.innerHTML = '<option value="">-- اختر الصندوق المالي --</option>';
             if(fundsDB.accounts) {
                 fundsDB.accounts.forEach(a=>{if(!a.currencyId)a.currencyId=cfg.baseCurrencyId;});
+                if(fundsDB.accounts.length>1)select.innerHTML += `<option value="${SUPPLIER_MULTI_PAYMENT_VALUE}">دفع متعدد</option>`;
                 fundsDB.accounts.forEach(a => { const cur=window.CashtopMulti?.getCurrency?.(a.currencyId||cfg.baseCurrencyId)||cfg.base; select.innerHTML += `<option value="${a.id}">${a.name} (المتاح: ${parseFloat(a.balance||0).toFixed(2)} ${cur.symbol||cur.code})</option>`; });
+                if(previous===SUPPLIER_MULTI_PAYMENT_VALUE&&supplierMultiPayments.length)select.value=SUPPLIER_MULTI_PAYMENT_VALUE;
+                else if(fundsDB.accounts.some(a=>String(a.id)===String(previous)))select.value=previous;
             }
         }
+        function openSupplierMultiPayment(){const amountNative=Math.max(0,Number(document.getElementById('payAmountInput')?.value||0));if(!(amountNative>0)){showToast('أدخل مبلغ الدفعة أولاً ثم اختر دفع متعدد.','warning');return false;}const cfg=supplierPayCurrencyConfig(),currencyId=cfg.enabled?supplierPayCurrencyId():cfg.baseCurrencyId;return window.CashtopMulti?.openMultiPayment?.({title:'دفع متعدد للمورد',accounts:fundsDB.accounts||[],transactionCurrencyId:currencyId,direction:'out',requireExact:true,exactTransactionAmount:amountNative,initialSplits:supplierMultiPayments,defaultTransactionAmount:supplierMultiPayments.length?0:amountNative,onSave:(splits)=>{supplierMultiPayments=splits.map(item=>({...item}));const select=document.getElementById('payVaultSelect');if(select)select.value=SUPPLIER_MULTI_PAYMENT_VALUE;}});}
+        function handleSupplierVaultChange(){const select=document.getElementById('payVaultSelect');if(!select)return;if(select.value===SUPPLIER_MULTI_PAYMENT_VALUE){if(!openSupplierMultiPayment())select.value='';}else supplierMultiPayments=[];}
 
         /* ========================================================== */
         /*   المنطق المحاسبي للموردين                                 */
@@ -888,6 +895,7 @@
         /* ========================================================== */
         function openPayModal(id, name) {
             document.getElementById('payForm').reset();
+            supplierMultiPayments=[];
             document.getElementById('paySupId').value = id;
             document.getElementById('paySupName').innerText = name;
             populateSupplierPayCurrency(supplierPayCurrencyConfig().baseCurrencyId);
@@ -908,26 +916,19 @@
             if(!vaultId || isNaN(amountNative) || amountNative <= 0) { showToast('تأكد من البيانات والمبلغ المدخل!', 'error'); return;}
 
             let sup = suppliersDB.find(s => s.id === supId);
-            let vault = fundsDB.accounts.find(a => String(a.id) === String(vaultId));
-
-            if(!sup || !vault) { showToast('خطأ في تحديد المورد أو الصندوق!', 'error'); return;}
-            const settlement = window.CashtopMulti?.settleToAccount?.(amountNative, currencyId, vault)
-                || { accountAmount: amountNative, accountCurrencyId: vault.currencyId || currencyId, baseAmount: amount };
-            if(Number(vault.balance || 0) < Number(settlement.accountAmount || 0)) { showToast(`الصندوق المحدد لا يحتوي رصيداً كافياً بعد تحويل العملة!`, 'error'); return;}
-
-            // خصم من الصندوق وتوثيقها بعملة الصندوق، مع حفظ عملة العملية الأصلية.
-            vault.balance -= Number(settlement.accountAmount || 0);
+            const isMultiPayment=vaultId===SUPPLIER_MULTI_PAYMENT_VALUE;
+            let vault = isMultiPayment?null:fundsDB.accounts.find(a => String(a.id) === String(vaultId));
+            if(!sup || (!isMultiPayment&&!vault)) { showToast('خطأ في تحديد المورد أو الصندوق!', 'error'); return;}
+            let payments=[];
+            if(isMultiPayment){payments=supplierMultiPayments.map(item=>({...item}));const totalBase=payments.reduce((sum,p)=>sum+Number(p.baseAmount||0),0);if(!payments.length||Math.abs(totalBase-amount)>0.01){showToast('توزيع الدفع المتعدد لا يساوي مبلغ الدفعة.','error');return;}const insufficient=payments.find(p=>{const a=fundsDB.accounts.find(x=>String(x.id)===String(p.accountId));return !a||Number(p.accountAmount||0)>Number(a.balance||0)+1e-9;});if(insufficient){const a=fundsDB.accounts.find(x=>String(x.id)===String(insufficient.accountId));showToast(`الصندوق [${a?.name||'المحدد'}] لا يحتوي رصيداً كافياً.`,'error');return;}}
+            else{const settlement=window.CashtopMulti?.settleToAccount?.(amountNative,currencyId,vault)||{accountAmount:amountNative,accountCurrencyId:vault.currencyId||currencyId,baseAmount:amount};if(Number(vault.balance||0)<Number(settlement.accountAmount||0)){showToast('الصندوق المحدد لا يحتوي رصيداً كافياً بعد تحويل العملة!','error');return;}payments=[{accountId:vault.id,accountName:vault.name,transactionAmount:amountNative,transactionCurrencyId:currencyId,baseAmount:amount,accountAmount:Number(settlement.accountAmount||0),accountCurrencyId:settlement.accountCurrencyId}];}
             let movId = 'spay_' + Date.now();
-            fundsDB.accountLogs.push({
-                accountId: vault.id, date: logDate, type: "سحب", amount: Number(settlement.accountAmount || 0), baseAmount: amount, currencyId: settlement.accountCurrencyId,
-                transactionAmount: amountNative, transactionCurrencyId: currencyId,
-                notes: `سداد لمورد [${sup.name}] | ${notes}`, refType: "supplierPayment", refId: movId
-            });
+            payments.forEach((payment,index)=>{const account=fundsDB.accounts.find(a=>String(a.id)===String(payment.accountId));if(!account)return;account.balance-=Number(payment.accountAmount||0);fundsDB.accountLogs.push({id:`LOG_SPAY_${movId}_${index}`,sourceType:'supplierPayment',sourceId:movId,accountId:account.id,date:logDate,type:'سحب',amount:Number(payment.accountAmount||0),baseAmount:Number(payment.baseAmount||0),currencyId:payment.accountCurrencyId||account.currencyId,transactionAmount:Number(payment.transactionAmount||0),transactionCurrencyId:currencyId,notes:`سداد${isMultiPayment?' متعدد':''} لمورد [${sup.name}] | ${notes}`,refType:'supplierPayment',refId:movId});});
 
             // تسجيل الدفعة في المورد (تنقص الدين)
             sup.movements.push({
-                id: movId, type: "payment", amount: amount, amountNative, currencyId, note: notes, 
-                accountId: vault.id, date: logDate, refType: "supplierPayment", refId: movId
+                id: movId, type: "payment", amount: amount, amountNative, currencyId, note: notes,
+                accountId: isMultiPayment?SUPPLIER_MULTI_PAYMENT_VALUE:payments[0].accountId, accountName:isMultiPayment?'دفع متعدد':payments[0].accountName, paymentMethod:isMultiPayment?'دفع متعدد':payments[0].accountName, payments:isMultiPayment?payments.map(item=>({...item})):[], date: logDate, refType: "supplierPayment", refId: movId
             });
 
             localStorage.setItem('cashtop_suppliers', JSON.stringify(suppliersDB));

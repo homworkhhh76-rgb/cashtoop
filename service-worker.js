@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v66-r56-item-total-insights-composite-stock-sidebar-cache-first';
+const CACHE_VERSION = 'v67-r57-multipay-labelprint-mfg-layout-cache-first';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = `cash-top-2-remote-static-${CACHE_VERSION}`;
 
@@ -129,7 +129,7 @@ function shouldRefreshLocalInBackground(request) {
  */
 function isLiveApiRequest(url) {
   const host = String(url.hostname || '').toLowerCase();
-  return host === 'cash-top-api-2026.vercel.app' ||
+  return host === 'cash-top-33.vercel.app' ||
     host.endsWith('.firebaseio.com') ||
     host.endsWith('.firebasedatabase.app') ||
     host === 'identitytoolkit.googleapis.com' ||

@@ -7,7 +7,7 @@ CASH TOP 2 - نسخة الاستضافة المحمولة
 
 اتصال قاعدة البيانات:
 - الرابط موجود في firebase-config.js -> config.databaseURL
-- الرابط الحالي: https://cash-top-api-2026.vercel.app/api/rtdb
+- الرابط الحالي: https://cash-top-33.vercel.app/api/rtdb
 - هذا الرابط هو خدمة MongoDB HTTPS خارجية ويجب أن تبقى شغالة.
 - كلمة مرور MongoDB لا توضع في ملفات الواجهة لأنها ستكون مكشوفة لأي زائر.
 

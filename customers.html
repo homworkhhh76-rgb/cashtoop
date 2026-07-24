@@ -245,7 +245,7 @@
     <link rel="icon" href="icon-192.png">
     <link rel="stylesheet" href="cashtop-core.css?v=56">
     <script src="cashtop-core.js?v=56"></script><script src="push-config.js?v=56"></script><script src="push-client.js?v=56"></script><script src="transient-notifications.js?v=56"></script>
-    <script src="multi-system.js?v=51"></script>
+    <script src="multi-system.js?v=57"></script>
     <script src="firebase-config.js?v=19"></script>
     <script src="accounting-engine.js"></script>
     <script src="firebase-sync.js?v=56"></script>
@@ -536,7 +536,7 @@
                             <label for="paymentAmount">مبلغ الدفعة</label>
                         </div>
                         <div class="form-group">
-                            <select class="form-control" id="paymentAccount" required onchange="updatePaymentAccountLabel()"></select>
+                            <select class="form-control" id="paymentAccount" required onchange="handleCustomerPaymentAccountChange()"></select>
                             <label for="paymentAccount">الصندوق / الحساب المستلم</label>
                         </div>
                     </div>
@@ -731,6 +731,8 @@
         }));
         let customerSaveBusy = false;
         let customerPaymentBusy = false;
+        let customerMultiPayments = [];
+        const CUSTOMER_MULTI_PAYMENT_VALUE = window.CashtopMulti?.MULTI_PAYMENT_VALUE || '__MULTI_PAYMENT__';
         let customerDebtBusy = false;
         let customersInitialized = false;
         let activeDebtFilter = 'all';
@@ -1014,7 +1016,7 @@
             const previous=preferredId||select.value||cfg.baseCurrencyId; select.innerHTML=cfg.currencies.map(c=>`<option value="${c.id}">${c.name} (${c.symbol||c.code})</option>`).join(''); select.value=cfg.currencies.some(c=>String(c.id)===String(previous))?previous:cfg.baseCurrencyId; wrap?.classList.toggle('active',cfg.enabled===true);
             const cur=window.CashtopMulti?.getCurrency?.(select.value)||cfg.base; const hint=document.getElementById('customerPaymentCurrencyHint'); if(hint)hint.textContent=String(cur.id)===String(cfg.baseCurrencyId)?'العملة الأساسية':`100 ${cfg.base.symbol||cfg.base.code} = ${Number(cur.ratePer100Base||0)} ${cur.symbol||cur.code}`;
         }
-        function handleCustomerPaymentCurrencyChange(){ populatePaymentAccounts(); updatePaymentPreview(); }
+        function handleCustomerPaymentCurrencyChange(){ customerMultiPayments=[]; populatePaymentAccounts(); updatePaymentPreview(); }
 
         function populatePaymentAccounts(selectedId = '') {
             const select = document.getElementById('paymentAccount');
@@ -1024,19 +1026,29 @@
             funds.accounts.forEach(account=>{if(!account.currencyId)account.currencyId=cfg.baseCurrencyId;});
             const accounts = funds.accounts.filter(account => account && account.id != null);
             select.innerHTML = accounts.length
-                ? accounts.map(account => { const cur=window.CashtopMulti?.getCurrency?.(account.currencyId||cfg.baseCurrencyId)||cfg.base; return `<option value="${escapeHtml(String(account.id))}">${escapeHtml(String(account.name || 'صندوق بدون اسم'))} — ${numeric(account.balance).toFixed(2)} ${escapeHtml(cur.symbol||cur.code)}</option>`; }).join('')
+                ? ((accounts.length>1?`<option value="${CUSTOMER_MULTI_PAYMENT_VALUE}">دفع متعدد</option>`:'') + accounts.map(account => { const cur=window.CashtopMulti?.getCurrency?.(account.currencyId||cfg.baseCurrencyId)||cfg.base; return `<option value="${escapeHtml(String(account.id))}">${escapeHtml(String(account.name || 'صندوق بدون اسم'))} — ${numeric(account.balance).toFixed(2)} ${escapeHtml(cur.symbol||cur.code)}</option>`; }).join(''))
                 : '<option value="">لا يوجد صندوق مالي</option>';
             const preferred = accounts.find(account => String(account.id) === String(selectedId))
                 || accounts.find(account => account.isDefaultCash === true)
                 || accounts[0];
-            if (preferred) select.value = String(preferred.id);
+            if(selectedId===CUSTOMER_MULTI_PAYMENT_VALUE && customerMultiPayments.length) select.value=CUSTOMER_MULTI_PAYMENT_VALUE;
+            else if (preferred) select.value = String(preferred.id);
             updatePaymentAccountLabel();
             return accounts;
         }
 
+        function openCustomerMultiPayment(){
+            const amountNative=Math.max(0,numeric(document.getElementById('paymentAmount')?.value));
+            if(!(amountNative>0)){showToast('أدخل مبلغ الدفعة أولاً ثم اختر دفع متعدد.','warning');return false;}
+            const funds=getFundsDb(),cfg=customerPaymentCurrencyConfig(),currencyId=cfg.enabled?customerPaymentCurrencyId():cfg.baseCurrencyId;
+            return window.CashtopMulti?.openMultiPayment?.({title:'تحصيل متعدد من العميل',accounts:funds.accounts||[],transactionCurrencyId:currencyId,direction:'in',requireExact:true,exactTransactionAmount:amountNative,initialSplits:customerMultiPayments,defaultTransactionAmount:customerMultiPayments.length?0:amountNative,onSave:(splits)=>{customerMultiPayments=splits.map(item=>({...item}));const select=document.getElementById('paymentAccount');if(select)select.value=CUSTOMER_MULTI_PAYMENT_VALUE;updatePaymentAccountLabel();}});
+        }
+        function handleCustomerPaymentAccountChange(){const select=document.getElementById('paymentAccount');if(!select)return;if(select.value===CUSTOMER_MULTI_PAYMENT_VALUE){if(!openCustomerMultiPayment())populatePaymentAccounts();}else customerMultiPayments=[];updatePaymentAccountLabel();}
+
         function openCustomerPaymentModal(id) {
             const customer = customersData.find(item => String(item?.id) === String(id));
             if (!customer) return showToast('تعذر العثور على العميل.', 'error');
+            customerMultiPayments=[];
             populateCustomerPaymentCurrency(customerPaymentCurrencyConfig().baseCurrencyId);
             const accounts = populatePaymentAccounts();
             if (!accounts.length) {
@@ -1063,7 +1075,7 @@
             const label = document.getElementById('paymentSelectedAccountName');
             if (!select || !label) return;
             const option = select.options[select.selectedIndex];
-            label.textContent = option?.textContent || '-';
+            label.textContent = select.value===CUSTOMER_MULTI_PAYMENT_VALUE ? 'دفع متعدد' : (option?.textContent || '-');
         }
 
         function updatePaymentPreview() {
@@ -1091,8 +1103,11 @@
             if (!(amountNative > 0)) return showToast('أدخل مبلغ دفعة صحيحاً أكبر من صفر.', 'error');
 
             const funds = getFundsDb();
-            const account = funds.accounts.find(item => String(item?.id) === accountId);
-            if (!account) return showToast('اختر صندوقاً صحيحاً لاستلام الدفعة.', 'error');
+            const isMultiPayment=accountId===CUSTOMER_MULTI_PAYMENT_VALUE;
+            const account = isMultiPayment?null:funds.accounts.find(item => String(item?.id) === accountId);
+            let payments=[];
+            if(isMultiPayment){payments=customerMultiPayments.map(item=>({...item}));const totalBase=payments.reduce((sum,p)=>sum+Number(p.baseAmount||0),0);if(!payments.length||Math.abs(totalBase-amount)>0.01)return showToast('توزيع الدفع المتعدد لا يساوي مبلغ الدفعة.','error');}
+            else if (!account) return showToast('اختر صندوقاً صحيحاً لاستلام الدفعة.', 'error');
 
             customerPaymentBusy = true;
             const submit = document.getElementById('paymentSubmitBtn');
@@ -1115,8 +1130,10 @@
                     refNumber,
                     type: 'قبض',
                     date,
-                    accountId: account.id,
-                    accountName: account.name || '',
+                    accountId: isMultiPayment?CUSTOMER_MULTI_PAYMENT_VALUE:account.id,
+                    accountName: isMultiPayment?'دفع متعدد':(account.name || ''),
+                    paymentMethod: isMultiPayment?'دفع متعدد':(account.name || ''),
+                    payments: isMultiPayment?payments.map(item=>({...item})):[],
                     relationType: 'client',
                     relationId: customer.id,
                     relationName: customer.name || 'عميل',
@@ -1128,25 +1145,20 @@
                     updatedAt: now
                 });
 
-                const settlement = window.CashtopMulti?.settleToAccount?.(amountNative, currencyId, account)
-                    || { accountAmount: amountNative, accountCurrencyId: account.currencyId || currencyId, baseAmount: amount };
-                account.balance = numeric(account.balance) + Number(settlement.accountAmount || 0);
-                funds.accountLogs.push({
-                    id: makeOperationId('LOG_CP'),
-                    sourceType: 'voucher',
-                    sourceId: voucherId,
-                    accountId: account.id,
-                    date,
-                    type: 'إيداع',
-                    amount: Number(settlement.accountAmount || 0), baseAmount: amount, currencyId: settlement.accountCurrencyId,
-                    transactionAmount: amountNative, transactionCurrencyId: currencyId,
-                    notes: `دفعة عميل [${refNumber}] | ${customer.name || 'عميل'}${notes ? ` | ${notes}` : ''}`,
-                    relationType: 'client',
-                    relationId: customer.id,
-                    relationName: customer.name || '',
-                    ...operator,
-                    createdAt: now
-                });
+                if(isMultiPayment){
+                    payments.forEach((payment,index)=>{const target=funds.accounts.find(item=>String(item?.id)===String(payment.accountId));if(!target)throw new Error(`الصندوق [${payment.accountName||payment.accountId}] غير موجود.`);target.balance=numeric(target.balance)+Number(payment.accountAmount||0);funds.accountLogs.push({id:`${makeOperationId('LOG_CP')}_${index}`,sourceType:'voucher',sourceId:voucherId,accountId:target.id,date,type:'إيداع',amount:Number(payment.accountAmount||0),baseAmount:Number(payment.baseAmount||0),currencyId:payment.accountCurrencyId||target.currencyId,transactionAmount:Number(payment.transactionAmount||0),transactionCurrencyId:currencyId,notes:`دفعة عميل متعددة [${refNumber}] | ${customer.name||'عميل'}${notes?` | ${notes}`:''}`,relationType:'client',relationId:customer.id,relationName:customer.name||'',...operator,createdAt:now});});
+                }else{
+                    const settlement = window.CashtopMulti?.settleToAccount?.(amountNative, currencyId, account)
+                        || { accountAmount: amountNative, accountCurrencyId: account.currencyId || currencyId, baseAmount: amount };
+                    account.balance = numeric(account.balance) + Number(settlement.accountAmount || 0);
+                    funds.accountLogs.push({
+                        id: makeOperationId('LOG_CP'), sourceType: 'voucher', sourceId: voucherId, accountId: account.id, date, type: 'إيداع',
+                        amount: Number(settlement.accountAmount || 0), baseAmount: amount, currencyId: settlement.accountCurrencyId,
+                        transactionAmount: amountNative, transactionCurrencyId: currencyId,
+                        notes: `دفعة عميل [${refNumber}] | ${customer.name || 'عميل'}${notes ? ` | ${notes}` : ''}`,
+                        relationType: 'client', relationId: customer.id, relationName: customer.name || '', ...operator, createdAt: now
+                    });
+                }
 
                 // جميع المفاتيح التالية مدارة من Cashtop Core؛ كل كتابة تدخل طابور Firebase الخاص بالشركة والفرع الحالي.
                 localStorage.setItem('cashtop_vouchers', JSON.stringify(vouchers));
@@ -1155,7 +1167,7 @@
                 customersData = nextCustomers;
                 filterTable();
                 closeCustomerPaymentModal();
-                showToast(`تم تسجيل دفعة ${amountNative.toFixed(2)} ${(window.CashtopMulti?.currencySymbol?.(currencyId)||'')} وإضافتها إلى ${account.name || 'الصندوق'} وتحديث حساب العميل.`, 'success');
+                showToast(`تم تسجيل دفعة ${amountNative.toFixed(2)} ${(window.CashtopMulti?.currencySymbol?.(currencyId)||'')} ${isMultiPayment?'بتوزيع متعدد على الصناديق':`وإضافتها إلى ${account.name||'الصندوق'}`} وتحديث حساب العميل.`, 'success');
                 window.CashtopFirebase?.syncAll?.()?.catch?.(() => {});
             } catch (error) {
                 customersData = originalCustomers;

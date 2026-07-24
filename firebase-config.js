@@ -14,7 +14,7 @@ window.CASHTOP_FIREBASE = Object.freeze({
   legacyRootPaths: Object.freeze(['cashTopPOS/v6']),
   config: Object.freeze({
     // رابط خدمة MongoDB الخارجية. يبقى ثابتاً مهما كانت الاستضافة التي ترفع عليها الواجهة.
-    databaseURL: 'https://cash-top-api-2026.vercel.app/api/rtdb',
+    databaseURL: 'https://cash-top-33.vercel.app/api/rtdb',
     projectId: 'cash-top-api-2026',
     apiKey: ''
   }),

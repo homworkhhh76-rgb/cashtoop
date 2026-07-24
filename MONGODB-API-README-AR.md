@@ -11,7 +11,7 @@
 
 ## الرابط الحالي
 
-`https://cash-top-api-2026.vercel.app/api/rtdb`
+`https://cash-top-33.vercel.app/api/rtdb`
 
 يمكن تغييره لاحقاً من `firebase-config.js` بدون تعديل بقية صفحات المشروع، بشرط أن تحافظ الخدمة الجديدة على نفس صيغة GET/PUT/PATCH/DELETE المستخدمة حالياً.
 

@@ -221,7 +221,7 @@
     <link rel="icon" href="icon-192.png">
     <link rel="stylesheet" href="cashtop-core.css?v=56">
     <script src="cashtop-core.js?v=56"></script><script src="push-config.js?v=56"></script><script src="push-client.js?v=56"></script><script src="transient-notifications.js?v=56"></script>
-    <script src="multi-system.js?v=51"></script>
+    <script src="multi-system.js?v=57"></script>
     <script src="firebase-config.js?v=19"></script>
     <script src="accounting-engine.js"></script>
     <script src="firebase-sync.js?v=56"></script>
@@ -371,7 +371,7 @@
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <select class="form-control" id="accountSelect" required></select>
+                            <select class="form-control" id="accountSelect" required onchange="handlePurchaseAccountChange()"></select>
                             <label>صندوق السداد (دفع المال)</label>
                         </div>
                         <div class="form-group">
@@ -570,6 +570,9 @@
         let purchaseScannerController = null;
         let currentScanTargetInput = null;
         let purchaseScannerRequestId = 0;
+        let purchaseMultiPayments = [];
+        let lastPurchasePayableBase = 0;
+        const PURCHASE_MULTI_PAYMENT_VALUE = window.CashtopMulti?.MULTI_PAYMENT_VALUE || '__MULTI_PAYMENT__';
 
         window.onload = function() {
             try {
@@ -714,6 +717,7 @@
         }
 
         function handlePurchaseCurrencyChange() {
+            purchaseMultiPayments = [];
             populatePurchaseCurrencySelect(purchaseCurrencyId());
             populateSelects();
             calculateInvoiceFinance();
@@ -731,12 +735,49 @@
             const previous = accountSelect?.value || '';
             const accounts = fundsDB.accounts;
             let fundHtml = '<option value="">-- حدد الصندوق المالي الدَافع --</option>';
+            if (accounts.length > 1) fundHtml += `<option value="${PURCHASE_MULTI_PAYMENT_VALUE}">دفع متعدد</option>`;
             accounts.forEach(f => {
                 const cur = window.CashtopMulti?.getCurrency?.(f.currencyId || cfg.baseCurrencyId) || cfg.base;
                 fundHtml += `<option value="${f.id}">${f.name} (متوفر: ${Number(f.balance || 0).toFixed(2)} ${cur.symbol || cur.code})</option>`;
             });
             accountSelect.innerHTML = fundHtml;
-            if (accounts.some(acc => String(acc.id) === String(previous))) accountSelect.value = previous;
+            if (previous === PURCHASE_MULTI_PAYMENT_VALUE && purchaseMultiPayments.length) accountSelect.value = PURCHASE_MULTI_PAYMENT_VALUE;
+            else if (accounts.some(acc => String(acc.id) === String(previous))) accountSelect.value = previous;
+        }
+
+        function openPurchaseMultiPayment() {
+            calculateInvoiceFinance();
+            const cfg = purchaseCurrencyConfig();
+            const currencyId = cfg.enabled ? purchaseCurrencyId() : cfg.baseCurrencyId;
+            const maxNative = window.CashtopMulti?.fromBase?.(lastPurchasePayableBase, currencyId) ?? lastPurchasePayableBase;
+            const currentPaid = Math.min(maxNative, Math.max(0, Number(document.getElementById('moneyPaid')?.value || 0)));
+            return window.CashtopMulti?.openMultiPayment?.({
+                title: 'دفع متعدد لفاتورة المشتريات',
+                accounts: fundsDB.accounts || [],
+                transactionCurrencyId: currencyId,
+                direction: 'out',
+                maxTransactionAmount: maxNative,
+                initialSplits: purchaseMultiPayments,
+                defaultTransactionAmount: purchaseMultiPayments.length ? 0 : currentPaid,
+                onSave: (splits, totalNative) => {
+                    purchaseMultiPayments = splits.map(item => ({...item}));
+                    const select = document.getElementById('accountSelect');
+                    if (select) select.value = PURCHASE_MULTI_PAYMENT_VALUE;
+                    const paidInput = document.getElementById('moneyPaid');
+                    if (paidInput) paidInput.value = Number(totalNative).toFixed(3).replace(/\.?0+$/,'');
+                    calculateInvoiceFinance();
+                }
+            });
+        }
+
+        function handlePurchaseAccountChange() {
+            const select = document.getElementById('accountSelect');
+            if (!select) return;
+            if (select.value === PURCHASE_MULTI_PAYMENT_VALUE) {
+                if (!openPurchaseMultiPayment()) select.value = '';
+            } else {
+                purchaseMultiPayments = [];
+            }
         }
 
         /* ========================================================== */
@@ -1445,6 +1486,7 @@
             const taxInfo = window.Cashtop?.calculateTax?.(taxableSubtotal, 'purchase') || { tax: 0, charged: false, total: taxableSubtotal };
             const purchaseTax = Number(taxInfo.tax || 0);
             const payableTotal = Number(taxInfo.total ?? taxableSubtotal);
+            lastPurchasePayableBase = payableTotal;
             const baseSymbol = purchaseBaseSymbol();
             document.getElementById('purchaseSubtotalDisplay').textContent = moneyDisplay(grandTotal) + " " + baseSymbol;
             document.getElementById('purchaseDiscountDisplay').textContent = moneyDisplay(purchaseDiscount) + " " + baseSymbol;
@@ -1473,24 +1515,41 @@
             const paidAmount = window.CashtopMulti?.toBase?.(paidNative, currencyId) ?? paidNative;
             const cards = document.querySelectorAll('.product-item');
 
+            const isMultiPayment = accountId === PURCHASE_MULTI_PAYMENT_VALUE;
             if (!supplierId || !accountId) { showToast("يرجى تحديد المورد والصندوق المالي أولاً!", "error"); return; }
             if (cards.length === 0) { showToast("الفاتورة فارغة، لا يوجد بضاعة مضافة!", "error"); return; }
 
             let supplier = suppliersDB.find(s => s.id == supplierId);
-            let vault = fundsDB.accounts.find(a => String(a.id) === String(accountId));
+            let vault = isMultiPayment ? null : fundsDB.accounts.find(a => String(a.id) === String(accountId));
 
-            if (!supplier || !vault) { showToast("تعذر العثور على المورد أو الصندوق المحدد", "error"); return; }
+            if (!supplier || (!isMultiPayment && !vault)) { showToast("تعذر العثور على المورد أو الصندوق المحدد", "error"); return; }
             const saveRollback = {
                 products: JSON.parse(JSON.stringify(productsDB)),
                 suppliers: JSON.parse(JSON.stringify(suppliersDB)),
                 funds: JSON.parse(JSON.stringify(fundsDB)),
                 purchases: JSON.parse(JSON.stringify(purchasesDB))
             };
-            const paymentSettlement = window.CashtopMulti?.settleToAccount?.(paidNative, currencyId, vault)
-                || { accountAmount: paidNative, accountCurrencyId: vault.currencyId || currencyId, baseAmount: paidAmount };
-            if (Number(paymentSettlement.accountAmount || 0) > Number(vault.balance || 0)) {
-                showToast(`الرصيد في صندوق [${vault.name}] غير كافٍ لسداد هذا المبلغ بعد تحويل العملة!`, "error");
-                return;
+            let paymentSettlement = null;
+            if (isMultiPayment) {
+                const splitBaseTotal = purchaseMultiPayments.reduce((sum, payment) => sum + Number(payment.baseAmount || 0), 0);
+                if (paidAmount > 0 && (!purchaseMultiPayments.length || Math.abs(splitBaseTotal - paidAmount) > 0.01)) {
+                    showToast('مبالغ الدفع المتعدد لا تطابق المبلغ المدفوع. افتح دفع متعدد واحفظ التوزيع من جديد.', 'error'); return;
+                }
+                const insufficient = purchaseMultiPayments.find(payment => {
+                    const account = fundsDB.accounts.find(a => String(a.id) === String(payment.accountId));
+                    return !account || Number(payment.accountAmount || 0) > Number(account.balance || 0) + 1e-9;
+                });
+                if (insufficient) {
+                    const account = fundsDB.accounts.find(a => String(a.id) === String(insufficient.accountId));
+                    showToast(`الرصيد في صندوق [${account?.name || 'المحدد'}] غير كافٍ!`, 'error'); return;
+                }
+            } else {
+                paymentSettlement = window.CashtopMulti?.settleToAccount?.(paidNative, currencyId, vault)
+                    || { accountAmount: paidNative, accountCurrencyId: vault.currencyId || currencyId, baseAmount: paidAmount };
+                if (Number(paymentSettlement.accountAmount || 0) > Number(vault.balance || 0)) {
+                    showToast(`الرصيد في صندوق [${vault.name}] غير كافٍ لسداد هذا المبلغ بعد تحويل العملة!`, "error");
+                    return;
+                }
             }
 
             let invoiceTotal = 0;
@@ -1652,8 +1711,20 @@
                 productsDB[existingIndex] = existing;
             });
 
-            // 2. خصم الدفعة النقدية من الصندوق (إذا وُجدت)
-            if (paidAmount > 0) {
+            // 2. خصم الدفعة النقدية من صندوق واحد أو عدة صناديق (إذا وُجدت)
+            if (paidAmount > 0 && isMultiPayment) {
+                purchaseMultiPayments.forEach((payment, paymentIndex) => {
+                    const account = fundsDB.accounts.find(a => String(a.id) === String(payment.accountId));
+                    if (!account) throw new Error(`الصندوق [${payment.accountName || payment.accountId}] غير موجود.`);
+                    account.balance -= Number(payment.accountAmount || 0);
+                    fundsDB.accountLogs.push({
+                        id: `LOG_PUR_${invId}_${paymentIndex}_${Date.now()}`, sourceType: 'purchaseInvoice', sourceId: invId,
+                        accountId: account.id, date: invDate, type: "سحب", amount: Number(payment.accountAmount || 0), baseAmount: Number(payment.baseAmount || 0), currencyId: payment.accountCurrencyId || account.currencyId,
+                        transactionAmount: Number(payment.transactionAmount || 0), transactionCurrencyId: currencyId,
+                        notes: `سداد متعدد لفاتورة مشتريات [${invId}] للمورد [${supplier.name}]`
+                    });
+                });
+            } else if (paidAmount > 0) {
                 vault.balance -= Number(paymentSettlement.accountAmount || 0);
                 fundsDB.accountLogs.push({
                     id: `LOG_PUR_${invId}_${Date.now()}`, sourceType: 'purchaseInvoice', sourceId: invId,
@@ -1685,7 +1756,10 @@
                 date: invDate,
                 supplierId: supplier.id,
                 supplierName: supplier.name,
-                accountId: vault.id,
+                accountId: isMultiPayment ? PURCHASE_MULTI_PAYMENT_VALUE : vault.id,
+                accountName: isMultiPayment ? 'دفع متعدد' : vault.name,
+                paymentMethod: isMultiPayment ? 'دفع متعدد' : vault.name,
+                payments: isMultiPayment ? purchaseMultiPayments.map(item => ({...item})) : [],
                 subtotal: invoiceTotal,
                 discount: purchaseDiscount,
                 netSubtotal: taxableSubtotal,
@@ -1694,8 +1768,8 @@
                 total: payableInvoiceTotal,
                 paid: paidAmount,
                 paidNative: paidNative,
-                accountAmountNative: Number(paymentSettlement.accountAmount || 0),
-                accountCurrencyId: paymentSettlement.accountCurrencyId,
+                accountAmountNative: isMultiPayment ? null : Number(paymentSettlement.accountAmount || 0),
+                accountCurrencyId: isMultiPayment ? null : paymentSettlement.accountCurrencyId,
                 currencyId: currencyId,
                 currencyName: (window.CashtopMulti?.getCurrency?.(currencyId) || cfg.base).name,
                 currencySymbol: (window.CashtopMulti?.getCurrency?.(currencyId) || cfg.base).symbol || (window.CashtopMulti?.getCurrency?.(currencyId) || cfg.base).code,
@@ -1754,6 +1828,7 @@
             // تهيئة واجهة جديدة
             document.getElementById('invIdBox').value = `INV-${Date.now().toString().slice(-5)}`;
             document.getElementById('moneyPaid').value = 0;
+            purchaseMultiPayments = [];
             if (document.getElementById('purchaseDiscount')) document.getElementById('purchaseDiscount').value = 0;
             document.getElementById('productsContainer').innerHTML = '';
             productRowCounter = 0;
@@ -1943,22 +2018,39 @@
                 }
             }
 
-            // 2. إرجاع المال المسحوب للصندوق
+            // 2. إرجاع المال المسحوب للصندوق/الصناديق
             if(inv.paid > 0) {
-                let vault = fundsDB.accounts.find(a => String(a.id) === String(inv.accountId));
-                if(vault) {
-                    const reversalCurrencyId = inv.accountCurrencyId || vault.currencyId || (window.CashtopMulti?.getCurrencyConfig?.().baseCurrencyId || 'base');
-                    const reversalNative = Number.isFinite(Number(inv.accountAmountNative))
-                        ? Number(inv.accountAmountNative)
-                        : (window.CashtopMulti?.accountAmountFromBase?.(Number(inv.paid || 0), reversalCurrencyId) ?? window.CashtopMulti?.fromBase?.(Number(inv.paid || 0), reversalCurrencyId) ?? Number(inv.paid || 0));
-                    vault.balance = Number(vault.balance || 0) + reversalNative;
-                    fundsDB.accountLogs = (fundsDB.accountLogs || []).filter(log => !(String(log?.sourceType || '') === 'purchaseInvoice' && String(log?.sourceId || '') === String(inv.id)));
-                    fundsDB.accountLogs.push({
-                        id: `LOG_PUR_REV_${inv.id}_${Date.now()}`, sourceType: 'purchaseInvoiceReversal', sourceId: inv.id,
-                        accountId: vault.id, date: new Date().toISOString().split('T')[0], type: "إيداع", amount: reversalNative,
-                        baseAmount: Number(inv.paid || 0), currencyId: reversalCurrencyId,
-                        notes: `عكس قيد: استرداد نقدية إثر إلغاء فاتورة مشتريات [${inv.id}]`
+                const paymentRows = Array.isArray(inv.payments) && inv.payments.length ? inv.payments : null;
+                fundsDB.accountLogs = (fundsDB.accountLogs || []).filter(log => !(String(log?.sourceType || '') === 'purchaseInvoice' && String(log?.sourceId || '') === String(inv.id)));
+                if (paymentRows) {
+                    paymentRows.forEach((payment, paymentIndex) => {
+                        const vault = fundsDB.accounts.find(a => String(a.id) === String(payment.accountId));
+                        if (!vault) return;
+                        const reversalCurrencyId = payment.accountCurrencyId || vault.currencyId || (window.CashtopMulti?.getCurrencyConfig?.().baseCurrencyId || 'base');
+                        const reversalNative = Number(payment.accountAmount || payment.accountAmountNative || 0);
+                        vault.balance = Number(vault.balance || 0) + reversalNative;
+                        fundsDB.accountLogs.push({
+                            id: `LOG_PUR_REV_${inv.id}_${paymentIndex}_${Date.now()}`, sourceType: 'purchaseInvoiceReversal', sourceId: inv.id,
+                            accountId: vault.id, date: new Date().toISOString().split('T')[0], type: "إيداع", amount: reversalNative,
+                            baseAmount: Number(payment.baseAmount || 0), currencyId: reversalCurrencyId,
+                            notes: `عكس قيد دفع متعدد: استرداد نقدية إثر إلغاء فاتورة مشتريات [${inv.id}]`
+                        });
                     });
+                } else {
+                    let vault = fundsDB.accounts.find(a => String(a.id) === String(inv.accountId));
+                    if(vault) {
+                        const reversalCurrencyId = inv.accountCurrencyId || vault.currencyId || (window.CashtopMulti?.getCurrencyConfig?.().baseCurrencyId || 'base');
+                        const reversalNative = Number.isFinite(Number(inv.accountAmountNative))
+                            ? Number(inv.accountAmountNative)
+                            : (window.CashtopMulti?.accountAmountFromBase?.(Number(inv.paid || 0), reversalCurrencyId) ?? window.CashtopMulti?.fromBase?.(Number(inv.paid || 0), reversalCurrencyId) ?? Number(inv.paid || 0));
+                        vault.balance = Number(vault.balance || 0) + reversalNative;
+                        fundsDB.accountLogs.push({
+                            id: `LOG_PUR_REV_${inv.id}_${Date.now()}`, sourceType: 'purchaseInvoiceReversal', sourceId: inv.id,
+                            accountId: vault.id, date: new Date().toISOString().split('T')[0], type: "إيداع", amount: reversalNative,
+                            baseAmount: Number(inv.paid || 0), currencyId: reversalCurrencyId,
+                            notes: `عكس قيد: استرداد نقدية إثر إلغاء فاتورة مشتريات [${inv.id}]`
+                        });
+                    }
                 }
             }
 
