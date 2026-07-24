@@ -200,9 +200,12 @@ function cors(req, res) {
   const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
   const proto = String(req.headers['x-forwarded-proto'] || 'https').split(',')[0].trim();
   const sameOrigin = origin && host && origin === `${proto}://${host}`;
-  const allowList = String(process.env.CASHTOP_ALLOWED_ORIGINS || '')
+  const allowList = String(process.env.CASHTOP_ALLOWED_ORIGINS || '*')
     .split(',').map(v => v.trim()).filter(Boolean);
-  if (sameOrigin || (origin && allowList.includes(origin))) {
+  const allowAll = allowList.includes('*');
+  if (allowAll) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  } else if (sameOrigin || (origin && allowList.includes(origin))) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
   }
