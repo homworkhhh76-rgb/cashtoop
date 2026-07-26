@@ -241,14 +241,14 @@
         .customer-payment-currency{display:none}.customer-payment-currency.active{display:flex}.customer-payment-currency small{font-size:11px;color:#64748b}
     </style>
 
-    <!-- CASH TOP: shared shell, unified storage, accounting and Firebase sync -->
+    <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=56">
-    <script src="cashtop-core.js?v=56"></script><script src="push-config.js?v=56"></script><script src="push-client.js?v=56"></script><script src="transient-notifications.js?v=56"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=75">
+    <script src="cashtop-core.js?v=75"></script>
     <script src="multi-system.js?v=57"></script>
-    <script src="firebase-config.js?v=19"></script>
+    <script src="turso-config.js?v=74"></script><script src="turso-rtdb.js?v=74"></script>
     <script src="accounting-engine.js"></script>
-    <script src="firebase-sync.js?v=56"></script>
+    <script src="turso-sync.js?v=75"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -322,7 +322,7 @@
         <div class="ct-submenu">
           <a href="sales-offers.html">عروض المبيعات</a>
           
-          <a href="notifications.html">الإشعارات</a>
+          
           <a href="tax-settings.html">إعدادات الضريبة</a>
           <a href="storage-settings.html">التخزين والأرشفة</a>
           <a href="استيراد وتصدير ل كل قسم.html">النسخ الاحتياطي</a>
@@ -720,7 +720,7 @@
         });
         if (portalKeysChanged) {
             localStorage.setItem('cashtop_customers', JSON.stringify(customersData));
-            queueMicrotask(() => window.CashtopFirebase?.syncAll?.().catch?.(() => {}));
+            queueMicrotask(() => window.CashtopTurso?.syncAll?.().catch?.(() => {}));
         }
         let groupsData = readArray('cashtop_customer_groups').map(group => ({
             ...group,
@@ -1160,7 +1160,7 @@
                     });
                 }
 
-                // جميع المفاتيح التالية مدارة من Cashtop Core؛ كل كتابة تدخل طابور Firebase الخاص بالشركة والفرع الحالي.
+                // جميع المفاتيح التالية مدارة من Cashtop Core؛ كل كتابة تدخل طابور Turso الخاص بالشركة والفرع الحالي.
                 localStorage.setItem('cashtop_vouchers', JSON.stringify(vouchers));
                 localStorage.setItem('cashtop_funds_db_v4', JSON.stringify(funds));
                 localStorage.setItem('cashtop_customers', JSON.stringify(nextCustomers));
@@ -1168,7 +1168,7 @@
                 filterTable();
                 closeCustomerPaymentModal();
                 showToast(`تم تسجيل دفعة ${amountNative.toFixed(2)} ${(window.CashtopMulti?.currencySymbol?.(currencyId)||'')} ${isMultiPayment?'بتوزيع متعدد على الصناديق':`وإضافتها إلى ${account.name||'الصندوق'}`} وتحديث حساب العميل.`, 'success');
-                window.CashtopFirebase?.syncAll?.()?.catch?.(() => {});
+                window.CashtopTurso?.syncAll?.()?.catch?.(() => {});
             } catch (error) {
                 customersData = originalCustomers;
                 console.error('[CASH TOP 2] customer payment:', error);
@@ -1248,7 +1248,7 @@
                 filterTable();
                 closeCustomerDebtModal();
                 showToast(`تمت إضافة دين يدوي بقيمة ${amount.toFixed(2)} ₪ إلى حساب العميل وتسجيله في السجل.`, 'success');
-                window.CashtopFirebase?.syncAll?.()?.catch?.(() => {});
+                window.CashtopTurso?.syncAll?.()?.catch?.(() => {});
             } catch (error) {
                 console.error('[CASH TOP 2] manual customer debt:', error);
                 showToast('تعذر إضافة الدين اليدوي. أعد المحاولة.', 'error');

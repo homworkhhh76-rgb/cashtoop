@@ -221,10 +221,10 @@
         <div id="receipt" class="receipt-container size-80"></div>
     </div>
 
-    <script src="firebase-config.js"></script>
-    <script src="cashtop-core.js"></script><script src="push-config.js?v=56"></script><script src="push-client.js?v=56"></script><script src="transient-notifications.js?v=56"></script>
+    <script src="turso-config.js?v=74"></script><script src="turso-rtdb.js?v=74"></script>
+    <script src="cashtop-core.js"></script>
     <script src="multi-system.js?v=57"></script>
-    <script src="firebase-sync.js"></script>
+    <script src="turso-sync.js"></script>
     <script>
         let selectedElements = new Set();
         let zIndexCounter = 10;
@@ -684,8 +684,8 @@
             localStorage.setItem(CASH_TOP_DESIGN_KEY, JSON.stringify(data));
             window.dispatchEvent(new CustomEvent('cashtop:data-changed', { detail: { key: CASH_TOP_DESIGN_KEY, source: 'invoice-designer' } }));
             try {
-                const uploaded = await window.CashtopFirebase?.uploadDataset?.(CASH_TOP_DESIGN_KEY);
-                if (uploaded === false && window.CashtopFirebase?.flushPendingQueue) await window.CashtopFirebase.flushPendingQueue();
+                const uploaded = await window.CashtopTurso?.uploadDataset?.(CASH_TOP_DESIGN_KEY);
+                if (uploaded === false && window.CashtopTurso?.flushPendingQueue) await window.CashtopTurso.flushPendingQueue();
                 window.Cashtop?.showToast?.('تم حفظ تصميم الفاتورة وتطبيقه ومزامنته بنجاح.', 'success', 4200);
             } catch (error) {
                 console.warn('Invoice design sync:', error);
@@ -713,7 +713,7 @@
             localStorage.removeItem(CASH_TOP_DESIGN_KEY);
             window.dispatchEvent(new CustomEvent('cashtop:data-changed', { detail: { key: CASH_TOP_DESIGN_KEY, source: 'invoice-designer', deleted: true } }));
             makeDefaultCashTopDesign();
-            try { await window.CashtopFirebase?.uploadDataset?.(CASH_TOP_DESIGN_KEY); } catch (_) {}
+            try { await window.CashtopTurso?.uploadDataset?.(CASH_TOP_DESIGN_KEY); } catch (_) {}
             window.Cashtop?.showToast?.('تمت استعادة تصميم الفاتورة الافتراضي ومزامنة التغيير.', 'success', 4200);
         }
 

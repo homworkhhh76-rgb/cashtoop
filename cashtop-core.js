@@ -27,15 +27,11 @@
   };
 
   const GLOBAL_KEYS = new Set([
-    'cashtop_session',
     'cashtop_remembered_key',
-    'cashtop_remembered_user',
     'cashtop_device_id',
     'cashtop_admin_licenses',
     'cashtop_admin_users',
     'cashtop_superadmin_session',
-    'cashtop_last_firebase_user',
-    'cashtop_firebase_enabled',
     'cashtop_tenant_bindings'
   ]);
 
@@ -56,8 +52,8 @@
     'cashtop_workers', 'cashtop_sales_agents', 'cashtop_agent_movements',
     'cashtop_settings', 'cashtop_db', 'cashtop_printer_settings', 'cashtop_barcode_settings', 'cashtop_invoice_design',
     'cashtop_sms_template', 'cashtop_invoice_message_template', 'cashtop_journal', 'cashtop_audit_log',
-    'cashtop_sales_offers', 'cashtop_tax_settings',
-    'cashtop_notification_settings', 'cashtop_manufacturing_recipes', 'cashtop_manufacturing_orders',
+    'cashtop_sales_offers', 'cashtop_tax_settings', 'cashtop_notification_settings',
+'cashtop_manufacturing_recipes', 'cashtop_manufacturing_orders',
     'cashtop_wastage', 'cashtop_archive_index', 'cashtop_salary_payments'
   ];
 
@@ -73,8 +69,7 @@
       ['accounts.view', 'عرض الحسابات والصناديق'], ['journal.view', 'عرض دفتر القيود'],
       ['vouchers.view', 'عرض سندات القبض والصرف'], ['expenses.view', 'عرض المصاريف'],
       ['reports.view', 'عرض التقارير'], ['employees.view', 'عرض الموظفين'], ['workers.view', 'عرض العمال والأجور'],
-      ['manufacturing.view', 'عرض إدارة التصنيع'], ['offers.view', 'عرض عروض المبيعات'],
-      ['notifications.view', 'عرض الإشعارات'], ['settings.system', 'فتح إعدادات النظام'],
+      ['manufacturing.view', 'عرض إدارة التصنيع'], ['offers.view', 'عرض عروض المبيعات'], ['notifications.view', 'عرض الإشعارات'], ['settings.system', 'فتح إعدادات النظام'],
       ['settings.printer', 'فتح إعدادات الطابعة'], ['settings.tax', 'فتح إعدادات الضريبة'],
       ['settings.storage', 'فتح التخزين والأرشفة'], ['backup.manage', 'فتح النسخ الاحتياطي والاستعادة']
     ]},
@@ -130,8 +125,7 @@
     { id: 'system', title: 'صلاحيات النظام الحساسة', permissions: [
       ['settings.edit', 'تعديل إعدادات النظام والشركة وكلمة المرور'], ['settings.sms', 'تعديل قالب رسائل العملاء'],
       ['printer.edit', 'تعديل إعدادات الطابعة والفاتورة'], ['tax.edit', 'تعديل إعدادات الضريبة'],
-      ['storage.manage', 'إدارة التخزين والأرشفة'], ['offers.manage', 'إدارة عروض المبيعات'],
-      ['notifications.manage', 'إدارة إعدادات الإشعارات'], ['sync.run', 'تشغيل المزامنة اليدوية'],
+      ['storage.manage', 'إدارة التخزين والأرشفة'], ['offers.manage', 'إدارة عروض المبيعات'], ['notifications.manage', 'إدارة إعدادات الإشعارات'], ['sync.run', 'تشغيل المزامنة اليدوية'],
       ['backup.exportImport', 'تصدير واستيراد نسخة احتياطية'], ['app.install', 'تثبيت تطبيق الويب']
     ]}
   ];
@@ -144,8 +138,7 @@
     'customer-groups.html': 'customerGroups.view', 'suppliers.html': 'suppliers.view', 'المناديب.html': 'agents.view',
     'accounts.html': 'accounts.view', 'journal.html': 'journal.view', 'sands.html': 'vouchers.view',
     'المصاريف.html': 'expenses.view', 'التقارير.html': 'reports.view', 'الموظفين.html': 'employees.view',
-    'العمال والاجور.html': 'workers.view', 'ادارة التصنيع.html': 'manufacturing.view', 'sales-offers.html': 'offers.view',
-    'notifications.html': 'notifications.view', 'setting.html': 'settings.system', 'printer-settings.html': 'settings.printer',
+    'العمال والاجور.html': 'workers.view', 'ادارة التصنيع.html': 'manufacturing.view', 'sales-offers.html': 'offers.view', 'notifications.html': 'notifications.view', 'setting.html': 'settings.system', 'printer-settings.html': 'settings.printer',
     'tax-settings.html': 'settings.tax', 'storage-settings.html': 'settings.storage',
     'استيراد وتصدير ل كل قسم.html': 'backup.manage'
   };
@@ -186,7 +179,6 @@
       exportTableToExcel: 'customers.export', exportTableToPDF: 'customers.export',
       exportTableToImage: 'customers.export', exportRowPDF: 'customers.export', exportRowImage: 'customers.export'
     },
-    'notifications.html': { openSettings: 'notifications.manage', saveSettings: 'notifications.manage', payEmployeeSalary: 'employees.manage' },
     'printer-settings.html': { savePrinterSettings: 'printer.edit', saveBarcodeSettings: 'printer.edit' },
     'products.html': {
       openProductModal: 'products.create', stageCurrentProduct: 'products.create', saveFinalPurchase: 'products.create',
@@ -212,6 +204,7 @@
       exportAllVouchersImage: 'vouchers.export', exportVoucherPDF: 'vouchers.export',
       exportVoucherImage: 'vouchers.export', printVoucher: 'vouchers.export'
     },
+    'notifications.html': { openSettings: 'notifications.manage', saveSettings: 'notifications.manage', payEmployeeSalary: 'employees.manage' },
     'setting.html': {
       saveSystemSettings: 'settings.edit', openPasswordModal: 'settings.edit',
       handlePasswordChange: 'settings.edit', saveSmsSettings: 'settings.sms', insertVariable: 'settings.sms'
@@ -364,6 +357,8 @@
       key.startsWith('cashtop_data::') ||
       key.startsWith('cashtop_meta::') ||
       key.startsWith('ct_sync_queue::') ||
+      key.startsWith('ct_sync_queue_reset_at::') ||
+      key.startsWith('ct_sync_queue_revision::') ||
       key.startsWith('cashtop_tx::')
     );
   }
@@ -405,6 +400,20 @@
         tx.onerror = () => resolve(false);
         tx.onabort = () => resolve(false);
       } catch (_) { resolve(false); }
+    });
+  }
+
+  async function readDurableLocalKey(key) {
+    if (!isDurableLocalKey(key)) return null;
+    const db = await openDurableLocalDb();
+    if (!db) return null;
+    return new Promise(resolve => {
+      try {
+        const tx = db.transaction(DURABLE_LOCAL_STORE, 'readonly');
+        const request = tx.objectStore(DURABLE_LOCAL_STORE).get(key);
+        request.onsuccess = () => resolve(request.result?.value ?? null);
+        request.onerror = () => resolve(null);
+      } catch (_) { resolve(null); }
     });
   }
 
@@ -472,7 +481,14 @@
     const tenant = encodeURIComponent(tenantIdFromSession());
     const dataPrefix = `cashtop_data::${tenant}::`;
     const metaPrefix = `cashtop_meta::${tenant}::`;
-    const prefixes = [dataPrefix, metaPrefix, `ct_sync_queue::${tenant}`, `cashtop_tx::${tenant}::`];
+    const prefixes = [
+      dataPrefix,
+      metaPrefix,
+      `ct_sync_queue::${tenant}`,
+      `ct_sync_queue_reset_at::${tenant}`,
+      `ct_sync_queue_revision::${tenant}`,
+      `cashtop_tx::${tenant}::`
+    ];
     const records = await new Promise(resolve => {
       try {
         const tx = db.transaction(DURABLE_LOCAL_STORE, 'readonly');
@@ -545,8 +561,8 @@
 
   function normalizeArrayValue(value, fallback = []) {
     let parsed = value;
-    // Firebase login/bootstrap data can arrive as an encoded JSON string, a
-    // normal array, or an object keyed by numeric/Firebase ids. Normalize all
+    // Turso login/bootstrap data can arrive as an encoded JSON string, a
+    // normal array, or an object keyed by numeric/Turso ids. Normalize all
     // three shapes so callers never fail on .find/.filter/.map.
     for (let i = 0; i < 2 && typeof parsed === 'string'; i += 1) {
       const decoded = safeJson(parsed, null);
@@ -566,6 +582,7 @@
   }
   function canonicalKey(key) { return ALIASES[key] || key; }
   const TAB_SESSION_KEY = 'cashtop_tab_session_v2';
+  const WINDOW_SESSION_PREFIX = 'CASHTOP_SESSION_V2:';
   function sessionTenantId(session) {
     return session && (session.tenantId || session.companyId || session.companyKey)
       ? String(session.tenantId || session.companyId || session.companyKey)
@@ -573,22 +590,21 @@
   }
   function getSession() {
     try {
-      const tabSession = safeJson(sessionStorage.getItem(TAB_SESSION_KEY), null);
-      if (tabSession) return tabSession;
+      const session = safeJson(sessionStorage.getItem(TAB_SESSION_KEY), null);
+      if (session) return session;
     } catch (_) {}
-    const globalSession = safeJson(rawGet('cashtop_session'), null);
-    if (globalSession) {
-      try { sessionStorage.setItem(TAB_SESSION_KEY, JSON.stringify(globalSession)); } catch (_) {}
-    }
-    return globalSession;
+    try {
+      if (String(window.name || '').startsWith(WINDOW_SESSION_PREFIX)) {
+        return safeJson(String(window.name).slice(WINDOW_SESSION_PREFIX.length), null);
+      }
+    } catch (_) {}
+    return null;
   }
-  function persistSession(session, forceGlobal = false) {
+  function persistSession(session) {
     if (!session) return;
-    try { sessionStorage.setItem(TAB_SESSION_KEY, JSON.stringify(session)); } catch (_) {}
-    const globalSession = safeJson(rawGet('cashtop_session'), null);
-    if (forceGlobal || !globalSession || sessionTenantId(globalSession) === sessionTenantId(session)) {
-      rawSet('cashtop_session', JSON.stringify(session));
-    }
+    const serialized = JSON.stringify(session);
+    try { sessionStorage.setItem(TAB_SESSION_KEY, serialized); } catch (_) {}
+    try { window.name = WINDOW_SESSION_PREFIX + serialized; } catch (_) {}
   }
   function tenantIdFromSession() {
     const session = getSession();
@@ -623,6 +639,44 @@
     return `ct_sync_queue::${encodeURIComponent(companyIdFromSession())}`;
   }
 
+  function syncQueueResetMarkerKey() {
+    return `ct_sync_queue_reset_at::${encodeURIComponent(companyIdFromSession())}`;
+  }
+
+  function syncQueueRevisionMarkerKey() {
+    return `ct_sync_queue_revision::${encodeURIComponent(companyIdFromSession())}`;
+  }
+
+  function syncQueueResetAt() {
+    return Math.max(0, Number(rawGet(syncQueueResetMarkerKey()) || 0));
+  }
+
+  function queueAfterLastReset(queue) {
+    const resetAt = syncQueueResetAt();
+    if (!Array.isArray(queue)) return [];
+    if (!resetAt) return queue;
+    const generation = String(resetAt);
+    // بعد التصفير لا نعتمد على ساعة الجهاز وحدها؛ لا تقبل العملية إلا إذا
+    // أُنشئت صراحةً داخل جيل الطابور الحالي. بذلك لا تعود أي عملية قديمة حتى
+    // لو كان createdAt الخاص بها خاطئاً أو مستقبلياً.
+    return queue.filter(item => String(item?.queueGeneration || '') === generation);
+  }
+
+  /*
+   * R59 يبدأ بطابور نظيف مرة واحدة فقط لكل شركة على كل جهاز. هذا يمسح
+   * العمليات القديمة التي بقيت عالقة من السيرفر السابق، ولا يمس البيانات
+   * المحلية نفسها. أي تعديل يحدث بعد لحظة التصفير يُضاف كعملية جديدة عادية.
+   */
+  function primeRevisionQueueResetR59() {
+    const revisionKey = syncQueueRevisionMarkerKey();
+    if (rawGet(revisionKey) === 'r59') return false;
+    const resetAt = Date.now();
+    rawSet(syncQueueResetMarkerKey(), String(resetAt));
+    rawSet(syncQueueKey(), '[]');
+    rawSet(revisionKey, 'r59');
+    return true;
+  }
+
   const SYNC_QUEUE_DB = 'cashtop-sync-queue-v1';
   const SYNC_QUEUE_STORE = 'queues';
   let syncQueueBackupChain = Promise.resolve();
@@ -639,6 +693,20 @@
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => resolve(null);
       } catch (_) { resolve(null); }
+    });
+  }
+
+  async function listSyncQueueBackupKeys() {
+    const db = await openSyncQueueDb();
+    if (!db) return [];
+    return new Promise(resolve => {
+      try {
+        const tx = db.transaction(SYNC_QUEUE_STORE, 'readonly');
+        const request = tx.objectStore(SYNC_QUEUE_STORE).getAllKeys();
+        request.onsuccess = () => resolve((Array.isArray(request.result) ? request.result : []).map(String));
+        request.onerror = () => resolve([]);
+        tx.oncomplete = () => db.close();
+      } catch (_) { try { db.close(); } catch (_) {} resolve([]); }
     });
   }
 
@@ -667,12 +735,14 @@
         tx.oncomplete = () => db.close();
       } catch (_) { try { db.close(); } catch (_) {} resolve([]); }
     });
-    if (!getSyncQueue().length && restored.length) {
-      rawSet(syncQueueKey(), JSON.stringify(restored.slice(-1200)));
+    const eligible = queueAfterLastReset(restored).slice(-1200);
+    if (eligible.length !== restored.length) await backupSyncQueue(eligible).catch(() => false);
+    if (!getSyncQueue().length && eligible.length) {
+      rawSet(syncQueueKey(), JSON.stringify(eligible));
       updateSyncBadge();
-      window.dispatchEvent(new CustomEvent('cashtop:sync-queue-restored', { detail: { count: restored.length } }));
+      window.dispatchEvent(new CustomEvent('cashtop:sync-queue-restored', { detail: { count: eligible.length } }));
     }
-    return restored;
+    return eligible;
   }
 
 
@@ -735,7 +805,10 @@
       try { legacyId = decodeURIComponent(encodedId); } catch (_) { legacyId = encodedId; }
       const accessRaw = rawGet(`cashtop_data::${encodedId}::cashtop_company_access`);
       const access = safeJson(accessRaw, {}) || {};
-      if (String(access.tenantId || access.companyId || '') === currentTenant) identifiers.add(legacyId);
+      const currentCompanyKey = String(session.companyKey || '').trim().toUpperCase();
+      const accessCompanyKey = String(access.companyKey || access.licenseKey || access.key || '').trim().toUpperCase();
+      if (String(access.tenantId || access.companyId || '') === currentTenant ||
+          Boolean(currentCompanyKey && accessCompanyKey === currentCompanyKey)) identifiers.add(legacyId);
     }
 
     return [...identifiers]
@@ -743,8 +816,107 @@
       .filter(key => key !== current);
   }
 
+  function mergeLegacyPendingRaw(oldRaw, currentRaw, pending = {}) {
+    if (oldRaw === null || oldRaw === undefined) return null;
+    if (currentRaw === null || currentRaw === undefined || pending.forceReplace === true) return String(oldRaw);
+    const oldValue = safeJson(oldRaw, null);
+    const currentValue = safeJson(currentRaw, null);
+
+    const mergeArrayDelta = (source, target, touchedIds = [], deletedIds = []) => {
+      if (!Array.isArray(source) || !Array.isArray(target)) return null;
+      const touched = new Set(touchedIds || []);
+      const deleted = new Set(deletedIds || []);
+      if (!touched.size && !deleted.size) return null;
+      const sourceMap = new Map(source.map(item => [recordIdentity(item), item]).filter(([id]) => id));
+      const merged = new Map(target.map(item => [recordIdentity(item), item]).filter(([id]) => id));
+      for (const id of deleted) merged.delete(id);
+      for (const id of touched) if (sourceMap.has(id)) merged.set(id, sourceMap.get(id));
+      const anonymous = target.filter(item => !recordIdentity(item));
+      return [...merged.values(), ...anonymous];
+    };
+
+    if (Array.isArray(oldValue) && Array.isArray(currentValue)) {
+      const merged = mergeArrayDelta(oldValue, currentValue, pending.touchedIds, pending.deletedIds);
+      return merged ? JSON.stringify(merged) : null;
+    }
+
+    if (oldValue && currentValue && typeof oldValue === 'object' && typeof currentValue === 'object' &&
+        !Array.isArray(oldValue) && !Array.isArray(currentValue)) {
+      const touchedFields = pending.touchedFields || [];
+      const deletedFields = pending.deletedFields || [];
+      if (!touchedFields.length && !deletedFields.length) return null;
+      const merged = { ...currentValue };
+      for (const field of touchedFields) {
+        if (!Object.prototype.hasOwnProperty.call(oldValue, field)) continue;
+        const nested = pending.nestedArrayChanges?.[field];
+        if (nested && Array.isArray(oldValue[field]) && Array.isArray(currentValue[field])) {
+          merged[field] = mergeArrayDelta(oldValue[field], currentValue[field], nested.touchedIds, nested.deletedIds) || oldValue[field];
+        } else {
+          merged[field] = oldValue[field];
+        }
+      }
+      for (const field of deletedFields) delete merged[field];
+      return JSON.stringify(merged);
+    }
+    return null;
+  }
+
+  async function discoverLegacySyncQueueCandidateKeys() {
+    const currentQueueKey = syncQueueKey();
+    const currentTenant = String(companyIdFromSession());
+    const currentSession = getSession() || {};
+    const currentCompanyKey = String(currentSession.companyKey || '').trim().toUpperCase();
+    const identityHints = new Set([
+      currentTenant,
+      currentSession.tenantId,
+      currentSession.companyId,
+      currentSession.licenseId,
+      currentSession.companyKey
+    ].filter(value => value !== undefined && value !== null && String(value).trim()).map(value => String(value).trim()));
+    const candidates = new Set(legacySyncQueueCandidateKeys());
+    const backupKeys = await listSyncQueueBackupKeys();
+    const storageQueueKeys = [];
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = RAW.key.call(localStorage, i);
+      if (key?.startsWith('ct_sync_queue::')) storageQueueKeys.push(key);
+    }
+    const allKnownQueueKeys = [...new Set([...backupKeys, ...storageQueueKeys])];
+
+    for (const queueKey of allKnownQueueKeys) {
+      if (!queueKey.startsWith('ct_sync_queue::') || queueKey === currentQueueKey || candidates.has(queueKey)) continue;
+      const encodedLegacyId = queueKey.slice('ct_sync_queue::'.length);
+      let legacyTenantId = '';
+      try { legacyTenantId = decodeURIComponent(encodedLegacyId); } catch (_) { legacyTenantId = encodedLegacyId; }
+      const storageQueue = safeJson(rawGet(queueKey), []);
+      const backupQueue = await readSyncQueueBackupByKey(queueKey);
+      const queue = [
+        ...(Array.isArray(storageQueue) ? storageQueue : []),
+        ...(Array.isArray(backupQueue) ? backupQueue : [])
+      ];
+      let belongsToCurrentCompany = queue.some(item => [
+        item?.tenantId,
+        item?.companyId,
+        item?.licenseId,
+        item?.companyKey,
+        item?.sourceTenantId
+      ].some(value => value !== undefined && value !== null && identityHints.has(String(value).trim())));
+
+      if (!belongsToCurrentCompany) {
+        const accessStorageKey = namespaceKey('cashtop_company_access', legacyTenantId);
+        const accessRaw = rawGet(accessStorageKey) ?? await readDurableLocalKey(accessStorageKey);
+        const access = safeJson(accessRaw, {}) || {};
+        const accessTenant = String(access.tenantId || access.companyId || '').trim();
+        const accessCompanyKey = String(access.companyKey || access.licenseKey || access.key || '').trim().toUpperCase();
+        belongsToCurrentCompany = accessTenant === currentTenant || Boolean(currentCompanyKey && accessCompanyKey === currentCompanyKey);
+      }
+
+      if (belongsToCurrentCompany) candidates.add(queueKey);
+    }
+    return [...candidates];
+  }
+
   async function migrateLegacySyncQueues() {
-    const candidates = legacySyncQueueCandidateKeys();
+    const candidates = await discoverLegacySyncQueueCandidateKeys();
     if (!candidates.length) return { migrated: 0, sources: 0 };
     let migrated = 0;
     let sources = 0;
@@ -755,11 +927,17 @@
       try { legacyTenantId = decodeURIComponent(encodedLegacyId); } catch (_) { legacyTenantId = encodedLegacyId; }
       const fromStorage = safeJson(rawGet(queueKey), []);
       const fromBackup = await readSyncQueueBackupByKey(queueKey);
-      const combined = [
+      const combinedAll = [
         ...(Array.isArray(fromStorage) ? fromStorage : []),
         ...(Array.isArray(fromBackup) ? fromBackup : [])
       ];
-      if (!combined.length) continue;
+      const combined = queueAfterLastReset(combinedAll);
+      if (!combined.length) {
+        // بعد تصفير الطابور لا نعيد عمليات قديمة من localStorage أو IndexedDB.
+        rawRemove(queueKey);
+        await deleteSyncQueueBackupByKey(queueKey);
+        continue;
+      }
       sources += 1;
       const seen = new Set();
       for (const item of combined) {
@@ -774,13 +952,23 @@
         if (legacyTenantId && legacyTenantId !== companyIdFromSession()) {
           const oldDataKey = namespaceKey(canonical, legacyTenantId);
           const oldMetaKey = metaKey(canonical, legacyTenantId);
-          const oldRaw = rawGet(oldDataKey);
-          const oldMeta = safeJson(rawGet(oldMetaKey), {}) || {};
+          const oldRaw = rawGet(oldDataKey) ?? await readDurableLocalKey(oldDataKey);
+          const oldMetaRaw = rawGet(oldMetaKey) ?? await readDurableLocalKey(oldMetaKey);
+          const oldMeta = safeJson(oldMetaRaw, {}) || {};
           const currentRaw = rawGet(namespaceKey(canonical));
           const currentMeta = safeJson(rawGet(metaKey(canonical)), {}) || {};
-          if (oldRaw !== null && (currentRaw === null || Number(oldMeta.updatedAt || 0) >= Number(currentMeta.updatedAt || 0))) {
-            rawSet(namespaceKey(canonical), oldRaw);
-            rawSet(metaKey(canonical), JSON.stringify({ ...oldMeta, migratedFromTenant: legacyTenantId, migratedAt: Date.now() }));
+          const deltaMergedRaw = mergeLegacyPendingRaw(oldRaw, currentRaw, item);
+          const oldIsNewer = Number(oldMeta.updatedAt || 0) >= Number(currentMeta.updatedAt || 0);
+          if (oldRaw !== null && (deltaMergedRaw !== null || currentRaw === null || oldIsNewer)) {
+            rawSet(namespaceKey(canonical), deltaMergedRaw !== null ? deltaMergedRaw : oldRaw);
+            rawSet(metaKey(canonical), JSON.stringify({
+              ...currentMeta,
+              ...oldMeta,
+              updatedAt: Math.max(Number(currentMeta.updatedAt || 0), Number(oldMeta.updatedAt || 0), Date.now()),
+              migratedFromTenant: legacyTenantId,
+              migratedAt: Date.now(),
+              seeded: false
+            }));
           }
         }
 
@@ -810,11 +998,11 @@
 
   function getSyncQueue() {
     const queue = safeJson(rawGet(syncQueueKey()), []);
-    return Array.isArray(queue) ? queue : [];
+    return queueAfterLastReset(Array.isArray(queue) ? queue : []);
   }
 
   function writeSyncQueue(queue) {
-    const normalized = Array.isArray(queue) ? queue.slice(-1200) : [];
+    const normalized = queueAfterLastReset(Array.isArray(queue) ? queue : []).slice(-1200);
     rawSet(syncQueueKey(), JSON.stringify(normalized));
     syncQueueBackupChain = syncQueueBackupChain.then(() => backupSyncQueue(normalized)).catch(() => false);
     updateSyncBadge();
@@ -880,9 +1068,13 @@
     // حتى يمكن دمج تعديلات جهازين بدلاً من استبدال المجموعة كاملة.
     const existing = queue.find(item => item.key === canonical);
     if (existing) {
-      existing.createdAt = Date.now();
+      existing.createdAt = Math.max(Date.now(), syncQueueResetAt() + 1);
+      existing.queueGeneration = String(syncQueueResetAt() || 'legacy');
       existing.deviceId = getDeviceId();
       existing.page = FILE;
+      existing.tenantId = companyIdFromSession();
+      existing.companyId = companyIdFromSession();
+      existing.companyKey = String((getSession() || {}).companyKey || '');
       const touchedNow = new Set(change.touchedIds || []);
       const deletedNow = new Set(change.deletedIds || []);
       const touchedFieldsNow = new Set(change.touchedFields || []);
@@ -910,9 +1102,13 @@
     const operation = {
       id: crypto.randomUUID ? crypto.randomUUID() : `SYNC_${Date.now()}_${Math.random().toString(36).slice(2)}`,
       key: canonical,
-      createdAt: Date.now(),
+      createdAt: Math.max(Date.now(), syncQueueResetAt() + 1),
+      queueGeneration: String(syncQueueResetAt() || 'legacy'),
       deviceId: getDeviceId(),
       page: FILE,
+      tenantId: companyIdFromSession(),
+      companyId: companyIdFromSession(),
+      companyKey: String((getSession() || {}).companyKey || ''),
       touchedIds: mergeUnique([], change.touchedIds),
       deletedIds: mergeUnique([], change.deletedIds),
       touchedFields: mergeUnique([], change.touchedFields),
@@ -937,6 +1133,55 @@
 
   function clearSyncQueue() {
     return writeSyncQueue([]);
+  }
+
+  async function preservePendingSyncState() {
+    const queue = getSyncQueue();
+    // انتظر الكتابات السابقة أولاً ثم ثبّت الطابور ومجموعاته في قاعدتي IndexedDB.
+    try { await durableWriteChain; } catch (_) {}
+    await backupSyncQueue(queue).catch(() => false);
+    const durableEntries = new Map([
+      [syncQueueKey(), JSON.stringify(queue)],
+      [syncQueueResetMarkerKey(), String(syncQueueResetAt() || 0)],
+      [syncQueueRevisionMarkerKey(), String(rawGet(syncQueueRevisionMarkerKey()) || '')]
+    ]);
+    queue.forEach(item => {
+      const key = canonicalKey(item?.key || '');
+      if (!DATA_KEYS.includes(key)) return;
+      const dataStorageKey = namespaceKey(key);
+      const metadataStorageKey = metaKey(key);
+      const dataValue = rawGet(dataStorageKey);
+      const metadataValue = rawGet(metadataStorageKey);
+      if (dataValue !== null) durableEntries.set(dataStorageKey, dataValue);
+      if (metadataValue !== null) durableEntries.set(metadataStorageKey, metadataValue);
+    });
+    await Promise.all([...durableEntries.entries()].map(([key, value]) => persistDurableLocalKey(key, value).catch(() => false)));
+    return { count: queue.length, savedAt: Date.now() };
+  }
+
+  async function resetSyncQueueCompletely() {
+    const discarded = getSyncQueue().length;
+    const resetAt = Date.now();
+    rawSet(syncQueueResetMarkerKey(), String(resetAt));
+
+    const legacyKeys = await discoverLegacySyncQueueCandidateKeys().catch(() => []);
+    const queueKeys = [...new Set([syncQueueKey(), ...legacyKeys])];
+    for (const queueKey of queueKeys) {
+      if (queueKey === syncQueueKey()) continue;
+      rawRemove(queueKey);
+      await deleteSyncQueueBackupByKey(queueKey).catch(() => false);
+      await deleteDurableLocalKey(queueKey).catch(() => false);
+    }
+
+    // لو حدث تعديل جديد أثناء تنفيذ التصفير، يحتفظ به لأنه يحمل جيل
+    // الطابور الحالي، بينما تختفي العمليات القديمة فقط.
+    const newOperations = getSyncQueue();
+    writeSyncQueue(newOperations);
+    try { await syncQueueBackupChain; } catch (_) {}
+    await persistDurableLocalKey(syncQueueResetMarkerKey(), String(resetAt)).catch(() => false);
+    await persistDurableLocalKey(syncQueueKey(), JSON.stringify(newOperations)).catch(() => false);
+    window.dispatchEvent(new CustomEvent('cashtop:sync-queue-reset', { detail: { discarded, resetAt, remaining: newOperations.length } }));
+    return { discarded, resetAt, remaining: newOperations.length };
   }
 
   function updateSyncBadge() {
@@ -1026,8 +1271,8 @@
       deviceId: getDeviceId()
     });
     // Keep only a small recent cache locally. Full history is uploaded as
-    // append-only day-sharded records by firebase-sync.js, so large audit logs
-    // never become one giant localStorage/Firebase dataset.
+    // append-only day-sharded records by turso-sync.js, so large audit logs
+    // never become one giant localStorage/Turso dataset.
     if (list.length > 100) list.splice(0, list.length - 100);
     const record = list[list.length - 1];
     rawSet(auditNs, JSON.stringify(list));
@@ -1584,43 +1829,118 @@
     return fullDatasetValue('cashtop_company_access', {}) || {};
   }
 
-  const PLUS_LIMITS = Object.freeze({ products:200, suppliers:50, branches:2, storesPerBranch:2, employeesPerBranch:3, invoicesDailyPerBranch:200, expensesDailyCompany:20, customersDailyCompany:100, purchasesDailyCompany:10 });
+  const PLUS_LIMITS = Object.freeze({
+    products:200, suppliers:50, branches:2, storesPerBranch:2, employeesPerBranch:3,
+    invoicesDailyPerBranch:200, expensesDailyCompany:20, customersDailyCompany:100, purchasesDailyCompany:10
+  });
+
+  function normalizePlanLimit(value) {
+    if (value === null || value === undefined || value === '') return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? Math.max(0, Math.floor(number)) : null;
+  }
+
+  function normalizeCustomLimits(value) {
+    const source = value && typeof value === 'object' ? value : {};
+    const daily = source.daily && typeof source.daily === 'object' ? source.daily : {};
+    const fixed = source.fixed && typeof source.fixed === 'object' ? source.fixed : {};
+    return {
+      daily: {
+        invoices: normalizePlanLimit(daily.invoices),
+        customers: normalizePlanLimit(daily.customers),
+        expenses: normalizePlanLimit(daily.expenses),
+        suppliers: normalizePlanLimit(daily.suppliers)
+      },
+      fixed: {
+        employees: normalizePlanLimit(fixed.employees),
+        warehouses: normalizePlanLimit(fixed.warehouses),
+        branches: normalizePlanLimit(fixed.branches),
+        products: normalizePlanLimit(fixed.products)
+      }
+    };
+  }
+
   function currentPlan() {
     const session = getSession() || {};
     const access = getCompanyAccess();
-    return String(access.plan || session.plan || 'pro').toLowerCase() === 'plus' ? 'plus' : 'pro';
+    const plan = String(access.plan || session.plan || 'pro').toLowerCase();
+    return ['plus','pro','custom'].includes(plan) ? plan : 'pro';
   }
+
+  function currentCustomLimits() {
+    const session = getSession() || {};
+    return normalizeCustomLimits(getCompanyAccess()?.customLimits || session.customLimits);
+  }
+
   function dateKey(value) {
     const date = new Date(value || 0);
     if (!Number.isFinite(date.getTime())) return '';
     return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
   }
-  function isTodayRecord(record) { return dateKey(record?.date || record?.createdAt || record?.timestamp || record?.updatedAt) === dateKey(Date.now()); }
-  function countBranch(array, branch) { return normalizeArrayValue(array, []).filter(item => sameBranch(item, branch)).length; }
+  function isTodayRecord(record) {
+    return dateKey(record?.createdAt || record?.date || record?.timestamp || record?.updatedAt) === dateKey(Date.now());
+  }
+  function countBranch(array, branch) {
+    return normalizeArrayValue(array, []).filter(item => sameBranch(item, branch)).length;
+  }
+
   function quotaViolation(canonical, oldRaw, newRaw) {
-    if (currentPlan() !== 'plus') return '';
+    const plan = currentPlan();
+    if (plan === 'pro') return '';
+
     const branch = branchIdFromSession();
     const oldVal = safeJson(oldRaw, canonical === 'cashtop_funds_db' ? {} : []);
     const newVal = safeJson(newRaw, canonical === 'cashtop_funds_db' ? {} : []);
-    const grewPast = (oldCount, newCount, limit, label) => newCount > limit && newCount > oldCount ? `وصلت خطة Plus إلى حد ${label} (${limit}).` : '';
-    if (canonical === 'cashtop_products') return grewPast(countBranchProducts(oldVal, branch), countBranchProducts(newVal, branch), PLUS_LIMITS.products, 'المنتجات لكل فرع');
-    if (canonical === 'cashtop_suppliers') return grewPast(countBranch(oldVal, branch), countBranch(newVal, branch), PLUS_LIMITS.suppliers, 'الموردين لكل فرع');
-    if (canonical === 'cashtop_branches') return grewPast(normalizeArrayValue(oldVal, []).length, normalizeArrayValue(newVal, []).length, PLUS_LIMITS.branches, 'الفروع');
-    if (canonical === 'cashtop_stores') return grewPast(countBranch(oldVal, branch), countBranch(newVal, branch), PLUS_LIMITS.storesPerBranch, 'المخازن لكل فرع');
-    if (canonical === 'cashtop_employees') {
-      const oldCounts = employeeCounts(oldVal), newCounts = employeeCounts(newVal);
-      for (const [bid,count] of Object.entries(newCounts)) if (count > PLUS_LIMITS.employeesPerBranch && count > Number(oldCounts[bid] || 0)) return `وصلت خطة Plus إلى حد الموظفين للفرع (${PLUS_LIMITS.employeesPerBranch}).`;
+    const grewPast = (oldCount, newCount, limit, label, planLabel) => {
+      if (limit == null) return '';
+      return newCount > limit && newCount > oldCount
+        ? `وصلت خطة ${planLabel} إلى حد ${label} (${limit}).`
+        : '';
+    };
+
+    if (plan === 'plus') {
+      if (canonical === 'cashtop_products') return grewPast(countBranchProducts(oldVal, branch), countBranchProducts(newVal, branch), PLUS_LIMITS.products, 'المنتجات لكل فرع', 'Plus');
+      if (canonical === 'cashtop_suppliers') return grewPast(countBranch(oldVal, branch), countBranch(newVal, branch), PLUS_LIMITS.suppliers, 'الموردين لكل فرع', 'Plus');
+      if (canonical === 'cashtop_branches') return grewPast(normalizeArrayValue(oldVal, []).length, normalizeArrayValue(newVal, []).length, PLUS_LIMITS.branches, 'الفروع', 'Plus');
+      if (canonical === 'cashtop_stores') return grewPast(countBranch(oldVal, branch), countBranch(newVal, branch), PLUS_LIMITS.storesPerBranch, 'المخازن لكل فرع', 'Plus');
+      if (canonical === 'cashtop_employees') {
+        const oldCounts = employeeCounts(oldVal), newCounts = employeeCounts(newVal);
+        for (const [bid,count] of Object.entries(newCounts)) {
+          if (count > PLUS_LIMITS.employeesPerBranch && count > Number(oldCounts[bid] || 0)) {
+            return `وصلت خطة Plus إلى حد الموظفين للفرع (${PLUS_LIMITS.employeesPerBranch}).`;
+          }
+        }
+      }
+      if (canonical === 'cashtop_invoices') return grewPast(todayInvoiceCount(oldVal, branch), todayInvoiceCount(newVal, branch), PLUS_LIMITS.invoicesDailyPerBranch, 'فواتير البيع اليومية للفرع', 'Plus');
+      if (canonical === 'cashtop_expenses') return grewPast(todayCount(oldVal), todayCount(newVal), PLUS_LIMITS.expensesDailyCompany, 'المصروفات اليومية للشركة', 'Plus');
+      if (canonical === 'cashtop_customers') return grewPast(todayCount(oldVal), todayCount(newVal), PLUS_LIMITS.customersDailyCompany, 'العملاء الجدد يومياً للشركة', 'Plus');
+      if (canonical === 'cashtop_purchases') return grewPast(todayCount(oldVal), todayCount(newVal), PLUS_LIMITS.purchasesDailyCompany, 'فواتير المشتريات اليومية للشركة', 'Plus');
+      return '';
     }
-    if (canonical === 'cashtop_invoices') return grewPast(todayBranchCount(oldVal, branch), todayBranchCount(newVal, branch), PLUS_LIMITS.invoicesDailyPerBranch, 'فواتير البيع اليومية للفرع');
-    if (canonical === 'cashtop_expenses') return grewPast(todayCount(oldVal), todayCount(newVal), PLUS_LIMITS.expensesDailyCompany, 'المصروفات اليومية للشركة');
-    if (canonical === 'cashtop_customers') return grewPast(todayCount(oldVal), todayCount(newVal), PLUS_LIMITS.customersDailyCompany, 'العملاء الجدد يومياً للشركة');
-    if (canonical === 'cashtop_purchases') return grewPast(todayCount(oldVal), todayCount(newVal), PLUS_LIMITS.purchasesDailyCompany, 'فواتير المشتريات اليومية للشركة');
+
+    const limits = currentCustomLimits();
+    const fixedCount = value => normalizeArrayValue(value, []).length;
+
+    if (canonical === 'cashtop_products') return grewPast(fixedCount(oldVal), fixedCount(newVal), limits.fixed.products, 'المنتجات', 'المخصصة');
+    if (canonical === 'cashtop_branches') return grewPast(fixedCount(oldVal), fixedCount(newVal), limits.fixed.branches, 'الفروع', 'المخصصة');
+    if (canonical === 'cashtop_stores') return grewPast(fixedCount(oldVal), fixedCount(newVal), limits.fixed.warehouses, 'المخازن', 'المخصصة');
+    if (canonical === 'cashtop_employees') return grewPast(fixedCount(oldVal), fixedCount(newVal), limits.fixed.employees, 'الموظفين', 'المخصصة');
+
+    if (canonical === 'cashtop_invoices') return grewPast(todayInvoiceCount(oldVal), todayInvoiceCount(newVal), limits.daily.invoices, 'الفواتير اليومية', 'المخصصة');
+    if (canonical === 'cashtop_customers') return grewPast(todayCount(oldVal), todayCount(newVal), limits.daily.customers, 'العملاء الجدد يومياً', 'المخصصة');
+    if (canonical === 'cashtop_expenses') return grewPast(todayCount(oldVal), todayCount(newVal), limits.daily.expenses, 'المصاريف اليومية', 'المخصصة');
+    if (canonical === 'cashtop_suppliers') return grewPast(todayCount(oldVal), todayCount(newVal), limits.daily.suppliers, 'الموردين الجدد يومياً', 'المخصصة');
+
     return '';
   }
   function countBranchProducts(products, branch) { return normalizeArrayValue(products, []).filter(p => productVisibleInBranch(p, branch)).length; }
   function employeeCounts(items) { const out={}; normalizeArrayValue(items, []).forEach(item => { const bid=String(item.branchId||'MAIN'); out[bid]=(out[bid]||0)+1; }); return out; }
   function todayCount(items) { return normalizeArrayValue(items, []).filter(isTodayRecord).length; }
-  function todayBranchCount(items, branch) { return normalizeArrayValue(items, []).filter(item => sameBranch(item, branch) && isTodayRecord(item)).length; }
+  function todayInvoiceCount(items, branch = null) {
+    return normalizeArrayValue(items, []).filter(item =>
+      item?.status !== 'draft' && isTodayRecord(item) && (branch == null || sameBranch(item, branch))
+    ).length;
+  }
 
   /*
    * Revision 43: every record list is exposed newest-first at the storage API
@@ -1707,6 +2027,13 @@
     const oldValue = rawGet(ns);
     const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
     if (oldValue === stringValue) return { changed: false, operationId: null };
+    if (options.bypassQuota !== true) {
+      const violation = quotaViolation(canonical, oldValue, stringValue);
+      if (violation) {
+        showToast(violation, 'error', 5200);
+        const error = new Error(violation); error.code = 'CASHTOP_PLAN_LIMIT'; throw error;
+      }
+    }
     rawSet(ns, stringValue);
     const previousMeta = safeJson(rawGet(metaKey(canonical)), {}) || {};
     rawSet(metaKey(canonical), JSON.stringify({
@@ -2242,7 +2569,18 @@
       if (main.isDefault !== true) { main.isDefault = true; branchesChanged = true; }
       if (main.locked !== true) { main.locked = true; branchesChanged = true; }
     }
-    if (branchesChanged) localStorage.setItem('cashtop_branches', JSON.stringify(branches));
+    if (branchesChanged) {
+      const branchMeta = safeJson(rawGet(metaKey('cashtop_branches')), {}) || {};
+      if (branchMeta.seeded === true || Number(branchMeta.updatedAt || 0) <= 0) {
+        // On a brand-new laptop this is only a local placeholder. Do NOT queue it
+        // before Turso gets a chance to hydrate the real branch dataset; otherwise
+        // a fresh device could overwrite existing cloud branches with BR-01.
+        rawSet(namespaceKey('cashtop_branches'), JSON.stringify(branches));
+        rawSet(metaKey('cashtop_branches'), JSON.stringify({ updatedAt: 0, revision: 0, seeded: true }));
+      } else {
+        localStorage.setItem('cashtop_branches', JSON.stringify(branches));
+      }
+    }
 
     // كل فرع يملك قاعدة صناديق مستقلة. لذلك نضمن صندوق كاش ثابتاً للفرع الحالي.
     const funds = safeJson(localStorage.getItem('cashtop_funds_db'), {}) || {};
@@ -2266,7 +2604,18 @@
       if (defaultCash.isDefaultCash !== true) { defaultCash.isDefaultCash = true; fundsChanged = true; }
       if (defaultCash.locked !== true) { defaultCash.locked = true; fundsChanged = true; }
     }
-    if (fundsChanged) localStorage.setItem('cashtop_funds_db', JSON.stringify(funds));
+    if (fundsChanged) {
+      const fundsMeta = safeJson(rawGet(metaKey('cashtop_funds_db')), {}) || {};
+      if (fundsMeta.seeded === true || Number(fundsMeta.updatedAt || 0) <= 0) {
+        // Same rule for the default cash box: keep it as a seeded local fallback
+        // until remote bootstrap finishes. The first real cash mutation will turn
+        // it into a normal queued dataset automatically.
+        rawSet(namespaceKey('cashtop_funds_db'), JSON.stringify(funds));
+        rawSet(metaKey('cashtop_funds_db'), JSON.stringify({ updatedAt: 0, revision: 0, seeded: true }));
+      } else {
+        localStorage.setItem('cashtop_funds_db', JSON.stringify(funds));
+      }
+    }
 
     // اجعل جلسة مدير الشركة تشير صراحةً إلى الفرع الرئيسي كي لا يظهر "فرع غير معروف".
     const session = getSession();
@@ -2364,6 +2713,8 @@
       companyId: session.tenantId || session.companyId || license.tenantId || license.companyId || current.tenantId || current.companyId || '',
       companyName: session.companyName || license.companyName || current.companyName || '',
       status: license.status || current.status || 'active',
+      plan: license.plan || session.plan || current.plan || 'pro',
+      customLimits: license.customLimits || session.customLimits || current.customLimits || null,
       startAt: license.startAt || current.startAt || '',
       endAt: license.endAt || session.licenseEnd || current.endAt || '',
       manager
@@ -2397,6 +2748,7 @@
     session.licenseStart = access.startAt || session.licenseStart || '';
     session.licenseEnd = access.endAt || session.licenseEnd || '';
     session.plan = access.plan || session.plan || 'pro';
+    session.customLimits = access.customLimits || session.customLimits || null;
     session.entitlementVersion = access.authVersion || access.updatedAt || session.entitlementVersion || 0;
 
     const role = String(session.role || '').toLowerCase();
@@ -2453,18 +2805,19 @@
     // تسجيل الخروج حتى تبقى جاهزة للمزامنة عند الدخول مجدداً أو عودة الإنترنت.
     try { await backupSyncQueue(getSyncQueue()); } catch (_) {}
     try {
-      if (window.CashtopFirebase && typeof window.CashtopFirebase.signOut === 'function') {
-        await window.CashtopFirebase.signOut();
+      if (window.CashtopTurso && typeof window.CashtopTurso.signOut === 'function') {
+        await window.CashtopTurso.signOut();
       }
     } catch (_) { /* local session is still cleared */ }
     const companyId = companyIdFromSession();
     const currentSession = getSession();
     try {
-      sessionStorage.removeItem(`ct_firebase_state::${encodeURIComponent(companyId)}`);
+      sessionStorage.removeItem(`ct_turso_state::${encodeURIComponent(companyId)}`);
       sessionStorage.removeItem(TAB_SESSION_KEY);
     } catch (_) {}
-    const globalSession = safeJson(rawGet('cashtop_session'), null);
-    if (!globalSession || sessionTenantId(globalSession) === sessionTenantId(currentSession)) rawRemove('cashtop_session');
+    try {
+      if (String(window.name || '').startsWith(WINDOW_SESSION_PREFIX)) window.name = '';
+    } catch (_) {}
     redirectToLogin(reason || 'logout');
   }
 
@@ -2569,7 +2922,8 @@
     'العمال والاجور.html': 'العمال والأجور', 'التقارير.html': 'التقارير',
     'setting.html': 'إعدادات النظام', 'printer-settings.html': 'إعدادات الطابعة',
     'sales-offers.html': 'عروض المبيعات',
-    'tax-settings.html': 'إعدادات الضريبة', 'notifications.html': 'الإشعارات',
+    'notifications.html': 'الإشعارات',
+    'tax-settings.html': 'إعدادات الضريبة',
     'storage-settings.html': 'إدارة التخزين والأرشفة',
     'ادارة التصنيع.html': 'إدارة التصنيع', 'استيراد وتصدير ل كل قسم.html': 'النسخ الاحتياطي والاستعادة'
   };
@@ -2863,7 +3217,6 @@
       let permission = Notification.permission;
       if (permission === 'default') permission = await Notification.requestPermission();
       if (permission !== 'granted') return { ok:false, reason:permission };
-      try { await window.CashtopPush?.ensureSubscription?.(); } catch (_) {}
       return { ok:true, permission };
     } catch (error) { return { ok:false, reason:error?.message || 'error' }; }
   }
@@ -2891,10 +3244,6 @@
     };
     try {
       const registration = await navigator.serviceWorker?.ready;
-      if (registration?.active) {
-        registration.active.postMessage({ type:'SHOW_NOTIFICATION', payload });
-        return true;
-      }
       if (registration?.showNotification) { await registration.showNotification(payload.title, payload); return true; }
     } catch (_) {}
     try { new Notification(payload.title, payload); return true; } catch (_) { return false; }
@@ -2957,38 +3306,66 @@
     if (document.documentElement.dataset.ctManagerNotificationsInstalled === 'true') return;
     document.documentElement.dataset.ctManagerNotificationsInstalled = 'true';
     if (!isManagerSession()) return;
-    let invoiceIds = new Set(normalizeArrayValue(localStorage.getItem('cashtop_invoices'), []).map(x=>String(x?.id||'')).filter(Boolean));
+
+    // إشعارات المدير الذكية تبقى مفعلة، لكن إشعار "فاتورة جديدة"
+    // أُلغي عمداً. إنشاء/مزامنة فاتورة لا يرسل تنبيهاً للمدير.
     let smartSeen = new Set(normalizeArrayValue(rawGet(`ct_smart_notification_seen::${companyIdFromSession()}`), []).map(String));
-    const persistSmartSeen=()=>rawSet(`ct_smart_notification_seen::${companyIdFromSession()}`,JSON.stringify([...smartSeen].slice(-300)));
-    const scanInvoices = () => {
-      if (getNotificationSettings().enabled !== true) return;
-      const list=normalizeArrayValue(localStorage.getItem('cashtop_invoices'), []);
-      const fresh=list.filter(x=>x?.id && !invoiceIds.has(String(x.id)) && x.status!=='draft');
-      list.forEach(x=>x?.id&&invoiceIds.add(String(x.id)));
-      fresh.slice(-5).forEach(inv=>{
-        const customer=inv.customerName||inv.customer||inv.clientName||'عميل نقدي';
-        const who=inv.employeeName||inv.createdByName||inv.createdBy||inv.cashierName||inv.user||'مستخدم النظام';
-        const currencyCfg=window.CashtopMulti?.getCurrencyConfig?.()||{base:{symbol:'₪',code:'ILS'}}; const symbol=currencyCfg.base?.symbol||currencyCfg.base?.code||'₪';
-        showSystemNotification(`فاتورة جديدة - ${customer}`,{body:`المبلغ الإجمالي: ${invoiceDisplayTotal(inv).toFixed(2)} ${symbol} — بواسطة: ${who}`,tag:`invoice-${inv.id}`,url:'invoices.html',data:{type:'invoice',invoiceId:inv.id}});
-      });
-    };
+    const persistSmartSeen = () => rawSet(
+      `ct_smart_notification_seen::${companyIdFromSession()}`,
+      JSON.stringify([...smartSeen].slice(-300))
+    );
+
     const scanSmart = () => {
-      if (getNotificationSettings().enabled !== true) return;
+      if (getNotificationSettings().enabled !== true) {
+        updateNotificationBadge();
+        return;
+      }
       const current = getSmartNotifications();
-      const activeIds = new Set(current.map(item=>String(item.id)));
-      smartSeen = new Set([...smartSeen].filter(id=>activeIds.has(String(id))));
-      current.forEach(item=>{
+      const activeIds = new Set(current.map(item => String(item.id)));
+      smartSeen = new Set([...smartSeen].filter(id => activeIds.has(String(id))));
+      current.forEach(item => {
         if (smartSeen.has(String(item.id))) return;
         smartSeen.add(String(item.id));
-        showSystemNotification(item.title,{body:item.message,tag:`smart-${item.id}`,url:item.href||'notifications.html',data:{type:item.type,id:item.id}});
+        showSystemNotification(item.title, {
+          body: item.message,
+          tag: `smart-${item.id}`,
+          url: item.href || 'notifications.html',
+          data: { type: item.type, id: item.id }
+        });
       });
       persistSmartSeen();
+      updateNotificationBadge();
     };
-    const dailyTick=()=>{ const now=new Date(), cfg=getNotificationSettings(); if(cfg.enabled===true&&cfg.dailySummaryEnabled!==false&&now.getHours()===23) showTodayProfitNotification(false); syncNotificationSummaryToServiceWorker(); };
-    const onData=event=>{const key=event?.detail?.key||''; if(['cashtop_products','cashtop_customers','cashtop_invoices','cashtop_employees','cashtop_workers','cashtop_salary_payments'].includes(key))scanSmart(); if(['cashtop_invoices','cashtop_settings','cashtop_notification_settings'].includes(key))syncNotificationSummaryToServiceWorker();};
-    window.addEventListener('cashtop:data-changed',onData); window.addEventListener('cashtop:remote-applied',onData); window.addEventListener('cashtop:external-change',onData);
-    setTimeout(()=>{scanSmart();syncNotificationSummaryToServiceWorker();},700);
-    setInterval(dailyTick,60*1000);
+
+    const dailyTick = () => {
+      const now = new Date();
+      const cfg = getNotificationSettings();
+      if (cfg.enabled === true && cfg.dailySummaryEnabled !== false && now.getHours() === 23) {
+        showTodayProfitNotification(false);
+      }
+      // Keep the optional Periodic Background Sync summary local to the service
+      // worker. This does not contact Turso and is not a new-invoice alert.
+      syncNotificationSummaryToServiceWorker();
+      updateNotificationBadge();
+    };
+
+    const onData = event => {
+      const key = event?.detail?.key || '';
+      if ([
+        'cashtop_products','cashtop_customers','cashtop_invoices',
+        'cashtop_employees','cashtop_workers','cashtop_salary_payments',
+        'cashtop_notification_settings','cashtop_settings'
+      ].includes(key)) scanSmart();
+      if (['cashtop_invoices','cashtop_settings','cashtop_notification_settings'].includes(key)) {
+        syncNotificationSummaryToServiceWorker();
+      }
+    };
+
+    window.addEventListener('cashtop:data-changed', onData);
+    window.addEventListener('cashtop:remote-applied', onData);
+    window.addEventListener('cashtop:external-change', onData);
+    setTimeout(() => { scanSmart(); syncNotificationSummaryToServiceWorker(); }, 700);
+    setInterval(dailyTick, 60 * 1000);
   }
 
   function assignPermissionRequirement(element, requirement) {
@@ -3107,6 +3484,7 @@
     applyPermissionVisibility();
     restrictSettingsForBasicUser(session);
     renderSubscriptionPanel(session);
+    renderSyncAndCacheMaintenancePanel();
     const pageTitle = PAGE_TITLES[FILE] || document.title || APP_NAME;
     document.title = `${pageTitle} - ${APP_NAME}`;
     setText('ctPageTitle', pageTitle);
@@ -3158,20 +3536,153 @@
       });
     });
     observer.observe(document.getElementById('ctPageHost') || document.body, { childList: true, subtree: true });
-    window.addEventListener('cashtop:data-changed', updateNotificationBadge);
   }
 
 
+  function renderSyncAndCacheMaintenancePanel() {
+    if (FILE !== 'setting.html' || document.getElementById('ctSyncCacheMaintenancePanel')) return;
+    const host = document.getElementById('ctPageHost');
+    if (!host || host.dataset.logoutOnly === 'true') return;
+
+    const panel = document.createElement('section');
+    panel.id = 'ctSyncCacheMaintenancePanel';
+    panel.className = 'ct-sync-cache-maintenance';
+    panel.innerHTML = `
+      <style>
+        .ct-sync-cache-maintenance{background:#fff;border:1px solid #e2e8f0;border-top:4px solid #605ca8;border-radius:10px;padding:16px;margin:0 0 16px;font-family:Cairo;box-shadow:0 5px 16px rgba(15,23,42,.04)}
+        .ct-maintenance-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+        .ct-maintenance-head strong{font-size:15px;color:#1f2937}.ct-maintenance-version{font-size:11px;font-weight:800;background:#eef2ff;color:#4338ca;padding:5px 10px;border-radius:999px}
+        .ct-maintenance-description{font-size:11px;line-height:1.9;color:#64748b;margin:9px 0 13px}
+        .ct-maintenance-status{display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:9px 11px;font-size:12px;font-weight:700;color:#334155;margin-bottom:12px}
+        .ct-maintenance-status b{color:#605ca8}.ct-maintenance-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+        .ct-maintenance-btn{border:0;border-radius:8px;padding:11px 13px;font:800 12px Cairo;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;min-height:43px}
+        .ct-maintenance-btn:disabled{opacity:.6;cursor:wait}.ct-cache-refresh-btn{background:#605ca8;color:#fff}.ct-queue-reset-btn{background:#fff1f2;color:#be123c;border:1px solid #fecdd3}
+        @media(max-width:620px){.ct-maintenance-actions{grid-template-columns:1fr}.ct-sync-cache-maintenance{padding:14px}}
+      </style>
+      <div class="ct-maintenance-head"><strong><i class="fa-solid fa-cloud-arrow-up"></i> المزامنة وتحديث التطبيق</strong><span class="ct-maintenance-version">R60</span></div>
+      <p class="ct-maintenance-description">تحديث الكاش يحفظ العمليات المعلقة في IndexedDB أولاً، ثم ينزّل ملفات الموقع الجديدة ويعيد فتح التطبيق. تصفير الطابور يحذف العمليات القديمة فقط ولا يحذف البيانات المحلية.</p>
+      <div class="ct-maintenance-status"><i class="fa-solid fa-list-check"></i><span>العمليات المعلقة حالياً: <b id="ctMaintenanceQueueCount">0</b></span></div>
+      <div class="ct-maintenance-actions">
+        <button type="button" class="ct-maintenance-btn ct-cache-refresh-btn" id="ctRefreshApplicationCache"><i class="fa-solid fa-arrows-rotate"></i><span>تحديث الكاش والتطبيق</span></button>
+        <button type="button" class="ct-maintenance-btn ct-queue-reset-btn" id="ctResetOldSyncQueue"><i class="fa-solid fa-trash-can-arrow-up"></i><span>تصفير طابور المزامنة القديم</span></button>
+      </div>`;
+
+    const subscription = document.getElementById('ctSubscriptionPanel');
+    if (subscription?.nextSibling) host.insertBefore(panel, subscription.nextSibling);
+    else host.prepend(panel);
+
+    const queueCount = panel.querySelector('#ctMaintenanceQueueCount');
+    const renderCount = () => { if (queueCount) queueCount.textContent = String(getSyncQueue().length); };
+    renderCount();
+    window.addEventListener('cashtop:sync-queue-changed', renderCount);
+    window.addEventListener('cashtop:sync-queue-reset', renderCount);
+
+    panel.querySelector('#ctResetOldSyncQueue')?.addEventListener('click', async event => {
+      const button = event.currentTarget;
+      const count = getSyncQueue().length;
+      const accepted = confirm(`سيتم حذف ${count} عملية قديمة من طابور هذا الجهاز. البيانات المحلية لن تُحذف، لكن هذه العمليات القديمة لن تُرفع إلى السيرفر. متابعة؟`);
+      if (!accepted) return;
+      button.disabled = true;
+      const oldHtml = button.innerHTML;
+      button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>جاري التصفير...</span>';
+      try {
+        const result = await resetSyncQueueCompletely();
+        await window.CashtopTurso?.resetSyncRuntime?.();
+        renderCount();
+        showToast(`تم تصفير الطابور وحذف ${result.discarded} عملية قديمة. أي تعديل جديد سيُزامن بطابور جديد.`, 'success', 4800);
+      } catch (error) {
+        showToast(error?.message || 'تعذر تصفير طابور المزامنة.', 'error');
+      } finally {
+        button.disabled = false;
+        button.innerHTML = oldHtml;
+      }
+    });
+
+    panel.querySelector('#ctRefreshApplicationCache')?.addEventListener('click', async event => {
+      const button = event.currentTarget;
+      button.disabled = true;
+      const oldHtml = button.innerHTML;
+      button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>جاري حفظ الطابور وتحديث الملفات...</span>';
+      try {
+        const result = await refreshApplicationCache();
+        showToast(`تم تحديث ملفات التطبيق، وحُفظت ${result.pendingPreserved} عملية معلقة. جاري إعادة الفتح...`, 'success', 4200);
+        setTimeout(() => location.reload(), 850);
+      } catch (error) {
+        showToast(error?.message || 'تعذر تحديث كاش التطبيق.', 'error', 5200);
+        button.disabled = false;
+        button.innerHTML = oldHtml;
+      }
+    });
+  }
+
   function renderSubscriptionPanel(session = getSession()) {
-    if (FILE !== 'setting.html' || document.getElementById('ctSubscriptionPanel')) return;
+    if (FILE !== 'setting.html') return;
+    document.getElementById('ctSubscriptionPanel')?.remove();
     const access = getCompanyAccess();
-    const plan = String(access.plan || session?.plan || 'pro').toLowerCase();
+    const plan = currentPlan();
+    const companyKey = String(access.companyKey || session?.companyKey || '').trim();
     const host = document.getElementById('ctPageHost');
     if (!host) return;
+
+    const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    })[char]);
+    const limitText = value => value == null ? 'غير محدود' : String(value);
+
+    let details = '';
+    if (plan === 'plus') {
+      details = `
+        <div class="ct-plan-grid">
+          <span>المنتجات / فرع <b>${PLUS_LIMITS.products}</b></span>
+          <span>الموردون / فرع <b>${PLUS_LIMITS.suppliers}</b></span>
+          <span>الفروع <b>${PLUS_LIMITS.branches}</b></span>
+          <span>المخازن / فرع <b>${PLUS_LIMITS.storesPerBranch}</b></span>
+          <span>الموظفون / فرع <b>${PLUS_LIMITS.employeesPerBranch}</b></span>
+          <span>الفواتير اليومية / فرع <b>${PLUS_LIMITS.invoicesDailyPerBranch}</b></span>
+          <span>العملاء الجدد يومياً <b>${PLUS_LIMITS.customersDailyCompany}</b></span>
+          <span>المصاريف اليومية <b>${PLUS_LIMITS.expensesDailyCompany}</b></span>
+          <span>فواتير المشتريات اليومية <b>${PLUS_LIMITS.purchasesDailyCompany}</b></span>
+        </div>`;
+    } else if (plan === 'custom') {
+      const limits = currentCustomLimits();
+      details = `
+        <div class="ct-plan-grid">
+          <span>الفواتير يومياً <b>${limitText(limits.daily.invoices)}</b></span>
+          <span>العملاء يومياً <b>${limitText(limits.daily.customers)}</b></span>
+          <span>المصاريف يومياً <b>${limitText(limits.daily.expenses)}</b></span>
+          <span>الموردون يومياً <b>${limitText(limits.daily.suppliers)}</b></span>
+          <span>الموظفون <b>${limitText(limits.fixed.employees)}</b></span>
+          <span>المخازن <b>${limitText(limits.fixed.warehouses)}</b></span>
+          <span>الفروع <b>${limitText(limits.fixed.branches)}</b></span>
+          <span>المنتجات <b>${limitText(limits.fixed.products)}</b></span>
+        </div>`;
+    } else {
+      details = '<div class="ct-plan-description">جميع حدود الاستخدام غير محدودة في خطة Pro.</div>';
+    }
+
+    const planLabel = plan === 'plus' ? 'Plus' : plan === 'custom' ? 'مخصصة' : 'Pro';
     const panel = document.createElement('section');
     panel.id = 'ctSubscriptionPanel';
     panel.className = 'ct-subscription-panel';
-    panel.innerHTML = `<style>.ct-subscription-panel{background:#fff;border:1px solid #e2e8f0;border-top:4px solid #605ca8;border-radius:9px;padding:15px;margin:0 0 16px;font-family:Cairo}.ct-plan-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.ct-plan-head strong{font-size:14px}.ct-plan-badge{padding:5px 12px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:11px;font-weight:800}.ct-plan-description{margin-top:10px;color:#64748b;font-size:11px;line-height:1.8}</style><div class="ct-plan-head"><strong><i class="fa-solid fa-crown"></i> خطة الشركة</strong><span class="ct-plan-badge">${plan === 'plus' ? 'Plus' : 'Pro'}</span></div><div class="ct-plan-description">تُدار الخطة مركزياً من لوحة المشرف، وتُحدّث على جميع الأجهزة من MongoDB.</div>`;
+    panel.innerHTML = `
+      <style>
+        .ct-subscription-panel{background:#fff;border:1px solid #e2e8f0;border-top:4px solid #605ca8;border-radius:9px;padding:15px;margin:0 0 16px;font-family:Cairo}
+        .ct-plan-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+        .ct-plan-head strong{font-size:14px}.ct-plan-badge{padding:5px 12px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:11px;font-weight:800}
+        .ct-company-key{margin-top:11px;padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;display:flex;justify-content:space-between;gap:10px;align-items:center;direction:rtl;font-size:11px}
+        .ct-company-key code{direction:ltr;unicode-bidi:plaintext;font-weight:800;color:#312e81;overflow-wrap:anywhere}
+        .ct-plan-description{margin-top:10px;color:#64748b;font-size:11px;line-height:1.8}
+        .ct-plan-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:11px}
+        .ct-plan-grid span{background:#f8fafc;border:1px solid #e2e8f0;border-radius:7px;padding:8px 10px;font-size:10px;color:#475569}
+        .ct-plan-grid b{color:#111827}
+        @media(max-width:600px){.ct-plan-grid{grid-template-columns:1fr}}
+      </style>
+      <div class="ct-plan-head">
+        <strong><i class="fa-solid fa-crown"></i> تفاصيل الخطة</strong>
+        <span class="ct-plan-badge">${planLabel}</span>
+      </div>
+      <div class="ct-company-key"><span>مفتاح الشركة</span><code>${esc(companyKey || '—')}</code></div>
+      ${details}`;
     host.prepend(panel);
   }
 
@@ -3202,7 +3713,7 @@
   function updateNetworkStatus() {
     const status = document.getElementById('ctNetStatus');
     if (!status) return;
-    const backendState = window.CashtopFirebase?.getState?.() || {};
+    const backendState = window.CashtopTurso?.getState?.() || {};
     const backendRecentlyReachable = backendState.backendReachable === true && Date.now() - Number(backendState.backendReachableAt || 0) < 120000;
     const online = navigator.onLine !== false || backendRecentlyReachable;
     status.classList.toggle('offline', !online);
@@ -3241,6 +3752,64 @@
     }, duration);
   }
 
+  function waitForServiceWorkerMessage(requestId, acceptedTypes, timeoutMs = 25000) {
+    return new Promise(resolve => {
+      let settled = false;
+      const types = new Set(Array.isArray(acceptedTypes) ? acceptedTypes : [acceptedTypes]);
+      const finish = value => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        navigator.serviceWorker?.removeEventListener?.('message', onMessage);
+        resolve(value);
+      };
+      const onMessage = event => {
+        const data = event.data || {};
+        if (!types.has(data.type)) return;
+        // توافق مع عامل الخدمة R58 الذي كان يرسل النتيجة بلا requestId.
+        if (data.requestId && data.requestId !== requestId) return;
+        finish(data);
+      };
+      const timer = setTimeout(() => finish({ timeout: true, requestId }), timeoutMs);
+      navigator.serviceWorker?.addEventListener?.('message', onMessage);
+    });
+  }
+
+  async function refreshApplicationCache() {
+    const saved = await preservePendingSyncState();
+    const secureServiceWorkerContext = location.protocol === 'https:' || location.hostname === 'localhost';
+    if (!('serviceWorker' in navigator) || !secureServiceWorkerContext) {
+      throw new Error('تحديث كاش التطبيق يحتاج فتح الموقع عبر HTTPS أو localhost.');
+    }
+
+    const registration = await navigator.serviceWorker.getRegistration() ||
+      await navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });
+
+    // اطلب من المتصفح فحص نسخة service-worker.js الجديدة من السيرفر مباشرة.
+    try { await registration.update(); } catch (_) {}
+    if (registration.waiting) registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+
+    // عامل الخدمة الفعال (الجديد إن تم تفعيله، أو الحالي إن لم يتغير الملف)
+    // يعيد تنزيل جميع ملفات التطبيق بلا كاش، من دون لمس localStorage/IndexedDB.
+    const ready = await navigator.serviceWorker.ready;
+    const worker = registration.waiting || registration.active || ready.active || navigator.serviceWorker.controller;
+    if (!worker) throw new Error('تعذر الوصول إلى عامل خدمة التطبيق.');
+
+    const requestId = `CACHE_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const responsePromise = waitForServiceWorkerMessage(requestId, 'CASHTOP_CACHE_REFRESHED', 35000);
+    worker.postMessage({ type: 'REFRESH_CACHE', requestId });
+    const refreshed = await responsePromise;
+    if (refreshed?.timeout) throw new Error('انتهت مهلة تحديث الكاش. أعد المحاولة مع اتصال ثابت.');
+    if (!refreshed?.complete) throw new Error(`اكتمل تحديث ${Number(refreshed?.updated || 0)} من ${Number(refreshed?.total || 0)} ملف فقط.`);
+
+    // أعد تثبيت الطابور بعد تنزيل الملفات احتياطياً، ثم اجعل أي SW منتظر فعالاً.
+    await preservePendingSyncState();
+    const latestRegistration = await navigator.serviceWorker.getRegistration();
+    latestRegistration?.waiting?.postMessage?.({ type: 'SKIP_WAITING' });
+    rawSet('ct_sw_update_checked_at', String(Date.now()));
+    return { ...refreshed, pendingPreserved: saved.count };
+  }
+
   async function installPwa() {
     if (!can('app.install')) {
       showToast('لا تملك صلاحية تثبيت التطبيق.', 'error');
@@ -3266,10 +3835,10 @@
   let cloudSyncRuntimePromise = null;
 
   function ensureCloudSyncRuntime() {
-    if (window.CashtopFirebase && typeof window.CashtopFirebase.syncAll === 'function') {
+    if (window.CashtopTurso && typeof window.CashtopTurso.syncAll === 'function') {
       return Promise.resolve(true);
     }
-    const cfg = window.CASHTOP_FIREBASE || {};
+    const cfg = window.CASHTOP_TURSO || {};
     if (!cfg.enabled || !cfg.config?.databaseURL) return Promise.resolve(false);
     if (cloudSyncRuntimePromise) return cloudSyncRuntimePromise;
 
@@ -3278,7 +3847,7 @@
       if (existing) {
         const started = Date.now();
         const wait = () => {
-          if (window.CashtopFirebase?.syncAll) return resolve(true);
+          if (window.CashtopTurso?.syncAll) return resolve(true);
           if (Date.now() - started > 5000) return resolve(false);
           setTimeout(wait, 80);
         };
@@ -3286,14 +3855,14 @@
         return;
       }
       const script = document.createElement('script');
-      script.src = 'firebase-sync.js?v=23';
+      script.src = 'turso-sync.js?v=75';
       script.async = true;
       script.dataset.ctSyncRuntime = 'classic';
-      script.onload = () => resolve(Boolean(window.CashtopFirebase?.syncAll));
+      script.onload = () => resolve(Boolean(window.CashtopTurso?.syncAll));
       script.onerror = () => resolve(false);
       (document.head || document.documentElement).appendChild(script);
     }).finally(() => {
-      if (!window.CashtopFirebase?.syncAll) cloudSyncRuntimePromise = null;
+      if (!window.CashtopTurso?.syncAll) cloudSyncRuntimePromise = null;
     });
     return cloudSyncRuntimePromise;
   }
@@ -3316,11 +3885,11 @@
     // navigator.onLine مؤشر تقريبي فقط وقد يكون خاطئاً على بعض الشبكات/VPN.
     // نحاول خادم قاعدة البيانات فعلياً ونقرر النتيجة من استجابة الطلب نفسه.
     try {
-      if (!(window.CashtopFirebase && typeof window.CashtopFirebase.syncAll === 'function')) {
+      if (!(window.CashtopTurso && typeof window.CashtopTurso.syncAll === 'function')) {
         await ensureCloudSyncRuntime();
       }
-      if (window.CashtopFirebase && typeof window.CashtopFirebase.syncAll === 'function') {
-        const result = await window.CashtopFirebase.syncAll({ manual, forceCheck: true });
+      if (window.CashtopTurso && typeof window.CashtopTurso.syncAll === 'function') {
+        const result = await window.CashtopTurso.syncAll({ manual, forceCheck: manual === true });
         if (manual) {
           const processed = Number(result?.processed || 0);
           const pulled = Number(result?.pulled || 0);
@@ -3399,25 +3968,23 @@
 
   async function syncImportedData(keys = []) {
     const importedKeys = [...new Set((Array.isArray(keys) ? keys : []).map(canonicalKey).filter(key => DATA_KEYS.includes(key)))];
-    importedKeys.forEach(key => enqueueSyncOperation(key, { forceReplace: true }));
-    if (!window.CashtopFirebase?.syncAll) return { unavailable: true, remaining: getSyncQueue().length };
+    importedKeys.forEach(key => {
+      if (!getSyncQueue().some(item => item.key === key)) enqueueSyncOperation(key, { forceReplace: true });
+    });
+    if (!window.CashtopTurso) return { unavailable: true, remaining: getSyncQueue().length };
 
     window.dispatchEvent(new CustomEvent('cashtop:sync-progress', {
-      detail: { active: true, current: 0, total: Math.max(1, importedKeys.length), label: 'جاري رفع النسخة الاحتياطية إلى قاعدة البيانات...' }
+      detail: { active: true, current: 0, total: Math.max(1, importedKeys.length), label: 'جاري رفع التغييرات المستوردة فقط...' }
     }));
 
     let result = null;
     try {
-      // ننتظر أي دورة قائمة ثم نكرر فوراً حتى لا تضيع الاستعادة بسبب busy/backoff.
-      for (let attempt = 0; attempt < 4; attempt += 1) {
-        result = await window.CashtopFirebase.syncAll({
-          manual: attempt > 0,
-          forceCheck: true,
-          importSync: true,
-          forceRetry: true
-        });
-        if (Number(result?.remaining || getSyncQueue().length) === 0) break;
-        await new Promise(resolve => setTimeout(resolve, 180 + attempt * 120));
+      // v74: Turso import uses batched exact UPSERTs: no remote pre-read and no
+      // verification pull for every dataset.
+      if (typeof window.CashtopTurso.importDatasets === 'function') {
+        result = await window.CashtopTurso.importDatasets(importedKeys);
+      } else if (typeof window.CashtopTurso.syncAll === 'function') {
+        result = await window.CashtopTurso.syncAll({ importSync: true, forceRetry: true });
       }
       return result || { remaining: getSyncQueue().length };
     } catch (error) {
@@ -3443,64 +4010,58 @@
     const session = getSession() || {};
     const currentCompany = String(session.tenantId || session.companyId || session.companyKey || '');
     const backupTenant = String(backup.tenantId || backup.companyId || '');
-    if (backupTenant && currentCompany && backupTenant !== currentCompany) {
-      throw new Error('هذه النسخة تخص شركة أخرى ولا يمكن دمجها داخل الشركة الحالية');
-    }
-    // المفتاح قد يكون قديماً بعد تغيير مفتاح نفس الشركة. tenantId الثابت هو المرجع.
-    // إذا كانت النسخة بلا tenantId نحتفظ بفحص المفتاح كحاجز أمان.
-    if (!backupTenant && backup.companyKey && session.companyKey &&
-        String(backup.companyKey).trim().toUpperCase() !== String(session.companyKey).trim().toUpperCase()) {
-      throw new Error('مفتاح النسخة الاحتياطية لا يطابق الشركة الحالية');
-    }
+    // v74: business data may be restored from any company/key backup. Identity,
+    // subscription and manager fields are always kept from the current session.
 
     const importedKeys = [];
     const currentAccess = getCompanyAccess();
     const protectedAccessFields = [
-      'tenantId', 'companyId', 'companyKey', 'companyName', 'status', 'plan', 'startAt', 'endAt',
+      'tenantId', 'companyId', 'companyKey', 'companyName', 'status', 'plan', 'customLimits', 'startAt', 'endAt',
       'durationUnit', 'durationQuantity', 'backupImportEnabled', 'authVersion', 'deleted', 'manager'
     ];
 
-    // التخزين المحلي أولاً؛ ثم نُجبر كل dataset مستورد على الرفع إلى القاعدة.
+    // Local-first restore. Only datasets whose raw value really changes are
+    // queued, so a large backup containing identical sections costs zero writes
+    // for those unchanged sections.
     Object.entries(backup.datasets).forEach(([key, entry]) => {
       if (!isManagedKey(key)) return;
       const canonical = canonicalKey(key);
       const exactRaw = entry && typeof entry === 'object' && entry.valueEncoding === 'local-storage-raw-v1';
+      const oldRaw = getRawCompanyDataset(canonical);
+
       if (exactRaw && entry.exists === false) {
-        if (canonical === 'cashtop_company_access') {
-          setRawCompanyDataset(canonical, JSON.stringify(currentAccess), { action: 'backup-import' });
-          enqueueSyncOperation(canonical, { forceReplace: true });
-        } else {
-          const oldValue = getRawCompanyDataset(canonical);
-          rawRemove(namespaceKey(canonical));
-          rawSet(metaKey(canonical), JSON.stringify({ updatedAt: Date.now(), revision: 1, deviceId: getDeviceId(), page: FILE, deleted: true }));
-          enqueueSyncOperation(canonical, { deletedDataset: true, forceReplace: true });
-          emitDataChange(canonical, oldValue, null, 'backup-import');
-        }
+        if (canonical === 'cashtop_company_access') return;
+        if (oldRaw === null) return;
+        rawRemove(namespaceKey(canonical));
+        rawSet(metaKey(canonical), JSON.stringify({ updatedAt: Date.now(), revision: 1, deviceId: getDeviceId(), page: FILE, deleted: true }));
+        enqueueSyncOperation(canonical, { deletedDataset: true, forceReplace: true });
+        emitDataChange(canonical, oldRaw, null, 'backup-import');
         importedKeys.push(canonical);
         return;
       }
+
       let storageValue = exactRaw
         ? String(entry.value ?? '')
         : (typeof entry === 'string' && ['cashtop_sms_template', 'cashtop_invoice_message_template'].includes(canonical)
           ? entry
           : JSON.stringify(entry));
 
-      // لا نسمح لنسخة قديمة أن تعيد مفتاحاً/حالةً/مديراً قديماً وتُعطّل الحساب.
       if (canonical === 'cashtop_company_access') {
         const importedAccess = safeJson(storageValue, {}) || {};
         const mergedAccess = { ...importedAccess };
         protectedAccessFields.forEach(field => {
           if (Object.prototype.hasOwnProperty.call(currentAccess, field)) mergedAccess[field] = currentAccess[field];
         });
-        mergedAccess.tenantId = session.tenantId || session.companyId || currentAccess.tenantId || currentAccess.companyId || '';
+        mergedAccess.tenantId = session.tenantId || session.companyId || currentAccess.tenantId || currentAccess.companyId || currentCompany || '';
         mergedAccess.companyId = mergedAccess.tenantId;
         mergedAccess.companyKey = session.companyKey || currentAccess.companyKey || '';
         mergedAccess.backupImportEnabled = currentAccess.backupImportEnabled === true;
         storageValue = JSON.stringify(mergedAccess);
       }
 
-      // النسخة الكاملة تُكتب على مستوى الشركة كلها، لا على فرع الجلسة فقط.
-      setRawCompanyDataset(canonical, storageValue, { action: 'backup-import' });
+      if (oldRaw === storageValue) return;
+      const result = setRawCompanyDataset(canonical, storageValue, { action: 'backup-import', enqueue: false, audit: false });
+      if (!result?.changed) return;
       enqueueSyncOperation(canonical, { forceReplace: true });
       importedKeys.push(canonical);
     });
@@ -4112,6 +4673,7 @@
     logout,
     showToast,
     syncNow,
+    refreshApplicationCache,
     installPwa,
     can,
     normalizePermissions,
@@ -4132,6 +4694,7 @@
     branchIdFromSession,
     currentPlan,
     PLUS_LIMITS,
+    currentCustomLimits,
     namespaceKey,
     metaKey,
     safeJson,
@@ -4143,20 +4706,24 @@
     syncImportedData,
     applyRemoteDataset,
     validateSessionLocal,
-    getTaxSettings, calculateTax, getSmartNotifications, updateNotificationBadge,
+    getTaxSettings, calculateTax,
+    getNotificationSettings, getSmartNotifications, updateNotificationBadge, requestNotificationPermission, notificationBrandIcon, showTodayProfitNotification,
     archiveRecords, readArchivedRecords, compactCompletedData,
-    getSyncQueue, enqueueSyncOperation, completeSyncOperation, clearSyncQueue, updateSyncBadge, restoreSyncQueueBackup, migrateLegacySyncQueues,
+    getSyncQueue, enqueueSyncOperation, completeSyncOperation, clearSyncQueue, resetSyncQueueCompletely, preservePendingSyncState, updateSyncBadge, restoreSyncQueueBackup, migrateLegacySyncQueues,
     setSyncProgress, restoreDurableCompanyData,
     getSystemSettings, getProfitRate, salePriceFromCost, applySystemBranding, recordIdentity, sortNewestFirstRecords,
     debounce, runWhenIdle, renderVirtualRows, runWorkerTask, queryRecords, atomicSetItems, recoverAtomicTransactions,
     captureModalDraft, restoreModalDraft, clearModalDraft, getAuditPending, getAuditPendingAsync, getAuditPendingCountAsync, completeAuditPending, completeAuditPendingAsync, getRecentAuditCache,
-    getNotificationSettings, requestNotificationPermission, showSystemNotification,
-    notificationBrandIcon, showTodayProfitNotification, todaySalesSummary
   });
 
   if (IS_APP_PAGE) {
     addCoreAssets();
     patchStorage();
+    const queueResetAppliedR59 = primeRevisionQueueResetR59();
+    if (queueResetAppliedR59) {
+      syncQueueBackupChain = syncQueueBackupChain.then(() => backupSyncQueue([])).catch(() => false);
+      window.dispatchEvent(new CustomEvent('cashtop:sync-queue-reset', { detail: { discarded: 0, resetAt: syncQueueResetAt(), automatic: true, revision: 'r59' } }));
+    }
     if (ensureAuthenticated()) { recoverAtomicTransactions(); seedCompanyStorage(); bootstrapCompanyAccess(); ensureSystemDefaults(); }
 
     window.addEventListener('online', () => { updateNetworkStatus(); syncNow({ manual: false }); });
@@ -4197,10 +4764,14 @@
       const result = validateSessionLocal(before);
       if (!result.ok) { logout(result.reason); return; }
       const after = getSession() || {};
-      if (JSON.stringify(before.permissions || {}) !== JSON.stringify(after.permissions || {}) || before.authVersion !== after.authVersion || before.plan !== after.plan) {
+      const accessChanged = JSON.stringify(before.permissions || {}) !== JSON.stringify(after.permissions || {}) ||
+        before.authVersion !== after.authVersion || before.plan !== after.plan ||
+        JSON.stringify(before.customLimits || null) !== JSON.stringify(after.customLimits || null);
+      if (accessChanged) {
         applyPermissionVisibility();
         applyActionPermissions();
         if (!enforceCurrentPageAccess(after)) return;
+        if (FILE === 'setting.html') renderSubscriptionPanel(after);
         window.dispatchEvent(new CustomEvent('cashtop:session-updated', { detail: after }));
       }
     };

@@ -268,17 +268,17 @@
         .ct-currency-hint { display:block; margin-top:4px; font-size:11px; color:#6b7280; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     </style>
 
-    <!-- CASH TOP: shared shell, unified storage, accounting and Firebase sync -->
+    <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=56">
+    <link rel="stylesheet" href="cashtop-core.css?v=75">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="barcode-tools.js?v=20"></script>
-    <script src="cashtop-core.js?v=56"></script><script src="push-config.js?v=56"></script><script src="push-client.js?v=56"></script><script src="transient-notifications.js?v=56"></script>
+    <script src="cashtop-core.js?v=75"></script>
     <script src="multi-system.js?v=57"></script>
-    <script src="firebase-config.js?v=19"></script>
+    <script src="turso-config.js?v=74"></script><script src="turso-rtdb.js?v=74"></script>
     <script src="accounting-engine.js"></script>
     <script src="cashtop-printer.js?v=48"></script>
-    <script src="firebase-sync.js?v=56"></script>
+    <script src="turso-sync.js?v=75"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -352,7 +352,7 @@
         <div class="ct-submenu">
           <a href="sales-offers.html">عروض المبيعات</a>
           
-          <a href="notifications.html">الإشعارات</a>
+          
           <a href="tax-settings.html">إعدادات الضريبة</a>
           <a href="storage-settings.html">التخزين والأرشفة</a>
           <a href="استيراد وتصدير ل كل قسم.html">النسخ الاحتياطي</a>
@@ -656,7 +656,7 @@
         let manufacturingRecipesData = readArray('cashtop_manufacturing_recipes');
         let customersData = readArray('cashtop_customers');
         let branchesData = readArray('cashtop_branches');
-        const cashierSession = window.Cashtop?.getSession?.() || readObject('cashtop_session', {});
+        const cashierSession = window.Cashtop?.getSession?.() || {};
         const sessionBranchId = cashierSession.dataBranchId || cashierSession.branchId || 'MAIN';
         let stockBranchId = sessionBranchId;
         let fundsDB = readObject('cashtop_funds_db', { accounts: [], accountLogs: [] });
@@ -2168,7 +2168,6 @@
             if (window.Cashtop?.atomicSetItems) window.Cashtop.atomicSetItems(invoiceChanges, { label: 'save-sales-invoice' });
             else Object.entries(invoiceChanges).forEach(([key, value]) => localStorage.setItem(key, JSON.stringify(value)));
             productsData = verifyPersistedStock(productsData, basketItems);
-            window.CashtopTransientNotifications?.notifyInvoice?.(invoiceObj).catch?.(()=>null);
 
             if(printStatus) {
                 showToast('تم حفظ الفاتورة محلياً، وجاري تجهيز الطباعة.', 'success');
@@ -2234,6 +2233,7 @@
                 id: currentlyEditingInvoiceId || `INV_${Date.now()}`,
                 status: status,
                 date: new Date().toISOString(),
+                createdAt: editingOriginalInvoice?.createdAt || editingOriginalInvoice?.date || new Date().toISOString(),
                 customer: customerName,
                 customerId: selectedCustomer?.id || editingOriginalInvoice?.customerId || null,
                 phone: customerPhone,

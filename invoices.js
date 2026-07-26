@@ -1430,7 +1430,7 @@ function saveBatchInvoices() {
     hideBatchInvoiceModal({ persist: false });
     clearBatchDraft();
     notify(`تم ترحيل ${created.length} فاتورة مبيعات؛ كل دفعة أضيفت للصندوق المختار وكل دين رُبط بفاتورته على العميل`, 'success');
-    window.CashtopFirebaseSync?.scheduleSync?.(100);
+    window.CashtopTursoSync?.scheduleSync?.(100);
   } catch (error) {
     console.error('تعذر ترحيل فواتير المبيعات', error);
     snapshotKeys.forEach(key => {

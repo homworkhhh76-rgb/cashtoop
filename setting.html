@@ -138,14 +138,14 @@
         }
     </style>
 
-    <!-- CASH TOP: shared shell, unified storage, accounting and Firebase sync -->
+    <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=56">
-    <script src="cashtop-core.js?v=56"></script><script src="push-config.js?v=56"></script><script src="push-client.js?v=56"></script><script src="transient-notifications.js?v=56"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=75">
+    <script src="cashtop-core.js?v=75"></script>
     <script src="multi-system.js?v=57"></script>
-    <script src="firebase-config.js?v=19"></script>
+    <script src="turso-config.js?v=74"></script><script src="turso-rtdb.js?v=74"></script>
     <script src="accounting-engine.js"></script>
-    <script src="firebase-sync.js?v=56"></script>
+    <script src="turso-sync.js?v=75"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -219,7 +219,7 @@
         <div class="ct-submenu">
           <a href="sales-offers.html">عروض المبيعات</a>
           
-          <a href="notifications.html">الإشعارات</a>
+          
           <a href="tax-settings.html">إعدادات الضريبة</a>
           <a href="storage-settings.html">التخزين والأرشفة</a>
           <a href="استيراد وتصدير ل كل قسم.html">النسخ الاحتياطي</a>
@@ -354,26 +354,7 @@
                         <input type="number" step="any" min="0.000001" class="form-control" id="sysQuantityStep" value="0.001" placeholder="0.001">
                         <label for="sysQuantityStep">أصغر كسر للكمية (يمكن إدخال أي كسر)</label>
                     </div>
-                    <div class="toggle-wrapper">
-                        <span class="toggle-label-text">تفعيل إشعارات المدير</span>
-                        <label class="switch">
-                            <input type="checkbox" id="sysNotificationsToggle">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    <div class="toggle-wrapper">
-                        <span class="toggle-label-text">إشعار مبيعات اليوم والأرباح الساعة 11 مساءً</span>
-                        <label class="switch">
-                            <input type="checkbox" id="sysDailyProfitNotificationToggle" checked>
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    <div class="form-group" style="grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-                        <button type="button" class="btn-action-password" onclick="enableManagerNotifications()"><i class="fa-solid fa-bell"></i> منح صلاحية الإشعارات</button>
-                        <button type="button" class="btn-action-password" onclick="showTodayProfitNow()"><i class="fa-solid fa-chart-line"></i> عرض إشعار أرباح اليوم الآن</button>
-                        
-                    </div>
-                    <div class="toggle-wrapper">
+<div class="toggle-wrapper">
                         <span class="toggle-label-text">تقريب الإجمالي والصافي والمدفوع والمتبقي في الطباعة/الصورة فقط</span>
                         <label class="switch">
                             <input type="checkbox" id="sysRoundInvoicePrintToggle">
@@ -565,9 +546,6 @@
                 document.getElementById('sysQtyByPriceToggle').checked = sysSettings.qtyByPrice === true;
                 document.getElementById('sysFractionQtyToggle').checked = sysSettings.allowFractionQty !== false;
                 document.getElementById('sysRoundInvoicePrintToggle').checked = sysSettings.roundInvoicePrintTotals === true;
-                const notifSettings = JSON.parse(localStorage.getItem('cashtop_notification_settings')||'{}');
-                document.getElementById('sysNotificationsToggle').checked = sysSettings.notificationsEnabled === true || notifSettings.enabled === true;
-                document.getElementById('sysDailyProfitNotificationToggle').checked = sysSettings.dailyProfitNotificationEnabled !== false;
                 document.getElementById('sysQuantityStep').value = Number(sysSettings.quantityStep || 0.001);
                 updateFractionSettingsState();
                 updateCustomerPortalUrl(sysSettings);
@@ -647,7 +625,7 @@
                 syncInvoiceDesignLogo(url);
                 closeLogoUrlModal();
                 window.Cashtop?.applySystemBranding?.();
-                showToast('تم حفظ رابط الشعار وإضافته إلى مزامنة MongoDB.', 'success');
+                showToast('تم حفظ رابط الشعار وإضافته إلى مزامنة Turso.', 'success');
             } catch (_) {
                 showToast('تعذر تحميل الصورة من الرابط. تأكد أن الرابط مباشر ومتاح.', 'error');
             } finally {
@@ -691,7 +669,7 @@
             const conf = document.getElementById('confirmPassword').value;
             if (pass !== conf) return showToast('خطأ: كلمات المرور غير متطابقة!', 'error');
 
-            const session = window.Cashtop?.getSession?.() || JSON.parse(Storage.prototype.getItem.call(localStorage, 'cashtop_session') || 'null') || {};
+            const session = window.Cashtop?.getSession?.() || {};
             const role = String(session.role || '').toLowerCase();
             let updated = false;
 
@@ -747,9 +725,9 @@
             }
 
             if (!updated) return showToast('تعذر تحديد حساب المستخدم الحالي لتغيير كلمة مروره.', 'error');
-            showToast('تم تحديث كلمة المرور وإضافتها إلى طابور مزامنة MongoDB.', 'success');
+            showToast('تم تحديث كلمة المرور وإضافتها إلى طابور مزامنة Turso.', 'success');
             closePasswordModal();
-            try { await window.CashtopFirebase?.syncAll?.(); }
+            try { await window.CashtopTurso?.syncAll?.(); }
             catch (error) { console.warn('Password sync:', error); }
         }
 
@@ -829,23 +807,7 @@
             });
             return list;
         }
-
-        async function enableManagerNotifications() {
-            const result = await window.Cashtop?.requestNotificationPermission?.();
-            if (result?.ok) {
-                document.getElementById('sysNotificationsToggle').checked = true;
-                showToast('تم منح صلاحية الإشعارات. اضغط حفظ الإعدادات لتفعيلها للنظام.', 'success');
-            } else showToast(result?.reason === 'denied' ? 'الإشعارات مرفوضة من إعدادات المتصفح. فعّلها من صلاحيات الموقع.' : 'تعذر منح صلاحية الإشعارات على هذا الجهاز.', 'error');
-        }
-        async function showTodayProfitNow() {
-            if (!document.getElementById('sysNotificationsToggle')?.checked) return showToast('فعّل إشعارات المدير أولاً ثم احفظ الإعدادات.', 'warning');
-            const result = await window.Cashtop?.requestNotificationPermission?.();
-            if (!result?.ok) return showToast('يجب منح صلاحية الإشعارات للمتصفح أولاً.', 'error');
-            const ok = await window.Cashtop?.showTodayProfitNotification?.(true);
-            showToast(ok ? 'تم عرض إشعار مبيعات وأرباح اليوم.' : 'تعذر عرض الإشعار. تأكد من حفظ تفعيل الإشعارات.', ok ? 'success' : 'warning');
-        }
-
-        function saveSystemSettings(event) {
+function saveSystemSettings(event) {
             event.preventDefault();
             if (!window.Cashtop?.can?.('settings.edit')) { showToast('لا تملك صلاحية تعديل الإعدادات', 'error'); return; }
             
@@ -864,8 +826,6 @@
                 qtyByPrice: document.getElementById('sysQtyByPriceToggle').checked,
                 allowFractionQty: document.getElementById('sysFractionQtyToggle').checked,
                 roundInvoicePrintTotals: document.getElementById('sysRoundInvoicePrintToggle')?.checked === true,
-                notificationsEnabled: document.getElementById('sysNotificationsToggle')?.checked === true,
-                dailyProfitNotificationEnabled: document.getElementById('sysDailyProfitNotificationToggle')?.checked !== false,
                 quantityStep: String(document.getElementById('sysQuantityStep').value || '').trim() === '' ? (previousSettings.quantityStep ?? null) : Math.max(0.000001, parseFloat(document.getElementById('sysQuantityStep').value)),
                 appName: 'كاش توب 2',
                 customerPortalUrl: buildCustomerPortalUrl(),
@@ -874,8 +834,6 @@
 
             // الحفظ في التخزين المحلي
             localStorage.setItem('cashtop_settings', JSON.stringify(settingsObj));
-            const currentNotificationSettings = JSON.parse(localStorage.getItem('cashtop_notification_settings')||'{}');
-            localStorage.setItem('cashtop_notification_settings', JSON.stringify({...currentNotificationSettings, enabled: settingsObj.notificationsEnabled === true, dailySummaryEnabled: settingsObj.dailyProfitNotificationEnabled !== false}));
             syncInvoiceDesignLogo(settingsObj.logo);
             
             // تحديث إعدادات قاعدة البيانات الخاصة بصفحة النواقص بشكل متزامن
@@ -885,8 +843,8 @@
 
             window.Cashtop?.applySystemBranding?.();
             updateCustomerPortalUrl(settingsObj);
-            window.CashtopFirebase?.syncAll?.().catch?.(error => console.warn('Settings sync:', error));
-            showToast('تم حفظ الإعدادات الأساسية للنظام وإضافتها إلى مزامنة MongoDB بنجاح!', 'success');
+            window.CashtopTurso?.syncAll?.().catch?.(error => console.warn('Settings sync:', error));
+            showToast('تم حفظ الإعدادات الأساسية للنظام وإضافتها إلى مزامنة Turso بنجاح!', 'success');
         }
 
         function saveSmsSettings(event) {
@@ -896,7 +854,7 @@
             const invoiceText = document.getElementById('invoiceMessageTextArea').value;
             localStorage.setItem('cashtop_sms_template', smsText);
             localStorage.setItem('cashtop_invoice_message_template', invoiceText);
-            window.CashtopFirebase?.syncAll?.().catch?.(error => console.warn('Message settings sync:', error));
+            window.CashtopTurso?.syncAll?.().catch?.(error => console.warn('Message settings sync:', error));
             showToast('تم حفظ قوالب رسائل العملاء والفواتير وإضافتها للمزامنة.', 'success');
         }
     </script>

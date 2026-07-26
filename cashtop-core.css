@@ -638,11 +638,31 @@ html.ct-app-page body {
 .ct-topbar-logo { display: none !important; }
 .ct-svg-icon { width: 1.2em; height: 1.2em; fill: none; color: currentColor; flex: 0 0 auto; }
 .ct-icon-badge {
-  position: absolute; top: -5px; left: -7px; right: auto; min-width: 16px; height: 16px; padding: 0 4px;
-  border-radius: 999px; background: #dd4b39; color: #fff; font-size: 9px; font-weight: 800;
-  display: inline-flex; align-items: center; justify-content: center; line-height: 1;
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  right: auto;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #dd4b39;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  z-index: 3;
+  pointer-events: none;
 }
-.ct-notification-button { position: relative; text-decoration: none; }
+/* يثبت عداد الإشعارات على زاوية مربع الجرس نفسه كما في الواجهة الأصلية. */
+.ct-notification-button {
+  position: relative !important;
+  overflow: visible !important;
+  text-decoration: none;
+}
 .ct-quick-actions { display: flex; align-items: center; gap: 8px; }
 .ct-quick-button {
   min-height: 34px; padding: 6px 11px; background: #f8f9fa; border: 1px solid #d2d6de;

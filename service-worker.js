@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v67-r57-multipay-labelprint-mfg-layout-cache-first';
+const CACHE_VERSION = 'v75-cache-first-notification-corner';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = `cash-top-2-remote-static-${CACHE_VERSION}`;
 
@@ -14,42 +14,41 @@ const LOCAL_ASSETS = [
   './admin.html',
   './admin.js',
   './app-icon.png',
+  './audit-trail.html',
   './barcode-generator.html',
   './barcode-tools.js',
   './branches.html',
   './cashier.html',
   './cashtop-core.css',
   './cashtop-core.js',
-  './cashtop-export.js',
+  './turso-config.js',
+  './turso-rtdb.js',
+  './turso-sync.js',
   './cashtop-download-fix.js',
+  './cashtop-export.js',
   './cashtop-logo.png',
   './cashtop-printer.js',
   './cashtop-worker.js',
   './customer-groups.html',
+  './customer-portal.html',
   './customers.html',
-  './firebase-config.js',
-  './firebase-sync.js',
   './icon-192.png',
   './icon-512.png',
   './index.html',
+  './invoice-designer.html',
   './invoice-document.js',
   './invoices.html',
   './invoices.js',
   './journal.html',
   './login.js',
+  './maintenance.html',
   './manifest.webmanifest',
   './manufacturing.js',
   './materials.html',
   './multi-system.js',
   './notifications.html',
-  './admin-notifications.html',
-  './push-client.js',
-  './push-config.js',
-  './transient-notifications.js',
   './offline.html',
   './printer-settings.html',
-  './invoice-designer.html',
-  './customer-portal.html',
   './products.html',
   './qr.mp3',
   './sales-offers.html',
@@ -101,7 +100,7 @@ const REMOTE_STATIC_HOSTS = new Set([
 /* Prevent background network refreshes from competing with UI rendering.
  * HTML can refresh relatively often; immutable app assets refresh much less. */
 const LOCAL_REFRESH_AT = new Map();
-const HTML_REFRESH_MS = 6 * 60 * 60 * 1000;
+const HTML_REFRESH_MS = 12 * 60 * 60 * 1000;
 const STATIC_REFRESH_MS = 24 * 60 * 60 * 1000;
 let shellVerificationPromise = null;
 let remoteWarmPromise = null;
@@ -124,19 +123,26 @@ function shouldRefreshLocalInBackground(request) {
 
 /*
  * هذه نطاقات بيانات حية. لا يجوز وضع استجاباتها في Cache Storage مطلقاً.
- * كان تخزين GET الخاص بـ Firebase هو سبب قراءة نسخة قديمة من بيانات الشركة
+ * كان تخزين GET الخاص بـ Turso هو سبب قراءة نسخة قديمة من بيانات الشركة
  * وعدم ظهور تعديلات الأجهزة الأخرى.
  */
-function isLiveApiRequest(url) {
+function isLiveApiRequest(request, url) {
   const host = String(url.hostname || '').toLowerCase();
-  return host === 'cash-top-33.vercel.app' ||
-    host.endsWith('.firebaseio.com') ||
-    host.endsWith('.firebasedatabase.app') ||
-    host === 'identitytoolkit.googleapis.com' ||
-    host === 'securetoken.googleapis.com' ||
-    host === 'firestore.googleapis.com' ||
-    host === 'firebaseinstallations.googleapis.com' ||
-    host === 'fcmregistrations.googleapis.com';
+  let pathname = String(url.pathname || '');
+  try { pathname = decodeURIComponent(pathname); } catch (_) {}
+  pathname = pathname.replace(/\/+/g, '/');
+  const accept = String(request?.headers?.get?.('accept') || '').toLowerCase();
+
+  // بعد نقل السيرفر قد تصبح قاعدة البيانات على نفس نطاق الواجهة. أي مسار API
+  // أو طلب JSON برمجي يجب أن يمر إلى الشبكة مباشرة ولا يدخل Cache Storage.
+  const sameOriginApi = url.origin === self.location.origin && (
+    /(?:^|\/)api(?:\/|$)/i.test(pathname) ||
+    (request?.destination === '' && accept.includes('application/json'))
+  );
+
+  return sameOriginApi ||
+    /__turso_rtdb__(?:\/|$)/i.test(pathname) ||
+    host === 'cash-top-homworkhhh76-rgb.aws-eu-west-1.turso.io';
 }
 
 function isCacheableRemoteStatic(request, url) {
@@ -170,15 +176,27 @@ async function fetchLocalAsset(asset) {
     cache: 'no-store',
     credentials: 'same-origin'
   });
-  const response = await fetch(request);
+  const response = await fetchWithDeadline(request, {}, 10000);
   if (!response || !response.ok) throw new Error(`تعذر تخزين ملف التطبيق: ${asset}`);
   return { request, response };
 }
 
 async function installCompleteLocalShell() {
   const cache = await caches.open(APP_CACHE);
-  const results = await Promise.all(LOCAL_ASSETS.map(fetchLocalAsset));
-  await Promise.all(results.map(({ request, response }) => cache.put(request, response)));
+  const results = await Promise.allSettled(LOCAL_ASSETS.map(fetchLocalAsset));
+  const stored = new Set();
+  for (const result of results) {
+    if (result.status !== 'fulfilled') continue;
+    await cache.put(result.value.request, result.value.response);
+    stored.add(new URL(result.value.request.url).pathname);
+  }
+
+  // لا نمنع تحديث عامل الخدمة بسبب صفحة اختيارية واحدة، لكن الملفات الحرجة
+  // يجب أن تكون موجودة حتى لا يُفعّل إصدار ناقص يعلّق الدخول والتنقل.
+  const critical = ['./index.html', './صفحة تسجيل الدخول.html', './لوحة التحكم.html', './cashtop-core.js', './cashtop-core.css', './turso-config.js', './turso-rtdb.js', './turso-sync.js', './offline.html'];
+  const missingCritical = critical.filter(asset => !stored.has(new URL(asset, self.registration.scope).pathname));
+  if (missingCritical.length) throw new Error(`حزمة الكاش الحرجة ناقصة: ${missingCritical.join(', ')}`);
+  return { stored: stored.size, total: LOCAL_ASSETS.length };
 }
 
 async function cacheRemoteCssDependencies(cache, styleUrl, response) {
@@ -275,7 +293,7 @@ self.addEventListener('install', event => {
 
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
-    const keep = new Set([APP_CACHE, REMOTE_STATIC_CACHE]);
+    const keep = new Set([APP_CACHE, REMOTE_STATIC_CACHE, NOTIFICATION_META_CACHE]);
     const names = await caches.keys();
     await Promise.all(names.filter(name => !keep.has(name)).map(name => caches.delete(name)));
     if (self.registration.navigationPreload) {
@@ -302,7 +320,8 @@ function canonicalLocalRequest(request) {
 
 async function refreshLocalCache(request, cache) {
   try {
-    const response = await fetch(request, { cache: 'no-store' });
+    const timeout = request.mode === 'navigate' || request.destination === 'document' ? 6500 : 9000;
+    const response = await fetchWithDeadline(request, { cache: 'no-store' }, timeout);
     if (response && response.ok) {
       // نحفظ دائماً تحت رابط ثابت بلا ?v= حتى تستبدل النسخة القديمة فعلياً.
       await cache.put(canonicalLocalRequest(request), response.clone());
@@ -324,6 +343,13 @@ async function localCacheFirst(request) {
   const response = await refreshLocalCache(request, cache);
   if (response) return response;
   if (request.mode === 'navigate') {
+    const scopeUrl = new URL(self.registration.scope);
+    const requestedUrl = new URL(request.url);
+    const isScopeRoot = requestedUrl.pathname.replace(/\/+$/, '') === scopeUrl.pathname.replace(/\/+$/, '');
+    if (isScopeRoot) {
+      const index = await cache.match(new URL('./index.html', self.registration.scope).href, { ignoreSearch: true });
+      if (index) return index;
+    }
     return (await cache.match(new URL('./offline.html', self.registration.scope).href, { ignoreSearch: true })) || Response.error();
   }
   return Response.error();
@@ -356,7 +382,7 @@ self.addEventListener('fetch', event => {
   if (!['http:', 'https:'].includes(url.protocol)) return;
 
   /* بيانات قاعدة البيانات والـ APIs الحية تمر مباشرة بلا أي كاش. */
-  if (isLiveApiRequest(url)) return;
+  if (isLiveApiRequest(request, url)) return;
 
   if (url.origin === self.location.origin) {
     // Always return Cache Storage immediately, even while online. Network refresh
@@ -374,19 +400,73 @@ self.addEventListener('fetch', event => {
   /* الروابط الخارجية الأخرى، مثل WhatsApp، تمر إلى الشبكة كما هي. */
 });
 
-const NOTIFICATION_META_CACHE = 'cash-top-2-notification-meta-v1';
+const NOTIFICATION_META_CACHE = 'cash-top-2-notification-meta-v2';
 const NOTIFICATION_META_KEY = new URL('./__cashtop_notification_meta__', self.registration.scope).href;
-async function saveNotificationMeta(payload){const c=await caches.open(NOTIFICATION_META_CACHE);await c.put(NOTIFICATION_META_KEY,new Response(JSON.stringify(payload||{}),{headers:{'Content-Type':'application/json'}}));}
-async function readNotificationMeta(){try{const c=await caches.open(NOTIFICATION_META_CACHE),r=await c.match(NOTIFICATION_META_KEY);return r?await r.json():{};}catch(_){return{}}}
-async function displayNotification(payload={}){const title=String(payload.title||'كاش توب');const options={body:String(payload.body||''),icon:payload.icon||'app-icon.png',badge:payload.badge||payload.icon||'app-icon.png',image:payload.image||undefined,tag:payload.tag||`ct-${Date.now()}`,renotify:payload.renotify===true,data:{...(payload.data||{}),url:payload.url||payload.data?.url||'notifications.html'}};return self.registration.showNotification(title,options)}
-self.addEventListener('push',event=>{event.waitUntil((async()=>{let payload={};try{payload=event.data?.json?.()||{body:event.data?.text?.()||''}}catch(_){payload={body:event.data?.text?.()||''}}await displayNotification(payload)})())});
-self.addEventListener('notificationclick',event=>{event.notification.close();event.waitUntil((async()=>{const target=new URL(event.notification?.data?.url||'notifications.html',self.registration.scope).href;const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});const existing=windows.find(c=>c.url===target)||windows.find(c=>c.url.startsWith(self.registration.scope));if(existing){await existing.focus();try{existing.navigate(target)}catch(_){}return}await self.clients.openWindow(target)})())});
-self.addEventListener('periodicsync',event=>{if(event.tag!=='cashtop-daily-summary')return;event.waitUntil((async()=>{const meta=await readNotificationMeta();const now=new Date();if(meta.enabled!==true||meta.dailySummaryEnabled===false||meta.role!=='manager'||now.getHours()<23)return;const s=meta.summary||{};const today=now.toISOString().slice(0,10);if(s.dayKey!==today)return;const c=await caches.open(NOTIFICATION_META_CACHE),sentKey=new URL(`./__ct_daily_sent_${encodeURIComponent(meta.companyId||'company')}_${today}`,self.registration.scope).href;if(await c.match(sentKey))return;await displayNotification({title:'مبيعات اليوم والأرباح',icon:meta.icon||'app-icon.png',badge:meta.icon||'app-icon.png',body:`المبيعات: ${Number(s.sales||0).toFixed(2)} ${s.symbol||''} — الأرباح: ${Number(s.profit||0).toFixed(2)} ${s.symbol||''} — عدد الفواتير: ${Number(s.count||0)}`,tag:`daily-profit-${meta.companyId||'company'}-${today}`,url:'التقارير.html'});await c.put(sentKey,new Response('1'))})())});
+
+async function saveNotificationMeta(payload) {
+  const cache = await caches.open(NOTIFICATION_META_CACHE);
+  await cache.put(NOTIFICATION_META_KEY, new Response(JSON.stringify(payload || {}), {
+    headers: { 'Content-Type': 'application/json' }
+  }));
+}
+
+async function readNotificationMeta() {
+  try {
+    const cache = await caches.open(NOTIFICATION_META_CACHE);
+    const response = await cache.match(NOTIFICATION_META_KEY);
+    return response ? await response.json() : {};
+  } catch (_) { return {}; }
+}
+
+async function displayLocalNotification(payload = {}) {
+  const title = String(payload.title || 'كاش توب');
+  return self.registration.showNotification(title, {
+    body: String(payload.body || ''),
+    icon: payload.icon || 'app-icon.png',
+    badge: payload.badge || payload.icon || 'app-icon.png',
+    image: payload.image || undefined,
+    tag: payload.tag || `ct-${Date.now()}`,
+    renotify: payload.renotify === true,
+    data: { ...(payload.data || {}), url: payload.url || payload.data?.url || 'notifications.html' }
+  });
+}
+
+// No remote-push listener is installed. This periodic handler only reuses a
+// summary already cached by the open manager app and therefore costs zero Turso
+// reads/writes. Browsers that do not support Periodic Background Sync ignore it.
+self.addEventListener('periodicsync', event => {
+  if (event.tag !== 'cashtop-daily-summary') return;
+  event.waitUntil((async () => {
+    const meta = await readNotificationMeta();
+    const now = new Date();
+    if (meta.enabled !== true || meta.dailySummaryEnabled === false || meta.role !== 'manager' || now.getHours() < 23) return;
+    const summary = meta.summary || {};
+    const today = now.toISOString().slice(0, 10);
+    if (summary.dayKey !== today) return;
+    const cache = await caches.open(NOTIFICATION_META_CACHE);
+    const sentKey = new URL(`./__ct_daily_sent_${encodeURIComponent(meta.companyId || 'company')}_${today}`, self.registration.scope).href;
+    if (await cache.match(sentKey)) return;
+    await displayLocalNotification({
+      title: 'مبيعات اليوم والأرباح',
+      icon: meta.icon || 'app-icon.png',
+      body: `المبيعات: ${Number(summary.sales || 0).toFixed(2)} ${summary.symbol || ''} — الأرباح: ${Number(summary.profit || 0).toFixed(2)} ${summary.symbol || ''} — عدد الفواتير: ${Number(summary.count || 0)}`,
+      tag: `daily-profit-${meta.companyId || 'company'}-${today}`,
+      url: 'التقارير.html'
+    });
+    await cache.put(sentKey, new Response('1'));
+  })());
+});
 
 self.addEventListener('message', event => {
   const data = event.data || {};
-  if (data.type === 'SHOW_NOTIFICATION') { event.waitUntil(displayNotification(data.payload || {})); return; }
-  if (data.type === 'CASHTOP_NOTIFICATION_META') { event.waitUntil(saveNotificationMeta(data.payload || {})); return; }
+  if (data.type === 'SHOW_NOTIFICATION') {
+    event.waitUntil(displayLocalNotification(data.payload || {}));
+    return;
+  }
+  if (data.type === 'CASHTOP_NOTIFICATION_META') {
+    event.waitUntil(saveNotificationMeta(data.payload || {}));
+    return;
+  }
   if (data === 'SKIP_WAITING' || data.type === 'SKIP_WAITING') {
     event.waitUntil(self.skipWaiting());
     return;
@@ -396,7 +476,7 @@ self.addEventListener('message', event => {
       const result = await ensureLocalShell();
       const source = event.source;
       if (source && typeof source.postMessage === 'function') {
-        source.postMessage({ type: 'CASHTOP_CACHE_STATUS', ...result, cache: APP_CACHE });
+        source.postMessage({ type: 'CASHTOP_CACHE_STATUS', requestId: data.requestId || '', ...result, cache: APP_CACHE, version: CACHE_VERSION });
       }
       // لا نعيد تنزيل حزمة التطبيق كاملة عند فتح كل صفحة. كل تنقل محلي
       // يُخدم فوراً من Cache Storage حتى مع وجود الإنترنت، والتحديث الشبكي
@@ -410,8 +490,24 @@ self.addEventListener('message', event => {
       const source = event.source;
       const refreshed = await refreshCompleteLocalShell().catch(() => ({ updated: 0, total: LOCAL_ASSETS.length, complete: false }));
       if (source && typeof source.postMessage === 'function') {
-        source.postMessage({ type: 'CASHTOP_CACHE_REFRESHED', ...refreshed, cache: APP_CACHE });
+        source.postMessage({ type: 'CASHTOP_CACHE_REFRESHED', requestId: data.requestId || '', ...refreshed, cache: APP_CACHE, version: CACHE_VERSION });
       }
     })());
   }
+});
+
+
+self.addEventListener('notificationclick', event => {
+  event.notification?.close?.();
+  const target = String(event.notification?.data?.url || event.notification?.url || 'notifications.html');
+  event.waitUntil((async () => {
+    const list = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of list) {
+      try {
+        const url = new URL(target, self.registration.scope).href;
+        if (client.url === url && 'focus' in client) return client.focus();
+      } catch (_) {}
+    }
+    if (self.clients.openWindow) return self.clients.openWindow(target);
+  })());
 });

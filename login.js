@@ -14,11 +14,11 @@
   const rawSet = (key, value) => Storage.prototype.setItem.call(localStorage, key, String(value));
   const rawRemove = key => Storage.prototype.removeItem.call(localStorage, key);
   const rawKey = index => Storage.prototype.key.call(localStorage, index);
-  const backendSettings = window.CASHTOP_FIREBASE || {};
+  const backendSettings = window.CASHTOP_TURSO || {};
   const backendBase = String(backendSettings.config?.databaseURL || '').replace(/\/+$/, '');
-  const isMongoProxy = ['mongodb-http-api','mongodb-rtdb-api'].includes(backendSettings.backendMode) || /\/api\/rtdb(?:$|\?)/i.test(backendBase);
+  const isPathProxy = backendSettings.backendMode === 'turso-http-rtdb' || /__turso_rtdb__(?:$|\?)/i.test(backendBase);
   function transportUrl(url) {
-    if (!isMongoProxy) return url;
+    if (!isPathProxy) return url;
     const raw = String(url || '');
     if (!raw.startsWith(backendBase)) return raw;
     let suffix = raw.slice(backendBase.length).replace(/^\/+/, '');
@@ -27,10 +27,26 @@
     return `${backendBase}?path=${encodeURIComponent(pathPart)}`;
   }
   const TAB_SESSION_KEY = 'cashtop_tab_session_v2';
+  const WINDOW_SESSION_PREFIX = 'CASHTOP_SESSION_V2:';
   const parse = (value, fallback) => { try { return JSON.parse(value) ?? fallback; } catch (_) { return fallback; } };
   function writeSession(session) {
-    rawSet('cashtop_session', JSON.stringify(session));
-    try { sessionStorage.setItem(TAB_SESSION_KEY, JSON.stringify(session)); } catch (_) {}
+    const serialized = JSON.stringify(session || {});
+    try { sessionStorage.setItem(TAB_SESSION_KEY, serialized); } catch (_) {}
+    // Fallback for desktop/privacy browsers that block sessionStorage.
+    // window.name survives same-tab navigation but is not a persistent login.
+    try { window.name = WINDOW_SESSION_PREFIX + serialized; } catch (_) {}
+  }
+  function readTabSession() {
+    try {
+      const fromStorage = parse(sessionStorage.getItem(TAB_SESSION_KEY), null);
+      if (fromStorage) return fromStorage;
+    } catch (_) {}
+    try {
+      if (String(window.name || '').startsWith(WINDOW_SESSION_PREFIX)) {
+        return parse(String(window.name).slice(WINDOW_SESSION_PREFIX.length), null);
+      }
+    } catch (_) {}
+    return null;
   }
 
   function decodeJsonValue(value, fallback = null) {
@@ -68,7 +84,7 @@
     const licenses = normalizeArray(rawGet('cashtop_admin_licenses')).filter(item => normalizeKey(item.key) !== 'CASHTOP-DEMO');
     const users = normalizeArray(rawGet('cashtop_admin_users')).filter(item => normalizeKey(item.companyKey) !== 'CASHTOP-DEMO');
     rawSet('cashtop_admin_licenses', JSON.stringify(licenses)); rawSet('cashtop_admin_users', JSON.stringify(users));
-    if (normalizeKey(rawGet('cashtop_remembered_key')) === 'CASHTOP-DEMO') { rawRemove('cashtop_remembered_key'); rawRemove('cashtop_remembered_user'); }
+    if (normalizeKey(rawGet('cashtop_remembered_key')) === 'CASHTOP-DEMO') { rawRemove('cashtop_remembered_key'); }
   }
 
   function normalizeKey(value) { return String(value || '').trim().toUpperCase(); }
@@ -98,11 +114,6 @@
     return decodeJsonValue(payload, fallback);
   }
 
-  function usernameToEmail(companyKey, username) {
-    const clean = value => String(value).trim().toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '');
-    if (String(username).includes('@')) return String(username).trim().toLowerCase();
-    return `${clean(companyKey)}.${clean(username)}@login.cashtop.app`;
-  }
 
   function showStatus(message, type = 'info') {
     let box = document.getElementById('loginStatus');
@@ -130,13 +141,8 @@
     return { ok: true, end };
   }
 
-  function saveRemembered(key, username, remember) {
-    if (remember) {
-      rawSet('cashtop_remembered_key', key);
-      rawSet('cashtop_remembered_user', username);
-    } else {
-      rawRemove('cashtop_remembered_key'); rawRemove('cashtop_remembered_user');
-    }
+  function saveRemembered(key) {
+    rawSet('cashtop_remembered_key', normalizeKey(key));
   }
 
   function findCompanyAccessByKey(companyKey) {
@@ -170,7 +176,7 @@
         companyId: tenantId,
         companyName: accessFromScan.companyName || 'الشركة',
         status: accessFromScan.status || 'active',
-        plan: accessFromScan.plan || 'pro',
+        plan: accessFromScan.plan || 'pro', customLimits: accessFromScan.customLimits || null,
         backupImportEnabled: accessFromScan.backupImportEnabled === true,
         startAt: accessFromScan.startAt || '',
         endAt: accessFromScan.endAt || ''
@@ -265,11 +271,11 @@
       branchName: account.branchName || '', companyKey, tenantId, companyId: tenantId,
       companyName: license.companyName || context.access?.companyName || 'الشركة',
       licenseId: license.id || license.licenseId || tenantId, licenseStart: license.startAt || '', licenseEnd: license.endAt || '',
-      plan: license.plan || context.access?.plan || 'pro', status: license.status || 'active', loginAt: new Date().toISOString(), lastLicenseCheck: Date.now()
+      plan: license.plan || context.access?.plan || 'pro', customLimits: context.access?.customLimits || license.customLimits || null, status: license.status || 'active', loginAt: new Date().toISOString(), lastLicenseCheck: Date.now()
     };
     writeSession(session);
     setTenantBinding(companyKey, tenantId);
-    saveRemembered(companyKey, account.username, remember);
+    saveRemembered(companyKey);
     return session;
   }
 
@@ -281,25 +287,6 @@
     saveSession(context, account, key, remember);
   }
 
-  let loginDatabaseToken = '';
-  async function getLoginDatabaseToken() {
-    if (isMongoProxy) return '';
-    if (loginDatabaseToken) return loginDatabaseToken;
-    const apiKey = window.CASHTOP_FIREBASE?.config?.apiKey;
-    if (!apiKey) return '';
-    const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${encodeURIComponent(apiKey)}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json;charset=UTF-8' },
-      body: JSON.stringify({ returnSecureToken: true }), cache: 'no-store'
-    });
-    if (!response.ok) return '';
-    const data = await response.json().catch(() => ({}));
-    loginDatabaseToken = data.idToken || '';
-    return loginDatabaseToken;
-  }
-  function withAuth(url, token) {
-    if (!token) return url;
-    return `${url}${url.includes('?') ? '&' : '?'}auth=${encodeURIComponent(token)}`;
-  }
   function loginTransportCandidates(url) {
     // لا يوجد API محلي داخل الاستضافة في النسخة المحمولة.
     return [transportUrl(url)];
@@ -312,11 +299,7 @@
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), timeout);
         try {
-          let response = await fetch(targetUrl, { cache: 'no-store', signal: controller.signal, headers: { Accept: 'application/json' } });
-          if (!isMongoProxy && !response.ok && (response.status === 401 || response.status === 403)) {
-            const token = await getLoginDatabaseToken().catch(() => '');
-            if (token) response = await fetch(withAuth(targetUrl, token), { cache: 'no-store', signal: controller.signal, headers: { Accept: 'application/json' } });
-          }
+          const response = await fetch(targetUrl, { cache: 'no-store', signal: controller.signal, headers: { Accept: 'application/json' } });
           if ([408, 425, 429, 500, 502, 503, 504].includes(response.status) && attempt === 0) {
             await new Promise(resolve => setTimeout(resolve, 220));
             continue;
@@ -372,23 +355,28 @@
   }
 
   async function fetchLoginBootstrap(companyKey, tenantId) {
-    const settings = window.CASHTOP_FIREBASE || {};
+    const settings = window.CASHTOP_TURSO || {};
     const base = String(settings.config?.databaseURL || '').replace(/\/+$/, '');
     const root = String(settings.rootPath || 'cashTopExchange/cashTopPOS').replace(/^\/+|\/+$/g, '');
     const canonicalTenant = sanitizeSegment(tenantId);
     if (!base || !canonicalTenant) return null;
     const datasetUrl = key => `${base}/${root}/${canonicalTenant}/datasets/${sanitizeSegment(key)}.json`;
-    const [meta, accessPayload, branchesPayload, employeesPayload] = await Promise.all([
-      fetchJson(`${base}/${root}/${canonicalTenant}/meta.json`, 10000).catch(() => ({})),
-      fetchJson(datasetUrl('cashtop_company_access'), 12000),
-      fetchJson(datasetUrl('cashtop_branches'), 10000).catch(() => null),
-      fetchJson(datasetUrl('cashtop_employees'), 10000).catch(() => null)
-    ]);
-    const node = { meta: meta && typeof meta === 'object' ? meta : {}, datasets: {} };
-    if (accessPayload != null) node.datasets.cashtop_company_access = accessPayload;
-    if (branchesPayload != null) node.datasets.cashtop_branches = branchesPayload;
-    if (employeesPayload != null) node.datasets.cashtop_employees = employeesPayload;
-    const access = datasetValue(node, 'cashtop_company_access', {}) || {};
+
+    // Low-usage login: company access already contains the company identity,
+    // subscription and manager account. Do not fetch branches/employees or meta
+    // until they are actually needed for a non-manager login.
+    const accessPayload = await fetchJson(datasetUrl('cashtop_company_access'), 12000);
+    const node = { meta: {}, datasets: { cashtop_company_access: accessPayload } };
+    let access = datasetValue(node, 'cashtop_company_access', {}) || {};
+
+    // Very old records may depend on /meta for identity. This is a compatibility
+    // fallback only, so current accounts normally cost one company-row read here.
+    if (!access.companyKey || !(access.tenantId || access.companyId)) {
+      const meta = await fetchJson(`${base}/${root}/${canonicalTenant}/meta.json`, 9000).catch(() => ({}));
+      node.meta = meta && typeof meta === 'object' ? meta : {};
+      access = datasetValue(node, 'cashtop_company_access', {}) || {};
+    }
+
     const remoteKey = normalizeKey(access.companyKey || node.meta.companyKey || companyKey);
     const remoteTenant = sanitizeSegment(access.tenantId || access.companyId || node.meta.tenantId || node.meta.companyId || canonicalTenant);
     if (remoteKey && remoteKey !== companyKey) {
@@ -404,8 +392,27 @@
     return { root, companyId: canonicalTenant, tenantId: canonicalTenant, node, access };
   }
 
+  async function fetchLoginActors(remote) {
+    if (!remote?.tenantId && !remote?.companyId) return remote;
+    const settings = window.CASHTOP_TURSO || {};
+    const base = String(settings.config?.databaseURL || '').replace(/\/+$/, '');
+    const root = String(remote.root || settings.rootPath || 'cashTopExchange/cashTopPOS').replace(/^\/+|\/+$/g, '');
+    const tenantId = sanitizeSegment(remote.tenantId || remote.companyId);
+    if (!base || !root || !tenantId) return remote;
+    const datasetUrl = key => `${base}/${root}/${tenantId}/datasets/${sanitizeSegment(key)}.json`;
+    const [branchesPayload, employeesPayload] = await Promise.all([
+      fetchJson(datasetUrl('cashtop_branches'), 10000).catch(() => null),
+      fetchJson(datasetUrl('cashtop_employees'), 10000).catch(() => null)
+    ]);
+    const node = remote.node && typeof remote.node === 'object' ? remote.node : { meta: {}, datasets: {} };
+    node.datasets = node.datasets && typeof node.datasets === 'object' ? node.datasets : {};
+    if (branchesPayload != null) node.datasets.cashtop_branches = branchesPayload;
+    if (employeesPayload != null) node.datasets.cashtop_employees = employeesPayload;
+    return { ...remote, node };
+  }
+
   async function findRemoteCompanyViaAdminIndex(companyKey) {
-    const settings = window.CASHTOP_FIREBASE || {}; const base = String(settings.config?.databaseURL || '').replace(/\/+$/,'');
+    const settings = window.CASHTOP_TURSO || {}; const base = String(settings.config?.databaseURL || '').replace(/\/+$/,'');
     const adminRoot = String(settings.adminRootPath || 'cashTopExchange/cashTopAdmin').replace(/^\/+|\/+$/g,'');
     if (!base) return null;
 
@@ -444,7 +451,7 @@
 
     // لا نفحص جذر قاعدة البيانات كاملاً ولا نختار شركة بالتخمين. عند غياب
     // فهرس الإدارة نسمح فقط بمسار محلي معروف مسبقاً لنفس المفتاح (ترحيل قديم).
-    const settings = window.CASHTOP_FIREBASE || {};
+    const settings = window.CASHTOP_TURSO || {};
     const cfg = settings.config || {};
     const base = String(cfg.databaseURL || '').replace(/\/+$/, '');
     const boundTenant = sanitizeSegment(getTenantBindings()[companyKey] || '');
@@ -512,7 +519,7 @@
       rawSet(namespaceKey(companyId, key), storageValue);
       rawSet(metaKey(companyId, key), JSON.stringify({
         updatedAt: Number(payload?.updatedAt || remote.node?.meta?.updatedAt || Date.now()),
-        revision: Number(payload?.revision || 1), source: isMongoProxy ? 'mongodb-login-bootstrap' : 'firebase-login-bootstrap', seeded: false
+        revision: Number(payload?.revision || 1), source: 'turso-login-bootstrap', seeded: false
       }));
     });
 
@@ -521,7 +528,7 @@
     const license = {
       id: access.licenseId || companyId, key: companyKey, tenantId: companyId, companyId,
       companyName: access.companyName || remote.node?.meta?.companyName || 'الشركة',
-      status: access.status || 'active', plan: access.plan || 'pro', backupImportEnabled: access.backupImportEnabled === true, startAt: access.startAt || '', endAt: access.endAt || '', authVersion: access.authVersion || access.updatedAt || 0
+      status: access.status || 'active', plan: access.plan || 'pro', customLimits: access.customLimits || null, backupImportEnabled: access.backupImportEnabled === true, startAt: access.startAt || '', endAt: access.endAt || '', authVersion: access.authVersion || access.updatedAt || 0
     };
     const idx = licenses.findIndex(item => normalizeKey(item.key) === companyKey);
     if (idx >= 0) licenses[idx] = { ...licenses[idx], ...license }; else licenses.push(license);
@@ -543,58 +550,35 @@
   }
 
   async function databaseLogin(key, username, password, remember) {
-    const remote = await findRemoteCompany(key);
+    let remote = await findRemoteCompany(key);
     if (!remote) throw new Error('لم يتم العثور على بيانات هذه الشركة في قاعدة البيانات.');
+    hydrateRemoteCompany(remote, key);
+    try {
+      // Manager login usually finishes here after only key-index + access reads.
+      await localLogin(key, username, password, remember);
+      return;
+    } catch (error) {
+      const invalidCredentials = String(error?.message || '').includes('اسم المستخدم أو كلمة المرور غير صحيحة');
+      const managerName = normalizeUsername(remote.access?.manager?.username || '');
+      // If the attempted username is the manager, the access row is authoritative;
+      // a wrong password must not trigger two unnecessary actor-dataset reads.
+      if (!invalidCredentials || (managerName && managerName === normalizeUsername(username))) throw error;
+    }
+
+    // Branch/employee datasets are fetched only when a non-manager account needs
+    // them and are then cached locally for later logins.
+    remote = await fetchLoginActors(remote);
     hydrateRemoteCompany(remote, key);
     await localLogin(key, username, password, remember);
   }
 
-  async function firebaseLogin(key, username, password, remember) {
-    const settings = window.CASHTOP_FIREBASE;
-    const version = settings.sdkVersion || '12.15.0';
-    const [appModule, authModule, firestoreModule] = await Promise.all([
-      import(`https://www.gstatic.com/firebasejs/${version}/firebase-app.js`),
-      import(`https://www.gstatic.com/firebasejs/${version}/firebase-auth.js`),
-      import(`https://www.gstatic.com/firebasejs/${version}/firebase-firestore.js`)
-    ]);
-    const firebaseConfig = settings.adminConfig || settings.config;
-    const app = appModule.getApps().find(item => item.options?.projectId === firebaseConfig.projectId) || appModule.initializeApp(firebaseConfig);
-    const auth = authModule.getAuth(app);
-    await authModule.setPersistence(auth, remember ? authModule.browserLocalPersistence : authModule.browserSessionPersistence);
-    const credential = await authModule.signInWithEmailAndPassword(auth, usernameToEmail(key, username), password);
-    const db = firestoreModule.getFirestore(app);
-    const usersCollection = settings.collections?.users || 'users';
-    const licensesCollection = settings.collections?.licenses || 'licenses';
-    const profileSnap = await firestoreModule.getDoc(firestoreModule.doc(db, usersCollection, credential.user.uid));
-    if (!profileSnap.exists()) throw new Error('لا يوجد ملف صلاحيات مرتبط بهذا المستخدم.');
-    const profile = profileSnap.data();
-    if (profile.active === false) throw new Error('تم تعطيل حساب المستخدم.');
-    if (normalizeKey(profile.licenseKey) !== key) throw new Error('المستخدم غير مرتبط بمفتاح الشركة المدخل.');
-    const licenseSnap = await firestoreModule.getDoc(firestoreModule.doc(db, licensesCollection, key));
-    const license = licenseSnap.exists() ? licenseSnap.data() : null;
-    if (license?.endAt?.toDate) license.endAt = license.endAt.toDate().toISOString();
-    if (license?.startAt?.toDate) license.startAt = license.startAt.toDate().toISOString();
-    const checked = validateLicense(license);
-    if (!checked.ok) { await authModule.signOut(auth); throw new Error(checked.message); }
-    const session = {
-      mode: 'firebase', uid: credential.user.uid, username: profile.username || username,
-      displayName: profile.displayName || profile.username || username, role: profile.role || 'user',
-      permissions: profile.permissions || {}, branchId: profile.branchId || null,
-      companyKey: key, tenantId: profile.tenantId || profile.companyId || license.tenantId || license.companyId,
-      companyId: profile.tenantId || profile.companyId || license.tenantId || license.companyId,
-      companyName: profile.companyName || license.companyName, licenseId: license.id || key,
-      licenseEnd: license.endAt, plan: license.plan || 'pro', backupImportEnabled: license.backupImportEnabled === true,
-      status: license.status, loginAt: new Date().toISOString(), lastLicenseCheck: Date.now()
-    };
-    writeSession(session); setTenantBinding(key, session.tenantId || session.companyId); saveRemembered(key, username, remember);
-  }
 
   async function handleLogin(event) {
     event.preventDefault();
     const key = normalizeKey(document.getElementById('companyKey').value);
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value;
-    const remember = document.getElementById('rememberMe').checked;
+    const remember = true;
     const button = document.querySelector('.btn-login');
     if (!key || !username || !password) return showStatus('أكمل جميع بيانات الدخول.', 'warning');
     button.disabled = true; button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري التحقق...';
@@ -603,7 +587,7 @@
       let remoteError = null;
       let authenticated = false;
       // نجرب قاعدة البيانات مباشرة؛ navigator.onLine قد يعطي false رغم وجود اتصال فعلي.
-      if (window.CASHTOP_FIREBASE?.enabled) {
+      if (window.CASHTOP_TURSO?.enabled) {
         try { await databaseLogin(key, username, password, remember); authenticated = true; }
         catch (error) {
           remoteError = error;
@@ -613,12 +597,7 @@
       if (!authenticated) {
         try { await localLogin(key, username, password, remember); authenticated = true; }
         catch (localError) {
-          const firebaseReady = Boolean(window.CASHTOP_FIREBASE?.enabled && (window.CASHTOP_FIREBASE?.adminConfig || window.CASHTOP_FIREBASE?.config)?.databaseURL);
-          if (firebaseReady && window.CASHTOP_FIREBASE?.authMode === 'firebase-only') {
-            await firebaseLogin(key, username, password, remember); authenticated = true;
-          } else {
-            throw remoteError || localError;
-          }
+          throw remoteError || localError;
         }
       }
       showStatus('تم تسجيل الدخول بنجاح. جاري فتح لوحة التحكم...', 'success');
@@ -647,17 +626,14 @@
   cleanupLegacyDemo();
   window.handleLogin = handleLogin;
   window.addEventListener('DOMContentLoaded', () => {
-    const existingSession = parse((()=>{try{return sessionStorage.getItem(TAB_SESSION_KEY)}catch(_){return null}})(), null) || parse(rawGet('cashtop_session'), null);
+    const existingSession = readTabSession();
     const existingEnd = existingSession?.licenseEnd ? new Date(existingSession.licenseEnd).getTime() : 0;
     if (existingSession && existingSession.status !== 'stopped' && (!existingEnd || existingEnd > Date.now()) && !new URLSearchParams(location.search).get('reason')) {
       location.replace('لوحة التحكم.html'); return;
     }
     const rememberedKey = rawGet('cashtop_remembered_key');
-    const rememberedUser = rawGet('cashtop_remembered_user');
     if (rememberedKey) {
       document.getElementById('companyKey').value = rememberedKey;
-      document.getElementById('username').value = rememberedUser || '';
-      document.getElementById('rememberMe').checked = true;
     }
     const header = document.querySelector('.login-header');
     if (header && !header.querySelector('img')) {
@@ -666,8 +642,6 @@
       header.prepend(img);
     }
     displayReason();
-    const pushBtn=document.getElementById('enablePushBtn');
-    if(pushBtn){pushBtn.addEventListener('click',async()=>{pushBtn.disabled=true;const old=pushBtn.innerHTML;pushBtn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> جاري التفعيل...';try{const result=await window.CashtopPush?.requestAndSubscribe?.();if(result?.ok){pushBtn.innerHTML='<i class="fa-solid fa-circle-check"></i> الإشعارات مفعلة';}else{pushBtn.innerHTML=old;alert(result?.message||'تعذر تفعيل الإشعارات.');}}finally{pushBtn.disabled=false;}});}
   });
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     (async () => {
