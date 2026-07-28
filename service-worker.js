@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v75-cache-first-notification-corner';
+const CACHE_VERSION = 'v78-financial-groups-integrity-cache-first';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = `cash-top-2-remote-static-${CACHE_VERSION}`;
 
@@ -31,6 +31,7 @@ const LOCAL_ASSETS = [
   './cashtop-worker.js',
   './customer-groups.html',
   './customer-portal.html',
+  './financial-groups.html',
   './customers.html',
   './icon-192.png',
   './icon-512.png',
@@ -78,6 +79,7 @@ const REMOTE_STATIC_ASSETS = [
   'https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap',
   'https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap',
   'https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap',
+  'https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Tajawal:wght@400;500;700&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
   'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',

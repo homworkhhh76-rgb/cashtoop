@@ -53,9 +53,44 @@
     'cashtop_settings', 'cashtop_db', 'cashtop_printer_settings', 'cashtop_barcode_settings', 'cashtop_invoice_design',
     'cashtop_sms_template', 'cashtop_invoice_message_template', 'cashtop_journal', 'cashtop_audit_log',
     'cashtop_sales_offers', 'cashtop_tax_settings', 'cashtop_notification_settings',
+    'cashtop_financial_groups', 'cashtop_opening_balances',
 'cashtop_manufacturing_recipes', 'cashtop_manufacturing_orders',
     'cashtop_wastage', 'cashtop_archive_index', 'cashtop_salary_payments'
   ];
+
+  /* ============================================================
+   * R77 — Financial Groups
+   * ============================================================
+   * R75 data stays exactly where it already is and becomes the first
+   * financial group (FG_LEGACY). New groups get isolated local/cloud
+   * dataset slots, while shared master/configuration data remains common.
+   */
+  const FINANCIAL_GROUPS_KEY = 'cashtop_financial_groups';
+  const OPENING_BALANCES_KEY = 'cashtop_opening_balances';
+  const LEGACY_FINANCIAL_GROUP_ID = 'FG_LEGACY';
+  const FINANCIAL_GROUP_SCOPED_KEYS = new Set([
+    'cashtop_products', 'cashtop_materials', 'cashtop_material_purchases',
+    'cashtop_customers', 'cashtop_suppliers', 'cashtop_supplier_movements',
+    'cashtop_invoices', 'cashtop_purchases', 'cashtop_purchase_returns',
+    'cashtop_expenses', 'cashtop_funds_db', 'cashtop_vouchers',
+    'cashtop_transfer_history', 'cashtop_branch_transfer_history',
+    'cashtop_workers', 'cashtop_sales_agents', 'cashtop_agent_movements',
+    'cashtop_journal', 'cashtop_audit_log', 'cashtop_material_purchases',
+    'cashtop_manufacturing_orders', 'cashtop_wastage', 'cashtop_archive_index',
+    'cashtop_salary_payments', OPENING_BALANCES_KEY
+  ]);
+  const FINANCIAL_GROUP_RESET_KEYS = new Set([
+    'cashtop_invoices', 'cashtop_purchases', 'cashtop_purchase_returns',
+    'cashtop_expenses', 'cashtop_vouchers', 'cashtop_supplier_movements',
+    'cashtop_transfer_history', 'cashtop_branch_transfer_history',
+    'cashtop_journal', 'cashtop_audit_log', 'cashtop_material_purchases',
+    'cashtop_agent_movements', 'cashtop_manufacturing_orders', 'cashtop_wastage',
+    'cashtop_salary_payments', 'cashtop_archive_index'
+  ]);
+  const FINANCIAL_GROUP_CARRY_KEYS = new Set([
+    'cashtop_products', 'cashtop_materials', 'cashtop_customers',
+    'cashtop_suppliers', 'cashtop_funds_db', 'cashtop_workers', 'cashtop_sales_agents'
+  ]);
 
   const PERMISSION_GROUPS = [
     { id: 'pages', title: 'صلاحيات الصفحات والأقسام', permissions: [
@@ -68,7 +103,7 @@
       ['suppliers.view', 'عرض الموردين'], ['agents.view', 'عرض المناديب'],
       ['accounts.view', 'عرض الحسابات والصناديق'], ['journal.view', 'عرض دفتر القيود'],
       ['vouchers.view', 'عرض سندات القبض والصرف'], ['expenses.view', 'عرض المصاريف'],
-      ['reports.view', 'عرض التقارير'], ['employees.view', 'عرض الموظفين'], ['workers.view', 'عرض العمال والأجور'],
+      ['reports.view', 'عرض التقارير'], ['financialGroups.view', 'عرض المجموعات المالية'], ['employees.view', 'عرض الموظفين'], ['workers.view', 'عرض العمال والأجور'],
       ['manufacturing.view', 'عرض إدارة التصنيع'], ['offers.view', 'عرض عروض المبيعات'], ['notifications.view', 'عرض الإشعارات'], ['settings.system', 'فتح إعدادات النظام'],
       ['settings.printer', 'فتح إعدادات الطابعة'], ['settings.tax', 'فتح إعدادات الضريبة'],
       ['settings.storage', 'فتح التخزين والأرشفة'], ['backup.manage', 'فتح النسخ الاحتياطي والاستعادة']
@@ -111,7 +146,9 @@
       ['expenses.manage', 'إضافة وتعديل وحذف المصاريف وأنواعها'], ['expenses.export', 'تصدير المصاريف'],
       ['vouchers.manage', 'إضافة وتعديل وحذف السندات'], ['vouchers.export', 'طباعة وتصدير السندات'],
       ['journal.manage', 'إدارة القيود المحاسبية'], ['journal.export', 'تصدير دفتر القيود'],
-      ['reports.export', 'تصدير التقارير'], ['reports.send', 'إرسال التقارير عبر قنوات المشاركة']
+      ['reports.export', 'تصدير التقارير'], ['reports.send', 'إرسال التقارير عبر قنوات المشاركة'],
+      ['financialGroups.switch', 'الانتقال بين المجموعات المالية'], ['financialGroups.viewClosed', 'استعراض المجموعات المغلقة'],
+      ['financialGroups.create', 'إغلاق المجموعة الحالية وفتح مجموعة مالية جديدة']
     ]},
     { id: 'staff', title: 'صلاحيات الموظفين والإدارة', permissions: [
       ['employees.manage', 'إضافة وتعديل وحذف وتعطيل الموظفين'], ['employees.export', 'تصدير بيانات الموظفين'],
@@ -136,7 +173,7 @@
     'warehouses.html': 'warehouses.view', 'branches.html': ['branches.view', 'inventory.transfer'], 'units.html': 'units.view',
     'shortages.html': 'shortages.view', 'barcode-generator.html': 'barcode.view', 'customers.html': 'customers.view',
     'customer-groups.html': 'customerGroups.view', 'suppliers.html': 'suppliers.view', 'المناديب.html': 'agents.view',
-    'accounts.html': 'accounts.view', 'journal.html': 'journal.view', 'sands.html': 'vouchers.view',
+    'accounts.html': 'accounts.view', 'journal.html': 'journal.view', 'financial-groups.html': 'financialGroups.view', 'sands.html': 'vouchers.view',
     'المصاريف.html': 'expenses.view', 'التقارير.html': 'reports.view', 'الموظفين.html': 'employees.view',
     'العمال والاجور.html': 'workers.view', 'ادارة التصنيع.html': 'manufacturing.view', 'sales-offers.html': 'offers.view', 'notifications.html': 'notifications.view', 'setting.html': 'settings.system', 'printer-settings.html': 'settings.printer',
     'tax-settings.html': 'settings.tax', 'storage-settings.html': 'settings.storage',
@@ -205,6 +242,7 @@
       exportVoucherImage: 'vouchers.export', printVoucher: 'vouchers.export'
     },
     'notifications.html': { openSettings: 'notifications.manage', saveSettings: 'notifications.manage', payEmployeeSalary: 'employees.manage' },
+    'financial-groups.html': { toggleForm: 'financialGroups.create', saveNewGroup: 'financialGroups.create', selectGroup: 'financialGroups.switch' },
     'setting.html': {
       saveSystemSettings: 'settings.edit', openPasswordModal: 'settings.edit',
       handlePasswordChange: 'settings.edit', saveSmsSettings: 'settings.sms', insertVariable: 'settings.sms'
@@ -481,6 +519,9 @@
     const tenant = encodeURIComponent(tenantIdFromSession());
     const dataPrefix = `cashtop_data::${tenant}::`;
     const metaPrefix = `cashtop_meta::${tenant}::`;
+    const activeGroup = currentFinancialGroupId();
+    const activeGroupDataPrefix = activeGroup === LEGACY_FINANCIAL_GROUP_ID ? dataPrefix : `${dataPrefix}fg::${encodeURIComponent(activeGroup)}::`;
+    const activeGroupMetaPrefix = activeGroup === LEGACY_FINANCIAL_GROUP_ID ? metaPrefix : `${metaPrefix}fg::${encodeURIComponent(activeGroup)}::`;
     const prefixes = [
       dataPrefix,
       metaPrefix,
@@ -516,10 +557,17 @@
     for (const record of records) {
       const key = String(record?.key || '');
       if (!key.startsWith(dataPrefix)) continue;
-      const dataset = key.slice(dataPrefix.length);
+      const suffixForGroup = key.slice(dataPrefix.length);
+      if (suffixForGroup.startsWith('fg::') && !key.startsWith(activeGroupDataPrefix)) continue;
+      const dataset = logicalDatasetFromPhysicalKey(key, tenantIdFromSession());
+      // Unprefixed scoped rows belong to FG_LEGACY. When another financial group
+      // is selected they must stay untouched in IndexedDB, not be restored into
+      // the current page's logical dataset stream. Shared datasets are still restored.
+      if (activeGroup !== LEGACY_FINANCIAL_GROUP_ID && !suffixForGroup.startsWith('fg::') && FINANCIAL_GROUP_SCOPED_KEYS.has(dataset)) continue;
+      const physicalSuffix = key.slice(dataPrefix.length);
       const currentRaw = rawGet(key);
-      const currentMeta = safeJson(rawGet(`${metaPrefix}${dataset}`), {}) || {};
-      const durableMeta = safeJson(recordMap.get(`${metaPrefix}${dataset}`)?.value, {}) || {};
+      const currentMeta = safeJson(rawGet(`${metaPrefix}${physicalSuffix}`), {}) || {};
+      const durableMeta = safeJson(recordMap.get(`${metaPrefix}${physicalSuffix}`)?.value, {}) || {};
       const shouldRestore = currentRaw === null || currentMeta.seeded === true || Number(currentMeta.updatedAt || 0) <= 0 ||
         Number(durableMeta.updatedAt || 0) > Number(currentMeta.updatedAt || 0);
       if (!shouldRestore) continue;
@@ -533,6 +581,12 @@
     for (const record of records) {
       const key = String(record?.key || '');
       if (!prefixes.some(prefix => key.startsWith(prefix)) || key.startsWith(dataPrefix)) continue;
+      if (key.startsWith(metaPrefix)) {
+        const metaSuffix = key.slice(metaPrefix.length);
+        if (metaSuffix.startsWith('fg::') && !key.startsWith(activeGroupMetaPrefix)) continue;
+        const metaDataset = logicalDatasetFromPhysicalKey(key, tenantIdFromSession());
+        if (activeGroup !== LEGACY_FINANCIAL_GROUP_ID && !metaSuffix.startsWith('fg::') && FINANCIAL_GROUP_SCOPED_KEYS.has(metaDataset)) continue;
+      }
       const current = rawGet(key);
       let shouldRestore = current === null;
       if (key.startsWith(metaPrefix)) {
@@ -581,6 +635,115 @@
     return Array.isArray(fallback) ? [...fallback] : [];
   }
   function canonicalKey(key) { return ALIASES[key] || key; }
+
+  function baseNamespaceKey(key, companyId = tenantIdFromSession()) {
+    return `cashtop_data::${encodeURIComponent(companyId)}::${canonicalKey(key)}`;
+  }
+  function baseMetaKey(key, companyId = tenantIdFromSession()) {
+    return `cashtop_meta::${encodeURIComponent(companyId)}::${canonicalKey(key)}`;
+  }
+  function financialGroupSelectionKey(companyId = tenantIdFromSession()) {
+    return `ct_financial_group_view_v1::${encodeURIComponent(companyId)}`;
+  }
+  function financialGroupToastKey(companyId = tenantIdFromSession()) {
+    return `ct_financial_group_toast_v1::${encodeURIComponent(companyId)}`;
+  }
+  function normalizeFinancialGroups(value) {
+    const source = Array.isArray(value) ? value : [];
+    const list = source.map((group, index) => ({
+      id: String(group?.id || `FG_${index + 1}`),
+      name: String(group?.name || `مجموعة مالية ${index + 1}`),
+      status: group?.status === 'closed' ? 'closed' : 'active',
+      createdAt: group?.createdAt || group?.openedAt || new Date().toISOString(),
+      openedAt: group?.openedAt || group?.createdAt || new Date().toISOString(),
+      closedAt: group?.closedAt || '',
+      previousGroupId: group?.previousGroupId || '',
+      nextGroupId: group?.nextGroupId || '',
+      legacy: group?.legacy === true,
+      capitalOpening: Number(group?.capitalOpening || 0),
+      capitalClosing: Number(group?.capitalClosing || 0),
+      closingSummary: group?.closingSummary && typeof group.closingSummary === 'object' ? group.closingSummary : null,
+      openingSummary: group?.openingSummary && typeof group.openingSummary === 'object' ? group.openingSummary : null,
+      settingsSource: group?.settingsSource || 'previous',
+      createdBy: group?.createdBy || ''
+    }));
+    if (!list.length) {
+      list.push({
+        id: LEGACY_FINANCIAL_GROUP_ID,
+        name: 'المجموعة الأساسية',
+        status: 'active',
+        legacy: true,
+        createdAt: new Date().toISOString(),
+        openedAt: new Date().toISOString(),
+        closedAt: '', previousGroupId: '', nextGroupId: '',
+        capitalOpening: 0, capitalClosing: 0, closingSummary: null, openingSummary: null, createdBy: ''
+      });
+    }
+    const active = list.filter(group => group.status === 'active');
+    if (active.length > 1) {
+      const keep = active[active.length - 1].id;
+      list.forEach(group => { if (group.status === 'active' && group.id !== keep) group.status = 'closed'; });
+    } else if (!active.length) {
+      list[list.length - 1].status = 'active';
+    }
+    return list;
+  }
+  function getFinancialGroups(companyId = tenantIdFromSession()) {
+    const raw = rawGet(baseNamespaceKey(FINANCIAL_GROUPS_KEY, companyId));
+    return normalizeFinancialGroups(safeJson(raw, []));
+  }
+  function explicitFinancialGroupId(companyId = tenantIdFromSession()) {
+    try { return String(sessionStorage.getItem(financialGroupSelectionKey(companyId)) || '').trim(); } catch (_) { return ''; }
+  }
+  function currentFinancialGroupId(companyId = tenantIdFromSession()) {
+    const groups = getFinancialGroups(companyId);
+    const explicit = explicitFinancialGroupId(companyId);
+    if (explicit) {
+      const selected = groups.find(group => group.id === explicit);
+      if (selected && (selected.status !== 'closed' || can('financialGroups.viewClosed'))) return explicit;
+      // A permission may have been revoked while this tab still remembered an old
+      // closed folder. Drop that selection so the employee falls back to the active
+      // group and cannot bypass viewClosed by keeping a stale sessionStorage id.
+      try { sessionStorage.removeItem(financialGroupSelectionKey(companyId)); } catch (_) {}
+    }
+    return String(groups.find(group => group.status === 'active')?.id || groups[groups.length - 1]?.id || LEGACY_FINANCIAL_GROUP_ID);
+  }
+  function getCurrentFinancialGroup(companyId = tenantIdFromSession()) {
+    const id = currentFinancialGroupId(companyId);
+    return getFinancialGroups(companyId).find(group => group.id === id) || null;
+  }
+  function isFinancialGroupScopedKey(key) {
+    return FINANCIAL_GROUP_SCOPED_KEYS.has(canonicalKey(key));
+  }
+  function isFinancialGroupReadOnly(companyId = tenantIdFromSession()) {
+    return getCurrentFinancialGroup(companyId)?.status === 'closed';
+  }
+  function financialGroupNamespaceKey(key, groupId, companyId = tenantIdFromSession()) {
+    const canonical = canonicalKey(key);
+    if (!FINANCIAL_GROUP_SCOPED_KEYS.has(canonical) || String(groupId || '') === LEGACY_FINANCIAL_GROUP_ID) {
+      return baseNamespaceKey(canonical, companyId);
+    }
+    return `cashtop_data::${encodeURIComponent(companyId)}::fg::${encodeURIComponent(String(groupId || LEGACY_FINANCIAL_GROUP_ID))}::${canonical}`;
+  }
+  function financialGroupMetaKey(key, groupId, companyId = tenantIdFromSession()) {
+    const canonical = canonicalKey(key);
+    if (!FINANCIAL_GROUP_SCOPED_KEYS.has(canonical) || String(groupId || '') === LEGACY_FINANCIAL_GROUP_ID) {
+      return baseMetaKey(canonical, companyId);
+    }
+    return `cashtop_meta::${encodeURIComponent(companyId)}::fg::${encodeURIComponent(String(groupId || LEGACY_FINANCIAL_GROUP_ID))}::${canonical}`;
+  }
+  function logicalDatasetFromPhysicalKey(storageKey, companyId = tenantIdFromSession()) {
+    const dataPrefix = `cashtop_data::${encodeURIComponent(companyId)}::`;
+    const metaPrefix = `cashtop_meta::${encodeURIComponent(companyId)}::`;
+    let suffix = storageKey.startsWith(dataPrefix) ? storageKey.slice(dataPrefix.length)
+      : storageKey.startsWith(metaPrefix) ? storageKey.slice(metaPrefix.length) : '';
+    if (!suffix) return '';
+    if (suffix.startsWith('fg::')) {
+      const parts = suffix.split('::');
+      return canonicalKey(parts.slice(2).join('::'));
+    }
+    return canonicalKey(suffix);
+  }
   const TAB_SESSION_KEY = 'cashtop_tab_session_v2';
   const WINDOW_SESSION_PREFIX = 'CASHTOP_SESSION_V2:';
   function sessionTenantId(session) {
@@ -615,11 +778,17 @@
   // companyIdFromSession بقي للاسم القديم، لكن القيمة الآن هي معرّف المستأجر الثابت.
   // هذا يمنع أن يتغير مسار التخزين عند تغيير مفتاح الشركة أو إعادة استخدام مفتاح قديم.
   function companyIdFromSession() { return tenantIdFromSession(); }
-  function namespaceKey(key, companyId = tenantIdFromSession()) {
-    return `cashtop_data::${encodeURIComponent(companyId)}::${canonicalKey(key)}`;
+  function namespaceKey(key, companyId = tenantIdFromSession(), groupId = null) {
+    const canonical = canonicalKey(key);
+    if (!FINANCIAL_GROUP_SCOPED_KEYS.has(canonical)) return baseNamespaceKey(canonical, companyId);
+    const selectedGroup = groupId || (String(companyId) === String(tenantIdFromSession()) ? currentFinancialGroupId(companyId) : LEGACY_FINANCIAL_GROUP_ID);
+    return financialGroupNamespaceKey(canonical, selectedGroup, companyId);
   }
-  function metaKey(key, companyId = tenantIdFromSession()) {
-    return `cashtop_meta::${encodeURIComponent(companyId)}::${canonicalKey(key)}`;
+  function metaKey(key, companyId = tenantIdFromSession(), groupId = null) {
+    const canonical = canonicalKey(key);
+    if (!FINANCIAL_GROUP_SCOPED_KEYS.has(canonical)) return baseMetaKey(canonical, companyId);
+    const selectedGroup = groupId || (String(companyId) === String(tenantIdFromSession()) ? currentFinancialGroupId(companyId) : LEGACY_FINANCIAL_GROUP_ID);
+    return financialGroupMetaKey(canonical, selectedGroup, companyId);
   }
   function isManagedKey(key) {
     return typeof key === 'string' && key.startsWith('cashtop_') && !GLOBAL_KEYS.has(key) &&
@@ -1812,17 +1981,34 @@
     const branch = branchIdFromSession();
     const old = safeJson(rawOld, {}) || {};
     const incoming = safeJson(incomingValue, {}) || {};
-    return JSON.stringify({
-      ...old, ...incoming,
-      accounts: [
-        ...normalizeArrayValue(old.accounts || [], []).filter(item => !sameBranch(item, branch)),
-        ...normalizeArrayValue(incoming.accounts || [], []).map(item => ({ ...deepClone(item), branchId: branch }))
-      ],
-      accountLogs: [
-        ...normalizeArrayValue(old.accountLogs || [], []).filter(item => !sameBranch(item, branch)),
-        ...normalizeArrayValue(incoming.accountLogs || [], []).map(item => ({ ...deepClone(item), branchId: branch }))
-      ]
+    const oldLogs = normalizeArrayValue(old.accountLogs || [], []);
+    const incomingLogs = normalizeArrayValue(incoming.accountLogs || [], []).map(item => ({ ...deepClone(item), branchId: branch }));
+    const accountLogs = [
+      ...oldLogs.filter(item => !sameBranch(item, branch)),
+      ...incomingLogs
+    ];
+    const oldBranchAccounts = normalizeArrayValue(old.accounts || [], []).filter(item => sameBranch(item, branch));
+    const incomingBranchAccounts = normalizeArrayValue(incoming.accounts || [], []).map(item => ({ ...deepClone(item), branchId: branch }));
+    const incomingIds = new Set(incomingBranchAccounts.map(account => String(account?.id)));
+    // سلامة الصناديق: أي حساب له رصيد/حركة سابقة لا يمكن إسقاطه من قاعدة البيانات.
+    // إذا حاولت واجهة/استيراد حذفه، نحوله إلى متوقف ونحتفظ به وبسجله.
+    const protectedMissingAccounts = oldBranchAccounts.filter(account => {
+      if (incomingIds.has(String(account?.id))) return false;
+      const hasLog = oldLogs.some(log => String(log?.accountId) === String(account?.id) && (Math.abs(Number(log?.amount || log?.baseAmount || 0)) > 0.0000001 || log?.sourceType || log?.refType));
+      return account?.isDefaultCash === true || account?.locked === true || account?.hasFinancialHistory === true || Math.abs(Number(account?.balance || 0)) > 0.0000001 || hasLog;
+    }).map(account => {
+      const locked = account?.isDefaultCash === true || account?.locked === true;
+      return { ...deepClone(account), active:locked ? true : false, disabled:locked ? false : true, status:locked ? 'active' : 'inactive', disabledAt:locked ? '' : (account?.disabledAt || new Date().toISOString()), hasFinancialHistory:true, branchId:branch };
     });
+    const accounts = [
+      ...normalizeArrayValue(old.accounts || [], []).filter(item => !sameBranch(item, branch)),
+      ...incomingBranchAccounts,
+      ...protectedMissingAccounts
+    ].map(account => {
+      const hasLog = accountLogs.some(log => String(log?.accountId) === String(account?.id) && (Math.abs(Number(log?.amount || log?.baseAmount || 0)) > 0.0000001 || log?.sourceType || log?.refType));
+      return hasLog || account?.hasFinancialHistory === true ? { ...account, hasFinancialHistory: true } : account;
+    });
+    return JSON.stringify({ ...old, ...incoming, accounts, accountLogs });
   }
 
   function getCompanyAccess() {
@@ -2023,6 +2209,7 @@
   function setRawCompanyDataset(key, value, options = {}) {
     const canonical = canonicalKey(key);
     if (!isManagedKey(canonical)) throw new Error('مجموعة البيانات غير مدارة');
+    assertFinancialGroupWritable(canonical);
     const ns = namespaceKey(canonical);
     const oldValue = rawGet(ns);
     const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
@@ -2049,6 +2236,316 @@
     return { changed: true, operationId };
   }
 
+
+
+  function ensureFinancialGroups() {
+    const ns = baseNamespaceKey(FINANCIAL_GROUPS_KEY);
+    const existing = safeJson(rawGet(ns), null);
+    if (Array.isArray(existing) && existing.length) return normalizeFinancialGroups(existing);
+    const groups = normalizeFinancialGroups([]);
+    // Keep the original R75 datasets as FG_LEGACY without moving a byte. On a
+    // brand-new laptop this is only a seeded fallback: do NOT queue it before
+    // Turso hydrates the real financial-group index, or a fresh device could
+    // overwrite an existing company's group history with one empty placeholder.
+    rawSet(ns, JSON.stringify(groups));
+    rawSet(baseMetaKey(FINANCIAL_GROUPS_KEY), JSON.stringify({ updatedAt:0, revision:0, seeded:true, source:'financial-groups-fallback' }));
+    return groups;
+  }
+
+  function financialGroupDefaultValue(key) {
+    const canonical = canonicalKey(key);
+    if (canonical === OPENING_BALANCES_KEY) return [];
+    if (Object.prototype.hasOwnProperty.call(NON_ARRAY_DEFAULTS, canonical)) return JSON.parse(JSON.stringify(NON_ARRAY_DEFAULTS[canonical]));
+    return [];
+  }
+
+  function parseFinancialGroupDataset(key, groupId, fallback = null) {
+    const raw = rawGet(financialGroupNamespaceKey(key, groupId));
+    if (raw == null) return fallback === null ? financialGroupDefaultValue(key) : fallback;
+    return safeJson(raw, fallback === null ? financialGroupDefaultValue(key) : fallback);
+  }
+
+  function writeFinancialGroupDatasetRaw(key, groupId, value, options = {}) {
+    const canonical = canonicalKey(key);
+    const raw = typeof value === 'string' ? value : JSON.stringify(value);
+    rawSet(financialGroupNamespaceKey(canonical, groupId), raw);
+    const previous = safeJson(rawGet(financialGroupMetaKey(canonical, groupId)), {}) || {};
+    rawSet(financialGroupMetaKey(canonical, groupId), JSON.stringify({
+      updatedAt: Number(options.updatedAt || Date.now()),
+      revision: Number(previous.revision || 0) + 1,
+      deviceId: getDeviceId(),
+      page: FILE,
+      financialGroupId: groupId,
+      seeded: false,
+      openingSeed: options.openingSeed === true
+    }));
+    return raw;
+  }
+
+  function supplierFinancialBalance(supplier) {
+    let balance = 0;
+    normalizeArrayValue(supplier?.movements, []).forEach(movement => {
+      const amount = Number(movement?.amount || 0);
+      if (movement?.type === 'payment' || movement?.type === 'return') balance -= amount;
+      else if (movement?.type === 'refundCash' || Number(movement?.balanceEffect) === 0) return;
+      else balance += amount;
+    });
+    return balance;
+  }
+
+  function productOpeningQuantity(product) {
+    let total = Number(product?.stockPieces ?? product?.stock ?? product?.qty ?? 0) || 0;
+    if (Array.isArray(product?.variants)) {
+      total = product.variants.reduce((sum, variant) => sum + (Number(variant?.qty ?? variant?.stockPieces ?? variant?.stock ?? 0) || 0), 0) || total;
+    }
+    return total;
+  }
+
+  function zeroProductStock(product) {
+    const next = JSON.parse(JSON.stringify(product || {}));
+    ['stockPieces', 'stock', 'qty', 'quantity'].forEach(field => { if (Object.prototype.hasOwnProperty.call(next, field)) next[field] = 0; });
+    if (Array.isArray(next.variants)) next.variants = next.variants.map(variant => ({ ...variant, qty: 0, stockPieces: 0, stock: 0 }));
+    if (next.branchStock && typeof next.branchStock === 'object') Object.keys(next.branchStock).forEach(key => { next.branchStock[key] = 0; });
+    if (next.storeStock && typeof next.storeStock === 'object') Object.keys(next.storeStock).forEach(key => { next.storeStock[key] = 0; });
+    return next;
+  }
+
+  function zeroMaterialStock(material) {
+    const next = JSON.parse(JSON.stringify(material || {}));
+    ['stockPieces', 'stock', 'qty', 'quantity', 'balance'].forEach(field => { if (Object.prototype.hasOwnProperty.call(next, field)) next[field] = 0; });
+    return next;
+  }
+
+  function calculateFinancialGroupClosing(groupId = currentFinancialGroupId()) {
+    const invoices = normalizeArrayValue(parseFinancialGroupDataset('cashtop_invoices', groupId, []), []);
+    const expenses = normalizeArrayValue(parseFinancialGroupDataset('cashtop_expenses', groupId, []), []);
+    const purchases = normalizeArrayValue(parseFinancialGroupDataset('cashtop_purchases', groupId, []), []);
+    const sales = invoices.filter(invoice => invoice && invoice.status !== 'draft' && invoice.deleted !== true)
+      .reduce((sum, invoice) => sum + Number(invoice.total || invoice.grandTotal || 0), 0);
+    const expenseTotal = expenses.filter(item => item && item.deleted !== true)
+      .reduce((sum, item) => sum + Number(item.amount || item.total || 0), 0);
+    const purchaseTotal = purchases.filter(item => item && item.deleted !== true)
+      .reduce((sum, item) => sum + Number(item.total || item.grandTotal || 0), 0);
+    return {
+      sales: Number(sales.toFixed(4)),
+      expenses: Number(expenseTotal.toFixed(4)),
+      purchases: Number(purchaseTotal.toFixed(4)),
+      netProfit: Number((sales - expenseTotal).toFixed(4)),
+      invoicesCount: invoices.filter(invoice => invoice && invoice.status !== 'draft' && invoice.deleted !== true).length,
+      purchasesCount: purchases.filter(item => item && item.deleted !== true).length,
+      expensesCount: expenses.filter(item => item && item.deleted !== true).length,
+      closedAt: new Date().toISOString()
+    };
+  }
+
+  function buildFinancialGroupOpening(previousGroupId, carryBalances = true) {
+    const now = new Date().toISOString();
+    const openingRecords = [];
+    const products = normalizeArrayValue(parseFinancialGroupDataset('cashtop_products', previousGroupId, []), []);
+    const materials = normalizeArrayValue(parseFinancialGroupDataset('cashtop_materials', previousGroupId, []), []);
+    const customers = normalizeArrayValue(parseFinancialGroupDataset('cashtop_customers', previousGroupId, []), []);
+    const suppliers = normalizeArrayValue(parseFinancialGroupDataset('cashtop_suppliers', previousGroupId, []), []);
+    const funds = parseFinancialGroupDataset('cashtop_funds_db', previousGroupId, { accounts: [], accountLogs: [] }) || { accounts: [], accountLogs: [] };
+    const workers = normalizeArrayValue(parseFinancialGroupDataset('cashtop_workers', previousGroupId, []), []);
+    const agents = normalizeArrayValue(parseFinancialGroupDataset('cashtop_sales_agents', previousGroupId, []), []);
+
+    const nextProducts = products.map(product => {
+      const quantity = carryBalances ? productOpeningQuantity(product) : 0;
+      if (carryBalances && Math.abs(quantity) > 1e-9) openingRecords.push({ id:`OPEN_PRODUCT_${product.id || Math.random().toString(36).slice(2)}`, type:'inventory', entityType:'product', entityId:product.id || '', name:product.name || '', quantity, amount:0, date:now, note:'رصيد مخزون افتتاحي مرحّل من المجموعة السابقة' });
+      return carryBalances ? JSON.parse(JSON.stringify(product)) : zeroProductStock(product);
+    });
+    const nextMaterials = materials.map(material => {
+      const quantity = carryBalances ? Number(material?.stockPieces ?? material?.stock ?? material?.qty ?? material?.quantity ?? 0) || 0 : 0;
+      if (carryBalances && Math.abs(quantity) > 1e-9) openingRecords.push({ id:`OPEN_MATERIAL_${material.id || Math.random().toString(36).slice(2)}`, type:'inventory', entityType:'material', entityId:material.id || '', name:material.name || '', quantity, amount:0, date:now, note:'رصيد صنف خام افتتاحي مرحّل' });
+      return carryBalances ? JSON.parse(JSON.stringify(material)) : zeroMaterialStock(material);
+    });
+    const nextCustomers = customers.map(customer => {
+      const next = JSON.parse(JSON.stringify(customer || {}));
+      const balance = carryBalances ? Number(customer?.balance || 0) : 0;
+      next.balance = balance;
+      next.debtInvoices = [];
+      if (Math.abs(balance) > 0.0001) {
+        // A positive balance is a receivable and can be represented as the first
+        // debt movement. A negative balance is a customer credit; keep it on the
+        // customer/opening ledger without fabricating a positive debt invoice.
+        if (balance > 0) {
+          next.debtInvoices.push({ id:`OPEN_CUST_${customer.id || Math.random().toString(36).slice(2)}`, type:'opening-balance', amount:balance, signedAmount:balance, remaining:balance, date:now.slice(0,10), reference:'OPENING', notes:'رصيد افتتاحي مرحّل من المجموعة السابقة', source:'financial-group-opening', createdAt:now, updatedAt:now });
+        }
+        openingRecords.push({ id:`OPEN_CUSTOMER_${customer.id || Math.random().toString(36).slice(2)}`, type:balance >= 0 ? 'receivable' : 'customer-credit', entityType:'customer', entityId:customer.id || '', name:customer.name || '', amount:balance, date:now, note:'رصيد عميل افتتاحي مرحّل من المجموعة السابقة' });
+      }
+      next.updatedAt = now;
+      return next;
+    });
+    const nextSuppliers = suppliers.map(supplier => {
+      const next = JSON.parse(JSON.stringify(supplier || {}));
+      const balance = carryBalances ? supplierFinancialBalance(supplier) : 0;
+      next.movements = [];
+      if (Math.abs(balance) > 0.0001) {
+        next.movements.push({ id:`OPEN_SUP_${supplier.id || Math.random().toString(36).slice(2)}`, type:balance >= 0 ? 'debt' : 'payment', amount:Math.abs(balance), note:'رصيد افتتاحي مرحّل من المجموعة السابقة', date:now.slice(0,10), refType:'financial-group-opening', refId:'OPENING', createdAt:now });
+        openingRecords.push({ id:`OPEN_SUPPLIER_${supplier.id || Math.random().toString(36).slice(2)}`, type:'payable', entityType:'supplier', entityId:supplier.id || '', name:supplier.name || '', amount:balance, date:now, note:'ذمة مورد افتتاحية مرحّلة' });
+      }
+      next.updatedAt = now;
+      return next;
+    });
+    const nextFunds = {
+      ...JSON.parse(JSON.stringify(funds || {})),
+      accounts: normalizeArrayValue(funds?.accounts, []).map(account => {
+        const next = JSON.parse(JSON.stringify(account || {}));
+        const balance = carryBalances ? Number(account?.balance || 0) : 0;
+        const hadHistory = account?.hasFinancialHistory === true || normalizeArrayValue(funds?.accountLogs, []).some(log => String(log?.accountId) === String(account?.id) && (Math.abs(Number(log?.amount || log?.baseAmount || 0)) > 0.0000001 || log?.sourceType || log?.refType));
+        next.balance = balance;
+        if (hadHistory) next.hasFinancialHistory = true;
+        if (Math.abs(balance) > 0.0001) openingRecords.push({ id:`OPEN_FUND_${account.id || Math.random().toString(36).slice(2)}`, type:'cash', entityType:'fund', entityId:account.id || '', name:account.name || '', amount:balance, currencyId:account.currencyId || '', date:now, note:'رصيد صندوق/بنك افتتاحي مرحّل' });
+        return next;
+      }),
+      accountLogs: []
+    };
+    nextFunds.accounts.forEach(account => {
+      const balance = Number(account.balance || 0);
+      if (Math.abs(balance) <= 0.0001) return;
+      nextFunds.accountLogs.push({ id:`OPEN_LOG_${account.id}_${Date.now()}`, accountId:account.id, date:now, type:balance >= 0 ? 'إيداع' : 'سحب', amount:Math.abs(balance), baseAmount:Math.abs(balance), currencyId:account.currencyId || '', notes:'رصيد افتتاحي للمجموعة المالية الجديدة', refType:'financial-group-opening', refId:'OPENING' });
+    });
+
+    return { openingRecords, nextProducts, nextMaterials, nextCustomers, nextSuppliers, nextFunds, nextWorkers: JSON.parse(JSON.stringify(workers)), nextAgents: JSON.parse(JSON.stringify(agents)) };
+  }
+
+  async function createFinancialGroup(options = {}) {
+    if (!can('financialGroups.create')) throw new Error('لا تملك صلاحية إغلاق وفتح المجموعات المالية.');
+    const groups = getFinancialGroups();
+    const current = getCurrentFinancialGroup();
+    if (!current || current.status !== 'active') throw new Error('لا يمكن إنشاء مجموعة جديدة أثناء استعراض مجموعة مغلقة. انتقل إلى المجموعة المفتوحة أولاً.');
+    const name = String(options.name || '').trim();
+    if (!name) throw new Error('أدخل اسم المجموعة الجديدة.');
+    if (navigator.onLine === false) throw new Error('إغلاق المجموعة المالية يحتاج اتصالاً بالإنترنت لضمان ترحيل آخر الأرصدة من جميع الأجهزة.');
+
+    // Closing is rare; correctness wins here. Flush pending writes, then refresh
+    // only the financial datasets once so the opening balances use the newest cloud state.
+    if (getSyncQueue().length && window.CashtopTurso?.syncAll) {
+      await window.CashtopTurso.syncAll({ manual:false, forceRetry:true }).catch(() => null);
+    }
+    if (getSyncQueue().length) throw new Error('توجد عمليات غير متزامنة. انتظر اكتمال المزامنة ثم أعد المحاولة.');
+    if (window.CashtopTurso?.pullDatasetKeys) {
+      await window.CashtopTurso.pullDatasetKeys([...FINANCIAL_GROUP_SCOPED_KEYS].filter(key => key !== OPENING_BALANCES_KEY), { concurrency:6, silentProgress:true }).catch(error => { throw error; });
+    }
+    if (typeof window.Cashtop?.rebuildJournal === 'function') {
+      try { window.Cashtop.rebuildJournal(); } catch (_) {}
+    }
+
+    const previousId = current.id;
+    const closing = calculateFinancialGroupClosing(previousId);
+    const carryBalances = options.carryBalances !== false;
+    const opening = buildFinancialGroupOpening(previousId, carryBalances);
+    const id = `FG_${Date.now()}_${Math.random().toString(36).slice(2,8).toUpperCase()}`;
+    const session = getSession() || {};
+    const capitalClosing = Number(current.capitalOpening || 0) + Number(closing.netProfit || 0);
+    opening.openingRecords.push({ id:`OPEN_EQUITY_${id}`, type:'equity', entityType:'equity', entityId:'RETAINED_EARNINGS', name:'رأس المال / الأرباح والخسائر المرحلة', amount:carryBalances ? capitalClosing : 0, date:new Date().toISOString(), note:'ترحيل صافي ربح/خسارة المجموعة السابقة ككتلة واحدة إلى رأس المال' });
+
+    const nextGroups = groups.map(group => group.id === previousId ? {
+      ...group, status:'closed', closedAt:new Date().toISOString(), closingSummary:closing,
+      capitalClosing, nextGroupId:id
+    } : group);
+    nextGroups.push({
+      id, name, status:'active', legacy:false, previousGroupId:previousId, nextGroupId:'',
+      createdAt:new Date().toISOString(), openedAt:new Date().toISOString(), closedAt:'',
+      capitalOpening: carryBalances ? capitalClosing : 0, capitalClosing:0,
+      openingSummary:{
+        funds: opening.nextFunds.accounts.reduce((sum, account) => sum + Number(account.balance || 0), 0),
+        customerReceivables: opening.nextCustomers.reduce((sum, customer) => sum + Math.max(0, Number(customer.balance || 0)), 0),
+        supplierPayables: opening.nextSuppliers.reduce((sum, supplier) => sum + Math.max(0, supplierFinancialBalance(supplier)), 0),
+        inventoryRecords: opening.openingRecords.filter(record => record.type === 'inventory').length,
+        capital: carryBalances ? capitalClosing : 0
+      },
+      closingSummary:null,
+      settingsSource: String(options.importSettings || 'last') === 'none' ? 'none' : 'previous',
+      createdBy: session.displayName || session.username || 'مستخدم'
+    });
+
+    // Prepare every scoped slot before switching. Empty transaction datasets stay
+    // local-only until they actually receive data, saving cloud writes/storage.
+    for (const key of FINANCIAL_GROUP_SCOPED_KEYS) {
+      if (key === 'cashtop_products') writeFinancialGroupDatasetRaw(key, id, opening.nextProducts, { openingSeed:true });
+      else if (key === 'cashtop_materials') writeFinancialGroupDatasetRaw(key, id, opening.nextMaterials, { openingSeed:true });
+      else if (key === 'cashtop_customers') writeFinancialGroupDatasetRaw(key, id, opening.nextCustomers, { openingSeed:true });
+      else if (key === 'cashtop_suppliers') writeFinancialGroupDatasetRaw(key, id, opening.nextSuppliers, { openingSeed:true });
+      else if (key === 'cashtop_funds_db') writeFinancialGroupDatasetRaw(key, id, opening.nextFunds, { openingSeed:true });
+      else if (key === 'cashtop_workers') writeFinancialGroupDatasetRaw(key, id, opening.nextWorkers, { openingSeed:true });
+      else if (key === 'cashtop_sales_agents') writeFinancialGroupDatasetRaw(key, id, opening.nextAgents, { openingSeed:true });
+      else if (key === OPENING_BALANCES_KEY) writeFinancialGroupDatasetRaw(key, id, opening.openingRecords, { openingSeed:true });
+      else writeFinancialGroupDatasetRaw(key, id, financialGroupDefaultValue(key), { openingSeed:true });
+    }
+
+    localStorage.setItem(FINANCIAL_GROUPS_KEY, JSON.stringify(nextGroups));
+    try { sessionStorage.setItem(financialGroupSelectionKey(), id); } catch (_) {}
+
+    // Queue only datasets that carry meaningful opening/master data. Empty period
+    // datasets are created lazily, which keeps the close/open operation economical.
+    [
+      'cashtop_products','cashtop_materials','cashtop_customers','cashtop_suppliers',
+      'cashtop_funds_db','cashtop_workers','cashtop_sales_agents',OPENING_BALANCES_KEY
+    ].forEach(key => {
+      const raw = rawGet(namespaceKey(key));
+      const parsed = safeJson(raw, null);
+      const meaningful = Array.isArray(parsed) ? parsed.length > 0 : parsed && typeof parsed === 'object' ? Object.keys(parsed).length > 0 : Boolean(raw);
+      if (meaningful) enqueueSyncOperation(key, { forceReplace:true });
+    });
+    try { sessionStorage.setItem(financialGroupToastKey(), JSON.stringify({ name, status:'active' })); } catch (_) {}
+    window.dispatchEvent(new CustomEvent('cashtop:financial-group-changed', { detail:{ id, previousId, name, status:'active', created:true } }));
+    // Important: turso-sync is intentionally page-scoped to the group selected at
+    // page boot. We leave the new group's queued opening records intact and let
+    // the destination page (loaded with the new group id) flush them. This prevents
+    // any opening data from being written to the just-closed group's cloud rows.
+    return nextGroups.find(group => group.id === id);
+  }
+
+  async function selectFinancialGroup(groupId, options = {}) {
+    if (!can('financialGroups.switch')) throw new Error('لا تملك صلاحية الانتقال بين المجموعات المالية.');
+    const groups = getFinancialGroups();
+    const target = groups.find(group => String(group.id) === String(groupId));
+    if (!target) throw new Error('المجموعة المالية المطلوبة غير موجودة.');
+    if (target.status === 'closed' && !can('financialGroups.viewClosed')) throw new Error('لا تملك صلاحية استعراض المجموعات المالية المغلقة.');
+    const currentId = currentFinancialGroupId();
+    if (currentId !== target.id && getSyncQueue().length) {
+      if (navigator.onLine === false) throw new Error('هناك عمليات لم تُزامن بعد. اتصل بالإنترنت قبل الانتقال إلى مجموعة أخرى.');
+      await window.CashtopTurso?.syncAll?.({ manual:false, forceRetry:true })?.catch?.(() => null);
+      if (getSyncQueue().length) throw new Error('انتظر اكتمال المزامنة قبل الانتقال إلى مجموعة أخرى.');
+    }
+    try { sessionStorage.setItem(financialGroupSelectionKey(), target.id); } catch (_) {}
+    try { sessionStorage.setItem(financialGroupToastKey(), JSON.stringify({ name:target.name, status:target.status })); } catch (_) {}
+    window.dispatchEvent(new CustomEvent('cashtop:financial-group-changed', { detail:{ id:target.id, name:target.name, status:target.status } }));
+    if (options.navigate !== false) location.href = options.target || 'لوحة التحكم.html';
+    return target;
+  }
+
+  function consumeFinancialGroupToast() {
+    try {
+      const key = financialGroupToastKey();
+      const payload = safeJson(sessionStorage.getItem(key), null);
+      if (!payload) return;
+      sessionStorage.removeItem(key);
+      const message = payload.status === 'closed'
+        ? `تم فتح المجموعة [${payload.name}] بنجاح.`
+        : `تم الدخول إلى المجموعة [${payload.name}] — جاهزة للعمل.`;
+      showToast(message, 'success', 3600);
+    } catch (_) {}
+  }
+
+  function readOnlyPermissionAllowed(requirement) {
+    const list = Array.isArray(requirement) ? requirement : [requirement];
+    return list.some(permission => /(?:\.view$|\.export$|\.print$|\.image$|reports\.send$|financialGroups\.(?:switch|viewClosed|view)$)/.test(String(permission || '')));
+  }
+
+  function applyFinancialGroupReadOnlyUi(root = document) {
+    const group = getCurrentFinancialGroup();
+    document.getElementById('ctFinancialGroupReadOnlyBanner')?.remove?.();
+    if (!group || group.status !== 'closed') return;
+    root.querySelectorAll?.('[data-ct-permission], [data-ct-permission-any]').forEach(element => {
+      const requirement = readPermissionRequirement(element);
+      if (readOnlyPermissionAllowed(requirement)) return;
+      if ('disabled' in element) element.disabled = true;
+      element.classList.add('ct-group-readonly-disabled');
+      element.title = 'المجموعة مغلقة للقراءة فقط';
+    });
+  }
 
   /* ============================================================
    * Performance + atomic data layer
@@ -2354,6 +2851,7 @@
     Object.entries(source).forEach(([key, value]) => {
       if (!isManagedKey(key)) return;
       const canonical = canonicalKey(key);
+      assertFinancialGroupWritable(canonical);
       const ns = namespaceKey(canonical);
       const oldValue = rawGet(ns);
       const inputValue = typeof value === 'string' ? value : JSON.stringify(value);
@@ -2473,6 +2971,20 @@
     });
   }
 
+  function financialGroupWriteError() {
+    const group = getCurrentFinancialGroup();
+    return `المجموعة [${group?.name || 'المحددة'}] مغلقة للقراءة فقط. انتقل إلى المجموعة المفتوحة لإضافة أو تعديل البيانات.`;
+  }
+  function assertFinancialGroupWritable(key) {
+    const canonical = canonicalKey(key);
+    if (!FINANCIAL_GROUP_SCOPED_KEYS.has(canonical) || !isFinancialGroupReadOnly()) return true;
+    const message = financialGroupWriteError();
+    showToast(message, 'error', 5200);
+    const error = new Error(message);
+    error.code = 'CASHTOP_FINANCIAL_GROUP_READ_ONLY';
+    throw error;
+  }
+
   function patchStorage() {
     if (window.__CASHTOP_STORAGE_PATCHED__) return;
     window.__CASHTOP_STORAGE_PATCHED__ = true;
@@ -2486,6 +2998,7 @@
     Storage.prototype.setItem = function (key, value) {
       if (this !== localStorage || !isManagedKey(key)) return RAW.set.call(this, key, value);
       const canonical = canonicalKey(key);
+      assertFinancialGroupWritable(canonical);
       const ns = namespaceKey(canonical);
       const oldValue = rawGet(ns);
       const stringValue = transformManagedWrite(canonical, oldValue, value);
@@ -2509,6 +3022,7 @@
     Storage.prototype.removeItem = function (key) {
       if (this !== localStorage || !isManagedKey(key)) return RAW.remove.call(this, key);
       const canonical = canonicalKey(key);
+      assertFinancialGroupWritable(canonical);
       const ns = namespaceKey(canonical);
       const oldValue = rawGet(ns);
       if (canonical === 'cashtop_products' || BRANCH_SCOPED_ARRAY_KEYS.has(canonical) || BRANCH_SCOPED_OBJECT_KEYS.has(canonical)) {
@@ -2582,39 +3096,44 @@
       }
     }
 
-    // كل فرع يملك قاعدة صناديق مستقلة. لذلك نضمن صندوق كاش ثابتاً للفرع الحالي.
-    const funds = safeJson(localStorage.getItem('cashtop_funds_db'), {}) || {};
-    funds.accounts = normalizeArrayValue(funds.accounts || [], []);
-    funds.accountLogs = normalizeArrayValue(funds.accountLogs || [], []);
-    let defaultCash = funds.accounts.find(account => account?.isDefaultCash === true)
-      || funds.accounts.find(account => ['صندوق الكاش', 'صندوق الكاش الرئيسي'].includes(String(account?.name || '').trim()));
-    let fundsChanged = false;
-    if (!defaultCash) {
-      defaultCash = {
-        id: 1000000001, name: DEFAULT_CASH_ACCOUNT_NAME, type: 'كاش', balance: 0,
-        notes: 'الصندوق الافتراضي للنظام', isDefaultCash: true, locked: true
-      };
-      // تجنب أي تعارض نادر مع رقم قديم.
-      while (funds.accounts.some(account => String(account?.id) === String(defaultCash.id))) defaultCash.id += 1;
-      funds.accounts.unshift(defaultCash);
-      fundsChanged = true;
-    } else {
-      if (defaultCash.name !== DEFAULT_CASH_ACCOUNT_NAME) { defaultCash.name = DEFAULT_CASH_ACCOUNT_NAME; fundsChanged = true; }
-      if (defaultCash.type !== 'كاش') { defaultCash.type = 'كاش'; fundsChanged = true; }
-      if (defaultCash.isDefaultCash !== true) { defaultCash.isDefaultCash = true; fundsChanged = true; }
-      if (defaultCash.locked !== true) { defaultCash.locked = true; fundsChanged = true; }
-    }
-    if (fundsChanged) {
-      const fundsMeta = safeJson(rawGet(metaKey('cashtop_funds_db')), {}) || {};
-      if (fundsMeta.seeded === true || Number(fundsMeta.updatedAt || 0) <= 0) {
-        // Same rule for the default cash box: keep it as a seeded local fallback
-        // until remote bootstrap finishes. The first real cash mutation will turn
-        // it into a normal queued dataset automatically.
-        rawSet(namespaceKey('cashtop_funds_db'), JSON.stringify(funds));
-        rawSet(metaKey('cashtop_funds_db'), JSON.stringify({ updatedAt: 0, revision: 0, seeded: true }));
+    // بيانات المجموعة المغلقة تاريخية وغير قابلة للتغيير حتى بواسطة
+    // تهيئة النظام التلقائية. إنشاء/تصحيح الصندوق الافتراضي يتم فقط في المجموعة المفتوحة.
+    if (!isFinancialGroupReadOnly()) {
+      // كل فرع يملك قاعدة صناديق مستقلة. لذلك نضمن صندوق كاش ثابتاً للفرع الحالي.
+      const funds = safeJson(localStorage.getItem('cashtop_funds_db'), {}) || {};
+      funds.accounts = normalizeArrayValue(funds.accounts || [], []);
+      funds.accountLogs = normalizeArrayValue(funds.accountLogs || [], []);
+      let defaultCash = funds.accounts.find(account => account?.isDefaultCash === true)
+        || funds.accounts.find(account => ['صندوق الكاش', 'صندوق الكاش الرئيسي'].includes(String(account?.name || '').trim()));
+      let fundsChanged = false;
+      if (!defaultCash) {
+        defaultCash = {
+          id: 1000000001, name: DEFAULT_CASH_ACCOUNT_NAME, type: 'كاش', balance: 0,
+          notes: 'الصندوق الافتراضي للنظام', isDefaultCash: true, locked: true
+        };
+        // تجنب أي تعارض نادر مع رقم قديم.
+        while (funds.accounts.some(account => String(account?.id) === String(defaultCash.id))) defaultCash.id += 1;
+        funds.accounts.unshift(defaultCash);
+        fundsChanged = true;
       } else {
-        localStorage.setItem('cashtop_funds_db', JSON.stringify(funds));
+        if (defaultCash.name !== DEFAULT_CASH_ACCOUNT_NAME) { defaultCash.name = DEFAULT_CASH_ACCOUNT_NAME; fundsChanged = true; }
+        if (defaultCash.type !== 'كاش') { defaultCash.type = 'كاش'; fundsChanged = true; }
+        if (defaultCash.isDefaultCash !== true) { defaultCash.isDefaultCash = true; fundsChanged = true; }
+        if (defaultCash.locked !== true) { defaultCash.locked = true; fundsChanged = true; }
       }
+      if (fundsChanged) {
+        const fundsMeta = safeJson(rawGet(metaKey('cashtop_funds_db')), {}) || {};
+        if (fundsMeta.seeded === true || Number(fundsMeta.updatedAt || 0) <= 0) {
+          // Same rule for the default cash box: keep it as a seeded local fallback
+          // until remote bootstrap finishes. The first real cash mutation will turn
+          // it into a normal queued dataset automatically.
+          rawSet(namespaceKey('cashtop_funds_db'), JSON.stringify(funds));
+          rawSet(metaKey('cashtop_funds_db'), JSON.stringify({ updatedAt: 0, revision: 0, seeded: true }));
+        } else {
+          localStorage.setItem('cashtop_funds_db', JSON.stringify(funds));
+        }
+      }
+
     }
 
     // اجعل جلسة مدير الشركة تشير صراحةً إلى الفرع الرئيسي كي لا يظهر "فرع غير معروف".
@@ -2914,7 +3433,7 @@
     'products.html': 'المنتجات والمخزون', 'materials.html': 'الأصناف الخام', 'invoices.html': 'فواتير المبيعات',
     'المشتريات.html': 'فواتير المشتريات', 'مرجع المشتريات.html': 'مرتجع المشتريات',
     'customers.html': 'العملاء', 'customer-groups.html': 'مجموعات العملاء',
-    'suppliers.html': 'الموردون', 'accounts.html': 'الحسابات والصناديق',
+    'suppliers.html': 'الموردون', 'accounts.html': 'الحسابات والصناديق', 'financial-groups.html': 'المجموعات المالية',
     'sands.html': 'سندات القبض والصرف', 'journal.html': 'دفتر القيود المحاسبية', 'المصاريف.html': 'المصاريف',
     'warehouses.html': 'المخازن', 'branches.html': 'الفروع', 'units.html': 'الوحدات',
     'shortages.html': 'نواقص المخزون', 'barcode-generator.html': 'مولد الباركود',
@@ -2963,7 +3482,7 @@
       ['fa-boxes-stacked','المخزون والفروع', [['products.html','المنتجات'],['materials.html','الأصناف'],['warehouses.html','المخازن'],['branches.html','الفروع'],['units.html','الوحدات'],['shortages.html','النواقص'],['barcode-generator.html','الباركود'],backupLink('inventory')]],
       ['fa-industry','التصنيع', [['ادارة التصنيع.html','إدارة التصنيع'],backupLink('manufacturing')]],
       ['fa-handshake','العملاء والعلاقات', [['customers.html','العملاء'],['customer-groups.html','مجموعات العملاء'],['المناديب.html','المناديب'],backupLink('relationships')]],
-      ['fa-calculator','المالية والمحاسبة', [['accounts.html','الصناديق والحسابات'],['sands.html','سندات القبض والصرف'],['journal.html','دفتر القيود'],['المصاريف.html','المصاريف'],backupLink('finance')]],
+      ['fa-calculator','المالية والمحاسبة', [['accounts.html','الصناديق والحسابات'],['financial-groups.html','المجموعات المالية'],['sands.html','سندات القبض والصرف'],['journal.html','دفتر القيود'],['المصاريف.html','المصاريف'],backupLink('finance')]],
       ['fa-users-gear','الموارد البشرية', [['الموظفين.html','الموظفون'],['العمال والاجور.html','العمال والأجور'],backupLink('hr')]],
       ['fa-chart-line','التقارير والمتابعة', [['التقارير.html','التقارير'],['notifications.html','الإشعارات'],backupLink('reports')]],
       ['fa-gears','النظام والإعدادات', [['tax-settings.html','إعدادات الضريبة'],['storage-settings.html','التخزين والأرشفة'],['استيراد وتصدير ل كل قسم.html','النسخ الاحتياطي الشامل'],['setting.html','إعدادات النظام'],['printer-settings.html','إعدادات الطابعة'],backupLink('settings')]]
@@ -3415,6 +3934,12 @@
     const restricted = target?.closest?.('[data-ct-permission], [data-ct-permission-any]');
     if (!restricted) return;
     const requirement = readPermissionRequirement(restricted);
+    if (isFinancialGroupReadOnly() && !readOnlyPermissionAllowed(requirement)) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      showToast(financialGroupWriteError(), 'error', 4800);
+      return;
+    }
     if (permissionAllowed(requirement)) return;
     event.preventDefault();
     event.stopImmediatePropagation();
@@ -3431,14 +3956,26 @@
       link.hidden = blockedForEmployee || (file === 'setting.html' ? false : Boolean(required && !permissionAllowed(required, session)));
     });
     root.querySelectorAll?.('[data-ct-permission], [data-ct-permission-any]').forEach(element => {
-      const allowed = permissionAllowed(readPermissionRequirement(element), session);
+      const requirement = readPermissionRequirement(element);
+      const allowed = permissionAllowed(requirement, session);
       element.hidden = !allowed;
-      if ('disabled' in element) element.disabled = !allowed;
+      if ('disabled' in element) element.disabled = !allowed || (isFinancialGroupReadOnly() && !readOnlyPermissionAllowed(requirement));
     });
     document.querySelectorAll('.ct-menu-group').forEach(group => {
       const visibleLinks = [...group.querySelectorAll('a[href]')].some(link => !link.hidden);
       group.hidden = !visibleLinks;
     });
+  }
+
+  function isFundActive(account) {
+    return Boolean(account) && account.disabled !== true && account.active !== false && String(account.status || '').toLowerCase() !== 'inactive';
+  }
+
+  function activeFundAccounts(fundsOrAccounts) {
+    const accounts = Array.isArray(fundsOrAccounts)
+      ? fundsOrAccounts
+      : normalizeArrayValue(fundsOrAccounts?.accounts, []);
+    return accounts.filter(isFundActive);
   }
 
   function getSystemSettings() {
@@ -3855,7 +4392,7 @@
         return;
       }
       const script = document.createElement('script');
-      script.src = 'turso-sync.js?v=75';
+      script.src = 'turso-sync.js?v=78';
       script.async = true;
       script.dataset.ctSyncRuntime = 'classic';
       script.onload = () => resolve(Boolean(window.CashtopTurso?.syncAll));
@@ -4670,6 +5207,20 @@
     getSession,
     persistSession,
     tenantIdFromSession,
+    FINANCIAL_GROUPS_KEY,
+    OPENING_BALANCES_KEY,
+    LEGACY_FINANCIAL_GROUP_ID,
+    FINANCIAL_GROUP_SCOPED_KEYS,
+    isFinancialGroupScopedKey,
+    getFinancialGroups,
+    currentFinancialGroupId,
+    getCurrentFinancialGroup,
+    isFinancialGroupReadOnly,
+    createFinancialGroup,
+    selectFinancialGroup,
+    calculateFinancialGroupClosing,
+    financialGroupNamespaceKey,
+    financialGroupMetaKey,
     logout,
     showToast,
     syncNow,
@@ -4695,6 +5246,8 @@
     currentPlan,
     PLUS_LIMITS,
     currentCustomLimits,
+    isFundActive,
+    activeFundAccounts,
     namespaceKey,
     metaKey,
     safeJson,
@@ -4724,7 +5277,15 @@
       syncQueueBackupChain = syncQueueBackupChain.then(() => backupSyncQueue([])).catch(() => false);
       window.dispatchEvent(new CustomEvent('cashtop:sync-queue-reset', { detail: { discarded: 0, resetAt: syncQueueResetAt(), automatic: true, revision: 'r59' } }));
     }
-    if (ensureAuthenticated()) { recoverAtomicTransactions(); seedCompanyStorage(); bootstrapCompanyAccess(); ensureSystemDefaults(); }
+    let bootFinancialGroupId = '';
+    if (ensureAuthenticated()) {
+      ensureFinancialGroups();
+      bootFinancialGroupId = currentFinancialGroupId();
+      if (!isFinancialGroupReadOnly()) recoverAtomicTransactions();
+      seedCompanyStorage();
+      bootstrapCompanyAccess();
+      ensureSystemDefaults();
+    }
 
     window.addEventListener('online', () => { updateNetworkStatus(); syncNow({ manual: false }); });
     window.addEventListener('cashtop:sync-queue-changed', updateSyncBadge);
@@ -4756,6 +5317,8 @@
       mountShell();
       installModalDraftPersistence();
       installManagerNotificationSystem();
+      applyFinancialGroupReadOnlyUi();
+      consumeFinancialGroupToast();
       setTimeout(installGlobalPerformanceGuards, 0);
     }, { once: true });
 
@@ -4779,6 +5342,16 @@
     window.addEventListener('cashtop:remote-applied', event => {
       if (['cashtop_employees','cashtop_branches','cashtop_company_access'].includes(event.detail?.key)) refreshSessionAccess();
       if (event.detail?.key === 'cashtop_settings') applySystemBranding();
+      if (event.detail?.key === FINANCIAL_GROUPS_KEY) {
+        const effective = currentFinancialGroupId();
+        if (bootFinancialGroupId && effective !== bootFinancialGroupId) {
+          const group = getCurrentFinancialGroup();
+          try { sessionStorage.setItem(financialGroupToastKey(), JSON.stringify({ name:group?.name || 'المجموعة المالية', status:group?.status || 'active' })); } catch (_) {}
+          location.reload();
+          return;
+        }
+        applyFinancialGroupReadOnlyUi();
+      }
     });
 
     if (channel) {

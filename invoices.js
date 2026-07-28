@@ -741,7 +741,7 @@ function batchReadFunds() {
 }
 
 function batchAccountOptions(selectedId = '') {
-  const accounts = batchReadFunds().accounts.filter(account => account && typeof account === 'object');
+  const accounts = batchReadFunds().accounts.filter(account => account && typeof account === 'object' && (window.Cashtop?.isFundActive ? window.Cashtop.isFundActive(account) : (account.disabled !== true && account.active !== false && String(account.status || '').toLowerCase() !== 'inactive')));
   if (!accounts.length) return '<option value="">لا توجد صناديق مسجلة</option>';
   const effectiveSelected = selectedId !== '' && selectedId != null ? String(selectedId) : String(accounts[0].id);
   return accounts.map(account => {

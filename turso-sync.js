@@ -45,15 +45,22 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     session.tenantId || session.companyId || session.licenseId || session.companyKey || 'unassigned'
   ) || 'unassigned';
   const normalizedCompanyKey = String(session.companyKey || '').trim().toUpperCase();
+  const financialGroupId = String(core.currentFinancialGroupId?.() || core.LEGACY_FINANCIAL_GROUP_ID || 'FG_LEGACY');
+  const legacyFinancialGroupId = String(core.LEGACY_FINANCIAL_GROUP_ID || 'FG_LEGACY');
+  const isGroupScopedKey = key => core.isFinancialGroupScopedKey?.(key) === true;
+  const remoteDatasetKey = key => isGroupScopedKey(key) && financialGroupId !== legacyFinancialGroupId
+    ? `fg_${sanitizeSegment(financialGroupId)}__${key}` : key;
+  const remoteStampKey = key => isGroupScopedKey(key) && financialGroupId !== legacyFinancialGroupId
+    ? `fg:${financialGroupId}:${key}` : key;
   // لا نزامن أبداً إلى عقدة تحمل معرفاً مختلفاً عن tenantId الحالي.
   // الجذور القديمة مسموحة فقط إذا كان اسم عقدة الشركة نفسه هو tenantId الثابت.
   const legacyCompanyIds = [];
   const companyIds = [canonicalCompanyId];
 
-  const stateKey = `${STATE_KEY_PREFIX}::${encodeURIComponent(canonicalCompanyId)}`;
+  const stateKey = `${STATE_KEY_PREFIX}::${encodeURIComponent(canonicalCompanyId)}::${encodeURIComponent(financialGroupId)}`;
   const locationKey = `${LOCATION_KEY_PREFIX}::${encodeURIComponent(canonicalCompanyId)}`;
-  const usageStateKey = `ct_turso_usage_v74::${encodeURIComponent(canonicalCompanyId)}`;
-  const bootstrapKey = `ct_turso_bootstrap_v74::${encodeURIComponent(canonicalCompanyId)}`;
+  const usageStateKey = `ct_turso_usage_v77::${encodeURIComponent(canonicalCompanyId)}::${encodeURIComponent(financialGroupId)}`;
+  const bootstrapKey = `ct_turso_bootstrap_v77::${encodeURIComponent(canonicalCompanyId)}::${encodeURIComponent(financialGroupId)}`;
   let syncing = false;
   let scheduledSync = null;
   let pollTimer = null;
@@ -325,7 +332,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
 
   function datasetEndpoint(location, key, token = '') {
     const query = token ? `?auth=${encodeURIComponent(token)}` : '';
-    return `${baseUrl}/${locationPath(location)}/datasets/${sanitizeSegment(key)}.json${query}`;
+    return `${baseUrl}/${locationPath(location)}/datasets/${sanitizeSegment(remoteDatasetKey(key))}.json${query}`;
   }
 
   function auditTrailEndpoint(location, day, hour = '', recordId = '', token = '') {
@@ -369,7 +376,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     const path = String(pathValue || '/').replace(/^\/+/, '');
     if (!path) return '';
     const segment = path.split('/')[0];
-    return CLOUD_DATA_KEYS.find(key => sanitizeSegment(key) === segment) || '';
+    return CLOUD_DATA_KEYS.find(key => sanitizeSegment(remoteDatasetKey(key)) === segment) || '';
   }
 
   function scheduleRealtimePull(key = '') {
@@ -455,7 +462,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   async function readDatasetLocation(location, key, token = '', options = {}) {
     if (isPathProxy && window.CashtopTursoBridge?.readExact) {
       const value = await window.CashtopTursoBridge.readExact(
-        directBridgePath(location, `datasets/${sanitizeSegment(key)}`),
+        directBridgePath(location, `datasets/${sanitizeSegment(remoteDatasetKey(key))}`),
         { cache: options.fresh !== true }
       );
       return value === undefined ? null : value;
@@ -512,7 +519,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   async function writeDatasetLocation(location, key, token = '', payload = null) {
     if (isPathProxy && window.CashtopTursoBridge?.writeNode) {
       await window.CashtopTursoBridge.writeNode(
-        directBridgePath(location, `datasets/${sanitizeSegment(key)}`), payload, false
+        directBridgePath(location, `datasets/${sanitizeSegment(remoteDatasetKey(key))}`), payload, false
       );
       return { ok: true, data: payload };
     }
@@ -536,9 +543,12 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   }
 
   function pagePriorityDatasets() {
-    const common = ['cashtop_company_access', 'cashtop_branches', 'cashtop_employees'];
+    const common = ['cashtop_company_access', 'cashtop_financial_groups', 'cashtop_branches', 'cashtop_employees'];
     const map = {
       'لوحة التحكم.html': ['cashtop_invoices', 'cashtop_products', 'cashtop_customers', 'cashtop_expenses', 'cashtop_funds_db'],
+      // Listing folders only needs the compact shared group index. The rare
+      // close/open action explicitly pulls its required balances once.
+      'financial-groups.html': ['cashtop_financial_groups'],
       'cashier.html': ['cashtop_products', 'cashtop_customers', 'cashtop_customer_groups', 'cashtop_funds_db', 'cashtop_sales_offers', 'cashtop_tax_settings', 'cashtop_units', 'cashtop_stores'],
       'products.html': ['cashtop_products', 'cashtop_units', 'cashtop_stores', 'cashtop_suppliers', 'cashtop_purchases', 'cashtop_funds_db'],
       'materials.html': ['cashtop_materials', 'cashtop_material_purchases', 'cashtop_units', 'cashtop_stores', 'cashtop_suppliers', 'cashtop_funds_db'],
@@ -946,7 +956,8 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       companyKey: session.companyKey || '',
       companyName: session.companyName || '',
       appName: 'كاش توب 2',
-      schema: 19,
+      schema: 20,
+      financialGroupId,
       datasetCount: CLOUD_DATA_KEYS.length,
       deviceId: core.rawGet('cashtop_device_id') || '',
       updatedAt: Date.now(),
@@ -963,9 +974,8 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   function normalizeDatasetStamps(meta) {
     const source = meta?.datasetStamps && typeof meta.datasetStamps === 'object' ? meta.datasetStamps : {};
     const out = {};
-    for (const [key, value] of Object.entries(source)) {
-      if (!CLOUD_DATA_KEYS.includes(key)) continue;
-      const stamp = Number(value || 0);
+    for (const key of CLOUD_DATA_KEYS) {
+      const stamp = Number(source[remoteStampKey(key)] || 0);
       if (stamp > 0) out[key] = stamp;
     }
     return out;
@@ -1004,7 +1014,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     const remoteStamps = normalizeDatasetStamps(remoteMeta);
     const changedKeys = [...new Set((uploadedKeys || []).filter(key => CLOUD_DATA_KEYS.includes(key)))];
     for (const key of changedKeys) {
-      datasetStamps[key] = Math.max(now, Number(localMetaFor(key)?.updatedAt || 0), Number(remoteStamps[key] || 0) + 1);
+      datasetStamps[remoteStampKey(key)] = Math.max(now, Number(localMetaFor(key)?.updatedAt || 0), Number(remoteStamps[key] || 0) + 1);
     }
     // Only changed keys are patched. Turso's atomic json_patch merges this nested
     // object with stamps written by other devices, preventing lost live updates.
@@ -1037,7 +1047,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
 
     try {
       if (isPathProxy && window.CashtopTursoBridge?.readMany) {
-        const paths = requested.map(key => directBridgePath(location, `datasets/${sanitizeSegment(key)}`));
+        const paths = requested.map(key => directBridgePath(location, `datasets/${sanitizeSegment(remoteDatasetKey(key))}`));
         const batch = await window.CashtopTursoBridge.readMany(paths, { cache: options.freshCache !== false ? false : true });
         for (let index = 0; index < requested.length; index += 1) {
           const key = requested[index];
@@ -2037,7 +2047,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
           return {
             key,
             payload,
-            path: directBridgePath(location, `datasets/${sanitizeSegment(key)}`),
+            path: directBridgePath(location, `datasets/${sanitizeSegment(remoteDatasetKey(key))}`),
             value: payload,
             deleted: false,
             updatedAt: Number(payload.updatedAt || Date.now())
@@ -2050,7 +2060,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
         reportSyncProgress(Math.min(i + chunk.length, unique.length), unique.length, 'رفع النسخة إلى Turso بدون إعادة قراءة البيانات...');
       }
       const importStamp = Date.now();
-      const importDatasetStamps = Object.fromEntries(unique.map(key => [key, Math.max(importStamp, Number(localMetaFor(key)?.updatedAt || 0))]));
+      const importDatasetStamps = Object.fromEntries(unique.map(key => [remoteStampKey(key), Math.max(importStamp, Number(localMetaFor(key)?.updatedAt || 0))]));
       const metaWritten = await writeMetaLocation(location, token, companyMeta(location, {
         datasetStampSchema: 1,
         datasetStamps: importDatasetStamps,

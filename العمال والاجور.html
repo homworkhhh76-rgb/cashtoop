@@ -185,12 +185,12 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=75">
-    <script src="cashtop-core.js?v=75"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=78">
+    <script src="cashtop-core.js?v=78"></script>
     <script src="multi-system.js?v=51"></script>
     <script src="turso-config.js?v=74"></script><script src="turso-rtdb.js?v=74"></script>
     <script src="accounting-engine.js"></script>
-    <script src="turso-sync.js?v=75"></script>
+    <script src="turso-sync.js?v=78"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -660,10 +660,11 @@
         function handleWorkerMoneyCurrencyChange(kind){ populateVaults(kind); if(kind==='pay'){const w=workersDB.find(x=>String(x.id)===String(document.getElementById('payWorkerId')?.value));if(w)suggestWorkerPayAmount(w);} }
         function populateVaults(kind='all') {
             const cfg=workerCurrencyConfig(); (fundsDB.accounts||[]).forEach(a=>{if(!a.currencyId)a.currencyId=cfg.baseCurrencyId;});
+            const activeAccounts=(fundsDB.accounts||[]).filter(a=>window.Cashtop?.isFundActive?window.Cashtop.isFundActive(a):(a.disabled!==true&&a.active!==false&&String(a.status||'').toLowerCase()!=='inactive'));
             let allOptions = '<option value="">-- اختر الصندوق المالي --</option>';
-            fundsDB.accounts.forEach(a => { const cur=window.CashtopMulti?.getCurrency?.(a.currencyId||cfg.baseCurrencyId)||cfg.base; allOptions += `<option value="${a.id}">${a.name} (متوفر: ${parseFloat(a.balance||0).toFixed(2)} ${cur.symbol||cur.code})</option>`; });
+            activeAccounts.forEach(a => { const cur=window.CashtopMulti?.getCurrency?.(a.currencyId||cfg.baseCurrencyId)||cfg.base; allOptions += `<option value="${a.id}">${a.name} (متوفر: ${parseFloat(a.balance||0).toFixed(2)} ${cur.symbol||cur.code})</option>`; });
             document.getElementById('wVaultSelect').innerHTML = allOptions;
-            ['pay','debt'].forEach(k=>{ if(kind!=='all'&&kind!==k)return; const cid=cfg.enabled?workerMoneyCurrencyId(k):cfg.baseCurrencyId; let opts='<option value="">-- اختر الصندوق المالي --</option>'; fundsDB.accounts.forEach(a=>{const cur=window.CashtopMulti?.getCurrency?.(a.currencyId||cfg.baseCurrencyId)||cfg.base;opts+=`<option value="${a.id}">${a.name} (متوفر: ${Number(a.balance||0).toFixed(2)} ${cur.symbol||cur.code})</option>`;}); document.getElementById(k==='pay'?'payVaultSelect':'debtVaultSelect').innerHTML=opts; });
+            ['pay','debt'].forEach(k=>{ if(kind!=='all'&&kind!==k)return; const cid=cfg.enabled?workerMoneyCurrencyId(k):cfg.baseCurrencyId; let opts='<option value="">-- اختر الصندوق المالي --</option>'; activeAccounts.forEach(a=>{const cur=window.CashtopMulti?.getCurrency?.(a.currencyId||cfg.baseCurrencyId)||cfg.base;opts+=`<option value="${a.id}">${a.name} (متوفر: ${Number(a.balance||0).toFixed(2)} ${cur.symbol||cur.code})</option>`;}); document.getElementById(k==='pay'?'payVaultSelect':'debtVaultSelect').innerHTML=opts; });
         }
 
         // ==========================================

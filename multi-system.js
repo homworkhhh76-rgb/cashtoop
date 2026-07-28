@@ -412,7 +412,7 @@
   function openMultiPayment(options = {}) {
     ensureMultiPaymentUi();
     const cfg = getCurrencyConfig();
-    const accounts = Array.isArray(options.accounts) ? options.accounts.filter(Boolean) : [];
+    const accounts = Array.isArray(options.accounts) ? options.accounts.filter(account => Boolean(account) && account.disabled !== true && account.active !== false && String(account.status || '').toLowerCase() !== 'inactive') : [];
     if (!accounts.length) { window.Cashtop?.showToast?.('لا توجد صناديق متاحة.', 'error'); return false; }
     multiPaymentContext = {
       accounts,

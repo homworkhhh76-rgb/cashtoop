@@ -243,12 +243,12 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=75">
-    <script src="cashtop-core.js?v=75"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=78">
+    <script src="cashtop-core.js?v=78"></script>
     <script src="multi-system.js?v=57"></script>
     <script src="turso-config.js?v=74"></script><script src="turso-rtdb.js?v=74"></script>
     <script src="accounting-engine.js"></script>
-    <script src="turso-sync.js?v=75"></script>
+    <script src="turso-sync.js?v=78"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -1024,7 +1024,7 @@
             const funds = getFundsDb();
             const cfg=customerPaymentCurrencyConfig(), cid=cfg.enabled?customerPaymentCurrencyId():cfg.baseCurrencyId;
             funds.accounts.forEach(account=>{if(!account.currencyId)account.currencyId=cfg.baseCurrencyId;});
-            const accounts = funds.accounts.filter(account => account && account.id != null);
+            const accounts = funds.accounts.filter(account => account && account.id != null && (window.Cashtop?.isFundActive ? window.Cashtop.isFundActive(account) : (account.disabled !== true && account.active !== false && String(account.status || '').toLowerCase() !== 'inactive')));
             select.innerHTML = accounts.length
                 ? ((accounts.length>1?`<option value="${CUSTOMER_MULTI_PAYMENT_VALUE}">دفع متعدد</option>`:'') + accounts.map(account => { const cur=window.CashtopMulti?.getCurrency?.(account.currencyId||cfg.baseCurrencyId)||cfg.base; return `<option value="${escapeHtml(String(account.id))}">${escapeHtml(String(account.name || 'صندوق بدون اسم'))} — ${numeric(account.balance).toFixed(2)} ${escapeHtml(cur.symbol||cur.code)}</option>`; }).join(''))
                 : '<option value="">لا يوجد صندوق مالي</option>';
@@ -1041,7 +1041,7 @@
             const amountNative=Math.max(0,numeric(document.getElementById('paymentAmount')?.value));
             if(!(amountNative>0)){showToast('أدخل مبلغ الدفعة أولاً ثم اختر دفع متعدد.','warning');return false;}
             const funds=getFundsDb(),cfg=customerPaymentCurrencyConfig(),currencyId=cfg.enabled?customerPaymentCurrencyId():cfg.baseCurrencyId;
-            return window.CashtopMulti?.openMultiPayment?.({title:'تحصيل متعدد من العميل',accounts:funds.accounts||[],transactionCurrencyId:currencyId,direction:'in',requireExact:true,exactTransactionAmount:amountNative,initialSplits:customerMultiPayments,defaultTransactionAmount:customerMultiPayments.length?0:amountNative,onSave:(splits)=>{customerMultiPayments=splits.map(item=>({...item}));const select=document.getElementById('paymentAccount');if(select)select.value=CUSTOMER_MULTI_PAYMENT_VALUE;updatePaymentAccountLabel();}});
+            return window.CashtopMulti?.openMultiPayment?.({title:'تحصيل متعدد من العميل',accounts:(funds.accounts||[]).filter(account => window.Cashtop?.isFundActive ? window.Cashtop.isFundActive(account) : (account?.disabled !== true && account?.active !== false && String(account?.status || '').toLowerCase() !== 'inactive')),transactionCurrencyId:currencyId,direction:'in',requireExact:true,exactTransactionAmount:amountNative,initialSplits:customerMultiPayments,defaultTransactionAmount:customerMultiPayments.length?0:amountNative,onSave:(splits)=>{customerMultiPayments=splits.map(item=>({...item}));const select=document.getElementById('paymentAccount');if(select)select.value=CUSTOMER_MULTI_PAYMENT_VALUE;updatePaymentAccountLabel();}});
         }
         function handleCustomerPaymentAccountChange(){const select=document.getElementById('paymentAccount');if(!select)return;if(select.value===CUSTOMER_MULTI_PAYMENT_VALUE){if(!openCustomerMultiPayment())populatePaymentAccounts();}else customerMultiPayments=[];updatePaymentAccountLabel();}
 

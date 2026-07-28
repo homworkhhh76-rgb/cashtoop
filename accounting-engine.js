@@ -146,6 +146,7 @@
   let rebuilding = false;
   function rebuild() {
     if (rebuilding) return;
+    if (window.Cashtop?.isFinancialGroupReadOnly?.()) return;
     rebuilding = true;
     try {
       const journal = buildJournal();

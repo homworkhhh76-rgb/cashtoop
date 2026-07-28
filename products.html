@@ -261,12 +261,12 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=75">
-    <script src="cashtop-core.js?v=75"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=78">
+    <script src="cashtop-core.js?v=78"></script>
     <script src="multi-system.js?v=57"></script>
     <script src="turso-config.js?v=74"></script><script src="turso-rtdb.js?v=74"></script>
     <script src="accounting-engine.js"></script>
-    <script src="turso-sync.js?v=75"></script>
+    <script src="turso-sync.js?v=78"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -1026,7 +1026,7 @@
             const current = select.value;
             const cfg=productPurchaseCurrencyConfig(),cid=cfg.enabled?productPurchaseCurrencyId():cfg.baseCurrencyId;
             select.innerHTML = '';
-            const accounts=(Array.isArray(fundsData.accounts) ? fundsData.accounts : []).filter(a => a && typeof a === 'object');
+            const accounts=(Array.isArray(fundsData.accounts) ? fundsData.accounts : []).filter(a => a && typeof a === 'object' && (window.Cashtop?.isFundActive ? window.Cashtop.isFundActive(a) : (a.disabled !== true && a.active !== false && String(a.status || '').toLowerCase() !== 'inactive')));
             accounts.forEach(a=>{if(!a.currencyId)a.currencyId=cfg.baseCurrencyId;});
             accounts.forEach(a => {
                 const opt = document.createElement('option'); const cur=window.CashtopMulti?.getCurrency?.(a.currencyId||cfg.baseCurrencyId)||cfg.base;

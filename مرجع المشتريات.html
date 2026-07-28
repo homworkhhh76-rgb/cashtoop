@@ -174,12 +174,12 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=75">
-    <script src="cashtop-core.js?v=75"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=78">
+    <script src="cashtop-core.js?v=78"></script>
     <script src="multi-system.js?v=57"></script>
     <script src="turso-config.js?v=74"></script><script src="turso-rtdb.js?v=74"></script>
     <script src="accounting-engine.js"></script>
-    <script src="turso-sync.js?v=75"></script>
+    <script src="turso-sync.js?v=78"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -584,8 +584,9 @@
 
             const cfg=returnCurrencyConfig(),cid=cfg.enabled?returnCurrencyId():cfg.baseCurrencyId;
             fundsData.accounts.forEach(f=>{if(!f.currencyId)f.currencyId=cfg.baseCurrencyId;});
+            const activeFunds=(fundsData.accounts||[]).filter(f=>window.Cashtop?.isFundActive?window.Cashtop.isFundActive(f):(f?.disabled!==true&&f?.active!==false&&String(f?.status||'').toLowerCase()!=='inactive'));
             let fundHtml = '';
-            fundsData.accounts.forEach(f => { const cur=window.CashtopMulti?.getCurrency?.(f.currencyId||cfg.baseCurrencyId)||cfg.base; fundHtml += `<option value="${f.id}">${f.name} [${f.type}] — ${Number(f.balance||0).toFixed(2)} ${cur.symbol||cur.code}</option>`; });
+            activeFunds.forEach(f => { const cur=window.CashtopMulti?.getCurrency?.(f.currencyId||cfg.baseCurrencyId)||cfg.base; fundHtml += `<option value="${f.id}">${f.name} [${f.type}] — ${Number(f.balance||0).toFixed(2)} ${cur.symbol||cur.code}</option>`; });
             document.getElementById('accountSelect').innerHTML = fundHtml;
         }
 

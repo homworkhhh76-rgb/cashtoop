@@ -217,12 +217,12 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=75">
-    <script src="cashtop-core.js?v=75"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=78">
+    <script src="cashtop-core.js?v=78"></script>
     <script src="multi-system.js?v=57"></script>
     <script src="turso-config.js?v=74"></script><script src="turso-rtdb.js?v=74"></script>
     <script src="accounting-engine.js"></script>
-    <script src="turso-sync.js?v=75"></script>
+    <script src="turso-sync.js?v=78"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -738,7 +738,7 @@
             normalizeVoucherAccountCurrencies();
             const cfg=voucherCurrencyConfig(); const cid=cfg.enabled?voucherCurrencyId():cfg.baseCurrencyId;
             if(fundsDB.accounts) {
-                fundsDB.accounts.forEach(a => {
+                fundsDB.accounts.filter(a => window.Cashtop?.isFundActive ? window.Cashtop.isFundActive(a) : (a?.disabled !== true && a?.active !== false && String(a?.status || '').toLowerCase() !== 'inactive')).forEach(a => {
                     const cur=window.CashtopMulti?.getCurrency?.(a.currencyId||cfg.baseCurrencyId)||cfg.base;
                     accContainer.innerHTML += `<div class="select-option-item" data-value="${a.id}">${a.name} [${a.type}] — ${Number(a.balance||0).toFixed(2)} ${cur.symbol||cur.code}</div>`;
                 });

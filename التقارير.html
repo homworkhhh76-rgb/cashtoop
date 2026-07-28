@@ -156,12 +156,12 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=75">
-    <script src="cashtop-core.js?v=75"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=78">
+    <script src="cashtop-core.js?v=78"></script>
     <script src="multi-system.js?v=51"></script>
     <script src="turso-config.js?v=74"></script><script src="turso-rtdb.js?v=74"></script>
     <script src="accounting-engine.js"></script>
-    <script src="turso-sync.js?v=75"></script>
+    <script src="turso-sync.js?v=78"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -529,6 +529,8 @@
         let purchasesData = [];
         let supplierMovementsData = [];
         let wastageData = [];
+        let customersData = [];
+        let fundsData = { accounts: [], accountLogs: [] };
         let currentChart = null;
 
         // مصفوفات عالمية للتصدير 
@@ -557,6 +559,9 @@
             branchesData = JSON.parse(localStorage.getItem('cashtop_branches')) || [];
             supplierMovementsData = JSON.parse(localStorage.getItem('cashtop_supplier_movements')) || [];
             wastageData = JSON.parse(localStorage.getItem('cashtop_wastage')) || [];
+            customersData = JSON.parse(localStorage.getItem('cashtop_customers')) || [];
+            fundsData = JSON.parse(localStorage.getItem('cashtop_funds_db')) || { accounts: [], accountLogs: [] };
+            if (!Array.isArray(fundsData.accounts)) fundsData.accounts = [];
             try {
                 const [archivedInvoices, archivedPurchases] = await Promise.all([
                     window.Cashtop?.readArchivedRecords?.('cashtop_invoices') || Promise.resolve([]),
@@ -648,7 +653,16 @@
             // تحديث الشاشة الرئيسية
             document.getElementById('mainSales').innerText = repSales.toFixed(2) + ' ₪';
             document.getElementById('mainProfit').innerText = netProfit.toFixed(2) + ' ₪';
-            document.getElementById('mainDebt').innerText = repDebt.toFixed(2) + ' ₪';
+            // أرصدة الميزانية الدائمة تأتي من الحالة الحالية للمجموعة نفسها،
+            // لذلك تبقى ظاهرة بعد فتح مجموعة مالية جديدة كرصد افتتاحي.
+            const customerReceivables = customersData.reduce((sum, customer) => sum + Math.max(0, Number(customer?.balance || 0)), 0);
+            const fundsBalance = (fundsData.accounts || []).reduce((sum, account) => {
+                const amount = Number(account?.balance || 0);
+                const currencyId = account?.currencyId || window.CashtopMulti?.getCurrencyConfig?.().baseCurrencyId;
+                const baseAmount = window.CashtopMulti?.toBase?.(amount, currencyId);
+                return sum + (Number.isFinite(Number(baseAmount)) ? Number(baseAmount) : amount);
+            }, 0);
+            document.getElementById('mainDebt').innerText = customerReceivables.toFixed(2) + ' ₪';
             
             document.getElementById('valTotalSales').innerText = repSales.toFixed(2) + ' ₪';
             document.getElementById('valTotalCost').innerText = repCost.toFixed(2) + ' ₪';
@@ -657,7 +671,7 @@
             document.getElementById('valDebtSales').innerText = repDebt.toFixed(2) + ' ₪';
             document.getElementById('valExpenses').innerText = '- ' + repWastage.toFixed(2) + ' ₪';
             document.getElementById('valNetProfit').innerText = netProfit.toFixed(2) + ' ₪';
-            document.getElementById('valCashBalance').innerText = repPaid.toFixed(2) + ' ₪'; 
+            document.getElementById('valCashBalance').innerText = fundsBalance.toFixed(2) + ' ₪'; 
 
             topProductsArrForExport = Object.keys(productSalesCounter).map(key => {
                 return { name: key, qty: productSalesCounter[key].qty, revenue: productSalesCounter[key].revenue };
