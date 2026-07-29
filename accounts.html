@@ -603,26 +603,34 @@
         window.onload = function() {
             try { window.Cashtop?.ensureSystemDefaults?.(); } catch (_) {}
             try {
-                // استخدمنا مفتاح تخزين جديد كلياً "cashtop_funds_db_v4" لمسح أخطائك السابقة والبدء بالكاش فقط
-                if (localStorage.getItem('cashtop_funds_db_v4')) {
-                    cashtop_funds_db = JSON.parse(localStorage.getItem('cashtop_funds_db_v4'));
-                } else { cashtop_funds_db = { accounts: [], accountLogs: [] }; localStorage.setItem('cashtop_funds_db_v4', JSON.stringify(cashtop_funds_db)); }
+                // قاعدة الصناديق الموحدة للفرع الحالي؛ لا ننشئ أرصدة وهمية محلياً.
+                const storedFunds = localStorage.getItem('cashtop_funds_db') || localStorage.getItem('cashtop_funds_db_v4');
+                cashtop_funds_db = storedFunds ? (JSON.parse(storedFunds) || { accounts: [], accountLogs: [] }) : { accounts: [], accountLogs: [] };
             } catch(e) {
                 console.error("خطأ في قراءة البيانات", e);
             }
             normalizeAccountCurrencies();
-            localStorage.setItem('cashtop_funds_db_v4', JSON.stringify(cashtop_funds_db));
+            localStorage.setItem('cashtop_funds_db', JSON.stringify(cashtop_funds_db));
             initLayout();
         };
 
         // مزامنة حية
+        function refreshAccountsFunds() {
+            try {
+                const raw = localStorage.getItem('cashtop_funds_db') || localStorage.getItem('cashtop_funds_db_v4') || '{}';
+                const fresh = JSON.parse(raw);
+                cashtop_funds_db = fresh && typeof fresh === 'object' ? fresh : { accounts: [], accountLogs: [] };
+                if (!Array.isArray(cashtop_funds_db.accounts)) cashtop_funds_db.accounts = [];
+                if (!Array.isArray(cashtop_funds_db.accountLogs)) cashtop_funds_db.accountLogs = [];
+            } catch (_) { cashtop_funds_db = { accounts: [], accountLogs: [] }; }
+            normalizeAccountCurrencies();
+            initLayout();
+        }
         window.addEventListener('storage', function(e) {
-            if (e.key === 'cashtop_funds_db_v4' && e.newValue) {
-                cashtop_funds_db = JSON.parse(e.newValue);
-                normalizeAccountCurrencies();
-                initLayout();
-            }
+            if (!e.key || String(e.key).includes('cashtop_funds_db')) refreshAccountsFunds();
         });
+        window.addEventListener('cashtop:funds-changed', refreshAccountsFunds);
+        window.addEventListener('cashtop:remote-applied', event => { if (event.detail?.key === 'cashtop_funds_db') refreshAccountsFunds(); });
 
         function initLayout() {
             renderTable();

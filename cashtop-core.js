@@ -32,7 +32,8 @@
     'cashtop_admin_licenses',
     'cashtop_admin_users',
     'cashtop_superadmin_session',
-    'cashtop_tenant_bindings'
+    'cashtop_tenant_bindings',
+    'cashtop_persistent_session_v1'
   ]);
 
   const ALIASES = {
@@ -745,6 +746,7 @@
     return canonicalKey(suffix);
   }
   const TAB_SESSION_KEY = 'cashtop_tab_session_v2';
+  const PERSISTENT_SESSION_KEY = 'cashtop_persistent_session_v1';
   const WINDOW_SESSION_PREFIX = 'CASHTOP_SESSION_V2:';
   function sessionTenantId(session) {
     return session && (session.tenantId || session.companyId || session.companyKey)
@@ -758,7 +760,17 @@
     } catch (_) {}
     try {
       if (String(window.name || '').startsWith(WINDOW_SESSION_PREFIX)) {
-        return safeJson(String(window.name).slice(WINDOW_SESSION_PREFIX.length), null);
+        const session = safeJson(String(window.name).slice(WINDOW_SESSION_PREFIX.length), null);
+        if (session) { try { sessionStorage.setItem(TAB_SESSION_KEY, JSON.stringify(session)); } catch (_) {} return session; }
+      }
+    } catch (_) {}
+    try {
+      const persistent = safeJson(rawGet(PERSISTENT_SESSION_KEY), null);
+      if (persistent) {
+        const serialized = JSON.stringify(persistent);
+        try { sessionStorage.setItem(TAB_SESSION_KEY, serialized); } catch (_) {}
+        try { window.name = WINDOW_SESSION_PREFIX + serialized; } catch (_) {}
+        return persistent;
       }
     } catch (_) {}
     return null;
@@ -767,6 +779,7 @@
     if (!session) return;
     const serialized = JSON.stringify(session);
     try { sessionStorage.setItem(TAB_SESSION_KEY, serialized); } catch (_) {}
+    try { rawSet(PERSISTENT_SESSION_KEY, serialized); } catch (_) {}
     try { window.name = WINDOW_SESSION_PREFIX + serialized; } catch (_) {}
   }
   function tenantIdFromSession() {
@@ -2952,7 +2965,7 @@
        still use their legacy render functions. */
     const style = document.createElement('style');
     style.id = 'ctPerformanceGuards';
-    style.textContent = 'tbody tr{content-visibility:auto;contain-intrinsic-size:auto 44px}.ct-lazy-table-sentinel,.ct-virtual-spacer,.ct-virtual-window-sentinel{content-visibility:visible!important;contain:none!important}';
+    style.textContent = 'tbody tr{content-visibility:auto;contain-intrinsic-size:auto 44px}.ct-lazy-table-sentinel,.ct-virtual-spacer,.ct-virtual-window-sentinel{content-visibility:visible!important;contain:none!important}html{scroll-behavior:auto}body{overscroll-behavior-y:contain}.ct-sidebar,.ct-topbar,.ct-bottom-nav,.modal-box,.modal-content{transform:translateZ(0);backface-visibility:hidden}button,a,input,select,textarea{touch-action:manipulation}';
     document.head.appendChild(style);
 
     /* Convert common inline search handlers to a 300ms debounced listener. */
@@ -3243,6 +3256,21 @@
     }
   }
 
+  function branchRecordIsActive(branch) {
+    if (!branch || typeof branch !== 'object') return false;
+    if (branch.isMain === true) return true;
+    if (branch.disabled === true || branch.active === false) return false;
+    return !['inactive','disabled','blocked','مجمد','معطل','موقوف'].includes(String(branch.status || '').trim().toLowerCase());
+  }
+
+  function resolveSessionBranch(branches, branchRef) {
+    const list = normalizeArrayValue(branches, []);
+    const main = list.find(item => item?.isMain === true) || list.find(item => String(item?.id || '').toUpperCase() === 'MAIN') || list[0] || null;
+    const ref = String(branchRef ?? '').trim();
+    if (!ref || ref.toUpperCase() === 'MAIN') return main || { id:'MAIN', name:DEFAULT_MAIN_BRANCH_NAME, status:'نشط', isMain:true };
+    return list.find(item => String(item?.id) === ref) || list.find(item => String(item?.name || '').trim() === ref) || null;
+  }
+
   function validateSessionLocal(session) {
     if (!session) return { ok: false, reason: 'missing' };
     const companyId = String(session.tenantId || session.companyId || session.companyKey || 'unassigned');
@@ -3275,23 +3303,24 @@
       const employees = normalizeArrayValue(rawGet(namespaceKey('cashtop_employees', companyId)), []);
       const employee = employees.find(item => String(item.id) === String(session.uid)) ||
         employees.find(item => String(item.username || '').toLowerCase() === String(session.username || '').toLowerCase());
-      if (!employee || employee.status !== 'active') return { ok: false, reason: 'user-disabled' };
+      if (!employee || !branchRecordIsActive(employee)) return { ok: false, reason: 'user-disabled' };
       session.displayName = employee.name || session.displayName;
       session.permissions = normalizePermissions(employee.permissions || {});
-      session.branchRecordId = employee.branchId || null;
       const branches = normalizeArrayValue(rawGet(namespaceKey('cashtop_branches', companyId)), []);
-      const employeeBranch = branches.find(item => String(item.id) === String(employee.branchId));
-      if (!employeeBranch || employeeBranch.status === 'مجمد') return { ok: false, reason: 'user-disabled' };
-      session.branchId = employeeBranch.isMain === true ? 'MAIN' : employeeBranch.id;
+      const employeeBranch = resolveSessionBranch(branches, employee.branchRecordId || employee.branchId || employee.dataBranchId || 'MAIN');
+      const employeeOnMain = !employee.branchId || String(employee.branchId).toUpperCase() === 'MAIN' || employeeBranch?.isMain === true;
+      if (!employeeBranch || (!employeeOnMain && !branchRecordIsActive(employeeBranch))) return { ok: false, reason: 'user-disabled' };
+      session.branchRecordId = employeeBranch.id || null;
+      session.branchId = employeeOnMain ? 'MAIN' : employeeBranch.id;
       session.dataBranchId = session.branchId;
-      session.branchName = employeeBranch.name || employee.branchName || '';
+      session.branchName = employeeBranch.name || employee.branchName || DEFAULT_MAIN_BRANCH_NAME;
       session.authVersion = employee.authVersion || employee.updatedAt || 0;
     } else if (['branch-admin', 'branch_manager', 'manager'].includes(role)) {
       const branches = normalizeArrayValue(rawGet(namespaceKey('cashtop_branches', companyId)), []);
       const lookup = session.branchRecordId || session.branchId;
-      const branch = branches.find(item => String(item.id) === String(lookup)) ||
+      const branch = resolveSessionBranch(branches, lookup) ||
         branches.find(item => String(item.managerUsername || '').toLowerCase() === String(session.username || '').toLowerCase());
-      if (!branch || branch.status === 'مجمد' || branch.managerActive === false || !branch.managerUsername) return { ok: false, reason: 'user-disabled' };
+      if (!branch || (!branch.isMain && !branchRecordIsActive(branch)) || branch.managerActive === false || !branch.managerUsername) return { ok: false, reason: 'user-disabled' };
       session.branchRecordId = branch.id;
       session.branchId = branch.isMain === true ? 'MAIN' : branch.id;
       session.dataBranchId = session.branchId;
@@ -3334,6 +3363,7 @@
       sessionStorage.removeItem(`ct_turso_state::${encodeURIComponent(companyId)}`);
       sessionStorage.removeItem(TAB_SESSION_KEY);
     } catch (_) {}
+    try { rawRemove(PERSISTENT_SESSION_KEY); } catch (_) {}
     try {
       if (String(window.name || '').startsWith(WINDOW_SESSION_PREFIX)) window.name = '';
     } catch (_) {}
@@ -4539,6 +4569,103 @@
     }
   }
 
+  function normalizeMergeToken(value) {
+    return String(value ?? '')
+      .replace(/[٠-٩]/g, digit => '0123456789'['٠١٢٣٤٥٦٧٨٩'.indexOf(digit)])
+      .replace(/[۰-۹]/g, digit => '0123456789'['۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)])
+      .trim().toLowerCase().replace(/[\s\-_.()+]/g, '');
+  }
+
+  function backupRecordCandidates(dataset, record) {
+    if (!record || typeof record !== 'object') return [];
+    const add = (type, value, out) => { const token = normalizeMergeToken(value); if (token) out.push(`${type}:${token}`); };
+    const out = [];
+    if (dataset === 'cashtop_products') {
+      add('barcode', record.barcode || record.barCode || record.productBarcode, out);
+      add('sku', record.sku || record.code || record.productCode, out);
+      add('id', record.id, out);
+      return [...new Set(out)];
+    }
+    if (dataset === 'cashtop_customers') {
+      add('id', record.id, out); add('portal', record.portalKey || record.customerKey, out);
+      add('phone', String(record.phone || record.mobile || '').replace(/\D/g,''), out);
+      add('code', record.code || record.customerCode || record.number, out);
+      return [...new Set(out)];
+    }
+    if (dataset === 'cashtop_employees') { add('id',record.id,out); add('username',record.username,out); return [...new Set(out)]; }
+    if (dataset === 'cashtop_branches') {
+      if (record.isMain === true || String(record.id || '').toUpperCase() === 'MAIN') out.push('branch:main');
+      add('id',record.id,out); return [...new Set(out)];
+    }
+    if (dataset === 'cashtop_funds_db_accounts') { add('id',record.id,out); add('name',record.name,out); return [...new Set(out)]; }
+    if (dataset === 'cashtop_funds_db_logs') { add('id',record.id,out); add('ref',`${record.sourceType||record.refType||''}:${record.sourceId||record.refId||''}:${record.accountId||''}`,out); return [...new Set(out)]; }
+    ['id','invoiceId','refNumber','reference','code','number','username'].forEach(field => add(field, record[field], out));
+    return [...new Set(out)];
+  }
+
+  function mergeBackupArray(dataset, currentValue, importedValue) {
+    const result = normalizeArrayValue(currentValue, []).map(item => deepClone(item));
+    const index = new Map();
+    const indexRecord = (record, position) => backupRecordCandidates(dataset, record).forEach(key => { if (!index.has(key)) index.set(key, position); });
+    result.forEach(indexRecord);
+    normalizeArrayValue(importedValue, []).forEach(imported => {
+      const keys = backupRecordCandidates(dataset, imported);
+      let position = -1;
+      for (const key of keys) { if (index.has(key)) { position = index.get(key); break; } }
+      if (position >= 0) {
+        const previous = result[position] && typeof result[position] === 'object' ? result[position] : {};
+        result[position] = { ...deepClone(previous), ...deepClone(imported) };
+        indexRecord(result[position], position);
+      } else {
+        position = result.length;
+        result.push(deepClone(imported));
+        indexRecord(result[position], position);
+      }
+    });
+    return result;
+  }
+
+  function ensureMergedCustomerPortalKeys(customers) {
+    const list = normalizeArrayValue(customers, []);
+    const used = new Set();
+    const normalizeKey = value => normalizeMergeToken(value).replace(/\D/g, '');
+    const makeKey = seed => {
+      let hash = 2166136261;
+      const text = String(seed || `${Date.now()}_${Math.random()}`);
+      for (let i = 0; i < text.length; i += 1) { hash ^= text.charCodeAt(i); hash = Math.imul(hash, 16777619); }
+      let key = String(100000 + (Math.abs(hash) % 900000));
+      while (used.has(key)) key = String(100000 + ((Number(key) + 7919) % 900000));
+      used.add(key); return key;
+    };
+    return list.map((customer, index) => {
+      const existing = normalizeKey(customer?.portalKey || customer?.customerKey || '');
+      if (existing && !used.has(existing)) { used.add(existing); return { ...customer, portalKey: existing }; }
+      return { ...customer, portalKey: makeKey(customer?.id || customer?.phone || customer?.name || index) };
+    });
+  }
+
+  function mergeBackupDataset(canonical, oldRaw, storageValue) {
+    const oldValue = safeJson(oldRaw, null);
+    const importedValue = safeJson(storageValue, null);
+    if (Array.isArray(importedValue)) {
+      const merged = mergeBackupArray(canonical, Array.isArray(oldValue) ? oldValue : [], importedValue);
+      return JSON.stringify(canonical === 'cashtop_customers' ? ensureMergedCustomerPortalKeys(merged) : merged);
+    }
+    if (canonical === 'cashtop_funds_db' && importedValue && typeof importedValue === 'object') {
+      const current = oldValue && typeof oldValue === 'object' ? oldValue : {};
+      return JSON.stringify({
+        ...deepClone(current), ...deepClone(importedValue),
+        accounts: mergeBackupArray('cashtop_funds_db_accounts', current.accounts || [], importedValue.accounts || []),
+        accountLogs: mergeBackupArray('cashtop_funds_db_logs', current.accountLogs || [], importedValue.accountLogs || [])
+      });
+    }
+    if (importedValue && typeof importedValue === 'object' && !Array.isArray(importedValue)) {
+      const current = oldValue && typeof oldValue === 'object' && !Array.isArray(oldValue) ? oldValue : {};
+      return JSON.stringify({ ...deepClone(current), ...deepClone(importedValue) });
+    }
+    return storageValue;
+  }
+
   async function importBackupFile(file) {
     if (!isBackupImportEnabled()) throw new Error('استيراد النسخ مقفل لهذا المفتاح. افتحه من لوحة المشرف أولاً.');
     const text = await file.text();
@@ -4566,16 +4693,9 @@
       const exactRaw = entry && typeof entry === 'object' && entry.valueEncoding === 'local-storage-raw-v1';
       const oldRaw = getRawCompanyDataset(canonical);
 
-      if (exactRaw && entry.exists === false) {
-        if (canonical === 'cashtop_company_access') return;
-        if (oldRaw === null) return;
-        rawRemove(namespaceKey(canonical));
-        rawSet(metaKey(canonical), JSON.stringify({ updatedAt: Date.now(), revision: 1, deviceId: getDeviceId(), page: FILE, deleted: true }));
-        enqueueSyncOperation(canonical, { deletedDataset: true, forceReplace: true });
-        emitDataChange(canonical, oldRaw, null, 'backup-import');
-        importedKeys.push(canonical);
-        return;
-      }
+      // الاستعادة دمج/UPSERT: ما هو موجود محلياً يبقى، والنسخة الجديدة تكتب فوق السجل المطابق فقط.
+      // لذلك غياب مجموعة من ملف النسخة لا يعني حذف المجموعة الحالية.
+      if (exactRaw && entry.exists === false) return;
 
       let storageValue = exactRaw
         ? String(entry.value ?? '')
@@ -4594,6 +4714,8 @@
         mergedAccess.companyKey = session.companyKey || currentAccess.companyKey || '';
         mergedAccess.backupImportEnabled = currentAccess.backupImportEnabled === true;
         storageValue = JSON.stringify(mergedAccess);
+      } else {
+        storageValue = mergeBackupDataset(canonical, oldRaw, storageValue);
       }
 
       if (oldRaw === storageValue) return;
@@ -4602,7 +4724,7 @@
       enqueueSyncOperation(canonical, { forceReplace: true });
       importedKeys.push(canonical);
     });
-    showToast('تمت الاستعادة محلياً، ويجري رفعها الآن إلى قاعدة البيانات.', 'success');
+    showToast('تم دمج النسخة محلياً دون تكرار السجلات، ويجري رفع التغييرات الآن.', 'success');
     const syncResult = await syncImportedData(importedKeys);
     if (Number(syncResult?.remaining || getSyncQueue().length) === 0) {
       showToast('تمت مزامنة النسخة الاحتياطية بالكامل مع قاعدة البيانات.', 'success');
@@ -5394,15 +5516,9 @@
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
       (async () => {
         try {
-          const registration = await navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });
-          // لا نفحص الشبكة عند فتح كل صفحة. فحص تحديث الـ SW مرة كل 30 دقيقة يكفي،
-          // بينما التنقل نفسه يبقى Cache First فورياً على الجوال واللابتوب.
-          const now = Date.now();
-          const lastUpdateCheck = Number(rawGet('ct_sw_update_checked_at') || 0);
-          if (now - lastUpdateCheck > 30 * 60 * 1000) {
-            rawSet('ct_sw_update_checked_at', String(now));
-            registration.update().catch(() => null);
-          }
+          const registration = await navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'all' });
+          // لا نعيد تنزيل صفحات التطبيق تلقائياً بعد تثبيتها. التحديث يتم فقط
+          // عند وصول Service Worker جديد بشكل طبيعي أو عند طلب تحديث الكاش يدوياً.
           const ready = await navigator.serviceWorker.ready;
           if (!sessionStorage.getItem('ct_sw_cache_verified_session')) {
             sessionStorage.setItem('ct_sw_cache_verified_session', '1');

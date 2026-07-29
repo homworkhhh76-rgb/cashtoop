@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v78-financial-groups-integrity-cache-first';
+const CACHE_VERSION = 'v79-persistent-offline-cache';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = `cash-top-2-remote-static-${CACHE_VERSION}`;
 
@@ -79,9 +79,12 @@ const REMOTE_STATIC_ASSETS = [
   'https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap',
   'https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap',
   'https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap',
+  'https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap',
+  'https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap',
   'https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Tajawal:wght@400;500;700&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
   'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js',
@@ -114,13 +117,10 @@ function localRefreshInterval(request) {
     : STATIC_REFRESH_MS;
 }
 
-function shouldRefreshLocalInBackground(request) {
-  const key = canonicalLocalRequest(request).url;
-  const now = Date.now();
-  const last = Number(LOCAL_REFRESH_AT.get(key) || 0);
-  if (now - last < localRefreshInterval(request)) return false;
-  LOCAL_REFRESH_AT.set(key, now);
-  return true;
+function shouldRefreshLocalInBackground() {
+  // بعد أول تنزيل ناجح تبقى صفحات التطبيق من Cache Storage. لا نعيد طلبها
+  // تلقائياً من الشبكة؛ التحديث اليدوي أو إصدار Service Worker جديد فقط يبدلها.
+  return false;
 }
 
 /*

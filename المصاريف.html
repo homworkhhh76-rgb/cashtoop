@@ -505,9 +505,8 @@
                     { id: 'et_3', name: 'مرتبات وأجور', notes: '' }
                 ];
                 
-                let localFunds = localStorage.getItem('cashtop_funds_db_v4');
-                if(localFunds) fundsDB = JSON.parse(localFunds);
-                else fundsDB = { accounts: [{id: 1, name: "صندوق الكاش الرئيسي", type: "كاش", balance: 5000}], accountLogs: [] };
+                const localFunds = localStorage.getItem('cashtop_funds_db') || localStorage.getItem('cashtop_funds_db_v4');
+                fundsDB = localFunds ? (JSON.parse(localFunds) || { accounts: [], accountLogs: [] }) : { accounts: [], accountLogs: [] };
             } catch(e) { console.error("Error loading DB", e); }
 
             initLayout();
@@ -519,6 +518,21 @@
             populateAccountsSelect();
             renderTable();
         }
+
+        function refreshExpenseFunds() {
+            try {
+                const raw = localStorage.getItem('cashtop_funds_db') || localStorage.getItem('cashtop_funds_db_v4') || '{}';
+                const fresh = JSON.parse(raw);
+                fundsDB = fresh && typeof fresh === 'object' ? fresh : { accounts: [], accountLogs: [] };
+                if (!Array.isArray(fundsDB.accounts)) fundsDB.accounts = [];
+                if (!Array.isArray(fundsDB.accountLogs)) fundsDB.accountLogs = [];
+            } catch (_) { fundsDB = { accounts: [], accountLogs: [] }; }
+            populateAccountsSelect();
+            calculateStats();
+        }
+        window.addEventListener('cashtop:funds-changed', refreshExpenseFunds);
+        window.addEventListener('cashtop:remote-applied', event => { if (event.detail?.key === 'cashtop_funds_db') refreshExpenseFunds(); });
+        window.addEventListener('storage', event => { if (!event.key || String(event.key).includes('cashtop_funds_db')) refreshExpenseFunds(); });
 
         function populateTypesSelect() {
             let options = '<option value="">اختر النوع المنتمي إليه...</option>';

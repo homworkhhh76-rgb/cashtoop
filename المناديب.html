@@ -657,9 +657,8 @@
 
             agentMovementsData = JSON.parse(localStorage.getItem('cashtop_agent_movements')) || [];
             
-            let localFunds = localStorage.getItem('cashtop_funds_db');
-            if(localFunds) fundsData = JSON.parse(localFunds);
-            else fundsData = { accounts: [{id: 1, name: "صندوق الكاش الرئيسي", type: "كاش", balance: 0}] };
+            const localFunds = localStorage.getItem('cashtop_funds_db') || localStorage.getItem('cashtop_funds_db_v4');
+            fundsData = localFunds ? (JSON.parse(localFunds) || { accounts: [], accountLogs: [] }) : { accounts: [], accountLogs: [] };
 
             normalizeAgentAccountCurrencies();
             populateAgentCurrencySelects();
@@ -709,7 +708,9 @@
                 const select = document.getElementById(selectId);
                 if (!select) return;
                 const currencyId = getAgentFlowCurrencyId(prefix);
-                const accounts = (fundsData.accounts || []);
+                const accounts = window.Cashtop?.activeFundAccounts
+                    ? window.Cashtop.activeFundAccounts(fundsData)
+                    : (fundsData.accounts || []).filter(account => account?.disabled !== true && account?.active !== false && String(account?.status || '').toLowerCase() !== 'inactive');
                 select.innerHTML = accounts.length
                     ? accounts.map(account => {
                         const currency = window.CashtopMulti?.getCurrency?.(account.currencyId || cfg.baseCurrencyId, cfg);
@@ -719,6 +720,20 @@
                     : '<option value="">لا يوجد صندوق مالي</option>';
             });
         }
+
+        function refreshAgentFunds() {
+            try {
+                const raw = localStorage.getItem('cashtop_funds_db') || localStorage.getItem('cashtop_funds_db_v4') || '{}';
+                const fresh = JSON.parse(raw);
+                fundsData = fresh && typeof fresh === 'object' ? fresh : { accounts: [], accountLogs: [] };
+                if (!Array.isArray(fundsData.accounts)) fundsData.accounts = [];
+            } catch (_) { fundsData = { accounts: [], accountLogs: [] }; }
+            normalizeAgentAccountCurrencies();
+            populateVaultSelects();
+        }
+        window.addEventListener('cashtop:funds-changed', refreshAgentFunds);
+        window.addEventListener('cashtop:remote-applied', event => { if (event.detail?.key === 'cashtop_funds_db') refreshAgentFunds(); });
+        window.addEventListener('storage', event => { if (!event.key || String(event.key).includes('cashtop_funds_db')) refreshAgentFunds(); });
 
         function handleAgentCurrencyChange(prefix) {
             populateVaultSelects();

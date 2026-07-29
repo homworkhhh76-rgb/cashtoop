@@ -1660,3 +1660,13 @@ html.ct-cashier-page .ct-sidebar-overlay { z-index: 9100 !important; }
 /* Revision 56: keep the basket insight dialog light and smooth without reintroducing layout shake. */
 #itemInfoModal.modal-overlay > .modal-box { opacity: 0; transition: opacity .18s ease !important; }
 #itemInfoModal.modal-overlay.active > .modal-box { opacity: 1 !important; transition: opacity .18s ease !important; }
+
+
+/* R79 — smoother high-refresh interaction without forcing permanent GPU layers. */
+html,body{scroll-behavior:auto}
+button,a,.action-btn,.btn,input,select,textarea{touch-action:manipulation}
+.ct-sidebar,.ct-bottom-nav,.ct-topbar{backface-visibility:hidden;transform:translateZ(0)}
+.modal-overlay.active>.modal-box,.modal-overlay.active>.modal-content,.toast.show{backface-visibility:hidden}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}

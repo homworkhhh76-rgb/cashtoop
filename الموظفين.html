@@ -598,6 +598,7 @@
             employeesDB = readArrayDataset('cashtop_employees');
             renderPermissionControls();
             renderTable();
+            if (document.getElementById('eSalaryAccountSelect')) populateSalaryAccountSelect(document.getElementById('eSalaryAccountSelect').value || '');
         }
 
         window.onload = function() {
@@ -689,10 +690,13 @@
             const select = document.getElementById('eBranchSelect');
             if (!select) return;
             const branches = readArrayDataset('cashtop_branches');
-            select.innerHTML = '<option value="">الرصيد الرئيسي / بدون فرع محدد</option>' + branches
-                .filter(branch => branch.status !== 'مجمد')
+            const main = branches.find(branch => branch?.isMain === true) || branches[0] || { id: 'MAIN', name: 'الفرع الرئيسي', status: 'نشط', isMain: true };
+            const activeBranches = branches.filter(branch => branch !== main && branch.status !== 'مجمد' && branch.disabled !== true && branch.active !== false);
+            select.innerHTML = `<option value="MAIN">${main.name || 'الفرع الرئيسي'} — الأساسي</option>` + activeBranches
                 .map(branch => `<option value="${branch.id}">${branch.name}</option>`).join('');
-            select.value = selectedBranchId || '';
+            const requested = String(selectedBranchId || 'MAIN');
+            select.value = requested === String(main.id) || requested.toUpperCase() === 'MAIN' ? 'MAIN' : requested;
+            if (!select.value) select.value = 'MAIN';
         }
 
         function readFundsDatabase() {
@@ -707,7 +711,10 @@
             if (!select) return;
             const funds = readFundsDatabase();
             const cfg = window.CashtopMulti?.getCurrencyConfig?.() || { baseCurrencyId: 'base', base: { symbol: '₪' } };
-            select.innerHTML = '<option value="">اختر حساب صرف الراتب</option>' + (funds.accounts || []).map(account => {
+            const accounts = window.Cashtop?.activeFundAccounts
+                ? window.Cashtop.activeFundAccounts(funds)
+                : (funds.accounts || []).filter(account => account?.disabled !== true && account?.active !== false && String(account?.status || '').toLowerCase() !== 'inactive');
+            select.innerHTML = '<option value="">اختر حساب صرف الراتب</option>' + accounts.map(account => {
                 const currency = window.CashtopMulti?.getCurrency?.(account.currencyId || cfg.baseCurrencyId, cfg) || cfg.base;
                 return `<option value="${account.id}">${account.name} — الرصيد ${Number(account.balance || 0).toFixed(3).replace(/\.?0+$/, '')} ${currency.symbol || currency.code || ''}</option>`;
             }).join('');
@@ -771,9 +778,10 @@
             const password = document.getElementById('ePasswordInput').value;
             const status = document.getElementById('eStatusSelect').value;
             const notes = document.getElementById('eNotesInput').value.trim();
-            const branchId = document.getElementById('eBranchSelect')?.value || null;
+            const branchId = document.getElementById('eBranchSelect')?.value || 'MAIN';
             const branchesList = readArrayDataset('cashtop_branches');
-            const branchName = branchesList.find(branch => String(branch.id) === String(branchId))?.name || '';
+            const mainBranch = branchesList.find(branch => branch?.isMain === true) || branchesList[0] || null;
+            const branchName = branchId === 'MAIN' ? (mainBranch?.name || 'الفرع الرئيسي') : (branchesList.find(branch => String(branch.id) === String(branchId))?.name || '');
             const salary = Math.max(0, Number(document.getElementById('eSalaryInput').value || 0));
             const salaryDay = Math.min(31, Math.max(1, Number(document.getElementById('eSalaryDayInput').value || 1)));
             const salaryAccountId = document.getElementById('eSalaryAccountSelect')?.value || '';

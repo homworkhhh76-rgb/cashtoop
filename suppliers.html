@@ -655,10 +655,9 @@
                     suppliersDB = [];
                 }
 
-                // جلب الصناديق (لعمليات السداد)
-                if (localStorage.getItem('cashtop_funds_db_v4')) {
-                    fundsDB = JSON.parse(localStorage.getItem('cashtop_funds_db_v4'));
-                }
+                // جلب كل الصناديق النشطة للفرع الحالي من قاعدة الصناديق الموحدة.
+                const localFunds = localStorage.getItem('cashtop_funds_db') || localStorage.getItem('cashtop_funds_db_v4');
+                fundsDB = localFunds ? (JSON.parse(localFunds) || { accounts: [], accountLogs: [] }) : { accounts: [], accountLogs: [] };
             } catch(e) { console.error("Error loading DB", e); }
             
             initLayout();
@@ -670,10 +669,7 @@
                 suppliersDB = JSON.parse(e.newValue);
                 initLayout();
             }
-            if (e.key === 'cashtop_funds_db_v4' && e.newValue) {
-                fundsDB = JSON.parse(e.newValue);
-                populateVaults();
-            }
+            if (e.key && String(e.key).includes('cashtop_funds_db')) refreshSupplierFunds();
         });
 
         function initLayout() {
@@ -682,6 +678,19 @@
             renderTable();
             calculateStats();
         }
+
+        function refreshSupplierFunds() {
+            try {
+                const raw = localStorage.getItem('cashtop_funds_db') || localStorage.getItem('cashtop_funds_db_v4') || '{}';
+                const fresh = JSON.parse(raw);
+                fundsDB = fresh && typeof fresh === 'object' ? fresh : { accounts: [], accountLogs: [] };
+                if (!Array.isArray(fundsDB.accounts)) fundsDB.accounts = [];
+                if (!Array.isArray(fundsDB.accountLogs)) fundsDB.accountLogs = [];
+            } catch (_) { fundsDB = { accounts: [], accountLogs: [] }; }
+            populateVaults();
+        }
+        window.addEventListener('cashtop:funds-changed', refreshSupplierFunds);
+        window.addEventListener('cashtop:remote-applied', event => { if (event.detail?.key === 'cashtop_funds_db') refreshSupplierFunds(); });
 
         function supplierPayCurrencyConfig(){ return window.CashtopMulti?.getCurrencyConfig?.() || {enabled:false,baseCurrencyId:'ILS',base:{id:'ILS',symbol:'₪',code:'ILS',ratePer100Base:100},currencies:[{id:'ILS',name:'شيكل',symbol:'₪',code:'ILS',ratePer100Base:100}]}; }
         function supplierPayCurrencyId(){ const cfg=supplierPayCurrencyConfig(); return document.getElementById('payCurrencySelect')?.value || cfg.baseCurrencyId; }

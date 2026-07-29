@@ -206,7 +206,10 @@
             .export-group::-webkit-scrollbar { display: none; }
             .btn-export { flex: 1; justify-content: center; padding: 8px 5px; font-size: 12px; flex-shrink: 0; }
             
-            .form-row { grid-template-columns: 1fr; gap: 12px; margin-bottom: 12px;}
+            .form-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px;}
+            .form-row.full-width { grid-template-columns: 1fr; }
+            .form-row > .form-group:only-child { grid-column: 1 / -1; }
+            .form-control { min-width: 0; padding: 9px 8px; }
             .modal-footer { flex-direction: column; gap: 10px;}
             .btn-submit, .btn-cancel { width: 100%; justify-content: center;}
             .modal-box { padding: 15px; }
@@ -500,8 +503,8 @@
                 </div>
 
                 <div class="modal-footer">
-                    <button type="button" class="btn-cancel" onclick="closeModal('voucherModal')">إلغاء</button>
                     <button type="submit" class="btn-submit"><i class="fa-solid fa-floppy-disk"></i> حفظ واعتماد القيود</button>
+                    <button type="button" class="btn-cancel" onclick="closeModal('voucherModal')">إلغاء</button>
                 </div>
             </form>
         </div>
@@ -786,50 +789,55 @@
         function initCustomSelects() {
             document.querySelectorAll('.custom-select-wrapper').forEach(wrapper => {
                 const input = wrapper.querySelector('.search-select-input');
-                const hiddenInput = wrapper.querySelector('.hidden-select-value');
                 const list = wrapper.querySelector('.select-dropdown-list');
                 const searchInput = wrapper.querySelector('.dropdown-search-inside input');
-                
-                // تنظيف الأحداث القديمة لمنع التكرار
-                let newInp = input.cloneNode(true);
-                input.parentNode.replaceChild(newInp, input);
-                
-                newInp.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    document.querySelectorAll('.select-dropdown-list').forEach(d => { if(d !== list) d.style.display = 'none'; });
-                    list.style.display = list.style.display === 'block' ? 'none' : 'block';
-                    if(list.style.display === 'block' && searchInput) {
-                        searchInput.value = ''; // تفريغ البحث عند الفتح
-                        const items = list.querySelectorAll('.select-option-item');
-                        items.forEach(i => i.style.display = 'block');
-                        searchInput.focus();
-                    }
-                });
+                if (!input || !list) return;
 
-                if(searchInput) {
-                    searchInput.addEventListener('input', function() {
-                        const filter = this.value.trim().toLowerCase();
-                        const items = list.querySelectorAll('.select-option-item');
-                        items.forEach(item => {
-                            const text = item.textContent.toLowerCase();
-                            item.style.display = text.includes(filter) ? 'block' : 'none';
-                        });
+                if (input.dataset.ctSelectClickBound !== 'true') {
+                    input.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        document.querySelectorAll('.select-dropdown-list').forEach(d => { if (d !== list) d.style.display = 'none'; });
+                        list.style.display = list.style.display === 'block' ? 'none' : 'block';
+                        if (list.style.display === 'block' && searchInput) {
+                            searchInput.value = '';
+                            list.querySelectorAll('.select-option-item').forEach(item => item.style.display = 'block');
+                            searchInput.focus({ preventScroll: true });
+                        }
                     });
+                    input.dataset.ctSelectClickBound = 'true';
                 }
 
-                wrapper.addEventListener('click', function(e) {
-                    if (e.target.classList.contains('select-option-item')) {
+                if (searchInput && searchInput.dataset.ctSelectSearchBound !== 'true') {
+                    searchInput.addEventListener('input', function() {
+                        const filter = this.value.trim().toLowerCase();
+                        list.querySelectorAll('.select-option-item').forEach(item => {
+                            item.style.display = item.textContent.toLowerCase().includes(filter) ? 'block' : 'none';
+                        });
+                    });
+                    searchInput.dataset.ctSelectSearchBound = 'true';
+                }
+
+                if (wrapper.dataset.ctSelectBound !== 'true') {
+                    wrapper.addEventListener('click', function(e) {
+                        const option = e.target.closest?.('.select-option-item');
+                        if (!option || !wrapper.contains(option)) return;
                         e.stopPropagation();
-                        newInp.value = e.target.textContent;
-                        hiddenInput.value = e.target.getAttribute('data-value');
+                        const visibleInput = wrapper.querySelector('.search-select-input');
+                        if (visibleInput) visibleInput.value = option.textContent;
+                        const hidden = wrapper.querySelector('.hidden-select-value');
+                        if (hidden) hidden.value = option.getAttribute('data-value') || '';
                         list.style.display = 'none';
-                    }
-                });
+                    });
+                    wrapper.dataset.ctSelectBound = 'true';
+                }
             });
 
-            document.addEventListener('click', () => {
-                document.querySelectorAll('.select-dropdown-list').forEach(list => list.style.display = 'none');
-            });
+            if (document.documentElement.dataset.ctSelectDocumentBound !== 'true') {
+                document.addEventListener('click', () => {
+                    document.querySelectorAll('.select-dropdown-list').forEach(list => list.style.display = 'none');
+                });
+                document.documentElement.dataset.ctSelectDocumentBound = 'true';
+            }
         }
 
         /* ========================================================== */

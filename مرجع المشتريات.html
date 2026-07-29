@@ -554,9 +554,8 @@
             supplierMovementsData = JSON.parse(localStorage.getItem('cashtop_supplier_movements')) || [];
             purchaseReturnsData = JSON.parse(localStorage.getItem('cashtop_purchase_returns')) || [];
             
-            let localFunds = localStorage.getItem('cashtop_funds_db');
-            if(localFunds) fundsData = JSON.parse(localFunds);
-            else fundsData = { accounts: [{id: 1, name: "صندوق الكاش الرئيسي", type: "كاش", balance: 0}], accountLogs: [] };
+            const localFunds = localStorage.getItem('cashtop_funds_db') || localStorage.getItem('cashtop_funds_db_v4');
+            fundsData = localFunds ? (JSON.parse(localFunds) || { accounts: [], accountLogs: [] }) : { accounts: [], accountLogs: [] };
 
             // تعبئة القوائم المنسدلة
             populateReturnCurrency();
@@ -589,6 +588,20 @@
             activeFunds.forEach(f => { const cur=window.CashtopMulti?.getCurrency?.(f.currencyId||cfg.baseCurrencyId)||cfg.base; fundHtml += `<option value="${f.id}">${f.name} [${f.type}] — ${Number(f.balance||0).toFixed(2)} ${cur.symbol||cur.code}</option>`; });
             document.getElementById('accountSelect').innerHTML = fundHtml;
         }
+
+        function refreshReturnFunds() {
+            try {
+                const raw = localStorage.getItem('cashtop_funds_db') || localStorage.getItem('cashtop_funds_db_v4') || '{}';
+                const fresh = JSON.parse(raw);
+                fundsData = fresh && typeof fresh === 'object' ? fresh : { accounts: [], accountLogs: [] };
+                if (!Array.isArray(fundsData.accounts)) fundsData.accounts = [];
+                if (!Array.isArray(fundsData.accountLogs)) fundsData.accountLogs = [];
+            } catch (_) { fundsData = { accounts: [], accountLogs: [] }; }
+            populateSelects();
+        }
+        window.addEventListener('cashtop:funds-changed', refreshReturnFunds);
+        window.addEventListener('cashtop:remote-applied', event => { if (event.detail?.key === 'cashtop_funds_db') refreshReturnFunds(); });
+        window.addEventListener('storage', event => { if (!event.key || String(event.key).includes('cashtop_funds_db')) refreshReturnFunds(); });
 
         // ==========================================
         // إدارة أسطر المنتجات المرجعة

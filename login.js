@@ -27,13 +27,14 @@
     return `${backendBase}?path=${encodeURIComponent(pathPart)}`;
   }
   const TAB_SESSION_KEY = 'cashtop_tab_session_v2';
+  const PERSISTENT_SESSION_KEY = 'cashtop_persistent_session_v1';
   const WINDOW_SESSION_PREFIX = 'CASHTOP_SESSION_V2:';
   const parse = (value, fallback) => { try { return JSON.parse(value) ?? fallback; } catch (_) { return fallback; } };
   function writeSession(session) {
     const serialized = JSON.stringify(session || {});
     try { sessionStorage.setItem(TAB_SESSION_KEY, serialized); } catch (_) {}
-    // Fallback for desktop/privacy browsers that block sessionStorage.
-    // window.name survives same-tab navigation but is not a persistent login.
+    // جلسة دائمة صريحة: تبقى بعد إغلاق المتصفح أو إعادة تشغيل الجهاز حتى يسجل المستخدم الخروج.
+    try { rawSet(PERSISTENT_SESSION_KEY, serialized); } catch (_) {}
     try { window.name = WINDOW_SESSION_PREFIX + serialized; } catch (_) {}
   }
   function readTabSession() {
@@ -43,7 +44,16 @@
     } catch (_) {}
     try {
       if (String(window.name || '').startsWith(WINDOW_SESSION_PREFIX)) {
-        return parse(String(window.name).slice(WINDOW_SESSION_PREFIX.length), null);
+        const fromWindow = parse(String(window.name).slice(WINDOW_SESSION_PREFIX.length), null);
+        if (fromWindow) { try { sessionStorage.setItem(TAB_SESSION_KEY, JSON.stringify(fromWindow)); } catch (_) {} return fromWindow; }
+      }
+    } catch (_) {}
+    try {
+      const persistent = parse(rawGet(PERSISTENT_SESSION_KEY), null);
+      if (persistent) {
+        try { sessionStorage.setItem(TAB_SESSION_KEY, JSON.stringify(persistent)); } catch (_) {}
+        try { window.name = WINDOW_SESSION_PREFIX + JSON.stringify(persistent); } catch (_) {}
+        return persistent;
       }
     } catch (_) {}
     return null;
@@ -89,6 +99,20 @@
 
   function normalizeKey(value) { return String(value || '').trim().toUpperCase(); }
   function normalizeUsername(value) { return String(value || '').trim().toLowerCase(); }
+  function accountIsActive(value) {
+    if (!value || typeof value !== 'object') return false;
+    if (value.active === false || value.disabled === true) return false;
+    const status = String(value.status || '').trim().toLowerCase();
+    return !['inactive', 'disabled', 'blocked', 'مجمد', 'معطل', 'موقوف'].includes(status);
+  }
+  function resolveBranch(branches, branchRef) {
+    const list = normalizeArray(branches);
+    const main = list.find(branch => branch?.isMain === true) || list.find(branch => String(branch?.id || '').toUpperCase() === 'MAIN') || list[0] || null;
+    const ref = String(branchRef ?? '').trim();
+    if (!ref || ref.toUpperCase() === 'MAIN') return main || { id: 'MAIN', name: 'الفرع الرئيسي', status: 'نشط', isMain: true };
+    return list.find(branch => String(branch?.id) === ref) ||
+      list.find(branch => String(branch?.name || '').trim() === ref) || null;
+  }
   function sanitizeSegment(value) { return String(value || '').trim().replace(/[.#$\[\]\/]/g, '_'); }
   function namespaceKey(tenantId, key) { return `cashtop_data::${encodeURIComponent(tenantId)}::${key}`; }
   function metaKey(tenantId, key) { return `cashtop_meta::${encodeURIComponent(tenantId)}::${key}`; }
@@ -239,7 +263,7 @@
           username: branch.managerUsername,
           password: branch.managerPassword,
           displayName: branch.manager || branch.managerUsername,
-          role: 'branch-admin', active: branch.managerActive !== false && branch.status !== 'مجمد',
+          role: 'branch-admin', active: branch.managerActive !== false && (branch.isMain === true || accountIsActive(branch)),
           permissions: branch.managerPermissions || {}, branchRecordId: branch.id, branchId: branch.isMain === true ? 'MAIN' : branch.id, dataBranchId: branch.isMain === true ? 'MAIN' : branch.id, branchName: branch.name
         };
       }
@@ -248,11 +272,17 @@
     if (!account) {
       const employee = context.employees.find(item => normalizeUsername(item.username) === uname);
       if (employee) {
+        const employeeBranch = resolveBranch(context.branches, employee.branchRecordId || employee.branchId || employee.dataBranchId || 'MAIN');
+        const isMain = employeeBranch?.isMain === true || String(employee.branchId || '').toUpperCase() === 'MAIN' || !employee.branchId;
         account = {
           id: employee.id, username: employee.username, password: employee.password,
           displayName: employee.name || employee.username, role: 'employee',
-          active: employee.status === 'active', permissions: employee.permissions || {}, branchRecordId: employee.branchId || null, branchId: (context.branches.find(branch => String(branch.id) === String(employee.branchId))?.isMain === true ? 'MAIN' : employee.branchId) || 'MAIN', dataBranchId: (context.branches.find(branch => String(branch.id) === String(employee.branchId))?.isMain === true ? 'MAIN' : employee.branchId) || 'MAIN',
-          branchName: employee.branchName || context.branches.find(branch => String(branch.id) === String(employee.branchId))?.name || ''
+          active: accountIsActive(employee) && (isMain || accountIsActive(employeeBranch)),
+          permissions: employee.permissions || {},
+          branchRecordId: employeeBranch?.id || null,
+          branchId: isMain ? 'MAIN' : (employeeBranch?.id || employee.branchId || 'MAIN'),
+          dataBranchId: isMain ? 'MAIN' : (employeeBranch?.id || employee.branchId || 'MAIN'),
+          branchName: employeeBranch?.name || employee.branchName || 'الفرع الرئيسي'
         };
       }
     }
@@ -646,8 +676,8 @@
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     (async () => {
       try {
-        const registration = await navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });
-        registration.update().catch(() => null);
+        const registration = await navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'all' });
+        // لا نفرض فحص الشبكة عند كل فتح لصفحة الدخول؛ عامل الخدمة والكاش الحاليان يكفيان.
         const worker = registration.active || registration.waiting || registration.installing;
         worker?.postMessage?.({ type: 'VERIFY_CACHE' });
         const ready = await navigator.serviceWorker.ready;

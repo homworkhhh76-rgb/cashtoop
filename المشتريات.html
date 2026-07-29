@@ -581,9 +581,8 @@
                 supplierMovementsDB = JSON.parse(localStorage.getItem('cashtop_supplier_movements')) || [];
                 purchasesDB = JSON.parse(localStorage.getItem('cashtop_purchases')) || [];
                 
-                let localFunds = localStorage.getItem('cashtop_funds_db_v4');
-                if(localFunds) fundsDB = JSON.parse(localFunds);
-                else fundsDB = { accounts: [{id: 1, name: "صندوق الكاش الرئيسي", type: "كاش", balance: 1000}], accountLogs: [] };
+                const localFunds = localStorage.getItem('cashtop_funds_db') || localStorage.getItem('cashtop_funds_db_v4');
+                fundsDB = localFunds ? (JSON.parse(localFunds) || { accounts: [], accountLogs: [] }) : { accounts: [], accountLogs: [] };
 
                 unitsDB = window.CashtopMulti?.normalizeUnits?.(JSON.parse(localStorage.getItem('cashtop_units')) || []) || [
                     { id: "u1", unitName: "كرتونة", pieceName: "حبة", piecesCount: 24 },
@@ -675,10 +674,10 @@
                 refreshWarehouseSelects();
             }
             if (!key || ['cashtop_suppliers','cashtop_funds_db','cashtop_funds_db_v4','cashtop_settings'].includes(key)) {
-                const localFunds = localStorage.getItem('cashtop_funds_db_v4');
+                const localFunds = localStorage.getItem('cashtop_funds_db') || localStorage.getItem('cashtop_funds_db_v4');
                 if (localFunds) {
-                    try { fundsDB = JSON.parse(localFunds) || fundsDB; } catch (_) {}
-                }
+                    try { fundsDB = JSON.parse(localFunds) || { accounts: [], accountLogs: [] }; } catch (_) {}
+                } else fundsDB = { accounts: [], accountLogs: [] };
                 populatePurchaseCurrencySelect();
                 populateSelects();
             }

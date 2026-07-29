@@ -926,7 +926,7 @@
         let fundsData = readObject('cashtop_funds_db', { accounts: [], accountLogs: [] });
         if (!Array.isArray(fundsData.accounts)) fundsData.accounts = [];
         if (!Array.isArray(fundsData.accountLogs)) fundsData.accountLogs = [];
-        if (!fundsData.accounts.length) fundsData.accounts = [{ id: 'ACC_1', name: 'صندوق الكاش الرئيسي', balance: 5000 }];
+        // لا ننشئ صندوقاً وهمياً أو رصيداً افتراضياً هنا؛ Cashtop Core يدير الصندوق الحقيقي للفرع.
         let purchaseInvoices = readArray('cashtop_purchase_invoices');
         let stagedProducts = [];
         let transferCart = [];
