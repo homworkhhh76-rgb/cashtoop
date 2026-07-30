@@ -44,7 +44,7 @@
 
   const DATA_KEYS = [
     'cashtop_products', 'cashtop_materials', 'cashtop_material_purchases', 'cashtop_customers', 'cashtop_customer_groups',
-    'cashtop_suppliers', 'cashtop_supplier_movements', 'cashtop_invoices',
+    'cashtop_suppliers', 'cashtop_supplier_movements', 'cashtop_invoices', 'cashtop_sales_reversals',
     'cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_purchase_returns', 'cashtop_expenses',
     'cashtop_expense_types', 'cashtop_funds_db', 'cashtop_vouchers',
     'cashtop_units', 'cashtop_stores', 'cashtop_transfer_history',
@@ -52,7 +52,7 @@
     'cashtop_company_access',
     'cashtop_workers', 'cashtop_sales_agents', 'cashtop_agent_movements',
     'cashtop_settings', 'cashtop_db', 'cashtop_printer_settings', 'cashtop_barcode_settings', 'cashtop_invoice_design',
-    'cashtop_sms_template', 'cashtop_invoice_message_template', 'cashtop_journal', 'cashtop_audit_log',
+    'cashtop_sms_template', 'cashtop_invoice_message_template', 'cashtop_journal', 'cashtop_journal_reversal_archive', 'cashtop_audit_log',
     'cashtop_sales_offers', 'cashtop_tax_settings', 'cashtop_notification_settings',
     'cashtop_financial_groups', 'cashtop_opening_balances',
 'cashtop_manufacturing_recipes', 'cashtop_manufacturing_orders',
@@ -72,19 +72,19 @@
   const FINANCIAL_GROUP_SCOPED_KEYS = new Set([
     'cashtop_products', 'cashtop_materials', 'cashtop_material_purchases',
     'cashtop_customers', 'cashtop_suppliers', 'cashtop_supplier_movements',
-    'cashtop_invoices', 'cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_purchase_returns',
+    'cashtop_invoices', 'cashtop_sales_reversals', 'cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_purchase_returns',
     'cashtop_expenses', 'cashtop_funds_db', 'cashtop_vouchers',
     'cashtop_transfer_history', 'cashtop_branch_transfer_history',
     'cashtop_workers', 'cashtop_sales_agents', 'cashtop_agent_movements',
-    'cashtop_journal', 'cashtop_audit_log', 'cashtop_material_purchases',
+    'cashtop_journal', 'cashtop_journal_reversal_archive', 'cashtop_audit_log', 'cashtop_material_purchases',
     'cashtop_manufacturing_orders', 'cashtop_wastage', 'cashtop_archive_index',
     'cashtop_salary_payments', OPENING_BALANCES_KEY
   ]);
   const FINANCIAL_GROUP_RESET_KEYS = new Set([
-    'cashtop_invoices', 'cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_purchase_returns',
+    'cashtop_invoices', 'cashtop_sales_reversals', 'cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_purchase_returns',
     'cashtop_expenses', 'cashtop_vouchers', 'cashtop_supplier_movements',
     'cashtop_transfer_history', 'cashtop_branch_transfer_history',
-    'cashtop_journal', 'cashtop_audit_log', 'cashtop_material_purchases',
+    'cashtop_journal', 'cashtop_journal_reversal_archive', 'cashtop_audit_log', 'cashtop_material_purchases',
     'cashtop_agent_movements', 'cashtop_manufacturing_orders', 'cashtop_wastage',
     'cashtop_salary_payments', 'cashtop_archive_index'
   ]);
@@ -1731,9 +1731,9 @@
 
   const BRANCH_SCOPED_ARRAY_KEYS = new Set([
     'cashtop_customers', 'cashtop_customer_groups', 'cashtop_suppliers', 'cashtop_supplier_movements',
-    'cashtop_invoices', 'cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_purchase_returns', 'cashtop_expenses',
+    'cashtop_invoices', 'cashtop_sales_reversals', 'cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_purchase_returns', 'cashtop_expenses',
     'cashtop_expense_types', 'cashtop_vouchers', 'cashtop_stores', 'cashtop_transfer_history',
-    'cashtop_workers', 'cashtop_sales_agents', 'cashtop_agent_movements', 'cashtop_journal',
+    'cashtop_workers', 'cashtop_sales_agents', 'cashtop_agent_movements', 'cashtop_journal', 'cashtop_journal_reversal_archive',
     'cashtop_audit_log', 'cashtop_sales_offers', 'cashtop_manufacturing_recipes',
     'cashtop_manufacturing_orders', 'cashtop_wastage'
   ]);
@@ -2858,6 +2858,75 @@
     return `cashtop_tx::${encodeURIComponent(companyIdFromSession())}::`;
   }
 
+  const GENERIC_JOURNAL_REVERSAL_TYPES = new Map([
+    ['cashtop_purchase_returns', new Set(['purchase-return'])],
+    ['cashtop_expenses', new Set(['expense'])],
+    ['cashtop_vouchers', new Set(['voucher'])]
+  ]);
+
+  function managedRecordId(record) {
+    if (!record || typeof record !== 'object') return '';
+    return String(record.id ?? record.refNumber ?? record.reference ?? '').trim();
+  }
+
+  function genericDeletionReversalArchiveEntry(entries) {
+    const candidates = (entries || []).filter(entry => GENERIC_JOURNAL_REVERSAL_TYPES.has(entry.key));
+    if (!candidates.length) return null;
+    // نضمن أن دفتر الأستاذ الحالي يمثل البيانات قبل الحذف، حتى لو كان آخر تحديث
+    // للواجهة لم يُمهل محرك المحاسبة لإعادة البناء بعد.
+    try { window.Cashtop?.rebuildJournal?.(); } catch (_) {}
+    const journal = normalizeArrayValue(safeJson(rawGet(namespaceKey('cashtop_journal')), []), []);
+    if (!journal.length) return null;
+    const archiveKey = 'cashtop_journal_reversal_archive';
+    const archiveNs = namespaceKey(archiveKey);
+    const oldArchiveRaw = rawGet(archiveNs);
+    const archive = normalizeArrayValue(safeJson(oldArchiveRaw, []), []);
+    const existing = new Set(archive.map(row => `${row?.sourceDataset || ''}::${row?.sourceId || ''}`));
+    let changed = false;
+
+    candidates.forEach(entry => {
+      const allowedTypes = GENERIC_JOURNAL_REVERSAL_TYPES.get(entry.key);
+      const oldRows = normalizeArrayValue(safeJson(entry.oldValue, []), []);
+      const newRows = normalizeArrayValue(safeJson(entry.newValue, []), []);
+      const newIds = new Set(newRows.map(managedRecordId).filter(Boolean));
+      oldRows.forEach(record => {
+        const sourceId = managedRecordId(record);
+        if (!sourceId || newIds.has(sourceId)) return;
+        const dedupeKey = `${entry.key}::${sourceId}`;
+        if (existing.has(dedupeKey)) return;
+        const lines = journal.filter(line => String(line?.sourceId || '') === sourceId && allowedTypes.has(String(line?.sourceType || '')));
+        if (!lines.length) return;
+        const deletedAt = new Date().toISOString();
+        archive.push({
+          id: `AUTO_REV_${sourceId}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          branchId: recordBranchId(record),
+          sourceDataset: entry.key,
+          sourceId,
+          deletedAt,
+          originalRecord: deepClone(record),
+          originalLines: deepClone(lines)
+        });
+        existing.add(dedupeKey);
+        changed = true;
+      });
+    });
+
+    if (!changed) return null;
+    // حد عملي يمنع تضخم التخزين المحلي، مع الإبقاء على أحدث قيود الحذف.
+    if (archive.length > 4000) archive.splice(0, archive.length - 4000);
+    const newValue = JSON.stringify(archive);
+    const violation = quotaViolation(archiveKey, oldArchiveRaw, newValue);
+    if (violation) { const error = new Error(violation); error.code = 'CASHTOP_PLAN_LIMIT'; throw error; }
+    return {
+      key: archiveKey,
+      ns: archiveNs,
+      oldValue: oldArchiveRaw,
+      newValue,
+      metaNs: metaKey(archiveKey),
+      oldMeta: rawGet(metaKey(archiveKey))
+    };
+  }
+
   function atomicSetItems(changes, options = {}) {
     const source = changes && typeof changes === 'object' ? changes : {};
     const entries = [];
@@ -2877,6 +2946,8 @@
         metaNs: metaKey(canonical), oldMeta: rawGet(metaKey(canonical))
       });
     });
+    const genericReversalEntry = genericDeletionReversalArchiveEntry(entries);
+    if (genericReversalEntry && !entries.some(entry => entry.key === genericReversalEntry.key)) entries.push(genericReversalEntry);
     if (!entries.length) return { changed: false, transactionId: null, keys: [] };
 
     const transactionId = crypto.randomUUID ? crypto.randomUUID() : `TX_${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -2982,6 +3053,26 @@
       input.addEventListener('input', debounce(() => window[fnName]?.(), 120));
       input.dataset.ctDebounced = 'true';
     });
+
+    // Prime likely next pages from Service Worker Cache Storage before the click.
+    // This remains cache-first even while online and only warms same-origin HTML.
+    if (document.documentElement.dataset.ctNavWarmup !== '1') {
+      document.documentElement.dataset.ctNavWarmup = '1';
+      const warmed = new Set();
+      const warmAnchor = anchor => {
+        if (!anchor?.href || anchor.target === '_blank' || anchor.hasAttribute('download')) return;
+        let url;
+        try { url = new URL(anchor.href, location.href); } catch (_) { return; }
+        if (url.origin !== location.origin || !/\.html$/i.test(url.pathname) || url.href === location.href || warmed.has(url.href)) return;
+        warmed.add(url.href);
+        fetch(url.href, { method:'GET', credentials:'same-origin', cache:'force-cache', priority:'low' }).catch(() => null);
+      };
+      document.addEventListener('pointerover', event => warmAnchor(event.target?.closest?.('a[href]')), { passive:true });
+      document.addEventListener('focusin', event => warmAnchor(event.target?.closest?.('a[href]')), { passive:true });
+      document.addEventListener('touchstart', event => warmAnchor(event.target?.closest?.('a[href]')), { passive:true, capture:true });
+      const idle = window.requestIdleCallback || (fn => setTimeout(fn, 250));
+      idle(() => [...document.querySelectorAll('.ct-sidebar a[href], nav a[href]')].slice(0, 10).forEach(warmAnchor));
+    }
   }
 
   function financialGroupWriteError() {
@@ -3021,7 +3112,9 @@
         showToast(violation, 'error', 5200);
         const error = new Error(violation); error.code = 'CASHTOP_PLAN_LIMIT'; throw error;
       }
+      const genericReversalEntry = genericDeletionReversalArchiveEntry([{ key: canonical, ns, oldValue, newValue: stringValue }]);
       rawSet(ns, stringValue);
+      if (genericReversalEntry) rawSet(genericReversalEntry.ns, genericReversalEntry.newValue);
       const previousMeta = safeJson(rawGet(metaKey(canonical)), {}) || {};
       rawSet(metaKey(canonical), JSON.stringify({
         updatedAt: Date.now(), revision: Number(previousMeta.revision || 0) + 1,
@@ -3030,6 +3123,13 @@
       appendAudit(canonical, oldValue, stringValue);
       const operationId = enqueueSyncOperation(canonical, { ...describeManagedChange(oldValue, stringValue), deletedDataset: false });
       emitDataChange(canonical, oldValue, stringValue, 'local', operationId);
+      if (genericReversalEntry) {
+        const archiveMeta = safeJson(genericReversalEntry.oldMeta, {}) || {};
+        rawSet(genericReversalEntry.metaNs, JSON.stringify({ updatedAt: Date.now(), revision: Number(archiveMeta.revision || 0) + 1, deviceId: getDeviceId(), page: FILE, transactionLabel: 'auto-delete-reversal' }));
+        try { appendAudit(genericReversalEntry.key, genericReversalEntry.oldValue, genericReversalEntry.newValue, 'auto-delete-reversal'); } catch (_) {}
+        const archiveOp = enqueueSyncOperation(genericReversalEntry.key, { ...describeManagedChange(genericReversalEntry.oldValue, genericReversalEntry.newValue), deletedDataset: false });
+        emitDataChange(genericReversalEntry.key, genericReversalEntry.oldValue, genericReversalEntry.newValue, 'local', archiveOp);
+      }
     };
 
     Storage.prototype.removeItem = function (key) {
@@ -5537,7 +5637,7 @@
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
       (async () => {
         try {
-          const registration = await navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'all' });
+          const registration = await navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });
           // لا نعيد تنزيل صفحات التطبيق تلقائياً بعد تثبيتها. التحديث يتم فقط
           // عند وصول Service Worker جديد بشكل طبيعي أو عند طلب تحديث الكاش يدوياً.
           const ready = await navigator.serviceWorker.ready;

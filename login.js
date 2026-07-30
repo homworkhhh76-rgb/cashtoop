@@ -676,7 +676,7 @@
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     (async () => {
       try {
-        const registration = await navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'all' });
+        const registration = await navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });
         // لا نفرض فحص الشبكة عند كل فتح لصفحة الدخول؛ عامل الخدمة والكاش الحاليان يكفيان.
         const worker = registration.active || registration.waiting || registration.installing;
         worker?.postMessage?.({ type: 'VERIFY_CACHE' });

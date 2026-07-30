@@ -220,11 +220,11 @@
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
     <link rel="stylesheet" href="cashtop-core.css?v=78">
-    <script src="cashtop-core.js?v=80"></script>
+    <script src="cashtop-core.js?v=81"></script>
     <script src="multi-system.js?v=57"></script>
     <script src="turso-config.js?v=74"></script><script src="turso-rtdb.js?v=74"></script>
-    <script src="accounting-engine.js"></script>
-    <script src="turso-sync.js?v=80"></script>
+    <script src="accounting-engine.js?v=81"></script>
+    <script src="turso-sync.js?v=81"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -357,7 +357,7 @@
                 <div class="invoice-card">
                     <div class="invoice-title-box">
                         <h2>تفاصيل فاتورة المورد والدفع والخصم</h2>
-                        <p>حدد المورد والصندوق والتاريخ والخصم بعد الانتهاء من إضافة جميع منتجات الفاتورة.</p>
+                        <p>اختر المورد أو «بدون مورد»، واختر صندوق السداد أو «بدون صندوق»، ثم أكمل التاريخ والخصم.</p>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
@@ -366,13 +366,13 @@
                         </div>
                         <div class="form-group">
                             <select class="form-control" id="supplierSelect" required></select>
-                            <label>المورد (الشركة الموردة)</label>
+                            <label>المورد (يمكن اختيار بدون مورد)</label>
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
                             <select class="form-control" id="accountSelect" required onchange="handlePurchaseAccountChange()"></select>
-                            <label>صندوق السداد (دفع المال)</label>
+                            <label>صندوق السداد (يمكن اختيار بدون صندوق)</label>
                         </div>
                         <div class="form-group">
                             <input type="date" class="form-control" id="invDateBox" required>
@@ -573,6 +573,8 @@
         let purchaseMultiPayments = [];
         let lastPurchasePayableBase = 0;
         const PURCHASE_MULTI_PAYMENT_VALUE = window.CashtopMulti?.MULTI_PAYMENT_VALUE || '__MULTI_PAYMENT__';
+        const PURCHASE_NO_SUPPLIER_VALUE = '__NO_SUPPLIER__';
+        const PURCHASE_NO_ACCOUNT_VALUE = '__NO_ACCOUNT__';
 
         window.onload = function() {
             try {
@@ -723,7 +725,7 @@
         }
 
         function populateSelects() {
-            let supHtml = '<option value="">-- حدد المورد --</option>';
+            let supHtml = `<option value="">-- حدد المورد --</option><option value="${PURCHASE_NO_SUPPLIER_VALUE}">بدون مورد (مشتريات عابرة)</option>`;
             suppliersDB.filter(s => s.active !== false).forEach(s => { supHtml += `<option value="${s.id}">${s.name}</option>`; });
             document.getElementById('supplierSelect').innerHTML = supHtml;
 
@@ -735,7 +737,7 @@
             const activeAccounts = (fundsDB.accounts || []).filter(acc => window.Cashtop?.isFundActive ? window.Cashtop.isFundActive(acc) : (acc?.disabled !== true && acc?.active !== false && String(acc?.status || '').toLowerCase() !== 'inactive'));
             const accounts = window.Cashtop?.sortFundAccountsForDropdown?.(activeAccounts) || activeAccounts;
             const preferredAccount = window.Cashtop?.getDefaultFundAccount?.(accounts);
-            let fundHtml = '<option value="">-- حدد الصندوق المالي الدَافع --</option>';
+            let fundHtml = `<option value="">-- حدد الصندوق المالي الدَافع --</option><option value="${PURCHASE_NO_ACCOUNT_VALUE}">بدون صندوق (لا حركة نقدية)</option>`;
             if (accounts.length > 1) fundHtml += `<option value="${PURCHASE_MULTI_PAYMENT_VALUE}">دفع متعدد</option>`;
             accounts.forEach(f => {
                 const cur = window.CashtopMulti?.getCurrency?.(f.currencyId || cfg.baseCurrencyId) || cfg.base;
@@ -743,6 +745,7 @@
             });
             accountSelect.innerHTML = fundHtml;
             if (previous === PURCHASE_MULTI_PAYMENT_VALUE && purchaseMultiPayments.length) accountSelect.value = PURCHASE_MULTI_PAYMENT_VALUE;
+            else if (previous === PURCHASE_NO_ACCOUNT_VALUE) accountSelect.value = PURCHASE_NO_ACCOUNT_VALUE;
             else if (accounts.some(acc => String(acc.id) === String(previous))) accountSelect.value = previous;
             else if (preferredAccount) accountSelect.value = String(preferredAccount.id);
         }
@@ -1518,19 +1521,21 @@
             const cards = document.querySelectorAll('.product-item');
 
             const isMultiPayment = accountId === PURCHASE_MULTI_PAYMENT_VALUE;
-            if (!supplierId || !accountId) { showToast("يرجى تحديد المورد والصندوق المالي أولاً!", "error"); return; }
+            const isNoSupplier = supplierId === PURCHASE_NO_SUPPLIER_VALUE;
+            const isNoAccount = accountId === PURCHASE_NO_ACCOUNT_VALUE;
+            if (!supplierId || !accountId) { showToast("حدد المورد أو اختر بدون مورد، وحدد الصندوق أو اختر بدون صندوق.", "error"); return; }
             if (cards.length === 0) { showToast("الفاتورة فارغة، لا يوجد بضاعة مضافة!", "error"); return; }
 
-            let supplier = suppliersDB.find(s => s.id == supplierId);
-            let vault = isMultiPayment ? null : fundsDB.accounts.find(a => String(a.id) === String(accountId));
+            let supplier = isNoSupplier ? null : suppliersDB.find(s => String(s.id) === String(supplierId));
+            let vault = (isMultiPayment || isNoAccount) ? null : fundsDB.accounts.find(a => String(a.id) === String(accountId));
+            const supplierName = supplier?.name || 'بدون مورد';
 
-            if (!supplier || (!isMultiPayment && !vault)) { showToast("تعذر العثور على المورد أو الصندوق المحدد", "error"); return; }
+            if ((!isNoSupplier && !supplier) || (!isMultiPayment && !isNoAccount && !vault)) { showToast("تعذر العثور على المورد أو الصندوق المحدد", "error"); return; }
             const saveRollback = {
                 products: JSON.parse(JSON.stringify(productsDB)),
                 suppliers: JSON.parse(JSON.stringify(suppliersDB)),
                 funds: JSON.parse(JSON.stringify(fundsDB)),
-                purchases: JSON.parse(JSON.stringify(purchasesDB)),
-                reversals: JSON.parse(JSON.stringify(purchaseReversals))
+                purchases: JSON.parse(JSON.stringify(purchasesDB))
             };
             let paymentSettlement = null;
             if (isMultiPayment) {
@@ -1546,6 +1551,8 @@
                     const account = fundsDB.accounts.find(a => String(a.id) === String(insufficient.accountId));
                     showToast(`الرصيد في صندوق [${account?.name || 'المحدد'}] غير كافٍ!`, 'error'); return;
                 }
+            } else if (isNoAccount) {
+                paymentSettlement = { accountAmount: 0, accountCurrencyId: null, baseAmount: paidAmount, externalPayment: true };
             } else {
                 paymentSettlement = window.CashtopMulti?.settleToAccount?.(paidNative, currencyId, vault)
                     || { accountAmount: paidNative, accountCurrencyId: vault.currencyId || currencyId, baseAmount: paidAmount };
@@ -1724,22 +1731,22 @@
                         id: `LOG_PUR_${invId}_${paymentIndex}_${Date.now()}`, sourceType: 'purchaseInvoice', sourceId: invId,
                         accountId: account.id, date: invDate, type: "سحب", amount: Number(payment.accountAmount || 0), baseAmount: Number(payment.baseAmount || 0), currencyId: payment.accountCurrencyId || account.currencyId,
                         transactionAmount: Number(payment.transactionAmount || 0), transactionCurrencyId: currencyId,
-                        notes: `سداد متعدد لفاتورة مشتريات [${invId}] للمورد [${supplier.name}]`
+                        notes: `سداد متعدد لفاتورة مشتريات [${invId}] للمورد [${supplierName}]`
                     });
                 });
-            } else if (paidAmount > 0) {
+            } else if (paidAmount > 0 && !isNoAccount) {
                 vault.balance -= Number(paymentSettlement.accountAmount || 0);
                 fundsDB.accountLogs.push({
                     id: `LOG_PUR_${invId}_${Date.now()}`, sourceType: 'purchaseInvoice', sourceId: invId,
                     accountId: vault.id, date: invDate, type: "سحب", amount: Number(paymentSettlement.accountAmount || 0), baseAmount: paidAmount, currencyId: paymentSettlement.accountCurrencyId,
                     transactionAmount: paidNative, transactionCurrencyId: currencyId,
-                    notes: `سداد جزء من فاتورة مشتريات [${invId}] للمورد [${supplier.name}]`
+                    notes: `سداد جزء من فاتورة مشتريات [${invId}] للمورد [${supplierName}]`
                 });
             }
 
             // 3. إضافة الدين لحساب المورد (إذا وُجد)
-            if (debtAmount > 0) {
-                // إضافة المديونية في حركات المورد وتحديث التخزين 
+            if (debtAmount > 0 && supplier) {
+                // إضافة المديونية فقط عندما تكون الفاتورة مرتبطة بمورد فعلي.
                 if(!supplier.movements) supplier.movements = [];
                 supplier.movements.push({
                     id: 'm_' + Date.now(),
@@ -1757,12 +1764,14 @@
             let newInvoice = {
                 id: invId,
                 date: invDate,
-                supplierId: supplier.id,
-                supplierName: supplier.name,
-                accountId: isMultiPayment ? PURCHASE_MULTI_PAYMENT_VALUE : vault.id,
-                accountName: isMultiPayment ? 'دفع متعدد' : vault.name,
-                paymentMethod: isMultiPayment ? 'دفع متعدد' : vault.name,
+                supplierId: supplier?.id || null,
+                supplierName,
+                accountId: isMultiPayment ? PURCHASE_MULTI_PAYMENT_VALUE : (isNoAccount ? null : vault.id),
+                accountName: isMultiPayment ? 'دفع متعدد' : (isNoAccount ? 'بدون صندوق' : vault.name),
+                paymentMethod: isMultiPayment ? 'دفع متعدد' : (isNoAccount ? 'دفع خارجي بدون صندوق' : vault.name),
                 payments: isMultiPayment ? purchaseMultiPayments.map(item => ({...item})) : [],
+                withoutSupplier: isNoSupplier,
+                withoutAccount: isNoAccount,
                 subtotal: invoiceTotal,
                 discount: purchaseDiscount,
                 netSubtotal: taxableSubtotal,
@@ -1771,8 +1780,8 @@
                 total: payableInvoiceTotal,
                 paid: paidAmount,
                 paidNative: paidNative,
-                accountAmountNative: isMultiPayment ? null : Number(paymentSettlement.accountAmount || 0),
-                accountCurrencyId: isMultiPayment ? null : paymentSettlement.accountCurrencyId,
+                accountAmountNative: (isMultiPayment || isNoAccount) ? null : Number(paymentSettlement.accountAmount || 0),
+                accountCurrencyId: (isMultiPayment || isNoAccount) ? null : paymentSettlement.accountCurrencyId,
                 currencyId: currencyId,
                 currencyName: (window.CashtopMulti?.getCurrency?.(currencyId) || cfg.base).name,
                 currencySymbol: (window.CashtopMulti?.getCurrency?.(currencyId) || cfg.base).symbol || (window.CashtopMulti?.getCurrency?.(currencyId) || cfg.base).code,
@@ -2010,6 +2019,9 @@
                     remainingRefund = Math.max(0, remainingRefund - targetBase);
                 });
                 inv.payments = currentPayments.filter(payment => Number(payment.baseAmount || 0) > 0.000001 || Number(payment.accountAmount || payment.accountAmountNative || 0) > 0.000001);
+            } else if (inv.withoutAccount === true || !inv.accountId) {
+                // الفاتورة مدفوعة خارج النظام أو بدون صندوق: نخفض الجزء المدفوع من الفاتورة
+                // فقط، ولا ننشئ أي حركة على الصناديق لأنها لم تُمس عند الشراء أصلاً.
             } else {
                 const account = fundsDB.accounts.find(row => String(row.id) === String(inv.accountId));
                 if (!account) throw new Error('الصندوق المرتبط بالفاتورة غير موجود.');

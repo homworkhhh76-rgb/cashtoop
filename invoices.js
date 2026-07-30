@@ -554,7 +554,7 @@ function confirmDeleteInvoice() {
   const invoice = allInvoices.find(item => String(item.id) === String(pendingDeleteInvoiceId));
   if (!invoice) return hideDeleteModal();
 
-  const snapshotKeys = [DB_KEY, 'cashtop_products', 'cashtop_customers', 'cashtop_funds_db', 'cashtop_sales_offers'];
+  const snapshotKeys = [DB_KEY, 'cashtop_sales_reversals', 'cashtop_products', 'cashtop_materials', 'cashtop_customers', 'cashtop_funds_db', 'cashtop_sales_offers'];
   const snapshots = Object.fromEntries(snapshotKeys.map(key => [key, localStorage.getItem(key)]));
   const confirmButton = document.querySelector('#deleteModal .btn-confirm-delete');
   deleteInvoiceInProgress = true;
@@ -567,8 +567,18 @@ function confirmDeleteInvoice() {
   try {
     const reversed = reverseInvoiceMovements(invoice) || {};
     allInvoices = readArray(DB_KEY).filter(item => String(item.id) !== String(invoice.id));
-    const changes = { [DB_KEY]: allInvoices };
+    const salesReversals = readArray('cashtop_sales_reversals');
+    salesReversals.push({
+      id: `SALE_REV_${invoice.id}_${Date.now()}`,
+      saleId: invoice.id,
+      branchId: invoice.branchId || 'MAIN',
+      reversedAt: new Date().toISOString(),
+      reason: 'حذف فاتورة المبيعات',
+      originalInvoice: JSON.parse(JSON.stringify(invoice))
+    });
+    const changes = { [DB_KEY]: allInvoices, cashtop_sales_reversals: salesReversals };
     if (reversed.products) changes.cashtop_products = reversed.products;
+    if (reversed.materials) changes.cashtop_materials = reversed.materials;
     if (reversed.customers) changes.cashtop_customers = reversed.customers;
     if (reversed.funds) changes.cashtop_funds_db = reversed.funds;
     if (reversed.offersChanged) changes.cashtop_sales_offers = reversed.offers;
@@ -597,44 +607,87 @@ function confirmDeleteInvoice() {
   }
 }
 
+function invoiceReverseIsComposite(product, recipes) {
+  if (!product) return false;
+  return (recipes || []).some(recipe => String(recipe?.finishedProductId) === String(product.id) && (
+    recipe?.consumptionMode === 'onSale' || recipe?.virtualStock === true || product?.manufacturingMode === 'components-on-sale' || product?.generatedByManufacturing === true
+  ));
+}
+
+function invoiceReverseComponentFactor(component, unitId) {
+  const chain = window.CashtopMulti?.normalizeProductChain?.(component) || component?.unitChain || [{ id: 'piece', factorToBase: 1 }];
+  return Math.max(0.000001, Number(chain.find(level => String(level?.id) === String(unitId))?.factorToBase || 1));
+}
+
+function restoreInvoiceLotAllocations(product, allocations) {
+  if (!Array.isArray(product?.inventoryLots) || !Array.isArray(allocations)) return;
+  allocations.forEach(allocation => {
+    const lot = product.inventoryLots.find(row => String(row?.id) === String(allocation?.lotId));
+    if (!lot) return;
+    lot.remainingPieces = Math.max(0, Number(lot.remainingPieces ?? lot.quantityPieces ?? 0)) + Math.max(0, Number(allocation?.quantityPieces || 0));
+  });
+}
+
 function reverseInvoiceMovements(invoice) {
-  if (invoice.status === 'draft') return;
+  if (invoice.status === 'draft') return {};
 
   const products = readJson('cashtop_products', []);
-  const branches = readJson('cashtop_branches', []);
-  const branchId = invoice.branchId || null;
-  const isMainBranch = !branchId || branches.find(branch => String(branch.id) === String(branchId))?.isMain === true ||
-    (!branches.some(branch => branch.isMain === true) && String(branches[0]?.id || '') === String(branchId));
+  const materials = readJson('cashtop_materials', []);
+  const recipes = readJson('cashtop_manufacturing_recipes', []);
+
+  const addBaseStock = (collection, id, quantity, allocations = []) => {
+    const record = collection.find(entry => String(entry?.id) === String(id));
+    if (!record || record.untrackedStock === true) return false;
+    record.stockPieces = Math.max(0, Number(record.stockPieces || 0)) + Math.max(0, Number(quantity || 0));
+    restoreInvoiceLotAllocations(record, allocations);
+    return true;
+  };
 
   (invoice.items || []).forEach(item => {
-    if (item.isCustom) return;
-    const product = products.find(entry => String(entry.id) === String(item.id));
-    if (!product) return;
-    const quantity = Number(item.qty) || 0;
-    const pieces = quantity * invoiceItemFactor(item);
+    if (!item || item.isCustom) return;
+    const product = products.find(entry => String(entry.id) === String(item.id ?? item.productId));
+    if (!product || product.untrackedStock === true) return;
+    const quantity = Math.max(0, Number(item.qty || 0));
+    const pieces = Math.max(0, quantity * invoiceItemFactor(item));
 
-    if (item.isVariant && Array.isArray(product.variants)) {
-      const variant = product.variants.find(entry =>
-        String(entry.size) === String(item.variantSize) &&
-        String(entry.color) === String(item.variantColor)
-      );
-      if (!variant) return;
-      if (isMainBranch) {
-        variant.qty = (Number(variant.qty) || 0) + quantity;
-        product.stockPieces = (Number(product.stockPieces) || 0) + pieces;
-      } else {
-        if (!variant.branchStocks || typeof variant.branchStocks !== 'object') variant.branchStocks = {};
-        variant.branchStocks[branchId] = (Number(variant.branchStocks[branchId]) || 0) + quantity;
+    if (!item.isVariant && invoiceReverseIsComposite(product, recipes)) {
+      let allocations = Array.isArray(item.componentAllocations) ? item.componentAllocations : [];
+      if (!allocations.length) {
+        const recipe = recipes.find(row => String(row?.finishedProductId) === String(product.id));
+        allocations = (recipe?.ingredients || []).map(ingredient => {
+          const sourceType = ingredient?.sourceType === 'material' ? 'material' : 'product';
+          const itemId = ingredient?.itemId || ingredient?.productId;
+          const component = sourceType === 'material'
+            ? materials.find(row => String(row?.id) === String(itemId))
+            : products.find(row => String(row?.id) === String(itemId));
+          return {
+            sourceType,
+            itemId,
+            quantityPieces: Math.max(0, Number(ingredient?.qty ?? ingredient?.qtyPerUnit ?? 0) * pieces * invoiceReverseComponentFactor(component, ingredient?.unitId)),
+            lotAllocations: []
+          };
+        }).filter(row => row.itemId && row.quantityPieces > 0);
       }
+      allocations.forEach(row => {
+        const target = row.sourceType === 'material' ? materials : products;
+        addBaseStock(target, row.itemId, row.quantityPieces, row.lotAllocations || []);
+      });
       return;
     }
 
-    if (isMainBranch) {
-      product.stockPieces = (Number(product.stockPieces) || 0) + pieces;
-    } else {
-      if (!product.branchStocks || typeof product.branchStocks !== 'object') product.branchStocks = {};
-      product.branchStocks[branchId] = (Number(product.branchStocks[branchId]) || 0) + pieces;
+    if (item.isVariant && Array.isArray(product.variants)) {
+      const variant = product.variants.find(entry =>
+        String(entry?.size || '') === String(item.variantSize || '') &&
+        String(entry?.color || '') === String(item.variantColor || '')
+      );
+      if (variant) variant.qty = Math.max(0, Number(variant.qty || 0)) + quantity;
+      product.stockPieces = Math.max(0, Number(product.stockPieces || 0)) + pieces;
+      restoreInvoiceLotAllocations(product, item.lotAllocations || []);
+      return;
     }
+
+    product.stockPieces = Math.max(0, Number(product.stockPieces || 0)) + pieces;
+    restoreInvoiceLotAllocations(product, item.lotAllocations || []);
   });
 
   const customers = readJson('cashtop_customers', []);
@@ -642,6 +695,7 @@ function reverseInvoiceMovements(invoice) {
     customers.find(entry => entry.name === invoice.customer);
   if (customer && Number(invoice.debt) > 0) {
     customer.balance = (Number(customer.balance) || 0) - Number(invoice.debt);
+    if (Math.abs(customer.balance) < 0.000001) customer.balance = 0;
     if (Array.isArray(customer.debtInvoices)) {
       customer.debtInvoices = customer.debtInvoices.filter(entry => String(entry?.invoiceId) !== String(invoice.id));
     }
@@ -650,29 +704,39 @@ function reverseInvoiceMovements(invoice) {
   const funds = readJson('cashtop_funds_db', { accounts: [], accountLogs: [] });
   if (!Array.isArray(funds.accounts)) funds.accounts = [];
   if (!Array.isArray(funds.accountLogs)) funds.accountLogs = [];
-  const account = funds.accounts.find(entry => String(entry.id) === String(invoice.accountId)) ||
-    (!invoice.accountId ? funds.accounts[0] : null);
-  if (account && Number(invoice.paid) > 0) {
-    const currencyCfg = window.CashtopMulti?.getCurrencyConfig?.() || { baseCurrencyId: 'ILS' };
-    const accountCurrencyId = account.currencyId || invoice.accountCurrencyId || currencyCfg.baseCurrencyId;
-    const reversalNative = Number.isFinite(Number(invoice.accountAmountNative))
-      ? Number(invoice.accountAmountNative)
-      : (window.CashtopMulti?.accountAmountFromBase?.(Number(invoice.paid), accountCurrencyId) ?? Number(invoice.paid));
-    account.balance = (Number(account.balance) || 0) - reversalNative;
-    funds.accountLogs.push({
-      id: `LOG_DELETE_SALE_${invoice.id}_${Date.now()}`,
-      sourceType: 'sale-delete',
-      sourceId: invoice.id,
-      accountId: account.id,
-      date: new Date().toISOString(),
-      type: 'سحب',
-      amount: reversalNative,
-      baseAmount: Number(invoice.paid),
-      currencyId: accountCurrencyId,
-      transactionAmount: Number(invoice.paidNative ?? invoice.paid),
-      transactionCurrencyId: invoice.currencyId || currencyCfg.baseCurrencyId,
-      notes: `عكس تحصيل فاتورة بيع محذوفة [${invoice.id}]`
+  if (Number(invoice.paid) > 0 && Array.isArray(invoice.payments) && invoice.payments.length) {
+    invoice.payments.forEach((payment, index) => {
+      const account = funds.accounts.find(entry => String(entry.id) === String(payment.accountId));
+      if (!account) return;
+      const reversalNative = Math.max(0, Number(payment.accountAmount || payment.accountAmountNative || 0));
+      account.balance = (Number(account.balance) || 0) - reversalNative;
+      funds.accountLogs.push({
+        id: `LOG_DELETE_SALE_${invoice.id}_${index}_${Date.now()}`,
+        sourceType: 'sale-reversal', sourceId: invoice.id,
+        accountId: account.id, date: new Date().toISOString(), type: 'سحب', amount: reversalNative,
+        baseAmount: Number(payment.baseAmount || 0), currencyId: payment.accountCurrencyId || account.currencyId,
+        transactionAmount: Number(payment.transactionAmount || 0), transactionCurrencyId: invoice.currencyId,
+        notes: `عكس تحصيل متعدد لفاتورة بيع محذوفة [${invoice.id}]`
+      });
     });
+  } else if (Number(invoice.paid) > 0) {
+    const account = funds.accounts.find(entry => String(entry.id) === String(invoice.accountId));
+    if (account) {
+      const currencyCfg = window.CashtopMulti?.getCurrencyConfig?.() || { baseCurrencyId: 'ILS' };
+      const accountCurrencyId = account.currencyId || invoice.accountCurrencyId || currencyCfg.baseCurrencyId;
+      const reversalNative = Number.isFinite(Number(invoice.accountAmountNative))
+        ? Number(invoice.accountAmountNative)
+        : (window.CashtopMulti?.accountAmountFromBase?.(Number(invoice.paid), accountCurrencyId) ?? Number(invoice.paid));
+      account.balance = (Number(account.balance) || 0) - reversalNative;
+      funds.accountLogs.push({
+        id: `LOG_DELETE_SALE_${invoice.id}_${Date.now()}`,
+        sourceType: 'sale-reversal', sourceId: invoice.id,
+        accountId: account.id, date: new Date().toISOString(), type: 'سحب', amount: reversalNative,
+        baseAmount: Number(invoice.paid), currencyId: accountCurrencyId,
+        transactionAmount: Number(invoice.paidNative ?? invoice.paid), transactionCurrencyId: invoice.currencyId || currencyCfg.baseCurrencyId,
+        notes: `عكس تحصيل فاتورة بيع محذوفة [${invoice.id}]`
+      });
+    }
   }
 
   const offers = readJson('cashtop_sales_offers', []);
@@ -684,7 +748,7 @@ function reverseInvoiceMovements(invoice) {
       offersChanged = true;
     }
   });
-  return { products, customers, funds, offers, offersChanged };
+  return { products, materials, customers, funds, offers, offersChanged };
 }
 
 // =============================================================
