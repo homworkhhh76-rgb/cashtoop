@@ -238,6 +238,18 @@
             .modal-overlay { display: none !important; }
         }
 
+        @media (min-width: 993px) {
+            .basket-section {
+                position: sticky;
+                top: 12px;
+                align-self: start;
+                max-height: calc(100vh - 24px);
+                overflow: hidden;
+            }
+            .basket-section .basket-items-list { max-height: calc(100vh - 315px); overflow-y: auto; }
+            .right-column-wrapper .products-grid { max-height: calc(100vh - 330px); overflow-y: auto; }
+        }
+
         /* الجوال وتخصيص الشبكة لتكون 3 أعمدة */
         .mobile-summary-container { display: none; }
         @media (max-width: 992px) {
@@ -273,12 +285,12 @@
     <link rel="stylesheet" href="cashtop-core.css?v=78">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="barcode-tools.js?v=20"></script>
-    <script src="cashtop-core.js?v=78"></script>
+    <script src="cashtop-core.js?v=80"></script>
     <script src="multi-system.js?v=57"></script>
     <script src="turso-config.js?v=74"></script><script src="turso-rtdb.js?v=74"></script>
     <script src="accounting-engine.js"></script>
     <script src="cashtop-printer.js?v=48"></script>
-    <script src="turso-sync.js?v=78"></script>
+    <script src="turso-sync.js?v=80"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -332,7 +344,7 @@
         <summary><i class="fa-solid fa-wallet"></i><span>الحسابات</span><i class="fa-solid fa-chevron-down ct-menu-arrow"></i></summary>
         <div class="ct-submenu">
           <a href="accounts.html">الصناديق والحسابات</a>
-          <a href="journal.html">دفتر القيود</a>
+          <a href="journal.html">دفتر الأستاذ</a>
           <a href="sands.html">سندات القبض والصرف</a>
           <a href="المصاريف.html">المصاريف</a>
           <a href="التقارير.html">التقارير</a>
@@ -863,7 +875,9 @@
             normalizeFundsAccountCurrencies();
             const cfg = getCashierCurrencyConfig();
             const previous = select.value;
-            const visible = (fundsDB.accounts || []).filter(acc => window.Cashtop?.isFundActive ? window.Cashtop.isFundActive(acc) : (acc?.disabled !== true && acc?.active !== false && String(acc?.status || '').toLowerCase() !== 'inactive'));
+            const activeAccounts = (fundsDB.accounts || []).filter(acc => window.Cashtop?.isFundActive ? window.Cashtop.isFundActive(acc) : (acc?.disabled !== true && acc?.active !== false && String(acc?.status || '').toLowerCase() !== 'inactive'));
+            const visible = window.Cashtop?.sortFundAccountsForDropdown?.(activeAccounts) || activeAccounts;
+            const preferred = window.Cashtop?.getDefaultFundAccount?.(visible);
             const multiOption = visible.length > 1 ? `<option value="${CASHIER_MULTI_PAYMENT_VALUE}">دفع متعدد</option>` : '';
             select.innerHTML = multiOption + visible.map(acc => {
                 const cur = window.CashtopMulti?.getCurrency?.(acc.currencyId || cfg.baseCurrencyId) || cfg.base;
@@ -871,6 +885,7 @@
             }).join('');
             if (previous === CASHIER_MULTI_PAYMENT_VALUE && cashierMultiPayments.length) select.value = CASHIER_MULTI_PAYMENT_VALUE;
             else if (visible.some(acc => String(acc.id) === String(previous))) select.value = previous;
+            else if (preferred) select.value = preferred.id;
             else if (visible[0]) select.value = visible[0].id;
             if (!visible.length) select.innerHTML = '<option value="">لا يوجد صندوق مالي</option>';
         }
@@ -912,7 +927,7 @@
             if (!select) return;
             if (select.value === CASHIER_MULTI_PAYMENT_VALUE) {
                 if (!openCashierMultiPayment()) {
-                    select.value = (fundsDB.accounts || []).find(acc => window.Cashtop?.isFundActive ? window.Cashtop.isFundActive(acc) : (acc?.disabled !== true && acc?.active !== false && String(acc?.status || '').toLowerCase() !== 'inactive'))?.id || '';
+                    select.value = window.Cashtop?.getDefaultFundAccount?.(fundsDB.accounts || [])?.id || (fundsDB.accounts || []).find(acc => window.Cashtop?.isFundActive ? window.Cashtop.isFundActive(acc) : (acc?.disabled !== true && acc?.active !== false && String(acc?.status || '').toLowerCase() !== 'inactive'))?.id || '';
                 }
             } else {
                 cashierMultiPayments = [];
@@ -1048,6 +1063,7 @@
 
         function getProductStockForBranch(product, branchId = stockBranchId) {
             if (!product) return 0;
+            if (product.untrackedStock === true) return Number.POSITIVE_INFINITY;
             // cashtop-core يعيد المنتج مُسقطاً على الفرع النشط، لذلك stockPieces
             // هو الرصيد الحقيقي للفرع الحالي سواء كان MAIN أو فرعاً فرعياً.
             const baseStock = Math.max(0, Number(product.stockPieces || 0));
@@ -1064,7 +1080,7 @@
         }
 
         function changeProductStockForBranch(product, item, direction, branchId = stockBranchId) {
-            if (!product || item.isCustom) return;
+            if (!product || item.isCustom || product.untrackedStock === true) return;
             const quantity = roundStockQuantity(item.qty || 0);
             const pieces = itemQuantityInPieces(item);
             const mainBranch = isMainStockBranch(branchId);
@@ -1123,7 +1139,7 @@
             (items || []).forEach(item => {
                 if (!item || item.isCustom) return;
                 const product = productsData.find(prod => String(prod.id) === String(item.id));
-                if (!product) return;
+                if (!product || product.untrackedStock === true) return;
                 if (isCompositeProduct(product) && !item.isVariant) {
                     compositeRequirements(product.id, itemQuantityInPieces(item)).forEach(row => {
                         const map = row.sourceType === 'material' ? materialReq : productReq;
@@ -1158,6 +1174,7 @@
                 const expected = expectedProducts.find(item => String(item.id) === id);
                 const actual = persisted.find(item => String(item.id) === id);
                 if (!expected || !actual) throw new Error(`STOCK_PERSISTENCE_MISSING:${id}`);
+                if (expected.untrackedStock === true || actual.untrackedStock === true) continue;
                 if (Math.abs(Number(expected.stockPieces || 0) - Number(actual.stockPieces || 0)) > 1e-6) {
                     throw new Error(`STOCK_PERSISTENCE_MISMATCH:${id}`);
                 }
@@ -1176,6 +1193,7 @@
                 if (item.isCustom) return;
                 const product = productsData.find(prod => String(prod.id) === String(item.id));
                 if (product) {
+                    if (product.untrackedStock === true) return;
                     if (isCompositeProduct(product) && !item.isVariant) changeCompositeStock(product, item, direction, branchId);
                     else changeProductStockForBranch(product, item, direction, branchId);
                 }
@@ -1459,7 +1477,8 @@
                     availStock = getAvailableStock(prod.id);
                 }
 
-                const isOutOfStock = availStock <= 0;
+                const isUntrackedStock = prod.untrackedStock === true;
+                const isOutOfStock = !isUntrackedStock && availStock <= 0;
                 
                 const card = document.createElement('div');
                 card.className = `product-item-card ${isOutOfStock ? 'out-of-stock' : ''}`;
@@ -1476,7 +1495,9 @@
                 };
                 
                 let stockStr = '';
-                if (isOutOfStock) {
+                if (isUntrackedStock) {
+                    stockStr = '';
+                } else if (isOutOfStock) {
                     stockStr = isCompositeProduct(prod) ? 'المخزون نفد' : 'نفد';
                 } else {
                     if (prod.hasVariants) {
@@ -1503,7 +1524,7 @@
                     <div class="product-item-title">${prod.name}</div>
                     ${isCompositeProduct(prod) ? '<div class="product-type-badge"><i class="fa-solid fa-cube"></i> غير متعدد</div>' : ''}
                     <div class="product-item-price">${cashierBaseSymbol()} ${moneyDisplay(getEffectiveProductPrice(prod, 'piece'))}</div>
-                    <div class="stock-text">${stockStr}</div>
+                    ${stockStr ? `<div class="stock-text">${stockStr}</div>` : ''}
                 `;
                 container.appendChild(card);
             });
@@ -1673,8 +1694,8 @@
                 itemDiv.innerHTML = `
                     <div class="item-row-top">
                         <div class="item-name-badge">
-                            <span class="item-title">${item.name}</span>
                             ${unitSelectorHtml}
+                            <span class="item-title">${item.name}</span>
                         </div>
                         <div class="item-top-actions">
                             <button type="button" class="btn-item-info" onclick="openBasketItemInfo(${index})" title="معلومات التكلفة والربح"><i class="fa-solid fa-chart-line"></i></button>

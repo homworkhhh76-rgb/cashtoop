@@ -220,11 +220,11 @@
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
     <link rel="stylesheet" href="cashtop-core.css?v=78">
-    <script src="cashtop-core.js?v=78"></script>
+    <script src="cashtop-core.js?v=80"></script>
     <script src="multi-system.js?v=57"></script>
     <script src="turso-config.js?v=74"></script><script src="turso-rtdb.js?v=74"></script>
     <script src="accounting-engine.js"></script>
-    <script src="turso-sync.js?v=78"></script>
+    <script src="turso-sync.js?v=80"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -278,7 +278,7 @@
         <summary><i class="fa-solid fa-wallet"></i><span>الحسابات</span><i class="fa-solid fa-chevron-down ct-menu-arrow"></i></summary>
         <div class="ct-submenu">
           <a href="accounts.html">الصناديق والحسابات</a>
-          <a href="journal.html">دفتر القيود</a>
+          <a href="journal.html">دفتر الأستاذ</a>
           <a href="sands.html">سندات القبض والصرف</a>
           <a href="المصاريف.html">المصاريف</a>
           <a href="التقارير.html">التقارير</a>
@@ -732,7 +732,9 @@
             const currencyId = cfg.enabled ? purchaseCurrencyId() : cfg.baseCurrencyId;
             const accountSelect = document.getElementById('accountSelect');
             const previous = accountSelect?.value || '';
-            const accounts = (fundsDB.accounts || []).filter(acc => window.Cashtop?.isFundActive ? window.Cashtop.isFundActive(acc) : (acc?.disabled !== true && acc?.active !== false && String(acc?.status || '').toLowerCase() !== 'inactive'));
+            const activeAccounts = (fundsDB.accounts || []).filter(acc => window.Cashtop?.isFundActive ? window.Cashtop.isFundActive(acc) : (acc?.disabled !== true && acc?.active !== false && String(acc?.status || '').toLowerCase() !== 'inactive'));
+            const accounts = window.Cashtop?.sortFundAccountsForDropdown?.(activeAccounts) || activeAccounts;
+            const preferredAccount = window.Cashtop?.getDefaultFundAccount?.(accounts);
             let fundHtml = '<option value="">-- حدد الصندوق المالي الدَافع --</option>';
             if (accounts.length > 1) fundHtml += `<option value="${PURCHASE_MULTI_PAYMENT_VALUE}">دفع متعدد</option>`;
             accounts.forEach(f => {
@@ -742,6 +744,7 @@
             accountSelect.innerHTML = fundHtml;
             if (previous === PURCHASE_MULTI_PAYMENT_VALUE && purchaseMultiPayments.length) accountSelect.value = PURCHASE_MULTI_PAYMENT_VALUE;
             else if (accounts.some(acc => String(acc.id) === String(previous))) accountSelect.value = previous;
+            else if (preferredAccount) accountSelect.value = String(preferredAccount.id);
         }
 
         function openPurchaseMultiPayment() {
@@ -1526,7 +1529,8 @@
                 products: JSON.parse(JSON.stringify(productsDB)),
                 suppliers: JSON.parse(JSON.stringify(suppliersDB)),
                 funds: JSON.parse(JSON.stringify(fundsDB)),
-                purchases: JSON.parse(JSON.stringify(purchasesDB))
+                purchases: JSON.parse(JSON.stringify(purchasesDB)),
+                reversals: JSON.parse(JSON.stringify(purchaseReversals))
             };
             let paymentSettlement = null;
             if (isMultiPayment) {
@@ -2128,11 +2132,15 @@
             if(invIndex === -1) return;
             
             let inv = purchasesDB[invIndex];
+            let purchaseReversals = [];
+            try { purchaseReversals = JSON.parse(localStorage.getItem('cashtop_purchase_reversals') || '[]'); } catch (_) { purchaseReversals = []; }
+            if (!Array.isArray(purchaseReversals)) purchaseReversals = [];
             const rollback = {
                 products: JSON.parse(JSON.stringify(productsDB)),
                 suppliers: JSON.parse(JSON.stringify(suppliersDB)),
                 funds: JSON.parse(JSON.stringify(fundsDB)),
-                purchases: JSON.parse(JSON.stringify(purchasesDB))
+                purchases: JSON.parse(JSON.stringify(purchasesDB)),
+                reversals: JSON.parse(JSON.stringify(purchaseReversals))
             };
 
             try {
@@ -2256,12 +2264,21 @@
                 }
             }
 
+            const reversalRecord = {
+                id: `PUR_REV_${inv.id}_${Date.now()}`,
+                purchaseId: inv.id,
+                reversedAt: new Date().toISOString(),
+                reason: 'حذف فاتورة المشتريات',
+                originalInvoice: JSON.parse(JSON.stringify(inv))
+            };
+            purchaseReversals.push(reversalRecord);
             purchasesDB.splice(invIndex, 1);
             const reversalChanges = {
                 cashtop_products: productsDB,
                 cashtop_suppliers: suppliersDB,
                 cashtop_funds_db: fundsDB,
-                cashtop_purchases: purchasesDB
+                cashtop_purchases: purchasesDB,
+                cashtop_purchase_reversals: purchaseReversals
             };
             if (window.Cashtop?.atomicSetItems) {
                 window.Cashtop.atomicSetItems(reversalChanges, { label: 'delete-purchase-invoice' });
@@ -2277,10 +2294,12 @@
                 suppliersDB = rollback.suppliers;
                 fundsDB = rollback.funds;
                 purchasesDB = rollback.purchases;
+                purchaseReversals = rollback.reversals;
                 localStorage.setItem('cashtop_products', JSON.stringify(productsDB));
                 localStorage.setItem('cashtop_suppliers', JSON.stringify(suppliersDB));
                 localStorage.setItem('cashtop_funds_db', JSON.stringify(fundsDB));
                 localStorage.setItem('cashtop_purchases', JSON.stringify(purchasesDB));
+                localStorage.setItem('cashtop_purchase_reversals', JSON.stringify(purchaseReversals));
                 if (error.message !== 'PURCHASE_STOCK_CONFLICT') console.error(error);
                 showToast('تعذر حذف الفاتورة، وتمت إعادة جميع بيانات المخزون والمورد والصندوق كما كانت.', 'error');
             }

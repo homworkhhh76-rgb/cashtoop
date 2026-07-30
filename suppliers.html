@@ -195,11 +195,11 @@
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
     <link rel="stylesheet" href="cashtop-core.css?v=78">
-    <script src="cashtop-core.js?v=78"></script>
+    <script src="cashtop-core.js?v=80"></script>
     <script src="multi-system.js?v=57"></script>
     <script src="turso-config.js?v=74"></script><script src="turso-rtdb.js?v=74"></script>
     <script src="accounting-engine.js"></script>
-    <script src="turso-sync.js?v=78"></script>
+    <script src="turso-sync.js?v=80"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -253,7 +253,7 @@
         <summary><i class="fa-solid fa-wallet"></i><span>الحسابات</span><i class="fa-solid fa-chevron-down ct-menu-arrow"></i></summary>
         <div class="ct-submenu">
           <a href="accounts.html">الصناديق والحسابات</a>
-          <a href="journal.html">دفتر القيود</a>
+          <a href="journal.html">دفتر الأستاذ</a>
           <a href="sands.html">سندات القبض والصرف</a>
           <a href="المصاريف.html">المصاريف</a>
           <a href="التقارير.html">التقارير</a>
@@ -702,11 +702,14 @@
             select.innerHTML = '<option value="">-- اختر الصندوق المالي --</option>';
             if(fundsDB.accounts) {
                 fundsDB.accounts.forEach(a=>{if(!a.currencyId)a.currencyId=cfg.baseCurrencyId;});
-                const activeAccounts=(fundsDB.accounts||[]).filter(a=>window.Cashtop?.isFundActive?window.Cashtop.isFundActive(a):(a.disabled!==true&&a.active!==false&&String(a.status||'').toLowerCase()!=='inactive'));
+                const rawActiveAccounts=(fundsDB.accounts||[]).filter(a=>window.Cashtop?.isFundActive?window.Cashtop.isFundActive(a):(a.disabled!==true&&a.active!==false&&String(a.status||'').toLowerCase()!=='inactive'));
+                const activeAccounts=window.Cashtop?.sortFundAccountsForDropdown?.(rawActiveAccounts)||rawActiveAccounts;
+                const preferredAccount=window.Cashtop?.getDefaultFundAccount?.(activeAccounts);
                 if(activeAccounts.length>1)select.innerHTML += `<option value="${SUPPLIER_MULTI_PAYMENT_VALUE}">دفع متعدد</option>`;
                 activeAccounts.forEach(a => { const cur=window.CashtopMulti?.getCurrency?.(a.currencyId||cfg.baseCurrencyId)||cfg.base; select.innerHTML += `<option value="${a.id}">${a.name} (المتاح: ${parseFloat(a.balance||0).toFixed(2)} ${cur.symbol||cur.code})</option>`; });
                 if(previous===SUPPLIER_MULTI_PAYMENT_VALUE&&supplierMultiPayments.length)select.value=SUPPLIER_MULTI_PAYMENT_VALUE;
                 else if(activeAccounts.some(a=>String(a.id)===String(previous)))select.value=previous;
+                else if(preferredAccount)select.value=String(preferredAccount.id);
             }
         }
         function openSupplierMultiPayment(){const amountNative=Math.max(0,Number(document.getElementById('payAmountInput')?.value||0));if(!(amountNative>0)){showToast('أدخل مبلغ الدفعة أولاً ثم اختر دفع متعدد.','warning');return false;}const cfg=supplierPayCurrencyConfig(),currencyId=cfg.enabled?supplierPayCurrencyId():cfg.baseCurrencyId;return window.CashtopMulti?.openMultiPayment?.({title:'دفع متعدد للمورد',accounts:(fundsDB.accounts||[]).filter(a=>window.Cashtop?.isFundActive?window.Cashtop.isFundActive(a):(a.disabled!==true&&a.active!==false&&String(a.status||'').toLowerCase()!=='inactive')),transactionCurrencyId:currencyId,direction:'out',requireExact:true,exactTransactionAmount:amountNative,initialSplits:supplierMultiPayments,defaultTransactionAmount:supplierMultiPayments.length?0:amountNative,onSave:(splits)=>{supplierMultiPayments=splits.map(item=>({...item}));const select=document.getElementById('payVaultSelect');if(select)select.value=SUPPLIER_MULTI_PAYMENT_VALUE;}});}

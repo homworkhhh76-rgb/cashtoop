@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v79-persistent-offline-cache';
+const CACHE_VERSION = 'v80-ledger-default-cash';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = `cash-top-2-remote-static-${CACHE_VERSION}`;
 

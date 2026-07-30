@@ -262,11 +262,11 @@
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
     <link rel="stylesheet" href="cashtop-core.css?v=78">
-    <script src="cashtop-core.js?v=78"></script>
+    <script src="cashtop-core.js?v=80"></script>
     <script src="multi-system.js?v=57"></script>
     <script src="turso-config.js?v=74"></script><script src="turso-rtdb.js?v=74"></script>
     <script src="accounting-engine.js"></script>
-    <script src="turso-sync.js?v=78"></script>
+    <script src="turso-sync.js?v=80"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -320,7 +320,7 @@
         <summary><i class="fa-solid fa-wallet"></i><span>الحسابات</span><i class="fa-solid fa-chevron-down ct-menu-arrow"></i></summary>
         <div class="ct-submenu">
           <a href="accounts.html">الصناديق والحسابات</a>
-          <a href="journal.html">دفتر القيود</a>
+          <a href="journal.html">دفتر الأستاذ</a>
           <a href="sands.html">سندات القبض والصرف</a>
           <a href="المصاريف.html">المصاريف</a>
           <a href="التقارير.html">التقارير</a>
@@ -488,7 +488,7 @@
                 <div id="pieceSection" class="conditional-section active">
                     <div class="form-row">
                         <div class="form-group">
-                            <input type="number" step="any" id="pQty" class="form-control" placeholder="0" min="0" oninput="calculatePurchaseTotals()">
+                            <input type="text" inputmode="decimal" id="pQty" class="form-control" placeholder="0" oninput="handlePieceQuantityInput()">
                             <label for="pQty">عدد القطع الواردة</label>
                         </div>
                         <div class="form-group">
@@ -1014,6 +1014,7 @@
                 select.appendChild(opt);
             });
             if ([...select.options].some(option => option.value === current)) select.value = current;
+            updateSupplierLockForUntracked?.();
         }
 
         function productPurchaseCurrencyConfig(){ return window.CashtopMulti?.getCurrencyConfig?.() || {enabled:false,baseCurrencyId:'ILS',base:{id:'ILS',symbol:'₪',code:'ILS',ratePer100Base:100},currencies:[{id:'ILS',name:'شيكل',symbol:'₪',code:'ILS',ratePer100Base:100}]}; }
@@ -1026,13 +1027,16 @@
             const current = select.value;
             const cfg=productPurchaseCurrencyConfig(),cid=cfg.enabled?productPurchaseCurrencyId():cfg.baseCurrencyId;
             select.innerHTML = '';
-            const accounts=(Array.isArray(fundsData.accounts) ? fundsData.accounts : []).filter(a => a && typeof a === 'object' && (window.Cashtop?.isFundActive ? window.Cashtop.isFundActive(a) : (a.disabled !== true && a.active !== false && String(a.status || '').toLowerCase() !== 'inactive')));
+            const activeAccounts=(Array.isArray(fundsData.accounts) ? fundsData.accounts : []).filter(a => a && typeof a === 'object' && (window.Cashtop?.isFundActive ? window.Cashtop.isFundActive(a) : (a.disabled !== true && a.active !== false && String(a.status || '').toLowerCase() !== 'inactive')));
+            const accounts=window.Cashtop?.sortFundAccountsForDropdown?.(activeAccounts) || activeAccounts;
+            const preferred=window.Cashtop?.getDefaultFundAccount?.(accounts);
             accounts.forEach(a=>{if(!a.currencyId)a.currencyId=cfg.baseCurrencyId;});
             accounts.forEach(a => {
                 const opt = document.createElement('option'); const cur=window.CashtopMulti?.getCurrency?.(a.currencyId||cfg.baseCurrencyId)||cfg.base;
                 opt.value = a.id; opt.text = `${a.name} (المتاح: ${parseFloat(a.balance||0).toFixed(2)} ${cur.symbol||cur.code})`; select.appendChild(opt);
             });
             if ([...select.options].some(option => option.value === current)) select.value = current;
+            else if (preferred) select.value = String(preferred.id);
         }
 
         function updateDatalistOptions() {
@@ -1230,6 +1234,25 @@
             });
         }
 
+        function pieceQuantityIsUntracked() {
+            return String(document.getElementById('pQty')?.value || '').trim() === '#';
+        }
+
+        function updateSupplierLockForUntracked() {
+            const supplier = document.getElementById('supplierSelect');
+            if (!supplier) return;
+            const isPiece = (document.getElementById('addTypeSelect')?.value || 'piece') === 'piece';
+            const hasVariants = Boolean(document.getElementById('hasVariantsToggle')?.checked);
+            const locked = isPiece && !hasVariants && pieceQuantityIsUntracked();
+            if (locked) supplier.value = 'cash';
+            supplier.disabled = locked;
+        }
+
+        function handlePieceQuantityInput() {
+            updateSupplierLockForUntracked();
+            calculatePurchaseTotals();
+        }
+
         function toggleAddType() {
             const method = document.getElementById('addTypeSelect')?.value || 'piece';
             const pieceMode = method === 'piece';
@@ -1244,6 +1267,7 @@
             if (pSale) pSale.required = pieceMode;
             if (uCost) uCost.required = !pieceMode;
             if (!pieceMode) autoFillUnitDetails();
+            updateSupplierLockForUntracked();
             calculatePurchaseTotals();
         }
 
@@ -1274,6 +1298,7 @@
             if (hasVariants && document.getElementById('variantsTableBody')?.children.length === 0) {
                 addVariantRow();
             }
+            updateSupplierLockForUntracked();
             calculatePurchaseTotals();
         }
 
@@ -1368,7 +1393,7 @@
                 if(hasVariants) {
                     document.querySelectorAll('.var-qty').forEach(inp => totalQty += parseFloat(inp.value) || 0);
                 } else {
-                    totalQty = parseFloat(document.getElementById('pQty').value) || 0;
+                    totalQty = pieceQuantityIsUntracked() ? 0 : (parseFloat(document.getElementById('pQty').value) || 0);
                 }
             } else {
                 costPerItem = parseFloat(document.getElementById('uCost').value) || 0;
@@ -1435,6 +1460,7 @@
             let piecesPerUnit = Math.max(1, Number(selectedChainTemplate[selectedChainTemplate.length - 1]?.factorToBase || 1));
 
             const hasVariants = Boolean(document.getElementById('hasVariantsToggle')?.checked);
+            const untrackedStock = type === 'piece' && !hasVariants && pieceQuantityIsUntracked();
             const variantsArray = [];
             let inputQty = 0;
 
@@ -1462,7 +1488,7 @@
                 }
             } else {
                 const qtyControl = type === 'piece' ? document.getElementById('pQty') : document.getElementById('uQty');
-                inputQty = Math.max(0, Number(qtyControl?.value || 0));
+                inputQty = untrackedStock ? 0 : Math.max(0, Number(qtyControl?.value || 0));
             }
 
             let cost = 0, pricePiece = 0, priceUnit = 0, unitBarcode = '', barcode = '';
@@ -1473,7 +1499,7 @@
                 priceUnit = pricePiece * piecesPerUnit;
                 barcode = String(document.getElementById('pBarcode')?.value || '').trim();
                 if (!barcode) barcode = crypto.randomUUID ? `BC_${crypto.randomUUID()}` : `BC_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-                totalLineCost = inputQty * cost;
+                totalLineCost = untrackedStock ? 0 : inputQty * cost;
             } else {
                 const unitCost = Math.max(0, Number(document.getElementById('uCost')?.value || 0));
                 const unitSale = Math.max(0, Number(document.getElementById('pSaleUnit')?.value || 0));
@@ -1506,7 +1532,7 @@
                 unitBarcode = topBarcode || unitBarcode;
             }
 
-            const stockPieces = type === 'piece' ? inputQty : inputQty * piecesPerUnit;
+            const stockPieces = untrackedStock ? 0 : (type === 'piece' ? inputQty : inputQty * piecesPerUnit);
             const destinationStoreId = String(document.getElementById('purchaseWarehouseSelect')?.value || 'shop');
             const destinationStoreName = destinationStoreId === 'shop'
                 ? 'المحل / المخزون الرئيسي'
@@ -1515,7 +1541,7 @@
                 id, name: prodName, barcode, pieceBarcode, unitBarcode, stockPieces, inputQty,
                 cost, pricePiece, priceUnit, unitId: unitId === 'none' ? null : unitId,
                 unitName, pieceName, piecesPerUnit, addType: type, unitChain, unitPrices,
-                hasVariants, variants: variantsArray, totalLineCost,
+                hasVariants, variants: variantsArray, untrackedStock, totalLineCost,
                 destinationStoreId, destinationStoreName,
                 expiryDate: String(document.getElementById('pExpiryDate')?.value || ''),
                 batchNumber: String(document.getElementById('pBatchNumber')?.value || '').trim(),
@@ -1549,6 +1575,7 @@
                     addVariantRow();
                 }
                 
+                updateSupplierLockForUntracked();
                 calculatePurchaseTotals();
                 showToast('تم إضافة المنتج للقائمة', 'success');
                 document.getElementById('pNameInput').focus();
@@ -1564,7 +1591,7 @@
                     <tr>
                         <td><strong>${p.name}</strong></td>
                         <td><span class="badge-unit">${unitLabel}</span></td>
-                        <td>${p.inputQty}</td>
+                        <td>${p.untrackedStock === true ? '—' : p.inputQty}</td>
                         <td><span class="badge-unit">${p.destinationStoreName || 'المحل / المخزون الرئيسي'}</span></td>
                         <td>${p.expiryDate || '-'}</td>
                         <td style="color:#00a65a; font-weight:bold;">${moneyDisplay(p.totalLineCost)} ${productBaseSymbol()}</td>
@@ -1605,7 +1632,7 @@
                 document.getElementById('pBarcode').value = prod.barcode || '';
                 document.getElementById('pCost').value = prod.cost || 0;
                 document.getElementById('pSalePiece').value = prod.pricePiece || 0;
-                document.getElementById('pQty').value = prod.inputQty || 0;
+                document.getElementById('pQty').value = prod.untrackedStock === true ? '#' : (prod.inputQty || 0);
             } else {
                 document.getElementById('pUnitBarcodeInput').value = prod.unitBarcode || '';
                 document.getElementById('pBarcodeInUnit').value = prod.barcode || '';
@@ -1628,6 +1655,7 @@
 
             stagedProducts.splice(index, 1);
             renderStagedTable();
+            updateSupplierLockForUntracked();
             calculatePurchaseTotals();
             showToast("تم سحب بيانات المنتج لأعلى، يمكنك التعديل وإعادة الإدراج", "success");
         }
@@ -1826,18 +1854,20 @@
                     ...product,
                     inventoryLotId: product.inventoryLotId || (crypto.randomUUID ? `LOT_${crypto.randomUUID()}` : `LOT_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`)
                 }));
-                const suppliedProductNames = invoiceItems
+                const purchaseInvoiceItems = invoiceItems.filter(item => item.untrackedStock !== true);
+                const hasPurchaseItems = purchaseInvoiceItems.length > 0;
+                const suppliedProductNames = purchaseInvoiceItems
                     .map(item => String(item?.name || item?.productName || '').trim())
                     .filter(Boolean)
                     .join('، ');
-                const totalInvoiceCost = invoiceItems.reduce((sum, product) => sum + Math.max(0, Number(product.totalLineCost || 0)), 0);
+                const totalInvoiceCost = purchaseInvoiceItems.reduce((sum, product) => sum + Math.max(0, Number(product.totalLineCost || 0)), 0);
                 const discount = Math.max(0, Number(document.getElementById('invoiceDiscountInput')?.value || 0));
                 const netBeforeTax = Math.max(0, totalInvoiceCost - discount);
                 const purchaseTaxInfo = window.Cashtop?.calculateTax?.(netBeforeTax, 'purchase') || { tax: 0, total: netBeforeTax };
                 const purchaseTax = Number(purchaseTaxInfo.tax || 0);
                 const finalInvoiceTotal = Math.max(0, Number(purchaseTaxInfo.total ?? netBeforeTax));
                 const cfg=productPurchaseCurrencyConfig(), currencyId=cfg.enabled?productPurchaseCurrencyId():cfg.baseCurrencyId;
-                const paidNative = Math.max(0, Number(document.getElementById('paidAmountInput')?.value || 0));
+                const paidNative = hasPurchaseItems ? Math.max(0, Number(document.getElementById('paidAmountInput')?.value || 0)) : 0;
                 const paidAmount = window.CashtopMulti?.toBase?.(paidNative,currencyId) ?? paidNative;
                 if (paidAmount > finalInvoiceTotal + 0.0001) {
                     showToast('المبلغ المدفوع أكبر من إجمالي الفاتورة', 'error');
@@ -1855,7 +1885,7 @@
                 if (!Array.isArray(nextFunds.accounts)) nextFunds.accounts = [];
                 if (!Array.isArray(nextFunds.accountLogs)) nextFunds.accountLogs = [];
 
-                if (!isEditMode) {
+                if (!isEditMode && hasPurchaseItems) {
                     if (paidAmount > 0) {
                         const account = nextFunds.accounts.find(item => String(item?.id) === accountId);
                         if (!account) {
@@ -1907,7 +1937,22 @@
 
                     nextInvoices.push({
                         id: purchaseId,
-                        date: new Date().toISOString(), supplierId, supplierName, accountId, items: invoiceItems,
+                        date: new Date().toISOString(), supplierId, supplierName, accountId, items: purchaseInvoiceItems.map(item => ({
+                            productId: item.id,
+                            name: item.name,
+                            quantityPieces: Number(item.stockPieces || 0),
+                            purchaseCost: Number(item.cost || 0),
+                            selectedUnitId: item.addType === 'unit' ? (item.unitId || '') : 'piece',
+                            selectedUnitName: item.addType === 'unit' ? (item.unitName || 'وحدة') : (item.pieceName || 'قطعة'),
+                            purchaseQuantity: Number(item.inputQty || 0),
+                            purchaseUnitFactor: item.addType === 'unit' ? Number(item.piecesPerUnit || 1) : 1,
+                            purchaseUnitCost: item.addType === 'unit' ? Number(item.cost || 0) * Number(item.piecesPerUnit || 1) : Number(item.cost || 0),
+                            unitChain: Array.isArray(item.unitChain) ? item.unitChain : [],
+                            warehouseId: item.destinationStoreId || 'shop',
+                            warehouseName: item.destinationStoreName || 'المحل / المخزون الرئيسي',
+                            expiryDate: item.expiryDate || '', batchNumber: item.batchNumber || '', inventoryLotId: item.inventoryLotId || '',
+                            variants: Array.isArray(item.variants) ? item.variants.map(v => ({ size:v.size, color:v.color, barcode:v.barcode || '', qty:Number(v.qty || 0) })) : []
+                        })),
                         subtotal: totalInvoiceCost, discount, tax: purchaseTax,
                         taxSettings: window.Cashtop?.getTaxSettings?.() || {},
                         total: finalInvoiceTotal, paid: paidAmount, paidNative, currencyId, currencyName:(window.CashtopMulti?.getCurrency?.(currencyId)||cfg.base).name, currencySymbol:(window.CashtopMulti?.getCurrency?.(currencyId)||cfg.base).symbol || (window.CashtopMulti?.getCurrency?.(currencyId)||cfg.base).code, exchangeRatePer100Base:Number((window.CashtopMulti?.getCurrency?.(currencyId)||cfg.base).ratePer100Base||100), debt
@@ -1918,21 +1963,21 @@
 
                 // تجهيز جميع القيم أولاً ثم حفظها؛ وعند أي خطأ تعاد القيم السابقة.
                 localStorage.setItem('cashtop_products', JSON.stringify(nextProducts));
-                if (!isEditMode) {
+                if (!isEditMode && hasPurchaseItems) {
                     localStorage.setItem('cashtop_purchase_invoices', JSON.stringify(nextInvoices));
                     localStorage.setItem('cashtop_funds_db', JSON.stringify(nextFunds));
                     localStorage.setItem('cashtop_suppliers', JSON.stringify(nextSuppliers));
                 }
 
                 productsData = nextProducts;
-                if (!isEditMode) {
+                if (!isEditMode && hasPurchaseItems) {
                     purchaseInvoices = nextInvoices;
                     fundsData = nextFunds;
                     suppliersData = nextSuppliers;
                 }
                 stagedProducts = [];
                 renderStagedTable();
-                showToast(isEditMode ? 'تم تحديث المنتج بنجاح' : 'تم حفظ المنتجات وإصدار فاتورة المشتريات بنجاح', 'success');
+                showToast(isEditMode ? 'تم تحديث المنتج بنجاح' : (hasPurchaseItems ? 'تم حفظ المنتجات وإصدار فاتورة المشتريات بنجاح' : 'تم حفظ المنتج بنجاح'), 'success');
                 closeProductModal();
                 updateDatalistOptions();
                 loadAccountsDropdown();
@@ -2029,11 +2074,11 @@
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td><strong>${prod.name || 'بدون اسم'}</strong><br><small style="color:#777; display:inline-block; margin-top:3px;">${barcodeDisplay}</small>${variantBadge}</td>
-                    <td><span class="badge-stock">${pStock <= 0 ? (compositeInfo ? 'المخزون نفد' : 'نفد المخزون') : stockStr}</span></td>
+                    <td>${prod.untrackedStock === true ? '<span style="color:#94a3b8;">—</span>' : `<span class="badge-stock">${pStock <= 0 ? (compositeInfo ? 'المخزون نفد' : 'نفد المخزون') : stockStr}</span>`}</td>
                     <td><span class="badge-unit">${productUnitChainLabel(prod)}</span></td>
                     <td style="color: #444; font-weight:bold;">${moneyDisplay(pCost)} ${productBaseSymbol()}</td>
                     <td style="color: #00a65a; font-weight:bold;">${moneyDisplay(pPrice)} ${productBaseSymbol()}</td>
-                    <td style="color:#777; font-size:11px;">${compositeInfo ? 'غير متعدد • يُخصم من المكونات عند البيع' : (prod.hasVariants ? 'مقسم حسب المقاسات' : 'مخزون مباشر')}</td>
+                    <td style="color:#777; font-size:11px;">${prod.untrackedStock === true ? '' : (compositeInfo ? 'غير متعدد • يُخصم من المكونات عند البيع' : (prod.hasVariants ? 'مقسم حسب المقاسات' : 'مخزون مباشر'))}</td>
                     <td><div class="actions-wrapper">
                         <button class="action-btn btn-edit-act" onclick="editProduct('${prod.id}')" title="تعديل المنتج"><i class="fa-solid fa-pen-to-square"></i></button>
                         <button class="action-btn btn-delete-act" onclick="deleteProduct('${prod.id}')" title="حذف الكرت"><i class="fa-solid fa-trash-can"></i></button>
@@ -2135,7 +2180,7 @@
                 document.getElementById('pSalePieceInUnit').value = prod.pricePiece || 0;
                 renderProductUnitPriceLadder(prod);
             } else {
-                document.getElementById('pQty').value = Number(prod.stockPieces || 0);
+                document.getElementById('pQty').value = prod.untrackedStock === true ? '#' : Number(prod.stockPieces || 0);
                 document.getElementById('pCost').value = Number(prod.cost || 0);
                 document.getElementById('pSalePiece').value = Number(prod.pricePiece || prod.price || 0);
                 document.getElementById('pBarcode').value = prod.barcode || '';
@@ -2144,6 +2189,7 @@
             document.getElementById('variantsTableBody').innerHTML = '';
             (prod.variants || []).forEach(v => addVariantRow(v.size, v.color, Number(v.qty || 0), v.barcode || ''));
             toggleVariantsSection();
+            updateSupplierLockForUntracked();
             document.getElementById('multiProductToggle').checked = false;
             toggleMultiMode();
             document.getElementById('purchaseZone').classList.add('hidden');
@@ -2175,6 +2221,7 @@
             document.getElementById('invoiceDiscountInput').value = '';
             populateProductPurchaseCurrency(productPurchaseCurrencyConfig().baseCurrencyId);
             loadAccountsDropdown();
+            updateSupplierLockForUntracked();
             document.getElementById('pExpiryDate').value = '';
             document.getElementById('pBatchNumber').value = ''; 
             stagedProducts = [];

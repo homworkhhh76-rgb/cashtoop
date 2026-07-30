@@ -167,11 +167,11 @@
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
     <link rel="stylesheet" href="cashtop-core.css?v=78">
-    <script src="cashtop-core.js?v=78"></script>
+    <script src="cashtop-core.js?v=80"></script>
     <script src="multi-system.js?v=57"></script>
     <script src="turso-config.js?v=74"></script><script src="turso-rtdb.js?v=74"></script>
     <script src="accounting-engine.js"></script>
-    <script src="turso-sync.js?v=78"></script>
+    <script src="turso-sync.js?v=80"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -225,7 +225,7 @@
         <summary><i class="fa-solid fa-wallet"></i><span>الحسابات</span><i class="fa-solid fa-chevron-down ct-menu-arrow"></i></summary>
         <div class="ct-submenu">
           <a href="accounts.html">الصناديق والحسابات</a>
-          <a href="journal.html">دفتر القيود</a>
+          <a href="journal.html">دفتر الأستاذ</a>
           <a href="sands.html">سندات القبض والصرف</a>
           <a href="المصاريف.html">المصاريف</a>
           <a href="التقارير.html">التقارير</a>
@@ -380,6 +380,13 @@
                 <div class="form-group" id="accCurrencyGroup" style="display:none;">
                     <label>عملة الصندوق / الحساب</label>
                     <select id="accCurrency" class="form-control"></select>
+                </div>
+                <div class="form-group">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                        <input type="checkbox" id="accDropdownDefault" style="width:17px;height:17px;accent-color:#16a34a;">
+                        تعيين هذا الصندوق كافتراضي في القوائم المنسدلة
+                    </label>
+                    <small style="color:#64748b;">يمكن تغييره لاحقاً من نفس الصفحة، ولا يؤثر ذلك على رصيد الصندوق أو حركاته.</small>
                 </div>
                 <div class="form-group">
                     <label>ملاحظات إضافية (اختياري)</label>
@@ -689,7 +696,9 @@
         function renderTable() {
             const tbody = document.getElementById('accountsTableBody');
             const records = Array.isArray(cashtop_funds_db.accounts) ? cashtop_funds_db.accounts : [];
+            const preferredDropdownAccount = window.Cashtop?.getDefaultFundAccount?.(records);
             const createRow = item => {
+                const isDropdownPreferred = preferredDropdownAccount && String(preferredDropdownAccount.id) === String(item.id);
                 let typeBadge = '';
                 if(item.type === 'كاش') typeBadge = `<span class="badge-type-cash"><i class="fa-solid fa-money-bill-wave"></i> كاش</span>`;
                 else if(item.type === 'بنكي') typeBadge = `<span class="badge-type-bank"><i class="fa-solid fa-building-columns"></i> بنكي</span>`;
@@ -697,7 +706,7 @@
                 else typeBadge = `<span class="badge-type-other" style="background-color:#f1f5f9;color:#475569;padding:4px 10px;border-radius:4px;font-weight:600;border:1px solid #cbd5e1;"><i class="fa-solid fa-layer-group"></i> ${item.type}</span>`;
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td><span class="badge-account-name">${item.name}</span>${isAccountActive(item) ? '' : '<span style="display:inline-block;margin-right:6px;background:#f1f5f9;color:#64748b;border-radius:999px;padding:2px 7px;font-size:10px;font-weight:700;">متوقف</span>'}</td><td>${typeBadge}</td>
+                    <td><span class="badge-account-name">${item.name}</span>${isDropdownPreferred ? '<span style="display:inline-block;margin-right:6px;background:#dcfce7;color:#166534;border-radius:999px;padding:2px 7px;font-size:10px;font-weight:800;"><i class="fa-solid fa-star"></i> افتراضي</span>' : ''}${isAccountActive(item) ? '' : '<span style="display:inline-block;margin-right:6px;background:#f1f5f9;color:#64748b;border-radius:999px;padding:2px 7px;font-size:10px;font-weight:700;">متوقف</span>'}</td><td>${typeBadge}</td>
                     <td><span class="badge-balance-val">${accountMoney(item.balance, item)}</span></td>
                     <td style="white-space:normal;font-size:12px;color:#666;">${item.notes || '-'}</td>
                     <td><div class="actions-wrapper">
@@ -705,6 +714,7 @@
                         <button class="action-btn btn-pdf" title="تحميل كشف PDF فردي" onclick="exportAccountPDF(${item.id})"><i class="fa-solid fa-file-pdf"></i></button>
                         <button class="action-btn btn-excel" title="تصدير السجل إلى Excel" onclick="exportAccountExcel(${item.id})"><i class="fa-solid fa-file-excel"></i></button>
                         <button class="action-btn btn-edit" title="تعديل الحساب" onclick="editAccount(${item.id})"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button class="action-btn" style="color:${isDropdownPreferred ? '#f59e0b' : '#64748b'}" title="${isDropdownPreferred ? 'الصندوق الافتراضي حالياً' : 'تعيين كصندوق افتراضي في القوائم'}" onclick="setDropdownDefaultAccount(${item.id})"><i class="fa-${isDropdownPreferred ? 'solid' : 'regular'} fa-star"></i></button>
                         ${(item.isDefaultCash === true || item.locked === true) ? '<span title="صندوق الكاش افتراضي ولا يمكن تعطيله أو حذفه" style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;color:#16a34a;"><i class="fa-solid fa-lock"></i></span>' : `<button class="action-btn" style="color:${isAccountActive(item)?'#f59e0b':'#16a34a'}" title="${isAccountActive(item)?'إيقاف الحساب':'تفعيل الحساب'}" onclick="toggleAccountStatus(${item.id})"><i class="fa-solid ${isAccountActive(item)?'fa-pause':'fa-play'}"></i></button><button class="action-btn btn-delete" title="حذف إذا لم توجد عليه حركات" onclick="confirmDeleteAccount(${item.id})"><i class="fa-solid fa-trash-can"></i></button>`}
                     </div></td>`;
                 return tr;
@@ -755,11 +765,25 @@
             toSelect.innerHTML = `<option value="">اختر الحساب المراد التحويل إليه...</option>`;
 
             if(!cashtop_funds_db.accounts) return;
-            cashtop_funds_db.accounts.filter(isAccountActive).forEach(a => {
+            const activeAccounts = cashtop_funds_db.accounts.filter(isAccountActive);
+            const accounts = window.Cashtop?.sortFundAccountsForDropdown?.(activeAccounts) || activeAccounts;
+            accounts.forEach(a => {
                 let optHtml = `<option value="${a.id}">${a.name} [${a.type}] — ${accountMoney(a.balance, a)}</option>`;
                 fromSelect.innerHTML += optHtml;
                 toSelect.innerHTML += optHtml;
             });
+            const preferred = window.Cashtop?.getDefaultFundAccount?.(accounts);
+            if (preferred) fromSelect.value = String(preferred.id);
+        }
+
+        function setDropdownDefaultAccount(id) {
+            if (window.Cashtop?.isFinancialGroupReadOnly?.()) { showToast('المجموعة المغلقة مؤرشفة ولا يمكن تعديل إعداداتها.', 'error'); return; }
+            const target = cashtop_funds_db.accounts.find(a => String(a.id) === String(id));
+            if (!target || !isAccountActive(target)) { showToast('لا يمكن تعيين حساب متوقف كافتراضي.', 'error'); return; }
+            cashtop_funds_db.accounts.forEach(account => { account.isDropdownDefault = String(account.id) === String(target.id); });
+            localStorage.setItem('cashtop_funds_db_v4', JSON.stringify(cashtop_funds_db));
+            initLayout();
+            showToast(`تم تعيين [${target.name}] كصندوق افتراضي في القوائم المنسدلة.`, 'success');
         }
 
         /* ========================================================== */
@@ -787,6 +811,7 @@
             document.getElementById('accName').disabled = false;
             document.getElementById('accType').disabled = false;
             document.getElementById('accBalance').disabled = false;
+            document.getElementById('accDropdownDefault').checked = false;
             populateAccountCurrencySelect(getCurrencyConfig().baseCurrencyId);
             document.getElementById('accCurrency').disabled = false;
             toggleOtherType();
@@ -823,6 +848,7 @@
                 populateAccountCurrencySelect(acc.currencyId || getCurrencyConfig().baseCurrencyId);
                 document.getElementById('accCurrency').disabled = Math.abs(Number(acc.balance || 0)) > 0;
                 document.getElementById('accNotes').value = acc.notes || '';
+                document.getElementById('accDropdownDefault').checked = acc.isDropdownDefault === true;
                 
                 document.getElementById('accountModalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square"></i> تعديل بيانات الحساب المالي';
                 openModal('accountModal');
@@ -846,6 +872,7 @@
             }
             
             const notes = document.getElementById('accNotes').value.trim();
+            const makeDropdownDefault = document.getElementById('accDropdownDefault').checked === true;
 
             if (!usernameToSave) { showToast('يرجى إدخال معرف الحساب', 'error'); return; }
 
@@ -868,13 +895,16 @@
                     acc.type = finalType;
                     if (!document.getElementById('accCurrency').disabled) acc.currencyId = document.getElementById('accCurrency').value || getCurrencyConfig().baseCurrencyId;
                     acc.notes = notes;
+                    if (makeDropdownDefault) cashtop_funds_db.accounts.forEach(item => { item.isDropdownDefault = String(item.id) === String(acc.id); });
+                    else acc.isDropdownDefault = false;
                     showToast('تم تعديل بيانات الحساب بنجاح.', 'success');
                 }
             } else {
                 const balance = parseFloat(document.getElementById('accBalance').value) || 0;
                 const newId = Date.now();
                 const currencyId = getCurrencyConfig().enabled ? (document.getElementById('accCurrency').value || getCurrencyConfig().baseCurrencyId) : getCurrencyConfig().baseCurrencyId;
-                cashtop_funds_db.accounts.push({ id: newId, name: usernameToSave, type: finalType, balance: balance, currencyId, notes: notes });
+                if (makeDropdownDefault) cashtop_funds_db.accounts.forEach(item => { item.isDropdownDefault = false; });
+                cashtop_funds_db.accounts.push({ id: newId, name: usernameToSave, type: finalType, balance: balance, currencyId, notes: notes, isDropdownDefault: makeDropdownDefault });
                 cashtop_funds_db.accountLogs.push({ accountId: newId, date: new Date().toLocaleString('en-GB'), type: "إيداع", amount: balance, baseAmount: window.CashtopMulti?.toBase?.(balance, currencyId) ?? balance, currencyId, notes: "رصيد افتتاحي عند الإنشاء" });
                 showToast('تم إنشاء الصندوق وحفظه بنجاح!', 'success');
             }

@@ -45,7 +45,7 @@
   const DATA_KEYS = [
     'cashtop_products', 'cashtop_materials', 'cashtop_material_purchases', 'cashtop_customers', 'cashtop_customer_groups',
     'cashtop_suppliers', 'cashtop_supplier_movements', 'cashtop_invoices',
-    'cashtop_purchases', 'cashtop_purchase_returns', 'cashtop_expenses',
+    'cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_purchase_returns', 'cashtop_expenses',
     'cashtop_expense_types', 'cashtop_funds_db', 'cashtop_vouchers',
     'cashtop_units', 'cashtop_stores', 'cashtop_transfer_history',
     'cashtop_branches', 'cashtop_branch_transfer_history', 'cashtop_employees',
@@ -72,7 +72,7 @@
   const FINANCIAL_GROUP_SCOPED_KEYS = new Set([
     'cashtop_products', 'cashtop_materials', 'cashtop_material_purchases',
     'cashtop_customers', 'cashtop_suppliers', 'cashtop_supplier_movements',
-    'cashtop_invoices', 'cashtop_purchases', 'cashtop_purchase_returns',
+    'cashtop_invoices', 'cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_purchase_returns',
     'cashtop_expenses', 'cashtop_funds_db', 'cashtop_vouchers',
     'cashtop_transfer_history', 'cashtop_branch_transfer_history',
     'cashtop_workers', 'cashtop_sales_agents', 'cashtop_agent_movements',
@@ -81,7 +81,7 @@
     'cashtop_salary_payments', OPENING_BALANCES_KEY
   ]);
   const FINANCIAL_GROUP_RESET_KEYS = new Set([
-    'cashtop_invoices', 'cashtop_purchases', 'cashtop_purchase_returns',
+    'cashtop_invoices', 'cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_purchase_returns',
     'cashtop_expenses', 'cashtop_vouchers', 'cashtop_supplier_movements',
     'cashtop_transfer_history', 'cashtop_branch_transfer_history',
     'cashtop_journal', 'cashtop_audit_log', 'cashtop_material_purchases',
@@ -102,7 +102,7 @@
       ['shortages.view', 'عرض نواقص المخزون'], ['barcode.view', 'فتح مولد الباركود'],
       ['customers.view', 'عرض العملاء'], ['customerGroups.view', 'عرض مجموعات العملاء'],
       ['suppliers.view', 'عرض الموردين'], ['agents.view', 'عرض المناديب'],
-      ['accounts.view', 'عرض الحسابات والصناديق'], ['journal.view', 'عرض دفتر القيود'],
+      ['accounts.view', 'عرض الحسابات والصناديق'], ['journal.view', 'عرض دفتر الأستاذ'],
       ['vouchers.view', 'عرض سندات القبض والصرف'], ['expenses.view', 'عرض المصاريف'],
       ['reports.view', 'عرض التقارير'], ['financialGroups.view', 'عرض المجموعات المالية'], ['employees.view', 'عرض الموظفين'], ['workers.view', 'عرض العمال والأجور'],
       ['manufacturing.view', 'عرض إدارة التصنيع'], ['offers.view', 'عرض عروض المبيعات'], ['notifications.view', 'عرض الإشعارات'], ['settings.system', 'فتح إعدادات النظام'],
@@ -146,7 +146,7 @@
       ['finance.deleteTransactions', 'حذف وعكس الحركات المالية'], ['finance.export', 'تصدير الحسابات والحركات'],
       ['expenses.manage', 'إضافة وتعديل وحذف المصاريف وأنواعها'], ['expenses.export', 'تصدير المصاريف'],
       ['vouchers.manage', 'إضافة وتعديل وحذف السندات'], ['vouchers.export', 'طباعة وتصدير السندات'],
-      ['journal.manage', 'إدارة القيود المحاسبية'], ['journal.export', 'تصدير دفتر القيود'],
+      ['journal.manage', 'إدارة دفتر الأستاذ'], ['journal.export', 'تصدير دفتر الأستاذ'],
       ['reports.export', 'تصدير التقارير'], ['reports.send', 'إرسال التقارير عبر قنوات المشاركة'],
       ['financialGroups.switch', 'الانتقال بين المجموعات المالية'], ['financialGroups.viewClosed', 'استعراض المجموعات المغلقة'],
       ['financialGroups.create', 'إغلاق المجموعة الحالية وفتح مجموعة مالية جديدة']
@@ -1731,7 +1731,7 @@
 
   const BRANCH_SCOPED_ARRAY_KEYS = new Set([
     'cashtop_customers', 'cashtop_customer_groups', 'cashtop_suppliers', 'cashtop_supplier_movements',
-    'cashtop_invoices', 'cashtop_purchases', 'cashtop_purchase_returns', 'cashtop_expenses',
+    'cashtop_invoices', 'cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_purchase_returns', 'cashtop_expenses',
     'cashtop_expense_types', 'cashtop_vouchers', 'cashtop_stores', 'cashtop_transfer_history',
     'cashtop_workers', 'cashtop_sales_agents', 'cashtop_agent_movements', 'cashtop_journal',
     'cashtop_audit_log', 'cashtop_sales_offers', 'cashtop_manufacturing_recipes',
@@ -3464,7 +3464,7 @@
     'المشتريات.html': 'فواتير المشتريات', 'مرجع المشتريات.html': 'مرتجع المشتريات',
     'customers.html': 'العملاء', 'customer-groups.html': 'مجموعات العملاء',
     'suppliers.html': 'الموردون', 'accounts.html': 'الحسابات والصناديق', 'financial-groups.html': 'المجموعات المالية',
-    'sands.html': 'سندات القبض والصرف', 'journal.html': 'دفتر القيود المحاسبية', 'المصاريف.html': 'المصاريف',
+    'sands.html': 'سندات القبض والصرف', 'journal.html': 'دفتر الأستاذ العام', 'المصاريف.html': 'المصاريف',
     'warehouses.html': 'المخازن', 'branches.html': 'الفروع', 'units.html': 'الوحدات',
     'shortages.html': 'نواقص المخزون', 'barcode-generator.html': 'مولد الباركود',
     'المناديب.html': 'المناديب', 'الموظفين.html': 'الموظفون',
@@ -3512,7 +3512,7 @@
       ['fa-boxes-stacked','المخزون والفروع', [['products.html','المنتجات'],['materials.html','الأصناف'],['warehouses.html','المخازن'],['branches.html','الفروع'],['units.html','الوحدات'],['shortages.html','النواقص'],['barcode-generator.html','الباركود'],backupLink('inventory')]],
       ['fa-industry','التصنيع', [['ادارة التصنيع.html','إدارة التصنيع'],backupLink('manufacturing')]],
       ['fa-handshake','العملاء والعلاقات', [['customers.html','العملاء'],['customer-groups.html','مجموعات العملاء'],['المناديب.html','المناديب'],backupLink('relationships')]],
-      ['fa-calculator','المالية والمحاسبة', [['accounts.html','الصناديق والحسابات'],['financial-groups.html','المجموعات المالية'],['sands.html','سندات القبض والصرف'],['journal.html','دفتر القيود'],['المصاريف.html','المصاريف'],backupLink('finance')]],
+      ['fa-calculator','المالية والمحاسبة', [['accounts.html','الصناديق والحسابات'],['financial-groups.html','المجموعات المالية'],['sands.html','سندات القبض والصرف'],['journal.html','دفتر الأستاذ'],['المصاريف.html','المصاريف'],backupLink('finance')]],
       ['fa-users-gear','الموارد البشرية', [['الموظفين.html','الموظفون'],['العمال والاجور.html','العمال والأجور'],backupLink('hr')]],
       ['fa-chart-line','التقارير والمتابعة', [['التقارير.html','التقارير'],['notifications.html','الإشعارات'],backupLink('reports')]],
       ['fa-gears','النظام والإعدادات', [['tax-settings.html','إعدادات الضريبة'],['storage-settings.html','التخزين والأرشفة'],['استيراد وتصدير ل كل قسم.html','النسخ الاحتياطي الشامل'],['setting.html','إعدادات النظام'],['printer-settings.html','إعدادات الطابعة'],backupLink('settings')]]
@@ -4006,6 +4006,25 @@
       ? fundsOrAccounts
       : normalizeArrayValue(fundsOrAccounts?.accounts, []);
     return accounts.filter(isFundActive);
+  }
+
+  function getDefaultFundAccount(fundsOrAccounts) {
+    const accounts = activeFundAccounts(fundsOrAccounts);
+    return accounts.find(account => account?.isDropdownDefault === true)
+      || accounts.find(account => account?.isDefaultCash === true)
+      || accounts[0]
+      || null;
+  }
+
+  function sortFundAccountsForDropdown(fundsOrAccounts) {
+    const accounts = activeFundAccounts(fundsOrAccounts).slice();
+    const preferred = getDefaultFundAccount(accounts);
+    if (!preferred) return accounts;
+    return accounts.sort((a, b) => {
+      const aDefault = String(a?.id) === String(preferred.id) ? 0 : 1;
+      const bDefault = String(b?.id) === String(preferred.id) ? 0 : 1;
+      return aDefault - bDefault;
+    });
   }
 
   function getSystemSettings() {
@@ -5370,6 +5389,8 @@
     currentCustomLimits,
     isFundActive,
     activeFundAccounts,
+    getDefaultFundAccount,
+    sortFundAccountsForDropdown,
     namespaceKey,
     metaKey,
     safeJson,

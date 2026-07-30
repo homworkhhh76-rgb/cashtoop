@@ -207,11 +207,11 @@
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
     <link rel="stylesheet" href="cashtop-core.css?v=78">
-    <script src="cashtop-core.js?v=78"></script>
+    <script src="cashtop-core.js?v=80"></script>
     <script src="multi-system.js?v=57"></script>
     <script src="turso-config.js?v=74"></script><script src="turso-rtdb.js?v=74"></script>
     <script src="accounting-engine.js"></script>
-    <script src="turso-sync.js?v=78"></script>
+    <script src="turso-sync.js?v=80"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -265,7 +265,7 @@
         <summary><i class="fa-solid fa-wallet"></i><span>الحسابات</span><i class="fa-solid fa-chevron-down ct-menu-arrow"></i></summary>
         <div class="ct-submenu">
           <a href="accounts.html">الصناديق والحسابات</a>
-          <a href="journal.html">دفتر القيود</a>
+          <a href="journal.html">دفتر الأستاذ</a>
           <a href="sands.html">سندات القبض والصرف</a>
           <a href="المصاريف.html">المصاريف</a>
           <a href="التقارير.html">التقارير</a>
@@ -711,14 +711,16 @@
             if (!select) return;
             const funds = readFundsDatabase();
             const cfg = window.CashtopMulti?.getCurrencyConfig?.() || { baseCurrencyId: 'base', base: { symbol: '₪' } };
-            const accounts = window.Cashtop?.activeFundAccounts
+            const rawAccounts = window.Cashtop?.activeFundAccounts
                 ? window.Cashtop.activeFundAccounts(funds)
                 : (funds.accounts || []).filter(account => account?.disabled !== true && account?.active !== false && String(account?.status || '').toLowerCase() !== 'inactive');
+            const accounts = window.Cashtop?.sortFundAccountsForDropdown?.(rawAccounts) || rawAccounts;
+            const preferredAccount = window.Cashtop?.getDefaultFundAccount?.(accounts);
             select.innerHTML = '<option value="">اختر حساب صرف الراتب</option>' + accounts.map(account => {
                 const currency = window.CashtopMulti?.getCurrency?.(account.currencyId || cfg.baseCurrencyId, cfg) || cfg.base;
                 return `<option value="${account.id}">${account.name} — الرصيد ${Number(account.balance || 0).toFixed(3).replace(/\.?0+$/, '')} ${currency.symbol || currency.code || ''}</option>`;
             }).join('');
-            select.value = selectedAccountId || '';
+            select.value = selectedAccountId || (preferredAccount ? String(preferredAccount.id) : '');
         }
 
         function openAddModal() {

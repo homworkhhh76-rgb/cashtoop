@@ -556,11 +556,11 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       'customers.html': ['cashtop_customers', 'cashtop_customer_groups', 'cashtop_invoices', 'cashtop_vouchers'],
       'customer-groups.html': ['cashtop_customer_groups', 'cashtop_customers', 'cashtop_products'],
       'suppliers.html': ['cashtop_suppliers', 'cashtop_supplier_movements', 'cashtop_purchases'],
-      'المشتريات.html': ['cashtop_purchases', 'cashtop_products', 'cashtop_suppliers', 'cashtop_funds_db', 'cashtop_stores'],
+      'المشتريات.html': ['cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_products', 'cashtop_suppliers', 'cashtop_funds_db', 'cashtop_stores'],
       'مرجع المشتريات.html': ['cashtop_purchase_returns', 'cashtop_purchases', 'cashtop_products', 'cashtop_suppliers'],
       'المصاريف.html': ['cashtop_expenses', 'cashtop_expense_types', 'cashtop_funds_db'],
       'accounts.html': ['cashtop_funds_db', 'cashtop_vouchers', 'cashtop_transfer_history'],
-      'journal.html': ['cashtop_journal', 'cashtop_funds_db'],
+      'journal.html': ['cashtop_journal', 'cashtop_funds_db', 'cashtop_purchase_reversals'],
       'branches.html': ['cashtop_branches', 'cashtop_stores', 'cashtop_employees', 'cashtop_products'],
       'warehouses.html': ['cashtop_stores', 'cashtop_products', 'cashtop_transfer_history'],
       'units.html': ['cashtop_units', 'cashtop_products'],
@@ -577,7 +577,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       'storage-settings.html': ['cashtop_archive_index', 'cashtop_invoices', 'cashtop_transfer_history', 'cashtop_branch_transfer_history', 'cashtop_settings'],
       'setting.html': ['cashtop_company_access', 'cashtop_settings', 'cashtop_db', 'cashtop_branches', 'cashtop_employees', 'cashtop_sms_template', 'cashtop_invoice_message_template'],
       'ادارة التصنيع.html': ['cashtop_manufacturing_recipes', 'cashtop_manufacturing_orders', 'cashtop_products', 'cashtop_materials', 'cashtop_stores'],
-      'التقارير.html': ['cashtop_invoices', 'cashtop_purchases', 'cashtop_expenses', 'cashtop_products', 'cashtop_customers', 'cashtop_funds_db'],
+      'التقارير.html': ['cashtop_invoices', 'cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_expenses', 'cashtop_products', 'cashtop_customers', 'cashtop_funds_db'],
       'notifications.html': ['cashtop_notification_settings', 'cashtop_settings', 'cashtop_products', 'cashtop_customers', 'cashtop_invoices', 'cashtop_workers', 'cashtop_salary_payments', 'cashtop_funds_db']
     };
     return [...new Set([...common, ...(map[core.FILE] || [])])].filter(key => CLOUD_DATA_KEYS.includes(key));

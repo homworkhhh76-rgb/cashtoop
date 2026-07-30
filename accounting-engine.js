@@ -3,7 +3,7 @@
   if (!window.Cashtop) return;
 
   const SOURCE_KEYS = new Set([
-    'cashtop_invoices', 'cashtop_purchases', 'cashtop_purchase_returns',
+    'cashtop_invoices', 'cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_purchase_returns',
     'cashtop_expenses', 'cashtop_vouchers', 'cashtop_workers'
   ]);
 
@@ -43,6 +43,29 @@
     }, 0);
   }
 
+  function appendPurchaseJournal(journal, inv, options = {}) {
+    if (!inv || typeof inv !== 'object') return;
+    const id = text(inv.id, `PUR_${Date.now()}`);
+    const total = n(inv.total);
+    const paid = Math.min(total, n(inv.paid));
+    const debt = Math.max(0, n(inv.debt || (total - paid)));
+    const date = options.date || inv.date;
+    const supplier = text(inv.supplierName, 'مورد');
+    const cashCode = text(inv.accountId, 'ACC_CASH_MAIN');
+    const reversed = options.reversed === true;
+    const entryId = reversed ? `JE_PUR_REV_${id}_${text(options.reversalId, Date.now())}` : `JE_PUR_${id}`;
+    const sourceType = reversed ? 'purchase-reversal' : 'purchase';
+    if (!reversed) {
+      if (total) journal.push(line(entryId, sourceType, id, date, '1200', 'المخزون', total, 0, `إثبات فاتورة المشتريات ${id}`, { partyType: 'supplier', partyId: inv.supplierId || null, partyName: supplier }));
+      if (paid) journal.push(line(entryId, sourceType, id, date, cashCode, 'الصندوق / الحساب', 0, paid, `المبلغ المدفوع لفاتورة المشتريات ${id}`, { partyType: 'supplier', partyName: supplier }));
+      if (debt) journal.push(line(entryId, sourceType, id, date, '2100', 'ذمم الموردين', 0, debt, `المبلغ الآجل لفاتورة المشتريات ${id}`, { partyType: 'supplier', partyId: inv.supplierId || null, partyName: supplier }));
+      return;
+    }
+    if (paid) journal.push(line(entryId, sourceType, id, date, cashCode, 'الصندوق / الحساب', paid, 0, `عكس المبلغ المدفوع لفاتورة المشتريات ${id}`, { partyType: 'supplier', partyName: supplier }));
+    if (debt) journal.push(line(entryId, sourceType, id, date, '2100', 'ذمم الموردين', debt, 0, `عكس ذمة المورد لفاتورة المشتريات ${id}`, { partyType: 'supplier', partyId: inv.supplierId || null, partyName: supplier }));
+    if (total) journal.push(line(entryId, sourceType, id, date, '1200', 'المخزون', 0, total, `عكس مخزون فاتورة المشتريات ${id}`, { partyType: 'supplier', partyId: inv.supplierId || null, partyName: supplier }));
+  }
+
   function buildJournal() {
     const journal = [];
 
@@ -66,18 +89,15 @@
       }
     });
 
-    parse('cashtop_purchases').forEach(inv => {
-      const id = text(inv.id, `PUR_${Date.now()}`);
-      const total = n(inv.total);
-      const paid = Math.min(total, n(inv.paid));
-      const debt = Math.max(0, n(inv.debt || (total - paid)));
-      const date = inv.date;
-      const supplier = text(inv.supplierName, 'مورد');
-      const cashCode = text(inv.accountId, 'ACC_CASH_MAIN');
-      const entryId = `JE_PUR_${id}`;
-      if (total) journal.push(line(entryId, 'purchase', id, date, '1200', 'المخزون', total, 0, `إثبات فاتورة المشتريات ${id}`, { partyType: 'supplier', partyId: inv.supplierId || null, partyName: supplier }));
-      if (paid) journal.push(line(entryId, 'purchase', id, date, cashCode, 'الصندوق / الحساب', 0, paid, `المبلغ المدفوع لفاتورة المشتريات ${id}`, { partyType: 'supplier', partyName: supplier }));
-      if (debt) journal.push(line(entryId, 'purchase', id, date, '2100', 'ذمم الموردين', 0, debt, `المبلغ الآجل لفاتورة المشتريات ${id}`, { partyType: 'supplier', partyId: inv.supplierId || null, partyName: supplier }));
+    const purchases = parse('cashtop_purchases');
+    const livePurchaseIds = new Set(purchases.map(inv => String(inv?.id || '')));
+    purchases.forEach(inv => appendPurchaseJournal(journal, inv));
+
+    parse('cashtop_purchase_reversals').forEach(record => {
+      const inv = record?.originalInvoice || record?.invoice;
+      if (!inv) return;
+      if (!livePurchaseIds.has(String(inv.id || ''))) appendPurchaseJournal(journal, inv);
+      appendPurchaseJournal(journal, inv, { reversed: true, date: record.reversedAt || record.date || new Date().toISOString(), reversalId: record.id });
     });
 
     parse('cashtop_purchase_returns').forEach(ret => {

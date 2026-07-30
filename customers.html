@@ -244,11 +244,11 @@
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
     <link rel="stylesheet" href="cashtop-core.css?v=78">
-    <script src="cashtop-core.js?v=78"></script>
+    <script src="cashtop-core.js?v=80"></script>
     <script src="multi-system.js?v=57"></script>
     <script src="turso-config.js?v=74"></script><script src="turso-rtdb.js?v=74"></script>
     <script src="accounting-engine.js"></script>
-    <script src="turso-sync.js?v=78"></script>
+    <script src="turso-sync.js?v=80"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -302,7 +302,7 @@
         <summary><i class="fa-solid fa-wallet"></i><span>الحسابات</span><i class="fa-solid fa-chevron-down ct-menu-arrow"></i></summary>
         <div class="ct-submenu">
           <a href="accounts.html">الصناديق والحسابات</a>
-          <a href="journal.html">دفتر القيود</a>
+          <a href="journal.html">دفتر الأستاذ</a>
           <a href="sands.html">سندات القبض والصرف</a>
           <a href="المصاريف.html">المصاريف</a>
           <a href="التقارير.html">التقارير</a>
@@ -1024,12 +1024,13 @@
             const funds = getFundsDb();
             const cfg=customerPaymentCurrencyConfig(), cid=cfg.enabled?customerPaymentCurrencyId():cfg.baseCurrencyId;
             funds.accounts.forEach(account=>{if(!account.currencyId)account.currencyId=cfg.baseCurrencyId;});
-            const accounts = funds.accounts.filter(account => account && account.id != null && (window.Cashtop?.isFundActive ? window.Cashtop.isFundActive(account) : (account.disabled !== true && account.active !== false && String(account.status || '').toLowerCase() !== 'inactive')));
+            const rawAccounts = funds.accounts.filter(account => account && account.id != null && (window.Cashtop?.isFundActive ? window.Cashtop.isFundActive(account) : (account.disabled !== true && account.active !== false && String(account.status || '').toLowerCase() !== 'inactive')));
+            const accounts = window.Cashtop?.sortFundAccountsForDropdown?.(rawAccounts) || rawAccounts;
             select.innerHTML = accounts.length
                 ? ((accounts.length>1?`<option value="${CUSTOMER_MULTI_PAYMENT_VALUE}">دفع متعدد</option>`:'') + accounts.map(account => { const cur=window.CashtopMulti?.getCurrency?.(account.currencyId||cfg.baseCurrencyId)||cfg.base; return `<option value="${escapeHtml(String(account.id))}">${escapeHtml(String(account.name || 'صندوق بدون اسم'))} — ${numeric(account.balance).toFixed(2)} ${escapeHtml(cur.symbol||cur.code)}</option>`; }).join(''))
                 : '<option value="">لا يوجد صندوق مالي</option>';
             const preferred = accounts.find(account => String(account.id) === String(selectedId))
-                || accounts.find(account => account.isDefaultCash === true)
+                || window.Cashtop?.getDefaultFundAccount?.(accounts)
                 || accounts[0];
             if(selectedId===CUSTOMER_MULTI_PAYMENT_VALUE && customerMultiPayments.length) select.value=CUSTOMER_MULTI_PAYMENT_VALUE;
             else if (preferred) select.value = String(preferred.id);
@@ -1060,7 +1061,7 @@
             document.getElementById('paymentCustomerName').textContent = customer.name || 'عميل بدون اسم';
             document.getElementById('paymentCurrentBalance').textContent = customerBalanceLabel(customer.balance);
             document.getElementById('paymentDate').value = todayIsoDate();
-            populatePaymentAccounts(accounts.find(account => account.isDefaultCash === true)?.id || accounts[0]?.id || '');
+            populatePaymentAccounts(window.Cashtop?.getDefaultFundAccount?.(accounts)?.id || accounts[0]?.id || '');
             updatePaymentPreview();
             document.getElementById('customerPaymentModal')?.classList.add('active');
             requestAnimationFrame(() => document.getElementById('paymentAmount')?.focus({ preventScroll: true }));
