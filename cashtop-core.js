@@ -2978,7 +2978,14 @@
       });
       rawSet(txKey, JSON.stringify({ ...journal, state: 'data-written', writtenAt: Date.now() }));
       const operationIds = {};
-      entries.forEach(entry => { operationIds[entry.key] = enqueueSyncOperation(entry.key); });
+      // احفظ دلتا كل مجموعة داخل الطابور. هذا يمنع جهاز الموظف من استبدال
+      // مجموعة كاملة عند وجود تعديل متزامن من المدير أو موظف آخر.
+      entries.forEach(entry => {
+        operationIds[entry.key] = enqueueSyncOperation(entry.key, {
+          ...describeManagedChange(entry.oldValue, entry.newValue),
+          deletedDataset: false
+        });
+      });
       rawSet(txKey, JSON.stringify({ ...journal, state: 'committed', committedAt: Date.now() }));
       entries.forEach(entry => {
         try { if (options.audit !== false) appendAudit(entry.key, entry.oldValue, entry.newValue, options.action); } catch (_) {}
@@ -5548,9 +5555,25 @@
     window.addEventListener('cashtop:sync-progress', event => setSyncProgress(event.detail || {}));
     window.addEventListener('cashtop:pull-start', event => setRecordsPulling(true, event.detail || {}));
     window.addEventListener('cashtop:pull-end', event => setRecordsPulling(false, event.detail || {}));
-    window.addEventListener('cashtop:local-storage-pressure', () => {
+    // رسالة التحويل إلى IndexedDB تظهر مرة واحدة فقط على هذا الجهاز.
+    // نضع العلامة أيضاً داخل IndexedDB لأن localStorage قد يكون ممتلئاً لحظة التحويل.
+    const storagePressureNoticeLocalKey = 'cashtop_indexeddb_notice_shown_v1';
+    const storagePressureNoticeDurableKey = 'cashtop_meta::__global__::__indexeddb_notice_shown_v1__';
+    let storagePressureNoticeHandled = false;
+    const showStoragePressureNoticeOnce = async () => {
+      if (storagePressureNoticeHandled) return;
+      storagePressureNoticeHandled = true;
+      let alreadyShown = false;
+      try { alreadyShown = RAW.get.call(localStorage, storagePressureNoticeLocalKey) === '1'; } catch (_) {}
+      if (!alreadyShown) {
+        try { alreadyShown = (await readDurableLocalKey(storagePressureNoticeDurableKey)) === '1'; } catch (_) {}
+      }
+      if (alreadyShown) return;
+      try { RAW.set.call(localStorage, storagePressureNoticeLocalKey, '1'); } catch (_) {}
+      try { await persistDurableLocalKey(storagePressureNoticeDurableKey, '1'); } catch (_) {}
       showToast('تم تحويل التخزين تلقائياً إلى قاعدة IndexedDB المحلية الكبيرة للحفاظ على البيانات.', 'info', 4200);
-    });
+    };
+    window.addEventListener('cashtop:local-storage-pressure', () => { showStoragePressureNoticeOnce().catch(() => null); });
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape') closeTransientUi();
     });

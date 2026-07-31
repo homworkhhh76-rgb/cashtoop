@@ -1609,7 +1609,18 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       );
       const forceReplaceBatch = options.importSync === true;
       const remoteChanged = remoteStampBefore > 0 && knownRemoteStamp > 0 && remoteStampBefore > knownRemoteStamp;
-      const safeFastBatch = isPathProxy && !remoteChanged;
+      const remoteDatasetStamps = normalizeDatasetStamps(remoteMeta);
+      const observedDatasetStamps = usageBefore.datasetRemoteStamps && typeof usageBefore.datasetRemoteStamps === 'object'
+        ? usageBefore.datasetRemoteStamps : {};
+      const hasDatasetStampSchema = Number(remoteMeta?.datasetStampSchema || 0) === 1 && Number(usageBefore.datasetStampSchemaSeen || 0) === 1;
+      const canFastWriteDataset = key => {
+        if (!isPathProxy) return false;
+        // لا يكفي أن يكون ختم الشركة العام معروفاً: قد تكون الصفحة قد سحبت
+        // المنتجات مثلاً ولم تسحب الفواتير. نقارن ختم dataset نفسه حتى لا
+        // تمسح فاتورة موظف أو جهاز آخر عند الرفع السريع.
+        if (!hasDatasetStampSchema) return false;
+        return Number(remoteDatasetStamps[key] || 0) <= Number(observedDatasetStamps[key] || 0);
+      };
 
       let pendingProgress = 0;
       reportSyncProgress(0, pendingKeys.length, forceReplaceBatch ? 'جاري رفع النسخة الاحتياطية...' : 'جاري رفع التعديلات المجمعة...');
@@ -1628,7 +1639,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
 
           // Import/forceReplace is an intentional overwrite. Normal edits also use
           // this fast path when the one metadata probe proved the cloud unchanged.
-          if (forceReplaceBatch || pending.forceReplace === true || safeFastBatch) {
+          if (forceReplaceBatch || pending.forceReplace === true || canFastWriteDataset(key)) {
             const sourceLocalPayload = makeLocalPayload(key, 0);
             await writeDatasetLocation(location, key, token, sourceLocalPayload);
             if (markUploaded(key, sourceLocalPayload)) { uploaded += 1; uploadedKeys.push(key); }

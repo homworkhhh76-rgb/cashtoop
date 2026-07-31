@@ -285,12 +285,12 @@
     <link rel="stylesheet" href="cashtop-core.css?v=78">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="barcode-tools.js?v=20"></script>
-    <script src="cashtop-core.js?v=81"></script>
+    <script src="cashtop-core.js?v=82"></script>
     <script src="multi-system.js?v=57"></script>
     <script src="turso-config.js?v=74"></script><script src="turso-rtdb.js?v=74"></script>
     <script src="accounting-engine.js?v=81"></script>
     <script src="cashtop-printer.js?v=48"></script>
-    <script src="turso-sync.js?v=81"></script>
+    <script src="turso-sync.js?v=82"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -2203,6 +2203,10 @@
             if (window.Cashtop?.atomicSetItems) window.Cashtop.atomicSetItems(invoiceChanges, { label: 'save-sales-invoice' });
             else Object.entries(invoiceChanges).forEach(([key, value]) => localStorage.setItem(key, JSON.stringify(value)));
             productsData = verifyPersistedStock(productsData, basketItems);
+            // فاتورة الموظف يجب أن تصل للمدير بسرعة؛ لا ننتظر مؤقت المزامنة العام.
+            if (navigator.onLine !== false) {
+                window.dispatchEvent(new CustomEvent('cashtop:sync-now', { detail: { reason: 'sales-invoice-saved', invoiceId: invoiceObj.id } }));
+            }
 
             if(printStatus) {
                 showToast('تم حفظ الفاتورة محلياً، وجاري تجهيز الطباعة.', 'success');
@@ -2252,6 +2256,44 @@
             }
         }
 
+        function resolveCurrentInvoiceSeller(session = window.Cashtop?.getSession?.() || {}) {
+            const role = String(session.role || '').toLowerCase();
+            const username = String(session.username || '').trim();
+            const uid = String(session.uid || '').trim();
+            let name = String(session.displayName || session.name || username || '').trim();
+            let id = uid;
+
+            if (role === 'employee' || uid.startsWith('EMP_')) {
+                const employees = readArray('cashtop_employees');
+                const employee = employees.find(item => String(item.id || '') === uid) ||
+                    employees.find(item => String(item.username || '').toLowerCase() === username.toLowerCase());
+                if (employee) {
+                    name = String(employee.name || employee.displayName || employee.username || name).trim();
+                    id = String(employee.id || id || '').trim();
+                }
+            } else if (['manager','branch-admin','branch_manager'].includes(role)) {
+                const branches = readArray('cashtop_branches');
+                const branch = branches.find(item => String(item.id || '') === String(session.branchRecordId || session.branchId || '')) ||
+                    branches.find(item => String(item.managerUsername || '').toLowerCase() === username.toLowerCase());
+                if (branch) {
+                    name = String(branch.manager || branch.managerName || branch.managerUsername || name).trim();
+                    id = String(branch.id || id || '').trim();
+                }
+            } else if (['admin','owner','company-admin'].includes(role)) {
+                const access = readObject('cashtop_company_access', {});
+                const manager = access.manager && typeof access.manager === 'object' ? access.manager : {};
+                name = String(session.displayName || manager.displayName || manager.name || manager.username || username || 'مدير النظام').trim();
+                id = String(session.uid || manager.id || id || '').trim();
+            }
+
+            return {
+                id: id || username || 'USER',
+                username: username || '',
+                name: name || 'مستخدم',
+                role: role || 'user'
+            };
+        }
+
         function buildInvoiceData(status) {
             const customerName = document.getElementById('customerNameInput').value.trim() || 'عميل نقدي';
             const customerPhone = document.getElementById('customerPhoneInput').value.trim();
@@ -2263,6 +2305,16 @@
             const isMultiPayment = document.getElementById('accountSelectBox')?.value === CASHIER_MULTI_PAYMENT_VALUE && cashierMultiPayments.length > 0;
             const currency = window.CashtopMulti?.getCurrency?.(totals.currencyId) || getCashierCurrencyConfig().base;
             const session = window.Cashtop?.getSession?.() || {};
+            const currentSeller = resolveCurrentInvoiceSeller(session);
+            const originalSellerName = String(
+                editingOriginalInvoice?.sellerName || editingOriginalInvoice?.employeeName || editingOriginalInvoice?.user || ''
+            ).trim();
+            const seller = originalSellerName ? {
+                id: editingOriginalInvoice?.sellerId || editingOriginalInvoice?.employeeId || '',
+                username: editingOriginalInvoice?.sellerUsername || '',
+                name: originalSellerName,
+                role: editingOriginalInvoice?.sellerRole || editingOriginalInvoice?.userRole || 'user'
+            } : currentSeller;
 
             return {
                 id: currentlyEditingInvoiceId || `INV_${Date.now()}`,
@@ -2276,7 +2328,18 @@
                 accountName: isMultiPayment ? 'دفع متعدد' : (account?.name || 'صندوق الكاش الرئيسي'),
                 paymentMethod: isMultiPayment ? 'دفع متعدد' : (account?.name || 'كاش'),
                 payments: isMultiPayment ? cashierMultiPayments.map(item => ({...item})) : [],
-                user: session.displayName || session.username || 'مستخدم',
+                // نخزن هوية البائع صراحةً حتى تظهر الفاتورة باسم الموظف/المدير
+                // على الأجهزة الأخرى وحتى بعد تعديل الفاتورة من مدير مختلف.
+                user: seller.name,
+                employeeName: seller.name,
+                sellerName: seller.name,
+                sellerId: seller.id || null,
+                employeeId: seller.role === 'employee' ? (seller.id || null) : null,
+                sellerUsername: seller.username || '',
+                sellerRole: seller.role || 'user',
+                userRole: seller.role || 'user',
+                createdBy: seller.name,
+                lastEditedBy: currentSeller.name,
                 branchId: stockBranchId || null,
                 branchName: getBranchDisplayName(stockBranchId),
                 items: basketItems.map(item => ({...item})),

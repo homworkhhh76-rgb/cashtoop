@@ -1,20 +1,63 @@
 'use strict';
 
 const DB_KEY = 'cashtop_invoices';
-let allInvoices = readArray(DB_KEY);
 let pendingDeleteInvoiceId = null;
 let deleteInvoiceInProgress = false;
 let batchInvoiceSequence = 0;
 let batchInvoiceSaveInProgress = false;
 const invoiceSession = window.Cashtop?.getSession?.() || {};
-const invoiceSessionBranchId = invoiceSession.branchId || null;
+const invoiceSessionBranchId = invoiceSession.dataBranchId || invoiceSession.branchId || null;
 
-function visibleInvoices() {
-  if (!invoiceSessionBranchId) return allInvoices;
-  return allInvoices.filter(invoice => String(invoice.branchId || '') === String(invoiceSessionBranchId));
+function invoiceSessionRole() {
+  return String((window.Cashtop?.getSession?.() || invoiceSession).role || '').toLowerCase();
 }
 
-window.addEventListener('load', () => { initializeInvoiceReportFilters(); refreshInvoices(); });
+function canViewAllCompanyInvoices() {
+  return ['admin', 'owner', 'company-admin'].includes(invoiceSessionRole());
+}
+
+function readCompanyInvoiceDataset() {
+  if (canViewAllCompanyInvoices() && window.Cashtop?.getRawCompanyDataset) {
+    try {
+      const raw = window.Cashtop.getRawCompanyDataset(DB_KEY);
+      const parsed = JSON.parse(raw || '[]');
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed && typeof parsed === 'object') return Object.values(parsed);
+    } catch (error) {
+      console.warn('[CASH TOP 2] company invoice view fallback:', error);
+    }
+  }
+  return readArray(DB_KEY);
+}
+
+let allInvoices = readCompanyInvoiceDataset();
+
+function visibleInvoices() {
+  if (canViewAllCompanyInvoices() || !invoiceSessionBranchId) return allInvoices;
+  return allInvoices.filter(invoice => String(invoice.branchId || 'MAIN') === String(invoiceSessionBranchId || 'MAIN'));
+}
+
+function invoiceSellerName(invoice) {
+  return String(
+    invoice?.sellerName || invoice?.employeeName || invoice?.cashierName || invoice?.createdBy || invoice?.user || 'مدير النظام'
+  ).trim() || 'مدير النظام';
+}
+
+function invoiceIsInCurrentBranch(invoice) {
+  if (!invoiceSessionBranchId) return true;
+  return String(invoice?.branchId || 'MAIN') === String(invoiceSessionBranchId || 'MAIN');
+}
+
+window.addEventListener('load', () => {
+  initializeInvoiceReportFilters();
+  refreshInvoices();
+  // لا نؤخر فتح الصفحة: نعرض كاش الفواتير فوراً، ثم نجلب مجموعة الفواتير
+  // وحدها في الخلفية حتى تظهر مبيعات الموظفين من الأجهزة الأخرى بسرعة.
+  setTimeout(() => {
+    window.CashtopTurso?.pullDatasetKeys?.([DB_KEY], { concurrency: 1, silentProgress: true })
+      ?.catch?.(() => null);
+  }, 80);
+});
 window.addEventListener('storage', event => {
   if (event.key && event.key.includes(DB_KEY)) refreshInvoices();
 });
@@ -99,7 +142,7 @@ function currencyLabel() {
 }
 
 function refreshInvoices() {
-  allInvoices = readArray(DB_KEY);
+  allInvoices = readCompanyInvoiceDataset();
   const displayInvoices = visibleInvoices();
   if (document.getElementById('invoicePeriodFilter')) filterTable();
   else renderTable(displayInvoices);
@@ -212,7 +255,7 @@ function invoiceReportRowsHtml(invoices) {
     <td>${escapeHtml(invoice.customer || 'عميل نقدي')}</td>
     <td>${escapeHtml(invoice.paymentMethod || 'كاش')}</td>
     <td>${escapeHtml(invoiceStatusText(invoice))}</td>
-    <td>${escapeHtml(invoice.user || 'مدير النظام')}</td>
+    <td>${escapeHtml(invoiceSellerName(invoice))}</td>
     <td>${money(invoice.total)}</td>
     <td>${money(invoice.paid)}</td>
     <td>${money(invoice.debt)}</td>
@@ -333,18 +376,18 @@ function renderTable(data) {
         <td>${escapeHtml(invoice.customer || 'عميل نقدي')}</td>
         <td>${paymentIcon} ${escapeHtml(invoice.paymentMethod || 'كاش')}</td>
         <td>${statusBadge}</td>
-        <td><span class="badge-user"><i class="fa-solid fa-user"></i> ${escapeHtml(invoice.user || 'مدير النظام')}</span></td>
+        <td><span class="badge-user"><i class="fa-solid fa-user"></i> ${escapeHtml(invoiceSellerName(invoice))}</span></td>
         <td><strong>${money(invoice.total)}</strong></td>
         <td>${money(invoice.paid)}</td>
         <td style="${debt > 0 ? 'color:#dd4b39;font-weight:bold;' : ''}">${money(debt)}</td>
         <td dir="ltr">${new Date(invoice.date).toLocaleDateString('en-GB')}</td>
         <td><div class="actions-wrapper">
           <button class="action-btn btn-view" title="عرض" onclick="openInvoiceModal('${safeId}')"><i class="fa-solid fa-eye"></i></button>
-          ${can('sales.edit') ? `<button class="action-btn btn-edit" title="تعديل" onclick="editInvoice('${safeId}')"><i class="fa-solid fa-pen-to-square"></i></button>` : ''}
+          ${can('sales.edit') && invoiceIsInCurrentBranch(invoice) ? `<button class="action-btn btn-edit" title="تعديل" onclick="editInvoice('${safeId}')"><i class="fa-solid fa-pen-to-square"></i></button>` : ''}
           ${can('sales.print') ? `<button class="action-btn btn-print" title="طباعة حرارية" onclick="printInvoice('${safeId}')"><i class="fa-solid fa-print"></i></button>` : ''}
           ${can('sales.image') ? `<button class="action-btn btn-image" title="تنزيل صورة الفاتورة" onclick="downloadAsImage('${safeId}')"><i class="fa-solid fa-image"></i></button>` : ''}
           <button class="action-btn btn-whatsapp" title="إرسال الفاتورة عبر واتساب" onclick="sendInvoiceMessage('${safeId}','whatsapp')"><i class="fa-brands fa-whatsapp"></i></button><button class="action-btn btn-sms" title="إرسال الفاتورة عبر SMS" onclick="sendInvoiceMessage('${safeId}','sms')"><i class="fa-solid fa-comment-sms"></i></button>
-          ${can('sales.delete') ? `<button class="action-btn btn-delete" title="حذف وعكس الحركة" onclick="deleteInvoice('${safeId}')"><i class="fa-solid fa-trash-can"></i></button>` : ''}
+          ${can('sales.delete') && invoiceIsInCurrentBranch(invoice) ? `<button class="action-btn btn-delete" title="حذف وعكس الحركة" onclick="deleteInvoice('${safeId}')"><i class="fa-solid fa-trash-can"></i></button>` : ''}
         </div></td>`;
       return row;
     };
@@ -373,7 +416,7 @@ function filterTable() {
   const fallback = () => source.filter(invoice =>
     String(invoice.id).toLowerCase().includes(value) ||
     String(invoice.customer || '').toLowerCase().includes(value) ||
-    String(invoice.user || '').toLowerCase().includes(value)
+    invoiceSellerName(invoice).toLowerCase().includes(value)
   );
   if (source.length < 800 || !window.Cashtop?.runWorkerTask) {
     renderTable(fallback());
@@ -411,7 +454,7 @@ function invoiceMarkup(invoice, options = {}) {
       <strong>فاتورة مبيعات #${escapeHtml(String(invoice.id).replace('INV_', ''))}</strong>
     </div>
     <div class="receipt-meta">
-      <div class="receipt-meta-pair"><span><strong>التاريخ:</strong> <span dir="ltr">${new Date(invoice.date).toLocaleString('en-GB')}</span></span><span><strong>الكاشير:</strong> ${escapeHtml(invoice.user || 'مدير النظام')}</span></div>
+      <div class="receipt-meta-pair"><span><strong>التاريخ:</strong> <span dir="ltr">${new Date(invoice.date).toLocaleString('en-GB')}</span></span><span><strong>الكاشير:</strong> ${escapeHtml(invoiceSellerName(invoice))}</span></div>
       <div class="receipt-meta-pair"><span><strong>العميل:</strong> ${escapeHtml(invoice.customer || 'عميل نقدي')}</span><span><strong>الدفع:</strong> ${escapeHtml(invoice.paymentMethod || 'كاش')} ${invoice.accountName ? `· ${escapeHtml(invoice.accountName)}` : ''}</span></div>
       ${invoice.branchName ? `<div><strong>الفرع:</strong> ${escapeHtml(invoice.branchName)}</div>` : ''}
     </div>
