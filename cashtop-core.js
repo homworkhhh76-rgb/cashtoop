@@ -44,7 +44,7 @@
 
   const DATA_KEYS = [
     'cashtop_products', 'cashtop_materials', 'cashtop_material_purchases', 'cashtop_customers', 'cashtop_customer_groups',
-    'cashtop_suppliers', 'cashtop_supplier_movements', 'cashtop_invoices', 'cashtop_sales_reversals',
+    'cashtop_suppliers', 'cashtop_supplier_movements', 'cashtop_invoices', 'cashtop_sales_reversals', 'cashtop_sales_returns',
     'cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_purchase_returns', 'cashtop_expenses',
     'cashtop_expense_types', 'cashtop_funds_db', 'cashtop_vouchers',
     'cashtop_units', 'cashtop_stores', 'cashtop_transfer_history',
@@ -72,7 +72,7 @@
   const FINANCIAL_GROUP_SCOPED_KEYS = new Set([
     'cashtop_products', 'cashtop_materials', 'cashtop_material_purchases',
     'cashtop_customers', 'cashtop_suppliers', 'cashtop_supplier_movements',
-    'cashtop_invoices', 'cashtop_sales_reversals', 'cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_purchase_returns',
+    'cashtop_invoices', 'cashtop_sales_reversals', 'cashtop_sales_returns', 'cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_purchase_returns',
     'cashtop_expenses', 'cashtop_funds_db', 'cashtop_vouchers',
     'cashtop_transfer_history', 'cashtop_branch_transfer_history',
     'cashtop_workers', 'cashtop_sales_agents', 'cashtop_agent_movements',
@@ -81,7 +81,7 @@
     'cashtop_salary_payments', OPENING_BALANCES_KEY
   ]);
   const FINANCIAL_GROUP_RESET_KEYS = new Set([
-    'cashtop_invoices', 'cashtop_sales_reversals', 'cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_purchase_returns',
+    'cashtop_invoices', 'cashtop_sales_reversals', 'cashtop_sales_returns', 'cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_purchase_returns',
     'cashtop_expenses', 'cashtop_vouchers', 'cashtop_supplier_movements',
     'cashtop_transfer_history', 'cashtop_branch_transfer_history',
     'cashtop_journal', 'cashtop_journal_reversal_archive', 'cashtop_audit_log', 'cashtop_material_purchases',
@@ -169,7 +169,7 @@
   ];
 
   const PAGE_PERMISSIONS = {
-    'لوحة التحكم.html': 'dashboard.view', 'cashier.html': 'pos.access', 'invoices.html': 'sales.invoices.view',
+    'لوحة التحكم.html': 'dashboard.view', 'cashier.html': 'pos.access', 'invoices.html': 'sales.invoices.view', 'مرجع المبيعات.html': 'sales.invoices.view',
     'المشتريات.html': 'purchases.view', 'مرجع المشتريات.html': 'purchaseReturns.view', 'products.html': 'products.view', 'materials.html': 'materials.view',
     'warehouses.html': 'warehouses.view', 'branches.html': ['branches.view', 'inventory.transfer'], 'units.html': 'units.view',
     'shortages.html': 'shortages.view', 'barcode-generator.html': 'barcode.view', 'customers.html': 'customers.view',
@@ -207,6 +207,9 @@
     'cashier.html': {
       holdInvoice: 'sales.hold', openSuspendedModal: 'sales.hold', clearBasket: 'sales.clearCart',
       applyDiscountValue: 'sales.discount', handleQuickProductSubmit: 'products.create'
+    },
+    'مرجع المبيعات.html': {
+      saveReturnInvoice: ['sales.create','sales.edit'], editSalesReturn: 'sales.edit', openDeleteSalesReturn: 'sales.delete', confirmDeleteSalesReturn: 'sales.delete'
     },
     'customer-groups.html': {
       openGroupModal: 'customerGroups.manage', saveGroupData: 'customerGroups.manage',
@@ -1183,10 +1186,18 @@
     return queueAfterLastReset(Array.isArray(queue) ? queue : []);
   }
 
+  function requestBackgroundSyncIfPossible() {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.ready.then(registration => {
+      try { return registration.sync?.register?.('cashtop-flush-pending'); } catch (_) { return null; }
+    }).catch(() => null);
+  }
+
   function writeSyncQueue(queue) {
     const normalized = queueAfterLastReset(Array.isArray(queue) ? queue : []).slice(-1200);
     rawSet(syncQueueKey(), JSON.stringify(normalized));
     syncQueueBackupChain = syncQueueBackupChain.then(() => backupSyncQueue(normalized)).catch(() => false);
+    if (normalized.length) requestBackgroundSyncIfPossible();
     updateSyncBadge();
     window.dispatchEvent(new CustomEvent('cashtop:sync-queue-changed', { detail: { count: normalized.length } }));
     return normalized;
@@ -1731,7 +1742,7 @@
 
   const BRANCH_SCOPED_ARRAY_KEYS = new Set([
     'cashtop_customers', 'cashtop_customer_groups', 'cashtop_suppliers', 'cashtop_supplier_movements',
-    'cashtop_invoices', 'cashtop_sales_reversals', 'cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_purchase_returns', 'cashtop_expenses',
+    'cashtop_invoices', 'cashtop_sales_reversals', 'cashtop_sales_returns', 'cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_purchase_returns', 'cashtop_expenses',
     'cashtop_expense_types', 'cashtop_vouchers', 'cashtop_stores', 'cashtop_transfer_history',
     'cashtop_workers', 'cashtop_sales_agents', 'cashtop_agent_movements', 'cashtop_journal', 'cashtop_journal_reversal_archive',
     'cashtop_audit_log', 'cashtop_sales_offers', 'cashtop_manufacturing_recipes',
@@ -1980,13 +1991,36 @@
     return JSON.stringify([...keep, ...incoming]);
   }
 
+  function fundLogIdentity(log, index = 0) {
+    const branch = recordBranchId(log);
+    const accountId = String(log?.accountId || '');
+    const type = String(log?.type || '');
+    const amount = Number(log?.amount || 0).toFixed(8);
+    const baseAmount = Number(log?.baseAmount ?? log?.amount ?? 0).toFixed(8);
+    const currencyId = String(log?.currencyId || '');
+    const date = String(log?.date || '');
+    const notes = String(log?.notes || '').trim();
+    const sourceType = String(log?.sourceType || log?.refType || '');
+    const sourceId = String(log?.sourceId || log?.refId || '');
+    if (/رصيد\s*افتتاحي/.test(notes)) return `opening:${branch}:${accountId}:${date}:${type}:${amount}:${baseAmount}:${currencyId}:${notes}`;
+    if (log?.id != null && String(log.id).trim()) return `id:${String(log.id).trim()}`;
+    if (sourceType && sourceId) return `ref:${branch}:${accountId}:${sourceType}:${sourceId}:${date}:${type}:${amount}:${baseAmount}:${currencyId}:${notes}`;
+    return `legacy:${branch}:${accountId}:${date}:${type}:${amount}:${baseAmount}:${currencyId}:${notes || index}`;
+  }
+
+  function dedupeFundLogs(logs) {
+    const unique = new Map();
+    normalizeArrayValue(logs || [], []).forEach((log, index) => unique.set(fundLogIdentity(log, index), log));
+    return [...unique.values()];
+  }
+
   function projectFunds(rawValue) {
     const branch = branchIdFromSession();
     const db = safeJson(rawValue, {}) || {};
     return JSON.stringify({
       ...db,
       accounts: normalizeArrayValue(db.accounts || [], []).filter(item => sameBranch(item, branch)),
-      accountLogs: normalizeArrayValue(db.accountLogs || [], []).filter(item => sameBranch(item, branch))
+      accountLogs: dedupeFundLogs(normalizeArrayValue(db.accountLogs || [], []).filter(item => sameBranch(item, branch)))
     });
   }
 
@@ -1996,19 +2030,19 @@
     const incoming = safeJson(incomingValue, {}) || {};
     const oldLogs = normalizeArrayValue(old.accountLogs || [], []);
     const incomingLogs = normalizeArrayValue(incoming.accountLogs || [], []).map(item => ({ ...deepClone(item), branchId: branch }));
-    const accountLogs = [
+    const accountLogs = dedupeFundLogs([
       ...oldLogs.filter(item => !sameBranch(item, branch)),
       ...incomingLogs
-    ];
+    ]);
     const oldBranchAccounts = normalizeArrayValue(old.accounts || [], []).filter(item => sameBranch(item, branch));
     const incomingBranchAccounts = normalizeArrayValue(incoming.accounts || [], []).map(item => ({ ...deepClone(item), branchId: branch }));
     const incomingIds = new Set(incomingBranchAccounts.map(account => String(account?.id)));
-    // سلامة الصناديق: أي حساب له رصيد/حركة سابقة لا يمكن إسقاطه من قاعدة البيانات.
-    // إذا حاولت واجهة/استيراد حذفه، نحوله إلى متوقف ونحتفظ به وبسجله.
+    // الحساب ذو الرصيد الصفري يمكن حذفه بعد حذف/عكس العمليات المرتبطة به، حتى لو
+    // بقي له أثر تاريخي قديم. نحمي فقط صندوق النظام المقفول أو الحساب الذي ما زال
+    // يحمل رصيداً فعلياً، كي لا تعيد المزامنة صندوقاً صفرياً حذفه المستخدم عمداً.
     const protectedMissingAccounts = oldBranchAccounts.filter(account => {
       if (incomingIds.has(String(account?.id))) return false;
-      const hasLog = oldLogs.some(log => String(log?.accountId) === String(account?.id) && (Math.abs(Number(log?.amount || log?.baseAmount || 0)) > 0.0000001 || log?.sourceType || log?.refType));
-      return account?.isDefaultCash === true || account?.locked === true || account?.hasFinancialHistory === true || Math.abs(Number(account?.balance || 0)) > 0.0000001 || hasLog;
+      return account?.isDefaultCash === true || account?.locked === true || Math.abs(Number(account?.balance || 0)) > 0.0001;
     }).map(account => {
       const locked = account?.isDefaultCash === true || account?.locked === true;
       return { ...deepClone(account), active:locked ? true : false, disabled:locked ? false : true, status:locked ? 'active' : 'inactive', disabledAt:locked ? '' : (account?.disabledAt || new Date().toISOString()), hasFinancialHistory:true, branchId:branch };
@@ -2859,6 +2893,7 @@
   }
 
   const GENERIC_JOURNAL_REVERSAL_TYPES = new Map([
+    ['cashtop_sales_returns', new Set(['sales-return'])],
     ['cashtop_purchase_returns', new Set(['purchase-return'])],
     ['cashtop_expenses', new Set(['expense'])],
     ['cashtop_vouchers', new Set(['voucher'])]
@@ -2881,20 +2916,33 @@
     const archiveNs = namespaceKey(archiveKey);
     const oldArchiveRaw = rawGet(archiveNs);
     const archive = normalizeArrayValue(safeJson(oldArchiveRaw, []), []);
-    const existing = new Set(archive.map(row => `${row?.sourceDataset || ''}::${row?.sourceId || ''}`));
+    const archiveRevisionKey = row => {
+      const revision = String(row?.sourceRevision || row?.originalRecord?.updatedAt || row?.originalRecord?.date || row?.deletedAt || 'legacy');
+      return `${row?.sourceDataset || ''}::${row?.sourceId || ''}::${revision}`;
+    };
+    const existing = new Set(archive.map(archiveRevisionKey));
     let changed = false;
 
     candidates.forEach(entry => {
       const allowedTypes = GENERIC_JOURNAL_REVERSAL_TYPES.get(entry.key);
       const oldRows = normalizeArrayValue(safeJson(entry.oldValue, []), []);
       const newRows = normalizeArrayValue(safeJson(entry.newValue, []), []);
-      const newIds = new Set(newRows.map(managedRecordId).filter(Boolean));
+      const newById = new Map(newRows.map(record => [managedRecordId(record), record]).filter(([id]) => id));
       oldRows.forEach(record => {
         const sourceId = managedRecordId(record);
-        if (!sourceId || newIds.has(sourceId)) return;
-        const dedupeKey = `${entry.key}::${sourceId}`;
+        if (!sourceId) return;
+        const nextRecord = newById.get(sourceId) || null;
+        const wasDeleted = !nextRecord;
+        // مرتجع المبيعات يحتاج قيد عكس عند التعديل كذلك، وليس عند الحذف فقط.
+        // نقارن النسخة المحفوظة القديمة بالجديدة قبل الكتابة كي يبقى سجل التدقيق
+        // عبارة عن: القيد القديم + عكسه + القيد المعدل الجديد.
+        const wasEdited = entry.key === 'cashtop_sales_returns' && !!nextRecord
+          && JSON.stringify(record) !== JSON.stringify(nextRecord);
+        if (!wasDeleted && !wasEdited) return;
+        const sourceRevision = String(record?.updatedAt || record?.date || record?.createdAt || 'legacy');
+        const dedupeKey = `${entry.key}::${sourceId}::${sourceRevision}`;
         if (existing.has(dedupeKey)) return;
-        const lines = journal.filter(line => String(line?.sourceId || '') === sourceId && allowedTypes.has(String(line?.sourceType || '')));
+        const lines = journal.filter(line => String(line?.sourceId || '') === sourceId && line?.archivedOriginal !== true && allowedTypes.has(String(line?.sourceType || '')));
         if (!lines.length) return;
         const deletedAt = new Date().toISOString();
         archive.push({
@@ -2902,6 +2950,8 @@
           branchId: recordBranchId(record),
           sourceDataset: entry.key,
           sourceId,
+          sourceRevision,
+          reversalReason: wasEdited ? 'edit' : 'delete',
           deletedAt,
           originalRecord: deepClone(record),
           originalLines: deepClone(lines)
@@ -3568,7 +3618,7 @@
   const PAGE_TITLES = {
     'لوحة التحكم.html': 'لوحة التحكم', 'cashier.html': 'نقطة البيع والكاشير',
     'products.html': 'المنتجات والمخزون', 'materials.html': 'الأصناف الخام', 'invoices.html': 'فواتير المبيعات',
-    'المشتريات.html': 'فواتير المشتريات', 'مرجع المشتريات.html': 'مرتجع المشتريات',
+    'المشتريات.html': 'فواتير المشتريات', 'مرجع المبيعات.html': 'مرتجع المبيعات', 'مرجع المشتريات.html': 'مرتجع المشتريات',
     'customers.html': 'العملاء', 'customer-groups.html': 'مجموعات العملاء',
     'suppliers.html': 'الموردون', 'accounts.html': 'الحسابات والصناديق', 'financial-groups.html': 'المجموعات المالية',
     'sands.html': 'سندات القبض والصرف', 'journal.html': 'دفتر الأستاذ العام', 'المصاريف.html': 'المصاريف',
@@ -3614,7 +3664,7 @@
     const backupLink = (section) => [`استيراد وتصدير ل كل قسم.html?section=${encodeURIComponent(section)}`, 'نسخ واستيراد القسم'];
     const groups = [
       ['fa-house','الرئيسية', [['لوحة التحكم.html','لوحة التحكم']]],
-      ['fa-cash-register','المبيعات', [['cashier.html','الكاشير'],['invoices.html','فواتير المبيعات'],['sales-offers.html','عروض المبيعات'],backupLink('sales')]],
+      ['fa-cash-register','المبيعات', [['cashier.html','الكاشير'],['invoices.html','فواتير المبيعات'],['مرجع المبيعات.html','مرتجع المبيعات'],['sales-offers.html','عروض المبيعات'],backupLink('sales')]],
       ['fa-cart-shopping','المشتريات', [['المشتريات.html','فواتير المشتريات'],['مرجع المشتريات.html','مرتجع المشتريات'],['suppliers.html','الموردون'],backupLink('purchases')]],
       ['fa-boxes-stacked','المخزون والفروع', [['products.html','المنتجات'],['materials.html','الأصناف'],['warehouses.html','المخازن'],['branches.html','الفروع'],['units.html','الوحدات'],['shortages.html','النواقص'],['barcode-generator.html','الباركود'],backupLink('inventory')]],
       ['fa-industry','التصنيع', [['ادارة التصنيع.html','إدارة التصنيع'],backupLink('manufacturing')]],
@@ -5239,10 +5289,10 @@
   }
 
   function selectBoundaryPosition(popover, select) {
-    if (!popover || !select || window.matchMedia('(max-width: 600px)').matches) return;
+    if (!popover || !select) return;
     const rect = select.getBoundingClientRect();
     const margin = 8;
-    const width = Math.max(220, Math.min(420, rect.width));
+    const width = Math.max(160, Math.min(Math.min(420, window.innerWidth - 16), rect.width));
     popover.style.width = `${width}px`;
     const measuredHeight = Math.min(popover.scrollHeight, 420);
     let top = rect.bottom + 6;
@@ -5538,10 +5588,22 @@
     }
 
     window.addEventListener('online', () => { updateNetworkStatus(); syncNow({ manual: false }); });
+    window.addEventListener('pageshow', () => { if (getSyncQueue().length) syncNow({ manual: false }); }, { passive: true });
     window.addEventListener('cashtop:sync-queue-changed', updateSyncBadge);
     window.addEventListener('cashtop:sync-queue-restored', () => { syncNow({ manual: false }); });
     window.addEventListener('cashtop:data-changed', event => { if (event.detail?.key === 'cashtop_settings') applySystemBranding(); });
     window.addEventListener('offline', updateNetworkStatus);
+    const flushDurableOfflineState = () => { preservePendingSyncState().catch(() => null); };
+    // ثبّت طابور المزامنة والبيانات المتغيرة في IndexedDB قبل تجميد/إغلاق الصفحة.
+    // هذا مهم خصوصاً على Android عندما يغلق النظام الـ WebView فجأة.
+    window.addEventListener('pagehide', flushDurableOfflineState, { passive: true });
+    window.addEventListener('beforeunload', flushDurableOfflineState, { passive: true });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') flushDurableOfflineState();
+    }, { passive: true });
+    navigator.serviceWorker?.addEventListener?.('message', event => {
+      if (event.data?.type === 'CASHTOP_BACKGROUND_SYNC' && getSyncQueue().length) syncNow({ manual: false });
+    });
     durableReadyPromise = restoreDurableCompanyData().catch(() => ({ restored: 0 }));
     window.Cashtop.localReady = durableReadyPromise;
     durableReadyPromise

@@ -199,6 +199,7 @@
         }
     </style>
 <link href="manifest.webmanifest" rel="manifest"/><link href="icon-512.png" rel="icon"/><meta content="#605ca8" name="theme-color"/><script src="cashtop-download-fix.js"></script>
+<script id="ct-offline-first-bootstrap-v85">(function(){if(!('serviceWorker'in navigator)||!(location.protocol==='https:'||location.hostname==='localhost'))return;navigator.serviceWorker.register('service-worker.js',{scope:'./',updateViaCache:'none'}).then(function(){return navigator.serviceWorker.ready}).then(function(r){r.active&&r.active.postMessage({type:'VERIFY_CACHE'});}).catch(function(){});})();</script>
 </head>
 <body>
 <div class="login-container">
@@ -246,5 +247,5 @@
 
 </div>
 
-<script src="turso-config.js?v=74"></script><script src="turso-rtdb.js?v=74"></script><script src="login.js?v=81"></script></body>
+<script src="turso-config.js?v=85"></script><script src="turso-rtdb.js?v=85"></script><script src="login.js?v=81"></script></body>
 </html>

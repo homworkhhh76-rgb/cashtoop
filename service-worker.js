@@ -1,8 +1,8 @@
 'use strict';
 
-const CACHE_VERSION = 'v82-employee-invoices-cache-first';
+const CACHE_VERSION = 'v85-offline-first-durable-sync-autocomplete';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
-const REMOTE_STATIC_CACHE = `cash-top-2-remote-static-${CACHE_VERSION}`;
+const REMOTE_STATIC_CACHE = 'cash-top-2-remote-static-persistent-v1';
 
 /*
  * حزمة التطبيق المحلية كاملة. التثبيت لا ينجح إلا بعد حفظ كل ملف محلي،
@@ -71,7 +71,8 @@ const LOCAL_ASSETS = [
   './الموظفين.html',
   './صفحة تسجيل الدخول.html',
   './لوحة التحكم.html',
-  './مرجع المشتريات.html'
+  './مرجع المشتريات.html',
+  './مرجع المبيعات.html'
 ];
 
 /* مكتبات العرض فقط. فشل أي مكتبة خارجية لا يمنع تثبيت التطبيق المحلي. */
@@ -189,16 +190,25 @@ async function installCompleteLocalShell() {
   const stored = new Set();
   for (const result of results) {
     if (result.status !== 'fulfilled') continue;
-    await cache.put(result.value.request, result.value.response);
+    await cache.put(canonicalLocalRequest(result.value.request), result.value.response);
     stored.add(new URL(result.value.request.url).pathname);
   }
 
-  // لا نمنع تحديث عامل الخدمة بسبب صفحة اختيارية واحدة، لكن الملفات الحرجة
-  // يجب أن تكون موجودة حتى لا يُفعّل إصدار ناقص يعلّق الدخول والتنقل.
-  const critical = ['./index.html', './صفحة تسجيل الدخول.html', './لوحة التحكم.html', './cashtop-core.js', './cashtop-core.css', './turso-config.js', './turso-rtdb.js', './turso-sync.js', './offline.html'];
+  // خزّن جذر التطبيق صراحةً أيضاً. بعض نسخ Android/PWA تفتح start_url على
+  // المجلد نفسه بدلاً من index.html؛ وجود هذا المفتاح يمنع شاشة المتصفح
+  // "لا يوجد اتصال" بعد إعادة تشغيل الجهاز.
+  const indexUrl = new URL('./index.html', self.registration.scope).href;
+  const indexResponse = await cache.match(indexUrl, { ignoreSearch: true });
+  if (indexResponse) {
+    const rootRequest = new Request(new URL('./', self.registration.scope).href, { method: 'GET', credentials: 'same-origin' });
+    await cache.put(rootRequest, indexResponse.clone());
+  }
+
+  // لا نفشل تثبيت عامل الخدمة كله بسبب ملف واحد تعذر تنزيله لحظياً. إذا كان
+  // هناك إصدار أقدم مكتمل فسيبقى كاحتياط، والملف الناقص يُملأ عند أول فرصة.
+  const critical = ['./index.html', './صفحة تسجيل الدخول.html', './لوحة التحكم.html', './cashtop-core.js', './cashtop-core.css', './turso-config.js', './turso-rtdb.js', './turso-sync.js'];
   const missingCritical = critical.filter(asset => !stored.has(new URL(asset, self.registration.scope).pathname));
-  if (missingCritical.length) throw new Error(`حزمة الكاش الحرجة ناقصة: ${missingCritical.join(', ')}`);
-  return { stored: stored.size, total: LOCAL_ASSETS.length };
+  return { stored: stored.size, total: LOCAL_ASSETS.length, complete: stored.size === LOCAL_ASSETS.length, missingCritical };
 }
 
 async function cacheRemoteCssDependencies(cache, styleUrl, response) {
@@ -295,18 +305,23 @@ self.addEventListener('install', event => {
 
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
-    const keep = new Set([APP_CACHE, REMOTE_STATIC_CACHE, NOTIFICATION_META_CACHE]);
-    const names = await caches.keys();
-    await Promise.all(names.filter(name => !keep.has(name)).map(name => caches.delete(name)));
     if (self.registration.navigationPreload) {
       try { await self.registration.navigationPreload.disable(); } catch (_) {}
     }
     await self.clients.claim();
-    // تأكد من اكتمال كاش التطبيق ثم سخّن مكتبات العرض في الخلفية.
-    await ensureLocalShell().catch(() => null);
-    warmRemoteStaticAssetsOnce().catch(() => null);
+
+    // أكمل حزمة الصفحات أولاً، وسخّن المكتبات الخارجية قبل تنظيف الكاش القديم.
+    // لو تعذر ملف في هذا الإصدار نحافظ على كاش الإصدار السابق ليكون fallback.
+    const shell = await ensureLocalShell().catch(() => ({ complete: false, missing: ['unknown'] }));
+    await warmRemoteStaticAssetsOnce().catch(() => null);
+    if (shell?.complete === true) {
+      const keep = new Set([APP_CACHE, REMOTE_STATIC_CACHE, NOTIFICATION_META_CACHE]);
+      const names = await caches.keys();
+      await Promise.all(names.filter(name => !keep.has(name)).map(name => caches.delete(name)));
+    }
+
     const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    clients.forEach(client => client.postMessage({ type: 'CASHTOP_CACHE_READY', cache: APP_CACHE, version: CACHE_VERSION }));
+    clients.forEach(client => client.postMessage({ type: 'CASHTOP_CACHE_READY', cache: APP_CACHE, version: CACHE_VERSION, complete: shell?.complete === true }));
   })());
 });
 
@@ -334,25 +349,55 @@ async function refreshLocalCache(request, cache) {
   }
 }
 
+async function matchCachedLocal(request) {
+  const cacheKey = canonicalLocalRequest(request);
+  // caches.match يبحث في كاش الإصدار الحالي وأي إصدار قديم احتياطي أبقيناه
+  // أثناء تحديث ناقص، وبالتالي لا تنقطع الصفحات عند تحديث التطبيق بدون شبكة.
+  let cached = await caches.match(cacheKey, { ignoreSearch: true });
+  if (cached) return cached;
+
+  if (request.mode !== 'navigate' && request.destination !== 'document') return null;
+  const requestedUrl = new URL(request.url);
+  const scopeUrl = new URL(self.registration.scope);
+  if (!requestedUrl.href.startsWith(scopeUrl.href)) return null;
+
+  // طابق اسم الصفحة بعد فك الترميز أيضاً، للتعامل مع الروابط العربية أو روابط
+  // تمت مشاركتها بترميز مختلف (%D9...).
+  let requestedPath = requestedUrl.pathname;
+  try { requestedPath = decodeURIComponent(requestedPath); } catch (_) {}
+  requestedPath = requestedPath.replace(/\/+$/, '');
+  for (const asset of LOCAL_ASSETS) {
+    if (!/\.html$/i.test(asset)) continue;
+    const assetUrl = new URL(asset, self.registration.scope);
+    let assetPath = assetUrl.pathname;
+    try { assetPath = decodeURIComponent(assetPath); } catch (_) {}
+    if (assetPath.replace(/\/+$/, '') !== requestedPath) continue;
+    cached = await caches.match(assetUrl.href, { ignoreSearch: true });
+    if (cached) return cached;
+  }
+
+  return null;
+}
+
 async function localCacheFirst(request) {
   const cache = await caches.open(APP_CACHE);
-  const cacheKey = canonicalLocalRequest(request);
-  const cached = await cache.match(cacheKey);
+  const cached = await matchCachedLocal(request);
 
-  // اعرض النسخة المحلية فوراً حتى مع وجود الإنترنت.
+  // Cache First حقيقي: حتى بوجود الإنترنت لا ننتظر الشبكة لفتح الصفحة.
   if (cached) return cached;
 
   const response = await refreshLocalCache(request, cache);
   if (response) return response;
   if (request.mode === 'navigate') {
-    const scopeUrl = new URL(self.registration.scope);
-    const requestedUrl = new URL(request.url);
-    const isScopeRoot = requestedUrl.pathname.replace(/\/+$/, '') === scopeUrl.pathname.replace(/\/+$/, '');
-    if (isScopeRoot) {
-      const index = await cache.match(new URL('./index.html', self.registration.scope).href, { ignoreSearch: true });
-      if (index) return index;
-    }
-    return (await cache.match(new URL('./offline.html', self.registration.scope).href, { ignoreSearch: true })) || Response.error();
+    // أي تنقل داخل نطاق التطبيق يعود إلى shell محلي بدلاً من شاشة Chromium
+    // "لا يتوفر اتصال بالإنترنت". الصفحة المقصودة تكون عادةً مخزنة أعلاه؛
+    // وهذا fallback أخير للروابط الجذرية/المعدلة يفتح التطبيق نفسه.
+    const index = await caches.match(new URL('./index.html', self.registration.scope).href, { ignoreSearch: true });
+    if (index) return index;
+    const login = await caches.match(new URL('./صفحة تسجيل الدخول.html', self.registration.scope).href, { ignoreSearch: true });
+    if (login) return login;
+    const offline = await caches.match(new URL('./offline.html', self.registration.scope).href, { ignoreSearch: true });
+    return offline || Response.error();
   }
   return Response.error();
 }
@@ -366,7 +411,7 @@ async function refreshCachedLocalInBackground(request) {
 
 async function remoteStaticCacheFirst(request) {
   const cache = await caches.open(REMOTE_STATIC_CACHE);
-  const cached = await cache.match(request, { ignoreSearch: false });
+  const cached = await cache.match(request, { ignoreSearch: false }) || await caches.match(request, { ignoreSearch: false });
   if (cached) return cached;
   try {
     const response = await fetch(request);
@@ -498,6 +543,17 @@ self.addEventListener('message', event => {
   }
 });
 
+
+// Background Sync لا يرسل البيانات بنفسه؛ بل يوقظ أي نافذة مفتوحة لتشغيل
+// محرك المزامنة المعتاد. أما عند إغلاق التطبيق بالكامل فتبقى العمليات في
+// IndexedDB وتُرفع فور أول فتح/عودة اتصال، بدون فقدانها.
+self.addEventListener('sync', event => {
+  if (event.tag !== 'cashtop-flush-pending') return;
+  event.waitUntil((async () => {
+    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    clients.forEach(client => client.postMessage({ type: 'CASHTOP_BACKGROUND_SYNC' }));
+  })());
+});
 
 self.addEventListener('notificationclick', event => {
   event.notification?.close?.();

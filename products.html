@@ -261,12 +261,12 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=78">
-    <script src="cashtop-core.js?v=82"></script>
-    <script src="multi-system.js?v=57"></script>
-    <script src="turso-config.js?v=74"></script><script src="turso-rtdb.js?v=74"></script>
-    <script src="accounting-engine.js?v=81"></script>
-    <script src="turso-sync.js?v=82"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=85">
+    <script src="cashtop-core.js?v=85"></script>
+    <script src="multi-system.js?v=85"></script>
+    <script src="turso-config.js?v=85"></script><script src="turso-rtdb.js?v=85"></script>
+    <script src="accounting-engine.js?v=85"></script>
+    <script src="turso-sync.js?v=85"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -301,6 +301,7 @@
         <summary><i class="fa-solid fa-file-invoice-dollar"></i><span>الفواتير</span><i class="fa-solid fa-chevron-down ct-menu-arrow"></i></summary>
         <div class="ct-submenu">
           <a href="invoices.html">فواتير المبيعات</a>
+          <a href="مرجع المبيعات.html">مرتجع المبيعات</a>
           <a href="المشتريات.html">المشتريات</a>
           <a href="مرجع المشتريات.html">مرتجع المشتريات</a>
         </div>
@@ -611,7 +612,7 @@
                     <div class="form-row">
                         <div class="form-group">
                             <select class="form-control" id="supplierSelect">
-                                <option value="cash">مشتريات نقدية عابرة (بدون مورد)</option>
+                                <option value="cash">بدون مورد (مشتريات عابرة)</option>
                             </select>
                             <label for="supplierSelect">المورد</label>
                         </div>
@@ -928,6 +929,7 @@
         if (!Array.isArray(fundsData.accountLogs)) fundsData.accountLogs = [];
         // لا ننشئ صندوقاً وهمياً أو رصيداً افتراضياً هنا؛ Cashtop Core يدير الصندوق الحقيقي للفرع.
         let purchaseInvoices = readArray('cashtop_purchase_invoices');
+        const PRODUCT_NO_ACCOUNT_VALUE = '__NO_ACCOUNT__';
         let stagedProducts = [];
         let transferCart = [];
         let transferHistory = readArray('cashtop_transfer_history');
@@ -1006,7 +1008,7 @@
             const select = document.getElementById('supplierSelect');
             if (!select) return;
             const current = select.value;
-            select.innerHTML = '<option value="cash">مشتريات نقدية عابرة (بدون مورد)</option>';
+            select.innerHTML = '<option value="cash">بدون مورد (مشتريات عابرة)</option>';
             suppliersData.filter(s => s && typeof s === 'object').forEach(s => {
                 const opt = document.createElement('option');
                 opt.value = s.id;
@@ -1026,7 +1028,7 @@
             if (!select) return;
             const current = select.value;
             const cfg=productPurchaseCurrencyConfig(),cid=cfg.enabled?productPurchaseCurrencyId():cfg.baseCurrencyId;
-            select.innerHTML = '';
+            select.innerHTML = `<option value="${PRODUCT_NO_ACCOUNT_VALUE}">بدون صندوق (لا حركة نقدية)</option>`;
             const activeAccounts=(Array.isArray(fundsData.accounts) ? fundsData.accounts : []).filter(a => a && typeof a === 'object' && (window.Cashtop?.isFundActive ? window.Cashtop.isFundActive(a) : (a.disabled !== true && a.active !== false && String(a.status || '').toLowerCase() !== 'inactive')));
             const accounts=window.Cashtop?.sortFundAccountsForDropdown?.(activeAccounts) || activeAccounts;
             const preferred=window.Cashtop?.getDefaultFundAccount?.(accounts);
@@ -1037,6 +1039,7 @@
             });
             if ([...select.options].some(option => option.value === current)) select.value = current;
             else if (preferred) select.value = String(preferred.id);
+            else select.value = PRODUCT_NO_ACCOUNT_VALUE;
         }
 
         function updateDatalistOptions() {
@@ -1876,7 +1879,9 @@
                 }
                 const debt = Math.max(0, finalInvoiceTotal - paidAmount);
                 const supplierId = String(document.getElementById('supplierSelect')?.value || 'cash');
-                const accountId = String(document.getElementById('accountSelect')?.value || '');
+                const accountId = String(document.getElementById('accountSelect')?.value || PRODUCT_NO_ACCOUNT_VALUE);
+                const withoutSupplier = supplierId === 'cash' || !supplierId;
+                const withoutAccount = accountId === PRODUCT_NO_ACCOUNT_VALUE || !accountId;
 
                 const nextProducts = cloneData(productsData);
                 const nextFunds = cloneData(fundsData);
@@ -1886,7 +1891,7 @@
                 if (!Array.isArray(nextFunds.accountLogs)) nextFunds.accountLogs = [];
 
                 if (!isEditMode && hasPurchaseItems) {
-                    if (paidAmount > 0) {
+                    if (paidAmount > 0 && !withoutAccount) {
                         const account = nextFunds.accounts.find(item => String(item?.id) === accountId);
                         if (!account) {
                             showToast('الصندوق المختار غير موجود', 'error');
@@ -1910,12 +1915,8 @@
                         });
                     }
 
-                    let supplierName = 'شراء نقدي';
-                    if (debt > 0 && supplierId === 'cash') {
-                        showToast('اختر مورداً لتسجيل المبلغ المتبقي كدين', 'error');
-                        return;
-                    }
-                    if (supplierId !== 'cash') {
+                    let supplierName = 'بدون مورد';
+                    if (!withoutSupplier) {
                         const supplier = nextSuppliers.find(item => String(item?.id) === supplierId);
                         if (!supplier) {
                             showToast('المورد المختار غير موجود', 'error');
@@ -1937,7 +1938,13 @@
 
                     nextInvoices.push({
                         id: purchaseId,
-                        date: new Date().toISOString(), supplierId, supplierName, accountId, items: purchaseInvoiceItems.map(item => ({
+                        date: new Date().toISOString(),
+                        supplierId: withoutSupplier ? null : supplierId, supplierName, withoutSupplier,
+                        accountId: withoutAccount ? null : accountId,
+                        accountName: withoutAccount ? 'بدون صندوق' : (nextFunds.accounts.find(item => String(item?.id) === accountId)?.name || ''),
+                        paymentMethod: withoutAccount ? 'دفع خارجي بدون صندوق' : (nextFunds.accounts.find(item => String(item?.id) === accountId)?.name || ''),
+                        withoutAccount,
+                        items: purchaseInvoiceItems.map(item => ({
                             productId: item.id,
                             name: item.name,
                             quantityPieces: Number(item.stockPieces || 0),

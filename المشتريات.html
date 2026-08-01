@@ -219,12 +219,12 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=78">
-    <script src="cashtop-core.js?v=82"></script>
-    <script src="multi-system.js?v=57"></script>
-    <script src="turso-config.js?v=74"></script><script src="turso-rtdb.js?v=74"></script>
-    <script src="accounting-engine.js?v=81"></script>
-    <script src="turso-sync.js?v=82"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=85">
+    <script src="cashtop-core.js?v=85"></script>
+    <script src="multi-system.js?v=85"></script>
+    <script src="turso-config.js?v=85"></script><script src="turso-rtdb.js?v=85"></script>
+    <script src="accounting-engine.js?v=85"></script>
+    <script src="turso-sync.js?v=85"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -259,6 +259,7 @@
         <summary><i class="fa-solid fa-file-invoice-dollar"></i><span>الفواتير</span><i class="fa-solid fa-chevron-down ct-menu-arrow"></i></summary>
         <div class="ct-submenu">
           <a href="invoices.html">فواتير المبيعات</a>
+          <a href="مرجع المبيعات.html">مرتجع المبيعات</a>
           <a href="المشتريات.html">المشتريات</a>
           <a href="مرجع المشتريات.html">مرتجع المشتريات</a>
         </div>
@@ -365,13 +366,13 @@
                             <label>رقم الفاتورة</label>
                         </div>
                         <div class="form-group">
-                            <select class="form-control" id="supplierSelect" required></select>
+                            <select class="form-control" id="supplierSelect"></select>
                             <label>المورد (يمكن اختيار بدون مورد)</label>
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <select class="form-control" id="accountSelect" required onchange="handlePurchaseAccountChange()"></select>
+                            <select class="form-control" id="accountSelect" onchange="handlePurchaseAccountChange()"></select>
                             <label>صندوق السداد (يمكن اختيار بدون صندوق)</label>
                         </div>
                         <div class="form-group">
@@ -725,9 +726,12 @@
         }
 
         function populateSelects() {
-            let supHtml = `<option value="">-- حدد المورد --</option><option value="${PURCHASE_NO_SUPPLIER_VALUE}">بدون مورد (مشتريات عابرة)</option>`;
+            const supplierSelect = document.getElementById('supplierSelect');
+            const previousSupplier = supplierSelect?.value || PURCHASE_NO_SUPPLIER_VALUE;
+            let supHtml = `<option value="${PURCHASE_NO_SUPPLIER_VALUE}">بدون مورد (مشتريات عابرة)</option>`;
             suppliersDB.filter(s => s.active !== false).forEach(s => { supHtml += `<option value="${s.id}">${s.name}</option>`; });
-            document.getElementById('supplierSelect').innerHTML = supHtml;
+            supplierSelect.innerHTML = supHtml;
+            supplierSelect.value = [...supplierSelect.options].some(option => String(option.value) === String(previousSupplier)) ? previousSupplier : PURCHASE_NO_SUPPLIER_VALUE;
 
             normalizePurchaseAccountCurrencies();
             const cfg = purchaseCurrencyConfig();
@@ -737,7 +741,7 @@
             const activeAccounts = (fundsDB.accounts || []).filter(acc => window.Cashtop?.isFundActive ? window.Cashtop.isFundActive(acc) : (acc?.disabled !== true && acc?.active !== false && String(acc?.status || '').toLowerCase() !== 'inactive'));
             const accounts = window.Cashtop?.sortFundAccountsForDropdown?.(activeAccounts) || activeAccounts;
             const preferredAccount = window.Cashtop?.getDefaultFundAccount?.(accounts);
-            let fundHtml = `<option value="">-- حدد الصندوق المالي الدَافع --</option><option value="${PURCHASE_NO_ACCOUNT_VALUE}">بدون صندوق (لا حركة نقدية)</option>`;
+            let fundHtml = `<option value="${PURCHASE_NO_ACCOUNT_VALUE}">بدون صندوق (لا حركة نقدية)</option>`;
             if (accounts.length > 1) fundHtml += `<option value="${PURCHASE_MULTI_PAYMENT_VALUE}">دفع متعدد</option>`;
             accounts.forEach(f => {
                 const cur = window.CashtopMulti?.getCurrency?.(f.currencyId || cfg.baseCurrencyId) || cfg.base;
@@ -748,6 +752,7 @@
             else if (previous === PURCHASE_NO_ACCOUNT_VALUE) accountSelect.value = PURCHASE_NO_ACCOUNT_VALUE;
             else if (accounts.some(acc => String(acc.id) === String(previous))) accountSelect.value = previous;
             else if (preferredAccount) accountSelect.value = String(preferredAccount.id);
+            else accountSelect.value = PURCHASE_NO_ACCOUNT_VALUE;
         }
 
         function openPurchaseMultiPayment() {
@@ -1510,8 +1515,8 @@
         /* ========================================================== */
         function savePurchaseInvoice() {
             if (!window.Cashtop?.can?.('purchases.create')) { showToast('لا تملك صلاحية إنشاء فاتورة مشتريات', 'error'); return; }
-            const supplierId = document.getElementById('supplierSelect').value;
-            const accountId = document.getElementById('accountSelect').value;
+            const supplierId = document.getElementById('supplierSelect').value || PURCHASE_NO_SUPPLIER_VALUE;
+            const accountId = document.getElementById('accountSelect').value || PURCHASE_NO_ACCOUNT_VALUE;
             const invDate = document.getElementById('invDateBox').value;
             const invId = document.getElementById('invIdBox').value;
             const cfg = purchaseCurrencyConfig();
@@ -1523,7 +1528,6 @@
             const isMultiPayment = accountId === PURCHASE_MULTI_PAYMENT_VALUE;
             const isNoSupplier = supplierId === PURCHASE_NO_SUPPLIER_VALUE;
             const isNoAccount = accountId === PURCHASE_NO_ACCOUNT_VALUE;
-            if (!supplierId || !accountId) { showToast("حدد المورد أو اختر بدون مورد، وحدد الصندوق أو اختر بدون صندوق.", "error"); return; }
             if (cards.length === 0) { showToast("الفاتورة فارغة، لا يوجد بضاعة مضافة!", "error"); return; }
 
             let supplier = isNoSupplier ? null : suppliersDB.find(s => String(s.id) === String(supplierId));

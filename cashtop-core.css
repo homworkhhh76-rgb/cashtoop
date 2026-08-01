@@ -671,47 +671,63 @@ html.ct-app-page body {
 }
 .ct-quick-button:hover { background: var(--ct-primary); color: #fff; border-color: var(--ct-primary); }
 
-/* The original page keeps its own closed-select appearance.
-   Only the opened option list is replaced with a modern custom popover. */
-.ct-original-page select,
-select[data-ct-enhanced="true"] { cursor: pointer; }
+/* R84: one dropdown language across the whole app, matching the sales-return UI. */
+.ct-original-page select:not([multiple]),
+select[data-ct-enhanced="true"]:not([multiple]) {
+  cursor: pointer !important;
+  background-color: #fff !important;
+  color: #334155 !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  min-height: 40px;
+  box-shadow: none !important;
+  outline: none !important;
+  transition: border-color .15s ease, box-shadow .15s ease !important;
+}
+.ct-original-page select:not([multiple]):hover,
+.ct-original-page select:not([multiple]):focus,
+select[data-ct-enhanced="true"]:not([multiple]):hover,
+select[data-ct-enhanced="true"]:not([multiple]):focus {
+  border-color: #f87171 !important;
+  box-shadow: 0 0 0 2px rgba(248,113,113,.12) !important;
+}
 
 .ct-select-backdrop {
-  position: fixed; inset: 0; z-index: 5990; background: transparent;
+  position: fixed; inset: 0; z-index: 8990; background: transparent;
 }
 .ct-select-popover {
-  position: fixed; z-index: 6000; width: min(420px, calc(100vw - 20px));
+  position: fixed; z-index: 9000; width: min(420px, calc(100vw - 20px));
   max-height: min(420px, calc(100dvh - 24px)); overflow: hidden;
-  background: #fff; border: 1px solid #dfe3ea; border-radius: 12px;
-  box-shadow: 0 18px 48px rgba(15,23,42,.2); direction: rtl;
+  background: #fff; border: 1px solid #f1f5f9; border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(15,23,42,.15); direction: rtl;
   display: flex; flex-direction: column; font-family: 'Cairo', sans-serif;
-  animation: ctSelectOpen .16s ease-out;
+  animation: ctSelectOpen .14s ease-out;
 }
 @keyframes ctSelectOpen { from { opacity: 0; transform: translateY(-5px) scale(.985); } to { opacity: 1; transform: none; } }
-.ct-select-search-wrap { padding: 10px; border-bottom: 1px solid #edf0f3; background: #fbfcfd; }
+.ct-select-search-wrap { padding: 8px; border-bottom: 1px solid #f1f5f9; background: #fff; }
 .ct-select-search {
   width: 100%; min-height: 38px; padding: 8px 12px; border: 1px solid #d7dce4;
-  border-radius: 8px; outline: none; font: 600 12px 'Cairo', sans-serif;
+  border-radius: 7px; outline: none; font: 600 12px 'Cairo', sans-serif;
 }
-.ct-select-search:focus { border-color: #605ca8; box-shadow: 0 0 0 3px rgba(96,92,168,.12); }
-.ct-select-options { overflow: auto; overscroll-behavior: contain; padding: 6px; }
+.ct-select-search:focus { border-color: #f87171; box-shadow: 0 0 0 2px rgba(248,113,113,.12); }
+.ct-select-options { overflow: auto; overscroll-behavior: contain; padding: 4px; }
 .ct-select-group {
   padding: 7px 10px 4px; color: #7b8190; font-size: 10px; font-weight: 800;
   background: #fff; position: sticky; top: 0; z-index: 1;
 }
 .ct-select-option {
   width: 100%; min-height: 40px; border: 0; background: #fff; color: #334155;
-  border-radius: 8px; padding: 8px 11px; display: flex; align-items: center;
+  border-radius: 7px; padding: 9px 11px; display: flex; align-items: center;
   justify-content: space-between; gap: 12px; text-align: right;
   font: 700 12px 'Cairo', sans-serif; cursor: pointer;
 }
-.ct-select-option:hover, .ct-select-option:focus { background: #f1f0fa; color: #514d96; outline: none; }
-.ct-select-option.is-selected { background: #eeedf8; color: #514d96; }
+.ct-select-option:hover, .ct-select-option:focus { background: #fff1f2; color: #be123c; outline: none; }
+.ct-select-option.is-selected { background: #fff1f2; color: #be123c; }
 .ct-select-option:disabled { opacity: .45; cursor: not-allowed; background: #f8fafc; }
 .ct-select-check { width: 22px; flex: 0 0 22px; text-align: center; font-size: 15px; }
 .ct-select-empty { padding: 22px 12px; text-align: center; color: #8a91a0; font-size: 12px; }
 .ct-select-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 9px 10px; border-top: 1px solid #edf0f3; }
-.ct-select-done { border: 0; border-radius: 7px; background: #605ca8; color: #fff; padding: 8px 18px; font: 700 12px 'Cairo'; cursor: pointer; }
+.ct-select-done { border: 0; border-radius: 7px; background: #dc2626; color: #fff; padding: 8px 18px; font: 700 12px 'Cairo'; cursor: pointer; }
 .ct-select-popover * { box-sizing: border-box; }
 
 /* Text replaces the old white connectivity dot on every screen size. */
@@ -726,15 +742,9 @@ select[data-ct-enhanced="true"] { cursor: pointer; }
 }
 
 @media (max-width: 600px) {
-  .ct-select-backdrop { background: rgba(15,23,42,.38); backdrop-filter: blur(1px); }
-  .ct-select-popover {
-    left: 0 !important; right: 0 !important; bottom: 0 !important; top: auto !important;
-    width: 100% !important; max-width: none !important; max-height: 72dvh;
-    border-radius: 18px 18px 0 0; border-bottom: 0;
-    animation: ctSelectSheetOpen .2s ease-out;
-  }
-  @keyframes ctSelectSheetOpen { from { opacity: .6; transform: translateY(24px); } to { opacity: 1; transform: none; } }
-  .ct-select-option { min-height: 46px; font-size: 13px; }
+  .ct-select-backdrop { background: transparent; backdrop-filter: none; }
+  .ct-select-popover { max-height: min(330px, calc(100dvh - 20px)); border-radius: 8px; }
+  .ct-select-option { min-height: 42px; font-size: 12px; }
 }
 @media (min-width: 769px) {
   .ct-app-shell { display: flex !important; flex-direction: row !important; }
@@ -1670,3 +1680,6 @@ button,a,.action-btn,.btn,input,select,textarea{touch-action:manipulation}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
 }
+
+/* R84 high-refresh rendering hints: compositor-friendly motion without forcing heavy effects. */
+@media (prefers-reduced-motion: no-preference){.ct-select-popover,.ct-sidebar,.ct-bottom-nav,.modal-overlay,.modal-box,.sr-modal-box{will-change:transform,opacity} .ct-page-host{scroll-behavior:auto}}

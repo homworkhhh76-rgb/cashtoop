@@ -3,7 +3,7 @@
   if (!window.Cashtop) return;
 
   const SOURCE_KEYS = new Set([
-    'cashtop_invoices', 'cashtop_sales_reversals', 'cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_purchase_returns',
+    'cashtop_invoices', 'cashtop_sales_reversals', 'cashtop_sales_returns', 'cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_purchase_returns',
     'cashtop_expenses', 'cashtop_vouchers', 'cashtop_workers', 'cashtop_journal_reversal_archive'
   ]);
 
@@ -164,11 +164,39 @@
       appendPurchaseJournal(journal, inv, { reversed: true, date: record.reversedAt || record.date || new Date().toISOString(), reversalId: record.id });
     });
 
+    parse('cashtop_sales_returns').forEach(ret => {
+      const id = text(ret.id || ret.refNumber, `SRET_${Date.now()}`);
+      const total = Math.max(0, n(ret.totalValue || ret.total || ret.amount));
+      if (!total) return;
+      const date = ret.date || ret.createdAt;
+      const branchId = text(ret.branchId, 'MAIN');
+      const customer = text(ret.customerName || ret.customer, 'عميل');
+      const party = { branchId, partyType: 'customer', partyId: ret.customerId || null, partyName: customer };
+      const entryId = `JE_SRET_${id}`;
+      journal.push(line(entryId, 'sales-return', id, date, '4200', 'مردودات المبيعات', total, 0, `إثبات مرتجع المبيعات ${id}`, party));
+      if (String(ret.sourceType || ret.returnSource || '') === 'customer_balance') {
+        journal.push(line(entryId, 'sales-return', id, date, '2200', 'أرصدة العملاء', 0, total, `إضافة قيمة مرتجع ${id} إلى رصيد العميل ${customer}`, party));
+      } else {
+        journal.push(line(entryId, 'sales-return', id, date, text(ret.accountId, 'ACC_CASH_MAIN'), text(ret.accountName, 'الصندوق / الحساب'), 0, total, `رد نقدية مرتجع المبيعات ${id}`, party));
+      }
+      const cost = (ret.items || []).reduce((sum, item) => {
+        const qty = Math.max(0, n(item.qty || item.inputQty));
+        const factor = Math.max(0.000001, n(item.factorToBase || item.piecesPerUnit || 1) || 1);
+        const costPerPiece = Math.max(0, n(item.costPerPiece || item.cost || 0));
+        return sum + qty * factor * costPerPiece;
+      }, 0);
+      if (cost) {
+        const costEntryId = `${entryId}_COGS`;
+        journal.push(line(costEntryId, 'sales-return', id, date, '1200', 'المخزون', cost, 0, `إعادة مخزون مرتجع المبيعات ${id}`, { branchId }));
+        journal.push(line(costEntryId, 'sales-return', id, date, '5100', 'تكلفة البضاعة المباعة', 0, cost, `عكس تكلفة الأصناف المرتجعة ${id}`, { branchId }));
+      }
+    });
+
     parse('cashtop_purchase_returns').forEach(ret => {
       const id = text(ret.id || ret.refNumber, `PRET_${Date.now()}`);
-      const total = n(ret.total || ret.amount);
-      const received = n(ret.received || ret.paid || ret.cashReceived);
-      const due = Math.max(0, n(ret.debt || ret.due || (total - received)));
+      const total = n(ret.totalValue || ret.total || ret.amount);
+      const received = n(ret.receivedCash || ret.received || ret.paid || ret.cashReceived);
+      const due = Math.max(0, n(ret.debtDeducted || ret.debt || ret.due || (total - received)));
       const entryId = `JE_PRET_${id}`;
       const branchId = text(ret.branchId, 'MAIN');
       const party = { branchId, partyType: ret.supplierId ? 'supplier' : 'other', partyId: ret.supplierId || null, partyName: text(ret.supplierName, ret.supplierId ? 'مورد' : 'بدون مورد') };
@@ -222,7 +250,7 @@
         const originalEntryId = text(original.entryId, `JE_ARCH_${record.sourceId || record.id}`);
         if (!byEntry.has(originalEntryId)) byEntry.set(originalEntryId, []);
         byEntry.get(originalEntryId).push(original);
-        journal.push({ ...original, id: `${text(original.id, originalEntryId)}_ARCH_${text(record.id, Date.now())}`, archivedOriginal: true, reversalArchiveId: record.id });
+        journal.push({ ...original, id: `${text(original.id, originalEntryId)}_ARCH_${text(record.id, Date.now())}`, entryId: `JE_ARCH_${text(record.id, Date.now())}_${originalEntryId}`, originalEntryId, archivedOriginal: true, reversalArchiveId: record.id });
       });
       byEntry.forEach((entryLines, originalEntryId) => {
         const reversalEntryId = `JE_AUTO_REV_${text(record.id, record.sourceId || Date.now())}_${originalEntryId}`;
@@ -235,7 +263,7 @@
             date: deletedAt,
             debit: Number(n(original.credit).toFixed(2)),
             credit: Number(n(original.debit).toFixed(2)),
-            description: `عكس تلقائي بعد الحذف: ${text(original.description, record.sourceId || '')}`,
+            description: `${record.reversalReason === 'edit' ? 'عكس تلقائي قبل التعديل' : 'عكس تلقائي بعد الحذف'}: ${text(original.description, record.sourceId || '')}`,
             reversalOfEntryId: originalEntryId,
             reversalArchiveId: record.id,
             archivedOriginal: false
