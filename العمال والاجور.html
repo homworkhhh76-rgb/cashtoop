@@ -185,12 +185,12 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=85">
-    <script src="cashtop-core.js?v=85"></script>
-    <script src="multi-system.js?v=85"></script>
-    <script src="turso-config.js?v=85"></script><script src="turso-rtdb.js?v=85"></script>
-    <script src="accounting-engine.js?v=85"></script>
-    <script src="turso-sync.js?v=85"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=90">
+    <script src="cashtop-core.js?v=90"></script>
+    <script src="multi-system.js?v=90"></script>
+    <script src="turso-config.js?v=90"></script><script src="turso-rtdb.js?v=90"></script>
+    <script src="accounting-engine.js?v=90"></script>
+    <script src="turso-sync.js?v=90"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -400,10 +400,10 @@
                         <label>العنوان</label>
                     </div>
                     <div class="form-group">
-                        <select class="form-control" id="wVaultSelect" required>
+                        <select class="form-control" id="wVaultSelect" data-ct-site-dropdown="true" data-ct-icon="fa-wallet" required>
                             <!-- تعبأ ديناميكيا -->
                         </select>
-                        <label>الصندوق الافتراضي للصرف</label>
+                        <label>طريقة الدفع الافتراضية</label>
                     </div>
                 </div>
                 <div class="form-row">
@@ -483,10 +483,10 @@
                         <label>المبلغ المدفوع (₪)</label>
                     </div>
                     <div class="form-group">
-                        <select class="form-control" id="payVaultSelect" required>
+                        <select class="form-control" id="payVaultSelect" data-ct-site-dropdown="true" data-ct-icon="fa-wallet" required onchange="handleWorkerVaultChange('pay')">
                             <!-- تعبأ ديناميكيا -->
                         </select>
-                        <label>الصندوق المسحوب منه</label>
+                        <label>طريقة الدفع</label>
                     </div>
                 </div>
                 <div class="form-row" id="payHoursRow" style="display:none">
@@ -525,10 +525,10 @@
                         <label>قيمة السُلفة (₪)</label>
                     </div>
                     <div class="form-group">
-                        <select class="form-control" id="debtVaultSelect" required>
+                        <select class="form-control" id="debtVaultSelect" data-ct-site-dropdown="true" data-ct-icon="fa-wallet" required onchange="handleWorkerVaultChange('debt')">
                             <!-- تعبأ ديناميكيا -->
                         </select>
-                        <label>الصندوق المسحوب منه</label>
+                        <label>طريقة الدفع</label>
                     </div>
                 </div>
                 <div class="form-row full">
@@ -633,6 +633,8 @@
         // قواعد البيانات
         let workersDB = [];
         let fundsDB = { accounts: [], accountLogs: [] };
+        const WORKER_MULTI_PAYMENT_VALUE = window.CashtopMulti?.MULTI_PAYMENT_VALUE || '__MULTI_PAYMENT__';
+        let workerMultiPayments = {pay:[], debt:[]};
 
         window.onload = function() {
             const currentRole=String(window.Cashtop?.getSession?.()?.role||'').toLowerCase();
@@ -657,18 +659,36 @@
         function workerCurrencyConfig(){ return window.CashtopMulti?.getCurrencyConfig?.() || {enabled:false,baseCurrencyId:'ILS',base:{id:'ILS',symbol:'₪',code:'ILS',ratePer100Base:100},currencies:[{id:'ILS',name:'شيكل',symbol:'₪',code:'ILS',ratePer100Base:100}]}; }
         function workerMoneyCurrencyId(kind){ const cfg=workerCurrencyConfig(); return document.getElementById(kind==='debt'?'workerDebtCurrencySelect':'workerPayCurrencySelect')?.value || cfg.baseCurrencyId; }
         function populateWorkerMoneyCurrency(kind,preferredId=''){ const cfg=workerCurrencyConfig(),select=document.getElementById(kind==='debt'?'workerDebtCurrencySelect':'workerPayCurrencySelect'),wrap=document.getElementById(kind==='debt'?'workerDebtCurrencyWrap':'workerPayCurrencyWrap'),hint=document.getElementById(kind==='debt'?'workerDebtCurrencyHint':'workerPayCurrencyHint');if(!select)return;const previous=preferredId||select.value||cfg.baseCurrencyId;select.innerHTML=cfg.currencies.map(c=>`<option value="${c.id}">${c.name} (${c.symbol||c.code})</option>`).join('');select.value=cfg.currencies.some(c=>String(c.id)===String(previous))?previous:cfg.baseCurrencyId;wrap?.classList.toggle('active',cfg.enabled===true);const cur=window.CashtopMulti?.getCurrency?.(select.value)||cfg.base;if(hint)hint.textContent=String(cur.id)===String(cfg.baseCurrencyId)?'العملة الأساسية':`100 ${cfg.base.symbol||cfg.base.code} = ${Number(cur.ratePer100Base||0)} ${cur.symbol||cur.code}`;}
-        function handleWorkerMoneyCurrencyChange(kind){ populateVaults(kind); if(kind==='pay'){const w=workersDB.find(x=>String(x.id)===String(document.getElementById('payWorkerId')?.value));if(w)suggestWorkerPayAmount(w);} }
+        function handleWorkerMoneyCurrencyChange(kind){ workerMultiPayments[kind]=[]; populateVaults(kind); if(kind==='pay'){const w=workersDB.find(x=>String(x.id)===String(document.getElementById('payWorkerId')?.value));if(w)suggestWorkerPayAmount(w);} }
         function populateVaults(kind='all') {
             const cfg=workerCurrencyConfig(); (fundsDB.accounts||[]).forEach(a=>{if(!a.currencyId)a.currencyId=cfg.baseCurrencyId;});
             const rawActiveAccounts=(fundsDB.accounts||[]).filter(a=>window.Cashtop?.isFundActive?window.Cashtop.isFundActive(a):(a.disabled!==true&&a.active!==false&&String(a.status||'').toLowerCase()!=='inactive'));
             const activeAccounts=window.Cashtop?.sortFundAccountsForDropdown?.(rawActiveAccounts)||rawActiveAccounts;
             const preferredAccount=window.Cashtop?.getDefaultFundAccount?.(activeAccounts);
-            let allOptions = '<option value="">-- اختر الصندوق المالي --</option>';
+            let allOptions = '<option value="">-- اختر طريقة الدفع --</option>';
             activeAccounts.forEach(a => { const cur=window.CashtopMulti?.getCurrency?.(a.currencyId||cfg.baseCurrencyId)||cfg.base; allOptions += `<option value="${a.id}">${a.name} (متوفر: ${parseFloat(a.balance||0).toFixed(2)} ${cur.symbol||cur.code})</option>`; });
             document.getElementById('wVaultSelect').innerHTML = allOptions;
             if(preferredAccount) document.getElementById('wVaultSelect').value=String(preferredAccount.id);
-            ['pay','debt'].forEach(k=>{ if(kind!=='all'&&kind!==k)return; const cid=cfg.enabled?workerMoneyCurrencyId(k):cfg.baseCurrencyId; let opts='<option value="">-- اختر الصندوق المالي --</option>'; activeAccounts.forEach(a=>{const cur=window.CashtopMulti?.getCurrency?.(a.currencyId||cfg.baseCurrencyId)||cfg.base;opts+=`<option value="${a.id}">${a.name} (متوفر: ${Number(a.balance||0).toFixed(2)} ${cur.symbol||cur.code})</option>`;}); const workerSelect=document.getElementById(k==='pay'?'payVaultSelect':'debtVaultSelect'); workerSelect.innerHTML=opts; if(preferredAccount)workerSelect.value=String(preferredAccount.id); });
+            ['pay','debt'].forEach(k=>{ if(kind!=='all'&&kind!==k)return; const cid=cfg.enabled?workerMoneyCurrencyId(k):cfg.baseCurrencyId; let opts='<option value="">-- اختر طريقة الدفع --</option>'; if(activeAccounts.length>1)opts+=`<option value="${WORKER_MULTI_PAYMENT_VALUE}">دفع متعدد</option>`; activeAccounts.forEach(a=>{const cur=window.CashtopMulti?.getCurrency?.(a.currencyId||cfg.baseCurrencyId)||cfg.base;opts+=`<option value="${a.id}">${a.name} (متوفر: ${Number(a.balance||0).toFixed(2)} ${cur.symbol||cur.code})</option>`;}); const workerSelect=document.getElementById(k==='pay'?'payVaultSelect':'debtVaultSelect'); const previous=workerSelect?.value||''; workerSelect.innerHTML=opts; if(previous===WORKER_MULTI_PAYMENT_VALUE&&workerMultiPayments[k]?.length)workerSelect.value=WORKER_MULTI_PAYMENT_VALUE; else if(activeAccounts.some(a=>String(a.id)===String(previous)))workerSelect.value=previous; else if(preferredAccount)workerSelect.value=String(preferredAccount.id); window.CashtopMulti?.enhanceSiteSelect?.(workerSelect); });
         }
+
+        function workerPaymentRows(kind,amountNative,currencyId){
+            const select=document.getElementById(kind==='pay'?'payVaultSelect':'debtVaultSelect');
+            const accountId=select?.value||'';
+            if(accountId===WORKER_MULTI_PAYMENT_VALUE)return (workerMultiPayments[kind]||[]).map(item=>({...item}));
+            const account=fundsDB.accounts.find(a=>String(a.id)===String(accountId));if(!account)return[];
+            const settlement=window.CashtopMulti?.settleToAccount?.(amountNative,currencyId,account)||{accountAmount:amountNative,accountCurrencyId:account.currencyId||currencyId,baseAmount:window.CashtopMulti?.toBase?.(amountNative,currencyId)??amountNative};
+            return [{accountId:account.id,accountName:account.name,transactionAmount:amountNative,transactionCurrencyId:currencyId,baseAmount:Number(settlement.baseAmount||0),accountAmount:Number(settlement.accountAmount||0),accountCurrencyId:settlement.accountCurrencyId}];
+        }
+        function openWorkerMultiPayment(kind){
+            const amountInput=document.getElementById(kind==='pay'?'payAmountInput':'debtAmountInput');const amountNative=Math.max(0,Number(amountInput?.value||0));
+            if(!(amountNative>0)){showToast('أدخل مبلغ العملية أولاً ثم اختر دفع متعدد.','warning');return false;}
+            const cfg=workerCurrencyConfig(),currencyId=cfg.enabled?workerMoneyCurrencyId(kind):cfg.baseCurrencyId;
+            return window.CashtopMulti?.openMultiPayment?.({title:kind==='pay'?'دفع متعدد لراتب العامل':'دفع متعدد لسُلفة العامل',accounts:(fundsDB.accounts||[]).filter(a=>window.Cashtop?.isFundActive?window.Cashtop.isFundActive(a):(a.disabled!==true&&a.active!==false&&String(a.status||'').toLowerCase()!=='inactive')),transactionCurrencyId:currencyId,direction:'out',requireExact:true,exactTransactionAmount:amountNative,initialSplits:workerMultiPayments[kind]||[],defaultTransactionAmount:(workerMultiPayments[kind]||[]).length?0:amountNative,onSave:(splits)=>{workerMultiPayments[kind]=splits.map(item=>({...item}));const select=document.getElementById(kind==='pay'?'payVaultSelect':'debtVaultSelect');if(select){select.value=WORKER_MULTI_PAYMENT_VALUE;window.CashtopMulti?.refreshEnhancedSelect?.(select);}}});
+        }
+        function handleWorkerVaultChange(kind){const select=document.getElementById(kind==='pay'?'payVaultSelect':'debtVaultSelect');if(!select)return;if(select.value===WORKER_MULTI_PAYMENT_VALUE){if(!openWorkerMultiPayment(kind)){select.value='';window.CashtopMulti?.refreshEnhancedSelect?.(select);}}else workerMultiPayments[kind]=[];}
+        function validateWorkerPayments(kind,payments,amountBase){if(!payments.length){showToast('اختر طريقة الدفع.','error');return false;}const total=payments.reduce((sum,p)=>sum+Number(p.baseAmount||0),0);if(Math.abs(total-amountBase)>.01){showToast('توزيع الدفع المتعدد لا يساوي مبلغ العملية.','error');return false;}const insufficient=payments.find(p=>{const a=fundsDB.accounts.find(x=>String(x.id)===String(p.accountId));return !a||Number(p.accountAmount||0)>Number(a.balance||0)+1e-9;});if(insufficient){showToast(`رصيد طريقة الدفع [${insufficient.accountName||'المحددة'}] غير كافٍ.`,'error');return false;}return true;}
+        function applyWorkerPayments(sourceId,kind,payments,logDate,workerName){payments.forEach((payment,index)=>{const account=fundsDB.accounts.find(a=>String(a.id)===String(payment.accountId));if(!account)throw new Error('طريقة الدفع غير موجودة.');account.balance=Number(account.balance||0)-Number(payment.accountAmount||0);fundsDB.accountLogs.push({id:`LOG_WORK_${sourceId}_${index}_${Date.now()}`,sourceType:kind==='pay'?'workerPayment':'workerDebt',sourceId,accountId:account.id,date:logDate,type:'سحب',amount:Number(payment.accountAmount||0),baseAmount:Number(payment.baseAmount||0),currencyId:payment.accountCurrencyId||account.currencyId,transactionAmount:Number(payment.transactionAmount||0),transactionCurrencyId:payment.transactionCurrencyId,notes:kind==='pay'?`صرف راتب/دفعة للعامل: ${workerName}`:`سلفة نقدية للعامل: ${workerName}`});});}
 
         // ==========================================
         // إدارة الحقول الشرطية لنوع الراتب
@@ -938,10 +958,11 @@
             let w = workersDB.find(x => x.id === id);
             if(!w) return;
             document.getElementById('payForm').reset();
+            workerMultiPayments.pay=[];
             document.getElementById('payWorkerId').value = id;
             document.getElementById('payWorkerName').innerText = name;
             const defaultVault=fundsDB.accounts.find(a=>String(a.id)===String(w.vaultId)); populateWorkerMoneyCurrency('pay',defaultVault?.currencyId||workerCurrencyConfig().baseCurrencyId); populateVaults('pay');
-            document.getElementById('payVaultSelect').value = w.vaultId || ''; // تحديد الصندوق الافتراضي للعامل
+            document.getElementById('payVaultSelect').value = w.vaultId || ''; window.CashtopMulti?.refreshEnhancedSelect?.(document.getElementById('payVaultSelect')); // تحديد طريقة الدفع الافتراضية للعامل
             suggestWorkerPayAmount(w);
             openModal('payModal');
         }
@@ -956,35 +977,13 @@
             const notes = document.getElementById('payNotesInput').value.trim();
             const logDate = new Date().toISOString().split('T')[0];
 
-            if(isNaN(amountNative) || amountNative <= 0 || !vaultId) { showToast("يرجى إدخال مبلغ صحيح واختيار صندوق", "error"); return; }
-
-            let worker = workersDB.find(x => x.id === wId);
-            let vault = fundsDB.accounts.find(a => String(a.id) === String(vaultId));
-
-            if(!worker || !vault) return;
-            const settlement = window.CashtopMulti?.settleToAccount?.(amountNative, currencyId, vault)
-                || { accountAmount: amountNative, accountCurrencyId: vault.currencyId || currencyId, baseAmount: amount };
-            if(Number(settlement.accountAmount || 0) > Number(vault.balance || 0)) { showToast(`رصيد الصندوق [${vault.name}] غير كافٍ للصرف بعد تحويل العملة!`, "error"); return; }
-
-            // 1. خصم من الصندوق
-            vault.balance -= Number(settlement.accountAmount || 0);
-            fundsDB.accountLogs.push({
-                accountId: vault.id, date: logDate, type: "سحب", amount: Number(settlement.accountAmount || 0), baseAmount: amount, currencyId: settlement.accountCurrencyId,
-                transactionAmount: amountNative, transactionCurrencyId: currencyId,
-                notes: `صرف راتب/دفعة للعامل: ${worker.name}`
-            });
-
-            // 2. تسجيل كـ مقبوضات للعامل
+            if(isNaN(amountNative) || amountNative <= 0 || !vaultId) { showToast("يرجى إدخال مبلغ صحيح واختيار طريقة الدفع", "error"); return; }
+            let worker = workersDB.find(x => x.id === wId); if(!worker)return;
+            const payments=workerPaymentRows('pay',amountNative,currencyId);if(!validateWorkerPayments('pay',payments,amount))return;
+            const movId=`mov_pay_${Date.now()}`;applyWorkerPayments(movId,'pay',payments,logDate,worker.name);
             if(!worker.movements) worker.movements = [];
-            worker.movements.push({
-                id: `mov_pay_${Date.now()}`,
-                type: 'payment',
-                amount: amount, amountNative, currencyId,
-                accountAmountNative: Number(settlement.accountAmount || 0), accountCurrencyId: settlement.accountCurrencyId,
-                date: logDate,
-                vaultId: vault.id,
-                notes: notes || 'صرف دفعة نقدية'
-            });
+            const isMulti=vaultId===WORKER_MULTI_PAYMENT_VALUE;
+            worker.movements.push({id:movId,type:'payment',amount,amountNative,currencyId,accountAmountNative:isMulti?null:Number(payments[0].accountAmount||0),accountCurrencyId:isMulti?null:payments[0].accountCurrencyId,date:logDate,vaultId:isMulti?WORKER_MULTI_PAYMENT_VALUE:payments[0].accountId,accountName:isMulti?'دفع متعدد':payments[0].accountName,paymentMethod:isMulti?'دفع متعدد':payments[0].accountName,payments:isMulti?payments.map(item=>({...item})):[],notes:notes||'صرف دفعة نقدية'});
 
             const paidAt = new Date();
             worker.lastPaidAt = paidAt.toISOString();
@@ -1000,7 +999,7 @@
             localStorage.setItem('cashtop_funds_db_v4', JSON.stringify(fundsDB));
             localStorage.setItem('cashtop_workers', JSON.stringify(workersDB));
             
-            showToast("تم صرف الراتب وخصم المبلغ من الصندوق بنجاح", "success");
+            showToast("تم صرف الراتب وخصم المبلغ من طريقة الدفع بنجاح", "success");
             closeModal('payModal');
             initLayout(); 
         }
@@ -1009,10 +1008,11 @@
             let w = workersDB.find(x => x.id === id);
             if(!w) return;
             document.getElementById('debtForm').reset();
+            workerMultiPayments.debt=[];
             document.getElementById('debtWorkerId').value = id;
             document.getElementById('debtWorkerName').innerText = name;
             const defaultVault=fundsDB.accounts.find(a=>String(a.id)===String(w.vaultId)); populateWorkerMoneyCurrency('debt',defaultVault?.currencyId||workerCurrencyConfig().baseCurrencyId); populateVaults('debt');
-            document.getElementById('debtVaultSelect').value = w.vaultId || ''; 
+            document.getElementById('debtVaultSelect').value = w.vaultId || ''; window.CashtopMulti?.refreshEnhancedSelect?.(document.getElementById('debtVaultSelect')); 
             openModal('debtModal');
         }
 
@@ -1026,42 +1026,18 @@
             const notes = document.getElementById('debtNotesInput').value.trim();
             const logDate = new Date().toISOString().split('T')[0];
 
-            if(isNaN(amountNative) || amountNative <= 0 || !vaultId || !notes) { showToast("يرجى التأكد من المبلغ والملاحظات واختيار الصندوق", "error"); return; }
-
-            let worker = workersDB.find(x => x.id === wId);
-            let vault = fundsDB.accounts.find(a => String(a.id) === String(vaultId));
-
-            if(!worker || !vault) return;
-            
-            // السلفة النقدية تعني أننا أعطيناه مال من الصندوق
-            const settlement = window.CashtopMulti?.settleToAccount?.(amountNative, currencyId, vault)
-                || { accountAmount: amountNative, accountCurrencyId: vault.currencyId || currencyId, baseAmount: amount };
-            if(Number(settlement.accountAmount || 0) > Number(vault.balance || 0)) { showToast(`رصيد الصندوق [${vault.name}] غير كافٍ لإعطاء السلفة بعد تحويل العملة!`, "error"); return; }
-
-            // 1. خصم من الصندوق
-            vault.balance -= Number(settlement.accountAmount || 0);
-            fundsDB.accountLogs.push({
-                accountId: vault.id, date: logDate, type: "سحب", amount: Number(settlement.accountAmount || 0), baseAmount: amount, currencyId: settlement.accountCurrencyId,
-                transactionAmount: amountNative, transactionCurrencyId: currencyId,
-                notes: `سلفة نقدية للعامل: ${worker.name}`
-            });
-
-            // 2. تسجيل كـ دين (سلفة) على العامل
+            if(isNaN(amountNative) || amountNative <= 0 || !vaultId || !notes) { showToast("يرجى التأكد من المبلغ والملاحظات واختيار طريقة الدفع", "error"); return; }
+            let worker = workersDB.find(x => x.id === wId); if(!worker)return;
+            const payments=workerPaymentRows('debt',amountNative,currencyId);if(!validateWorkerPayments('debt',payments,amount))return;
+            const movId=`mov_debt_${Date.now()}`;applyWorkerPayments(movId,'debt',payments,logDate,worker.name);
             if(!worker.movements) worker.movements = [];
-            worker.movements.push({
-                id: `mov_debt_${Date.now()}`,
-                type: 'debt',
-                amount: amount, amountNative, currencyId,
-                accountAmountNative: Number(settlement.accountAmount || 0), accountCurrencyId: settlement.accountCurrencyId,
-                date: logDate,
-                vaultId: vault.id,
-                notes: notes
-            });
+            const isMulti=vaultId===WORKER_MULTI_PAYMENT_VALUE;
+            worker.movements.push({id:movId,type:'debt',amount,amountNative,currencyId,accountAmountNative:isMulti?null:Number(payments[0].accountAmount||0),accountCurrencyId:isMulti?null:payments[0].accountCurrencyId,date:logDate,vaultId:isMulti?WORKER_MULTI_PAYMENT_VALUE:payments[0].accountId,accountName:isMulti?'دفع متعدد':payments[0].accountName,paymentMethod:isMulti?'دفع متعدد':payments[0].accountName,payments:isMulti?payments.map(item=>({...item})):[],notes});
 
             localStorage.setItem('cashtop_funds_db_v4', JSON.stringify(fundsDB));
             localStorage.setItem('cashtop_workers', JSON.stringify(workersDB));
             
-            showToast("تم قيد السلفة وسحب المبلغ من الصندوق بنجاح", "success");
+            showToast("تم قيد السلفة وسحب المبلغ من طريقة الدفع بنجاح", "success");
             closeModal('debtModal');
             initLayout();
         }
@@ -1117,15 +1093,10 @@
                 // استرداد المبالغ للصناديق لعكس القيود
                 if(worker.movements && worker.movements.length > 0) {
                     worker.movements.forEach(m => {
+                        const rows=Array.isArray(m.payments)&&m.payments.length?m.payments:null;
+                        if(rows){rows.forEach((payment,index)=>{const vault=fundsDB.accounts.find(a=>String(a.id)===String(payment.accountId));if(!vault)return;vault.balance=Number(vault.balance||0)+Number(payment.accountAmount||0);fundsDB.accountLogs.push({id:`LOG_WORK_REV_${m.id}_${index}_${Date.now()}`,accountId:vault.id,date:new Date().toISOString().split('T')[0],type:'إيداع',amount:Number(payment.accountAmount||0),baseAmount:Number(payment.baseAmount||0),currencyId:payment.accountCurrencyId||vault.currencyId,notes:`عكس قيد: استرداد مبلغ ${m.type==='payment'?'راتب':'سلفة'} إثر حذف العامل ${worker.name}`});});return;}
                         let vault = fundsDB.accounts.find(a => a.id == m.vaultId);
-                        if(vault) {
-                            const nativeAmount=Number.isFinite(Number(m.amountNative)) ? Number(m.amountNative) : (window.CashtopMulti?.fromBase?.(parseFloat(m.amount) || 0, m.currencyId || vault.currencyId || workerCurrencyConfig().baseCurrencyId) ?? (parseFloat(m.amount) || 0));
-                            vault.balance += nativeAmount;
-                            fundsDB.accountLogs.push({
-                                accountId: vault.id, date: new Date().toISOString().split('T')[0], type: "إيداع", amount: nativeAmount, baseAmount: parseFloat(m.amount)||0, currencyId:m.currencyId||vault.currencyId||workerCurrencyConfig().baseCurrencyId, 
-                                notes: `عكس قيد: استرداد مبلغ ${m.type==='payment'?'راتب':'سلفة'} إثر حذف العامل ${worker.name}`
-                            });
-                        }
+                        if(vault) {const nativeAmount=Number.isFinite(Number(m.accountAmountNative))?Number(m.accountAmountNative):(Number.isFinite(Number(m.amountNative))?Number(m.amountNative):(window.CashtopMulti?.fromBase?.(parseFloat(m.amount)||0,m.currencyId||vault.currencyId||workerCurrencyConfig().baseCurrencyId)??(parseFloat(m.amount)||0)));vault.balance+=nativeAmount;fundsDB.accountLogs.push({accountId:vault.id,date:new Date().toISOString().split('T')[0],type:'إيداع',amount:nativeAmount,baseAmount:parseFloat(m.amount)||0,currencyId:m.accountCurrencyId||vault.currencyId||workerCurrencyConfig().baseCurrencyId,notes:`عكس قيد: استرداد مبلغ ${m.type==='payment'?'راتب':'سلفة'} إثر حذف العامل ${worker.name}`});}
                     });
                     localStorage.setItem('cashtop_funds_db_v4', JSON.stringify(fundsDB));
                 }

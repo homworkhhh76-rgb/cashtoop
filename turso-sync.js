@@ -549,15 +549,16 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       // Listing folders only needs the compact shared group index. The rare
       // close/open action explicitly pulls its required balances once.
       'financial-groups.html': ['cashtop_financial_groups'],
-      'cashier.html': ['cashtop_products', 'cashtop_customers', 'cashtop_customer_groups', 'cashtop_funds_db', 'cashtop_sales_offers', 'cashtop_tax_settings', 'cashtop_units', 'cashtop_stores'],
-      'products.html': ['cashtop_products', 'cashtop_units', 'cashtop_stores', 'cashtop_suppliers', 'cashtop_purchases', 'cashtop_funds_db'],
+      'cashier.html': ['cashtop_products', 'cashtop_product_categories', 'cashtop_customers', 'cashtop_customer_groups', 'cashtop_funds_db', 'cashtop_sales_offers', 'cashtop_tax_settings', 'cashtop_units', 'cashtop_stores', 'cashtop_settings'],
+      'products.html': ['cashtop_products', 'cashtop_product_categories', 'cashtop_units', 'cashtop_stores', 'cashtop_suppliers', 'cashtop_purchases', 'cashtop_funds_db', 'cashtop_tax_settings', 'cashtop_settings'],
+      'categories.html': ['cashtop_product_categories', 'cashtop_products'],
       'materials.html': ['cashtop_materials', 'cashtop_material_purchases', 'cashtop_units', 'cashtop_stores', 'cashtop_suppliers', 'cashtop_funds_db'],
       'invoices.html': ['cashtop_invoices', 'cashtop_products', 'cashtop_customers', 'cashtop_funds_db', 'cashtop_sales_offers', 'cashtop_sales_returns'],
       'مرجع المبيعات.html': ['cashtop_sales_returns', 'cashtop_products', 'cashtop_customers', 'cashtop_funds_db', 'cashtop_invoices'],
       'customers.html': ['cashtop_customers', 'cashtop_customer_groups', 'cashtop_invoices', 'cashtop_sales_returns', 'cashtop_vouchers'],
       'customer-groups.html': ['cashtop_customer_groups', 'cashtop_customers', 'cashtop_products'],
       'suppliers.html': ['cashtop_suppliers', 'cashtop_supplier_movements', 'cashtop_purchases'],
-      'المشتريات.html': ['cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_products', 'cashtop_suppliers', 'cashtop_funds_db', 'cashtop_stores'],
+      'المشتريات.html': ['cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_products', 'cashtop_suppliers', 'cashtop_funds_db', 'cashtop_stores', 'cashtop_tax_settings', 'cashtop_settings'],
       'مرجع المشتريات.html': ['cashtop_purchase_returns', 'cashtop_purchases', 'cashtop_products', 'cashtop_suppliers'],
       'المصاريف.html': ['cashtop_expenses', 'cashtop_expense_types', 'cashtop_funds_db'],
       'accounts.html': ['cashtop_funds_db', 'cashtop_vouchers', 'cashtop_transfer_history'],
@@ -576,7 +577,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       'invoice-designer.html': ['cashtop_invoice_design', 'cashtop_printer_settings', 'cashtop_settings', 'cashtop_invoices'],
       'tax-settings.html': ['cashtop_tax_settings', 'cashtop_settings'],
       'storage-settings.html': ['cashtop_archive_index', 'cashtop_invoices', 'cashtop_transfer_history', 'cashtop_branch_transfer_history', 'cashtop_settings'],
-      'setting.html': ['cashtop_company_access', 'cashtop_settings', 'cashtop_db', 'cashtop_branches', 'cashtop_employees', 'cashtop_sms_template', 'cashtop_invoice_message_template'],
+      'setting.html': ['cashtop_company_access', 'cashtop_settings', 'cashtop_db', 'cashtop_branches', 'cashtop_employees', 'cashtop_sales_agents', 'cashtop_sms_template', 'cashtop_invoice_message_template'],
       'ادارة التصنيع.html': ['cashtop_manufacturing_recipes', 'cashtop_manufacturing_orders', 'cashtop_products', 'cashtop_materials', 'cashtop_stores'],
       'التقارير.html': ['cashtop_invoices', 'cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_expenses', 'cashtop_products', 'cashtop_customers', 'cashtop_funds_db'],
       'notifications.html': ['cashtop_notification_settings', 'cashtop_settings', 'cashtop_products', 'cashtop_customers', 'cashtop_invoices', 'cashtop_workers', 'cashtop_salary_payments', 'cashtop_funds_db']
@@ -878,12 +879,21 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     protectedFields.forEach(field => {
       if (Object.prototype.hasOwnProperty.call(remoteAccess, field)) merged[field] = remoteAccess[field];
     });
-    /* حالة المدير من لوحة الإدارة تبقى مرجعية، بينما نحتفظ بكلمة مرور أحدث غُيرت من إعدادات الشركة. */
+    /* بيانات المدير الإدارية تبقى مرجعية من الخادم. أما اسم المستخدم/كلمة المرور
+       فيمكن تغييرهما من إعدادات الشركة؛ credentialsUpdatedAt يمنع أن يعيد سحب
+       قديم كتابة اسم المستخدم السابق أثناء وجود تعديل محلي معلّق. */
     if (remoteAccess.manager && typeof remoteAccess.manager === 'object') {
-      merged.manager = { ...(remoteAccess.manager || {}), ...(localAccess.manager || {}) };
-      ['id', 'username', 'displayName', 'role', 'active', 'authVersion'].forEach(field => {
-        if (Object.prototype.hasOwnProperty.call(remoteAccess.manager, field)) merged.manager[field] = remoteAccess.manager[field];
+      const remoteManager = remoteAccess.manager || {};
+      const localManager = localAccess.manager || {};
+      const localCredentialStamp = Number(localManager.credentialsUpdatedAt || 0);
+      const remoteCredentialStamp = Number(remoteManager.credentialsUpdatedAt || 0);
+      const preferLocalCredentials = localCredentialStamp > 0 && localCredentialStamp >= remoteCredentialStamp;
+      merged.manager = { ...remoteManager, ...localManager };
+      ['id', 'displayName', 'role', 'active', 'authVersion'].forEach(field => {
+        if (Object.prototype.hasOwnProperty.call(remoteManager, field)) merged.manager[field] = remoteManager[field];
       });
+      if (!preferLocalCredentials && Object.prototype.hasOwnProperty.call(remoteManager, 'username')) merged.manager.username = remoteManager.username;
+      if (!preferLocalCredentials && Object.prototype.hasOwnProperty.call(remoteManager, 'credentialsUpdatedAt')) merged.manager.credentialsUpdatedAt = remoteManager.credentialsUpdatedAt;
     }
     const mergedRaw = JSON.stringify(merged);
     if (mergedRaw === String(localRaw || '')) return false;

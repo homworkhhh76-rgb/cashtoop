@@ -54,7 +54,11 @@
         .select-filter { flex: 0 0 220px; padding: 10px 14px; font-size: 13px; border: 2px solid #e2e8f0; border-radius: 4px; outline: none; background-color: #fff; font-weight: 600; transition: 0.3s;}
         .select-filter:focus { border-color: #dd4b39; }
 
-        .search-box { display: flex; align-items: center; flex: 1; position: relative; }
+                .conditional-select { display: none !important; }
+        .conditional-select.active { display: block !important; }
+        .conditional-row { display: none !important; }
+        .conditional-row.active { display: grid !important; }
+.search-box { display: flex; align-items: center; flex: 1; position: relative; }
         .search-control { width: 100%; padding: 10px 38px 10px 12px; font-size: 13px; border: 2px solid #e2e8f0; border-radius: 4px; outline: none; transition: 0.3s; }
         .search-control:focus { border-color: #dd4b39; }
         .search-box i { position: absolute; right: 12px; color: #94a3b8; font-size: 15px; }
@@ -81,7 +85,9 @@
         .data-table th { font-weight: 800; color: #1e293b; padding: 15px 10px; border-bottom: 2px solid #e2e8f0; background-color: #f8fafc; white-space: nowrap; }
         .data-table td { padding: 15px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; white-space: nowrap; }
 
-        .badge-type-label { background-color: rgba(96, 92, 168, 0.12); color: #605ca8; padding: 5px 12px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(96, 92, 168, 0.2); }
+        .badge-type-label { background-color: rgba(96, 92, 168, 0.12); color: #605ca8; padding: 5px 12px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(96, 92, 168, 0.2); display:inline-flex; align-items:center; gap:5px; }
+        .badge-subtype-label { margin-top:5px; display:inline-flex; align-items:center; gap:5px; background:#f8fafc; color:#475569; padding:4px 9px; border-radius:4px; border:1px solid #e2e8f0; font-size:11px; font-weight:700; }
+        .category-cell { white-space:normal !important; min-width:150px; }
         .badge-cost { background-color: #fdeaea; color: #dd4b39; padding: 5px 12px; border-radius: 4px; font-weight: 800; border: 1px solid #fca5a5;}
 
         .actions-wrapper { display: flex; justify-content: center; gap: 8px; flex-wrap: nowrap; min-width: max-content;}
@@ -177,12 +183,12 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=85">
-    <script src="cashtop-core.js?v=85"></script>
-    <script src="multi-system.js?v=85"></script>
-    <script src="turso-config.js?v=85"></script><script src="turso-rtdb.js?v=85"></script>
-    <script src="accounting-engine.js?v=85"></script>
-    <script src="turso-sync.js?v=85"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=90">
+    <script src="cashtop-core.js?v=90"></script>
+    <script src="multi-system.js?v=90"></script>
+    <script src="turso-config.js?v=90"></script><script src="turso-rtdb.js?v=90"></script>
+    <script src="accounting-engine.js?v=90"></script>
+    <script src="turso-sync.js?v=90"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -304,8 +310,11 @@
         <div class="action-bar">
             <div class="filter-search-row">
                 <div class="search-group-wrap">
-                    <select class="select-filter" id="filterTypeSelect" onchange="renderTable()">
+                    <select class="select-filter" id="filterTypeSelect" data-ct-site-dropdown="true" data-ct-icon="fa-folder" onchange="handleFilterTypeChange()">
                         <option value="">كل أنواع المصاريف...</option>
+                    </select>
+                    <select class="select-filter conditional-select" id="filterSubtypeSelect" data-ct-site-dropdown="true" data-ct-icon="fa-folder-tree" onchange="renderTable()">
+                        <option value="">كل الفروع...</option>
                     </select>
                     
                     <div class="search-box">
@@ -338,7 +347,7 @@
                             <th>اسم المصروف</th>
                             <th>نوع (تصنيف) المصروف</th>
                             <th>المبلغ المستقطع</th>
-                            <th>الصندوق المنصرف منه</th>
+                            <th>طريقة الدفع</th>
                             <th>ملاحظات وتفاصيل</th>
                             <th>الإجراءات</th>
                         </tr>
@@ -365,9 +374,18 @@
                         <label>اسم المصروف</label>
                     </div>
                     <div class="form-group">
-                        <select class="form-control" id="expTypeSelect" required>
+                        <select class="form-control" id="expTypeSelect" data-ct-site-dropdown="true" data-ct-icon="fa-folder" required onchange="handleExpenseTypeChange()">
                         </select>
-                        <label>نوع المصروف</label>
+                        <label>نوع المصروف الأساسي</label>
+                    </div>
+                </div>
+
+                <div class="form-row full-width conditional-row" id="expSubtypeRow">
+                    <div class="form-group">
+                        <select class="form-control" id="expSubtypeSelect" data-ct-site-dropdown="true" data-ct-icon="fa-folder-tree">
+                            <option value="">اختر التصنيف الفرعي...</option>
+                        </select>
+                        <label>المصروف الفرعي</label>
                     </div>
                 </div>
 
@@ -378,8 +396,8 @@
                         <small id="expenseCurrencyHint"></small>
                     </div>
                     <div class="form-group">
-                        <select class="form-control" id="expAccountSelect" required onchange="handleExpenseAccountChange()"></select>
-                        <label>يصرف من (الصندوق)</label>
+                        <select class="form-control" id="expAccountSelect" data-ct-site-dropdown="true" data-ct-icon="fa-wallet" required onchange="handleExpenseAccountChange()"></select>
+                        <label>طريقة الدفع</label>
                     </div>
                 </div>
 
@@ -403,7 +421,7 @@
 
                 <div class="modal-footer">
                     <button type="button" class="btn-cancel" onclick="closeModal('expenseModal')">إلغاء</button>
-                    <button type="submit" class="btn-submit-exp"><i class="fa-solid fa-floppy-disk"></i> حفظ وخصم الصندوق</button>
+                    <button type="submit" class="btn-submit-exp"><i class="fa-solid fa-floppy-disk"></i> حفظ وخصم طريقة الدفع</button>
                 </div>
             </form>
         </div>
@@ -413,20 +431,29 @@
     <div class="modal-overlay" id="typeModal">
         <div class="modal-box">
             <div class="modal-header">
-                <div class="modal-title"><i class="fa-solid fa-folder-plus"></i> إضافة تصنيف مصروف جديد</div>
+                <div class="modal-title"><i class="fa-solid fa-folder-plus"></i> إضافة تصنيف مصروف رئيسي أو فرعي</div>
                 <button class="modal-close" onclick="closeModal('typeModal')">&times;</button>
             </div>
             <form onsubmit="saveExpenseType(event)">
                 <div class="form-row full-width">
                     <div class="form-group">
-                        <input type="text" class="form-control" id="typeName" placeholder="مثال: مصاريف صيانة، بضاعة تالفة..." required autocomplete="off">
+                        <select class="form-control" id="typeParentSelect" data-ct-site-dropdown="true" data-ct-icon="fa-folder-tree">
+                            <option value="">تصنيف أساسي مستقل</option>
+                        </select>
+                        <label>يندرج تحت</label>
+                    </div>
+                </div>
+
+                <div class="form-row full-width">
+                    <div class="form-group">
+                        <input type="text" class="form-control" id="typeName" placeholder="مثال: مواصلات شراء أو مواصلات للمحل..." required autocomplete="off">
                         <label>اسم التصنيف</label>
                     </div>
                 </div>
 
                 <div class="form-row full-width">
                     <div class="form-group">
-                        <textarea class="form-control" id="typeNotes" placeholder="أكتب وصفاً عاماً للمصاريف التي تندرج تحت هذا التبويب..."></textarea>
+                        <textarea class="form-control" id="typeNotes" placeholder="مثال: أي مصروفات خاصة بالنقل أو المواصلات..."></textarea>
                         <label>ملاحظات على التصنيف</label>
                     </div>
                 </div>
@@ -501,10 +528,11 @@
             try {
                 expensesDB = JSON.parse(localStorage.getItem('cashtop_expenses')) || [];
                 expenseTypesDB = JSON.parse(localStorage.getItem('cashtop_expense_types')) || [
-                    { id: 'et_1', name: 'مصاريف تشغيلية', notes: '' },
-                    { id: 'et_2', name: 'إيجارات وفواتير', notes: '' },
-                    { id: 'et_3', name: 'مرتبات وأجور', notes: '' }
+                    { id: 'et_1', name: 'مصاريف تشغيلية', notes: '', parentId: '' },
+                    { id: 'et_2', name: 'إيجارات وفواتير', notes: '', parentId: '' },
+                    { id: 'et_3', name: 'مرتبات وأجور', notes: '', parentId: '' }
                 ];
+                normalizeExpenseTypes();
                 
                 const localFunds = localStorage.getItem('cashtop_funds_db') || localStorage.getItem('cashtop_funds_db_v4');
                 fundsDB = localFunds ? (JSON.parse(localFunds) || { accounts: [], accountLogs: [] }) : { accounts: [], accountLogs: [] };
@@ -535,16 +563,111 @@
         window.addEventListener('cashtop:remote-applied', event => { if (event.detail?.key === 'cashtop_funds_db') refreshExpenseFunds(); });
         window.addEventListener('storage', event => { if (!event.key || String(event.key).includes('cashtop_funds_db')) refreshExpenseFunds(); });
 
+        function normalizeExpenseTypes() {
+            expenseTypesDB = (Array.isArray(expenseTypesDB) ? expenseTypesDB : []).map(type => ({
+                ...type,
+                parentId: type?.parentId ? String(type.parentId) : ''
+            }));
+        }
+
+        function expenseMainTypes() {
+            return expenseTypesDB.filter(type => !type.parentId);
+        }
+
+        function expenseSubtypes(parentId) {
+            return expenseTypesDB.filter(type => String(type.parentId || '') === String(parentId || ''));
+        }
+
+        function expenseTypeById(id) {
+            return expenseTypesDB.find(type => String(type.id) === String(id || '')) || null;
+        }
+
+        function resolveExpenseCategory(expense) {
+            const storedType = expenseTypeById(expense?.typeId);
+            if (storedType?.parentId) {
+                return { main: expenseTypeById(storedType.parentId), subtype: storedType };
+            }
+            const subtype = expenseTypeById(expense?.subtypeId);
+            return {
+                main: storedType,
+                subtype: subtype?.parentId && String(subtype.parentId) === String(storedType?.id || '') ? subtype : null
+            };
+        }
+
         function populateTypesSelect() {
-            let options = '<option value="">اختر النوع المنتمي إليه...</option>';
-            let filterOptions = '<option value="">كل أنواع المصاريف...</option>';
-            expenseTypesDB.forEach(t => {
-                let opt = `<option value="${t.id}">${t.name}</option>`;
-                options += opt;
-                filterOptions += opt;
-            });
-            document.getElementById('expTypeSelect').innerHTML = options;
-            document.getElementById('filterTypeSelect').innerHTML = filterOptions;
+            normalizeExpenseTypes();
+            const mains = expenseMainTypes();
+            const expTypeSelect = document.getElementById('expTypeSelect');
+            const filterTypeSelect = document.getElementById('filterTypeSelect');
+            const typeParentSelect = document.getElementById('typeParentSelect');
+            const previousExpType = expTypeSelect?.value || '';
+            const previousFilterType = filterTypeSelect?.value || '';
+            const previousParent = typeParentSelect?.value || '';
+
+            const options = ['<option value="">اختر النوع الأساسي...</option>']
+                .concat(mains.map(type => `<option value="${type.id}">${type.name}</option>`))
+                .join('');
+            const filterOptions = ['<option value="">كل أنواع المصاريف...</option>']
+                .concat(mains.map(type => `<option value="${type.id}">${type.name}</option>`))
+                .join('');
+            const parentOptions = ['<option value="">تصنيف أساسي مستقل</option>']
+                .concat(mains.map(type => `<option value="${type.id}">${type.name}</option>`))
+                .join('');
+
+            if (expTypeSelect) {
+                expTypeSelect.innerHTML = options;
+                if (mains.some(type => String(type.id) === String(previousExpType))) expTypeSelect.value = previousExpType;
+            }
+            if (filterTypeSelect) {
+                filterTypeSelect.innerHTML = filterOptions;
+                if (mains.some(type => String(type.id) === String(previousFilterType))) filterTypeSelect.value = previousFilterType;
+            }
+            if (typeParentSelect) {
+                typeParentSelect.innerHTML = parentOptions;
+                if (mains.some(type => String(type.id) === String(previousParent))) typeParentSelect.value = previousParent;
+            }
+
+            handleExpenseTypeChange(false);
+            handleFilterTypeChange(false);
+        }
+
+        function handleExpenseTypeChange(shouldReset = true) {
+            const typeSelect = document.getElementById('expTypeSelect');
+            const subtypeSelect = document.getElementById('expSubtypeSelect');
+            const subtypeRow = document.getElementById('expSubtypeRow');
+            if (!typeSelect || !subtypeSelect || !subtypeRow) return;
+            const previous = shouldReset ? '' : subtypeSelect.value;
+            const subtypes = expenseSubtypes(typeSelect.value);
+            subtypeSelect.innerHTML = '<option value="">اختر التصنيف الفرعي...</option>' +
+                subtypes.map(type => `<option value="${type.id}">${type.name}</option>`).join('');
+            if (!shouldReset && subtypes.some(type => String(type.id) === String(previous))) subtypeSelect.value = previous;
+            const visible = !!typeSelect.value && subtypes.length > 0;
+            subtypeRow.classList.toggle('active', visible);
+            subtypeSelect.required = visible;
+            if (!visible) subtypeSelect.value = '';
+        }
+
+        function handleFilterTypeChange(shouldRender = true) {
+            const typeSelect = document.getElementById('filterTypeSelect');
+            const subtypeSelect = document.getElementById('filterSubtypeSelect');
+            if (!typeSelect || !subtypeSelect) return;
+            const previous = shouldRender ? '' : subtypeSelect.value;
+            const subtypes = expenseSubtypes(typeSelect.value);
+            subtypeSelect.innerHTML = '<option value="">كل الفروع...</option>' +
+                subtypes.map(type => `<option value="${type.id}">${type.name}</option>`).join('');
+            if (!shouldRender && subtypes.some(type => String(type.id) === String(previous))) subtypeSelect.value = previous;
+            const visible = !!typeSelect.value && subtypes.length > 0;
+            subtypeSelect.classList.toggle('active', visible);
+            if (!visible) subtypeSelect.value = '';
+            if (shouldRender) renderTable();
+        }
+
+        function expenseMatchesCategory(expense, mainId, subtypeId) {
+            if (!mainId) return true;
+            const category = resolveExpenseCategory(expense);
+            if (String(category.main?.id || '') !== String(mainId)) return false;
+            if (subtypeId && String(category.subtype?.id || '') !== String(subtypeId)) return false;
+            return true;
         }
 
         function expenseCurrencyConfig(){ return window.CashtopMulti?.getCurrencyConfig?.() || {enabled:false,baseCurrencyId:'ILS',base:{id:'ILS',symbol:'₪',code:'ILS',ratePer100Base:100},currencies:[{id:'ILS',name:'شيكل',symbol:'₪',code:'ILS',ratePer100Base:100}]}; }
@@ -581,7 +704,7 @@
             return window.CashtopMulti?.openMultiPayment?.({
                 title:'دفع متعدد للمصروف',accounts:(fundsDB.accounts||[]).filter(a=>window.Cashtop?.isFundActive?window.Cashtop.isFundActive(a):(a?.disabled!==true&&a?.active!==false&&String(a?.status||'').toLowerCase()!=='inactive')),transactionCurrencyId:currencyId,direction:'out',
                 requireExact:true,exactTransactionAmount:amountNative,initialSplits:expenseMultiPayments,defaultTransactionAmount:expenseMultiPayments.length?0:amountNative,
-                onSave:(splits)=>{expenseMultiPayments=splits.map(item=>({...item}));const select=document.getElementById('expAccountSelect');if(select)select.value=EXPENSE_MULTI_PAYMENT_VALUE;}
+                onSave:(splits)=>{expenseMultiPayments=splits.map(item=>({...item}));const select=document.getElementById('expAccountSelect');if(select){select.value=EXPENSE_MULTI_PAYMENT_VALUE;window.CashtopMulti?.refreshEnhancedSelect?.(select);}}
             });
         }
         function handleExpenseAccountChange(){const select=document.getElementById('expAccountSelect');if(!select)return;if(select.value===EXPENSE_MULTI_PAYMENT_VALUE){if(!openExpenseMultiPayment())select.value='';}else expenseMultiPayments=[];}
@@ -614,10 +737,12 @@
         async function renderTable() {
             const tbody = document.getElementById('expensesTableBody');
             const filterType = document.getElementById('filterTypeSelect').value;
+            const filterSubtype = document.getElementById('filterSubtypeSelect')?.value || '';
             const searchQ = String(document.getElementById('searchInput').value || '').trim();
             const sequence = renderTable._sequence = (renderTable._sequence || 0) + 1;
             const searchFallback = () => !searchQ ? expensesDB : expensesDB.filter(exp => {
-                const values = [exp?.name, exp?.title, exp?.details, exp?.notes, exp?.note];
+                const category = resolveExpenseCategory(exp);
+                const values = [exp?.name, exp?.title, exp?.details, exp?.notes, exp?.note, category.main?.name, category.subtype?.name];
                 const q = searchQ.toLowerCase();
                 return values.some(value => String(value || '').toLowerCase().includes(q));
             });
@@ -625,12 +750,13 @@
                 ? await window.Cashtop.runWorkerTask('filter-records', { records: expensesDB, query: searchQ, fields: ['name','title','details','notes','note'] }, searchFallback)
                 : searchFallback();
             if (sequence !== renderTable._sequence) return;
-            const filtered = searched.filter(exp => filterType === '' || exp.typeId === filterType).slice().reverse();
+            const filtered = searched.filter(exp => expenseMatchesCategory(exp, filterType, filterSubtype)).slice().reverse();
             const createRow = exp => {
-                const typeObj = expenseTypesDB.find(t => t.id === exp.typeId);
-                const typeName = typeObj ? typeObj.name : 'غير محدد';
+                const category = resolveExpenseCategory(exp);
+                const typeName = category.main ? category.main.name : 'غير محدد';
+                const subtypeName = category.subtype ? category.subtype.name : '';
                 const accObj = fundsDB.accounts.find(a => a.id == exp.accountId);
-                const accName = Array.isArray(exp.payments)&&exp.payments.length ? 'دفع متعدد' : (accObj ? accObj.name : 'صندوق محذوف');
+                const accName = Array.isArray(exp.payments)&&exp.payments.length ? 'دفع متعدد' : (accObj ? accObj.name : 'طريقة دفع محذوفة');
                 const safeDate = exp.date ? exp.date.split('T')[0] : 'غير محدد';
                 const safeName = exp.name || exp.title || exp.details || 'مصروف غير محدد';
                 const safeNotes = exp.notes || exp.note || '-';
@@ -638,7 +764,10 @@
                 tr.innerHTML = `
                     <td dir="ltr" style="font-size:12px;font-weight:600;color:#475569;">${safeDate}</td>
                     <td><strong>${safeName}</strong></td>
-                    <td><span class="badge-type-label">${typeName}</span></td>
+                    <td class="category-cell">
+                        <span class="badge-type-label"><i class="fa-solid fa-folder"></i>${typeName}</span>
+                        ${subtypeName ? `<br><span class="badge-subtype-label"><i class="fa-solid fa-turn-up fa-rotate-90"></i>${subtypeName}</span>` : ''}
+                    </td>
                     <td><span class="badge-cost">${parseFloat(exp.amount).toFixed(2)} ₪</span></td>
                     <td>${accName}</td>
                     <td style="font-size:12px;color:#64748b;white-space:normal;max-width:200px;">${safeNotes}</td>
@@ -664,7 +793,9 @@
         // ==========================================
         //  إضافة نوع مصروف
         // ==========================================
-        function openTypeModal() {
+        function openTypeModal(parentId = '') {
+            populateTypesSelect();
+            document.getElementById('typeParentSelect').value = parentId || '';
             document.getElementById('typeName').value = '';
             document.getElementById('typeNotes').value = '';
             openModal('typeModal');
@@ -674,19 +805,34 @@
             e.preventDefault();
             const name = document.getElementById('typeName').value.trim();
             const notes = document.getElementById('typeNotes').value.trim();
+            const parentId = document.getElementById('typeParentSelect').value || '';
 
             if (!name) return;
+            if (parentId && !expenseMainTypes().some(type => String(type.id) === String(parentId))) {
+                showToast('التصنيف الأساسي المحدد غير موجود.', 'error');
+                return;
+            }
+
+            const duplicate = expenseTypesDB.some(type =>
+                String(type.parentId || '') === String(parentId) &&
+                String(type.name || '').trim().toLocaleLowerCase('ar') === name.toLocaleLowerCase('ar')
+            );
+            if (duplicate) {
+                showToast(parentId ? 'هذا المصروف الفرعي موجود مسبقاً داخل التصنيف الأساسي.' : 'هذا التصنيف الأساسي موجود مسبقاً.', 'warning');
+                return;
+            }
 
             expenseTypesDB.push({
                 id: 'et_' + Date.now(),
-                name: name,
-                notes: notes
+                name,
+                notes,
+                parentId
             });
 
             localStorage.setItem('cashtop_expense_types', JSON.stringify(expenseTypesDB));
             populateTypesSelect();
             closeModal('typeModal');
-            showToast('تمت إضافة تصنيف المصروفات بنجاح.', 'success');
+            showToast(parentId ? 'تمت إضافة المصروف الفرعي وربطه بالتصنيف الأساسي.' : 'تمت إضافة تصنيف المصروفات الأساسي.', 'success');
         }
 
         // ==========================================
@@ -696,6 +842,8 @@
             document.getElementById('editExpId').value = '';
             document.getElementById('expName').value = '';
             document.getElementById('expTypeSelect').value = '';
+            document.getElementById('expSubtypeSelect').value = '';
+            handleExpenseTypeChange();
             document.getElementById('expAmount').value = '';
             expenseMultiPayments = [];
             populateExpenseCurrencySelect(expenseCurrencyConfig().baseCurrencyId);
@@ -716,9 +864,12 @@
             populateExpenseCurrencySelect(exp.currencyId || expenseCurrencyConfig().baseCurrencyId);
             populateAccountsSelect(); // تحديث الأرصدة
             
+            const category = resolveExpenseCategory(exp);
             document.getElementById('editExpId').value = exp.id;
             document.getElementById('expName').value = exp.name || exp.title || '';
-            document.getElementById('expTypeSelect').value = exp.typeId || '';
+            document.getElementById('expTypeSelect').value = category.main?.id || exp.typeId || '';
+            handleExpenseTypeChange();
+            document.getElementById('expSubtypeSelect').value = category.subtype?.id || exp.subtypeId || '';
             document.getElementById('expAmount').value = expenseNativeAmount(exp);
             expenseMultiPayments = Array.isArray(exp.payments) ? exp.payments.map(item=>({...item})) : [];
             document.getElementById('expAccountSelect').value = expenseMultiPayments.length ? EXPENSE_MULTI_PAYMENT_VALUE : (exp.accountId || '');
@@ -745,7 +896,7 @@
             return [{accountId:account.id,accountName:account.name,transactionAmount:expenseNativeAmount(exp),transactionCurrencyId:exp.currencyId||cfg.baseCurrencyId,baseAmount:Number(exp.amount||0),accountAmount,accountCurrencyId}];
         }
         function validateExpensePayments(payments,amountBase){
-            if(!payments.length){showToast('اختر صندوقاً صحيحاً للصرف.','error');return false;}
+            if(!payments.length){showToast('اختر طريقة دفع صحيحة للصرف.','error');return false;}
             const totalBase=payments.reduce((sum,p)=>sum+Number(p.baseAmount||0),0);
             if(Math.abs(totalBase-Number(amountBase||0))>0.01){showToast('توزيع الدفع المتعدد لا يساوي مبلغ المصروف. افتح دفع متعدد واحفظ التوزيع من جديد.','error');return false;}
             const insufficient=payments.find(p=>{const a=fundsDB.accounts.find(x=>String(x.id)===String(p.accountId));return !a||Number(p.accountAmount||0)>Number(a.balance||0)+1e-9;});
@@ -756,13 +907,16 @@
             legacyExpensePayments(exp).forEach((payment,index)=>{const account=fundsDB.accounts.find(a=>String(a.id)===String(payment.accountId));if(!account)return;account.balance=Number(account.balance||0)+Number(payment.accountAmount||0);fundsDB.accountLogs.push({id:`LOG_EXP_REV_${exp.id}_${index}_${Date.now()}`,sourceType:'expense-reversal',sourceId:exp.id,accountId:account.id,date,type:'إيداع',amount:Number(payment.accountAmount||0),baseAmount:Number(payment.baseAmount||0),currencyId:payment.accountCurrencyId||account.currencyId,notes:`عكس قيد مصروف [${name}] قبل التعديل`});});
         }
         function applyExpensePayments(expenseId,payments,date,name,currencyId){
-            payments.forEach((payment,index)=>{const account=fundsDB.accounts.find(a=>String(a.id)===String(payment.accountId));if(!account)throw new Error('الصندوق المحدد غير موجود.');account.balance=Number(account.balance||0)-Number(payment.accountAmount||0);fundsDB.accountLogs.push({id:`LOG_EXP_${expenseId}_${index}_${Date.now()}`,sourceType:'expense',sourceId:expenseId,accountId:account.id,date,type:'سحب',amount:Number(payment.accountAmount||0),baseAmount:Number(payment.baseAmount||0),currencyId:payment.accountCurrencyId||account.currencyId,transactionAmount:Number(payment.transactionAmount||0),transactionCurrencyId:currencyId,notes:`مستند صرف: ${name}`});});
+            payments.forEach((payment,index)=>{const account=fundsDB.accounts.find(a=>String(a.id)===String(payment.accountId));if(!account)throw new Error('طريقة الدفع المحددة غير موجودة.');account.balance=Number(account.balance||0)-Number(payment.accountAmount||0);fundsDB.accountLogs.push({id:`LOG_EXP_${expenseId}_${index}_${Date.now()}`,sourceType:'expense',sourceId:expenseId,accountId:account.id,date,type:'سحب',amount:Number(payment.accountAmount||0),baseAmount:Number(payment.baseAmount||0),currencyId:payment.accountCurrencyId||account.currencyId,transactionAmount:Number(payment.transactionAmount||0),transactionCurrencyId:currencyId,notes:`مستند صرف: ${name}`});});
         }
 
         function saveExpense(e) {
             e.preventDefault();
-            const editId=document.getElementById('editExpId').value,name=document.getElementById('expName').value.trim(),typeId=document.getElementById('expTypeSelect').value,cfg=expenseCurrencyConfig(),currencyId=cfg.enabled?expenseCurrencyId():cfg.baseCurrencyId,amountNative=parseFloat(document.getElementById('expAmount').value),amount=window.CashtopMulti?.toBase?.(amountNative,currencyId)??amountNative,accountId=document.getElementById('expAccountSelect').value,date=document.getElementById('expDate').value,notes=document.getElementById('expNotes').value.trim();
+            const editId=document.getElementById('editExpId').value,name=document.getElementById('expName').value.trim(),typeId=document.getElementById('expTypeSelect').value,subtypeId=document.getElementById('expSubtypeSelect')?.value||'',cfg=expenseCurrencyConfig(),currencyId=cfg.enabled?expenseCurrencyId():cfg.baseCurrencyId,amountNative=parseFloat(document.getElementById('expAmount').value),amount=window.CashtopMulti?.toBase?.(amountNative,currencyId)??amountNative,accountId=document.getElementById('expAccountSelect').value,date=document.getElementById('expDate').value,notes=document.getElementById('expNotes').value.trim();
             if(!name||!typeId||isNaN(amountNative)||amountNative<=0||!accountId){showToast('الرجاء تعبئة جميع الحقول بشكل صحيح','error');return;}
+            const availableSubtypes=expenseSubtypes(typeId);
+            if(availableSubtypes.length&&!subtypeId){showToast('اختر المصروف الفرعي التابع لنوع المصروف الأساسي.','warning');return;}
+            if(subtypeId&&!availableSubtypes.some(type=>String(type.id)===String(subtypeId))){showToast('المصروف الفرعي لا يتبع التصنيف الأساسي المحدد.','error');return;}
             const payments=expensePaymentsForSelection(amountNative,currencyId);
             if(!validateExpensePayments(payments,amount))return;
             const snapshotFunds=JSON.parse(JSON.stringify(fundsDB)),snapshotExpenses=JSON.parse(JSON.stringify(expensesDB));
@@ -773,10 +927,10 @@
                 const isMulti=accountId===EXPENSE_MULTI_PAYMENT_VALUE;
                 const target=editId?expensesDB.find(x=>x.id===editId):{};
                 if(!editId&&!target.createdAt)target.createdAt=new Date().toISOString();
-                Object.assign(target,{id:expenseId,name,typeId,amount,amountNative,currencyId,accountId:isMulti?EXPENSE_MULTI_PAYMENT_VALUE:payments[0].accountId,accountName:isMulti?'دفع متعدد':payments[0].accountName,paymentMethod:isMulti?'دفع متعدد':payments[0].accountName,payments:isMulti?payments.map(item=>({...item})):[],accountAmountNative:isMulti?null:Number(payments[0].accountAmount||0),accountCurrencyId:isMulti?null:payments[0].accountCurrencyId,date,notes});
+                Object.assign(target,{id:expenseId,name,typeId,subtypeId:subtypeId||'',amount,amountNative,currencyId,accountId:isMulti?EXPENSE_MULTI_PAYMENT_VALUE:payments[0].accountId,accountName:isMulti?'دفع متعدد':payments[0].accountName,paymentMethod:isMulti?'دفع متعدد':payments[0].accountName,payments:isMulti?payments.map(item=>({...item})):[],accountAmountNative:isMulti?null:Number(payments[0].accountAmount||0),accountCurrencyId:isMulti?null:payments[0].accountCurrencyId,date,notes});
                 if(!editId)expensesDB.push(target);
                 if(window.Cashtop?.atomicSetItems)window.Cashtop.atomicSetItems({cashtop_expenses:expensesDB,cashtop_funds_db_v4:fundsDB,cashtop_funds_db:fundsDB},{label:'save-expense'});else{localStorage.setItem('cashtop_expenses',JSON.stringify(expensesDB));localStorage.setItem('cashtop_funds_db_v4',JSON.stringify(fundsDB));localStorage.setItem('cashtop_funds_db',JSON.stringify(fundsDB));}
-                expenseMultiPayments=[];closeModal('expenseModal');initLayout();showToast(editId?'تم تحديث المصروف والقيود بنجاح':'تم تسجيل المصروف وخصمه من الصندوق','success');
+                expenseMultiPayments=[];closeModal('expenseModal');initLayout();showToast(editId?'تم تحديث المصروف والقيود بنجاح':'تم تسجيل المصروف وخصمه من طريقة الدفع','success');
             }catch(error){fundsDB=snapshotFunds;expensesDB=snapshotExpenses;console.error(error);showToast(error.message||'تعذر حفظ المصروف.','error');}
         }
 
@@ -788,7 +942,7 @@
             if(!exp) return;
             
             let acc = fundsDB.accounts.find(a => a.id == exp.accountId);
-            let accName = Array.isArray(exp.payments)&&exp.payments.length ? 'دفع متعدد' : (acc ? acc.name : 'صندوق محذوف');
+            let accName = Array.isArray(exp.payments)&&exp.payments.length ? 'دفع متعدد' : (acc ? acc.name : 'طريقة دفع محذوفة');
 
             document.getElementById('deleteExpId').value = id;
             document.getElementById('delExpAmount').innerText = expenseNativeAmount(exp).toFixed(2) + ' ' + (window.CashtopMulti?.currencySymbol?.(exp.currencyId || expenseCurrencyConfig().baseCurrencyId) || '');
@@ -832,18 +986,19 @@
                 ["نظام كاش توب - سجل المصاريف والمدفوعات"],
                 ["تاريخ الاستخراج:", new Date().toLocaleString('ar-EG')],
                 [],
-                ["التاريخ", "اسم المصروف", "التصنيف", "المبلغ (₪)", "الصندوق المخصوم منه", "ملاحظات"]
+                ["التاريخ", "اسم المصروف", "التصنيف الأساسي", "التصنيف الفرعي", "المبلغ (₪)", "طريقة الدفع", "ملاحظات"]
             ];
 
             expensesDB.slice().reverse().forEach(exp => {
-                let typeObj = expenseTypesDB.find(t => t.id === exp.typeId);
-                let accObj = fundsDB.accounts.find(a => a.id == exp.accountId);
-                let safeName = exp.name || exp.title || exp.details || 'بدون اسم';
-                let safeDate = exp.date ? exp.date.split('T')[0] : '';
-                
+                const category = resolveExpenseCategory(exp);
+                const accObj = fundsDB.accounts.find(a => a.id == exp.accountId);
+                const safeName = exp.name || exp.title || exp.details || 'بدون اسم';
+                const safeDate = exp.date ? exp.date.split('T')[0] : '';
+                const paymentName = Array.isArray(exp.payments)&&exp.payments.length ? 'دفع متعدد' : (accObj ? accObj.name : '');
+
                 ws_data.push([
-                    safeDate, safeName, (typeObj ? typeObj.name : ''), 
-                    parseFloat(exp.amount), (accObj ? accObj.name : ''), exp.notes || ''
+                    safeDate, safeName, category.main?.name || '', category.subtype?.name || '',
+                    parseFloat(exp.amount), paymentName, exp.notes || ''
                 ]);
             });
 
@@ -856,16 +1011,17 @@
         async function exportPDF() {
             if (expensesDB.length === 0) { showToast("لا توجد بيانات للتصدير", "error"); return; }
             const rows = expensesDB.slice().reverse().map((exp, i) => {
-                const typeObj = expenseTypesDB.find(t => t.id === exp.typeId);
+                const category = resolveExpenseCategory(exp);
                 const accObj = fundsDB.accounts.find(a => a.id == exp.accountId);
                 const safeName = exp.name || exp.title || exp.details || 'بدون اسم';
                 const safeDate = exp.date ? exp.date.split('T')[0] : '';
-                return [i + 1, safeDate, safeName, typeObj ? typeObj.name : '-', parseFloat(exp.amount || 0).toFixed(2), accObj ? accObj.name : '-', exp.notes || '-'];
+                const paymentName = Array.isArray(exp.payments)&&exp.payments.length ? 'دفع متعدد' : (accObj ? accObj.name : '-');
+                return [i + 1, safeDate, safeName, category.main?.name || '-', category.subtype?.name || '-', parseFloat(exp.amount || 0).toFixed(2), paymentName, exp.notes || '-'];
             });
             try {
                 await CashtopExport.exportDataTablePDF({
                     title: 'سجل المصاريف',
-                    columns: ['#', 'التاريخ', 'المصروف', 'التصنيف', 'المبلغ (₪)', 'الصندوق', 'ملاحظات'],
+                    columns: ['#', 'التاريخ', 'المصروف', 'التصنيف الأساسي', 'التصنيف الفرعي', 'المبلغ (₪)', 'طريقة الدفع', 'ملاحظات'],
                     rows, filename: `تقرير_المصاريف_${Date.now()}.pdf`, orientation: 'landscape', fontSize: 7.5
                 });
                 showToast('تم تنزيل سجل المصاريف.', 'success');

@@ -140,12 +140,12 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=85">
-    <script src="cashtop-core.js?v=85"></script>
-    <script src="multi-system.js?v=85"></script>
-    <script src="turso-config.js?v=85"></script><script src="turso-rtdb.js?v=85"></script>
-    <script src="accounting-engine.js?v=85"></script>
-    <script src="turso-sync.js?v=85"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=90">
+    <script src="cashtop-core.js?v=90"></script>
+    <script src="multi-system.js?v=90"></script>
+    <script src="turso-config.js?v=90"></script><script src="turso-rtdb.js?v=90"></script>
+    <script src="accounting-engine.js?v=90"></script>
+    <script src="turso-sync.js?v=90"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -332,8 +332,17 @@
                     </div>
 
                     <div class="form-group">
-                        <input type="number" step="0.01" class="form-control" id="sysProfitRate" placeholder="15">
+                        <input type="number" step="0.01" class="form-control" id="sysProfitRate" min="0" value="25" placeholder="25">
                         <label for="sysProfitRate">معدل الربح المستهدف (%)</label>
+                    </div>
+                    <div class="form-group">
+                        <select class="form-control" id="sysInventoryAccountingMethod" data-ct-site-dropdown="true" data-ct-icon="fa-layer-group">
+                            <option value="default">افتراضي (النظام الحالي)</option>
+                            <option value="fifo">FIFO - الوارد أولاً يصرف أولاً</option>
+                            <option value="lifo">LIFO - الوارد أخيراً يصرف أولاً</option>
+                        </select>
+                        <label for="sysInventoryAccountingMethod">نظام احتساب تكلفة المخزون</label>
+                        <small style="display:block;margin-top:5px;color:#64748b;line-height:1.7;">الافتراضي يحافظ على طريقة النظام الحالية. FIFO/LIFO يحددان دفعات التكلفة المستخدمة عند البيع.</small>
                     </div>
                     
                     <div class="toggle-wrapper">
@@ -366,7 +375,7 @@
                 </div>
 
                 <div class="card-footer-actions">
-                    <button type="button" class="btn-action-password" data-ct-permission="settings.edit" onclick="openPasswordModal()"><i class="fa-solid fa-key"></i> تغيير كلمة المرور</button>
+                    <button type="button" class="btn-action-password" data-ct-permission="settings.edit" onclick="openPasswordModal()"><i class="fa-solid fa-user-lock"></i> تغيير اسم المستخدم وكلمة المرور</button>
                     <button type="submit" class="btn-action-primary"><i class="fa-solid fa-floppy-disk"></i> حفظ الإعدادات</button>
                 </div>
             </form>
@@ -449,28 +458,32 @@
         </div>
     </div>
 
-    <!-- النافذة المنبثقة: تغيير كلمة المرور -->
+    <!-- النافذة المنبثقة: بيانات تسجيل الدخول -->
     <div class="modal-overlay" id="passwordModal">
         <div class="modal-box">
             <div class="modal-header">
-                <div class="modal-title"><i class="fa-solid fa-lock" style="color: #337ab7;"></i> تغيير كلمة مرور النظام الأمنية</div>
-                <button class="modal-close" onclick="closePasswordModal()">&times;</button>
+                <div class="modal-title"><i class="fa-solid fa-user-lock" style="color: #337ab7;"></i> تغيير بيانات تسجيل الدخول</div>
+                <button type="button" class="modal-close" onclick="closePasswordModal()">&times;</button>
             </div>
             <form id="passwordForm" onsubmit="handlePasswordChange(event)">
                 <div style="display: flex; flex-direction: column; gap: 20px; margin-top: 10px;">
                     <div class="form-group">
-                        <input type="password" class="form-control" id="newPassword" placeholder="••••••••" required minlength="4">
+                        <input type="text" class="form-control" id="newUsername" autocomplete="username" required minlength="2" placeholder="اسم المستخدم">
+                        <label for="newUsername">اسم المستخدم الجديد</label>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" class="form-control" id="newPassword" autocomplete="new-password" minlength="4" placeholder="اتركه فارغاً للإبقاء على الحالي">
                         <label for="newPassword">كلمة المرور الجديدة</label>
                     </div>
                     <div class="form-group">
-                        <input type="password" class="form-control" id="confirmPassword" placeholder="••••••••" required minlength="4">
-                        <label for="confirmPassword">إعادة كتابة كلمة المرور</label>
+                        <input type="password" class="form-control" id="confirmPassword" autocomplete="new-password" minlength="4" placeholder="أعد كلمة المرور الجديدة">
+                        <label for="confirmPassword">تأكيد كلمة المرور</label>
                     </div>
+                    <small style="display:block;color:#64748b;line-height:1.8;margin-top:-8px;">يمكن تغيير اسم المستخدم وحده. اترك حقلي كلمة المرور فارغين للاحتفاظ بكلمة المرور الحالية.</small>
                 </div>
-                <!-- الأزرار متراصة بجوار بعضها بدقة -->
                 <div class="modal-footer">
                     <button type="button" class="btn-action-cancel" onclick="closePasswordModal()"><i class="fa-solid fa-xmark"></i> إلغاء</button>
-                    <button type="submit" class="btn-action-primary" style="background-color: #337ab7; margin: 0;"><i class="fa-solid fa-shield-halved"></i> تحديث الآن</button>
+                    <button type="submit" class="btn-action-primary" style="background-color: #337ab7; margin: 0;"><i class="fa-solid fa-shield-halved"></i> حفظ بيانات الدخول</button>
                 </div>
             </form>
         </div>
@@ -544,7 +557,10 @@
                 renderCurrencySettings(sysSettings);
                 updateMultiCurrencyState();
                 if (sysSettings.alertLimit) document.getElementById('sysAlertLimit').value = sysSettings.alertLimit;
-                if (sysSettings.profitRate !== undefined && sysSettings.profitRate !== null) document.getElementById('sysProfitRate').value = sysSettings.profitRate;
+                document.getElementById('sysProfitRate').value = (sysSettings.profitRate !== undefined && sysSettings.profitRate !== null && String(sysSettings.profitRate).trim() !== '') ? sysSettings.profitRate : 25;
+                const inventoryMethod = ['fifo','lifo'].includes(String(sysSettings.inventoryAccountingMethod || '').toLowerCase()) ? String(sysSettings.inventoryAccountingMethod).toLowerCase() : 'default';
+                const accountingSelect = document.getElementById('sysInventoryAccountingMethod');
+                if (accountingSelect) { accountingSelect.value = inventoryMethod; window.CashtopMulti?.refreshEnhancedSelect?.(accountingSelect); }
                 document.getElementById('sysQtyByPriceToggle').checked = sysSettings.qtyByPrice === true;
                 document.getElementById('sysFractionQtyToggle').checked = sysSettings.allowFractionQty !== false;
                 document.getElementById('sysRoundInvoicePrintToggle').checked = sysSettings.roundInvoicePrintTotals === true;
@@ -654,35 +670,75 @@
             textarea.selectionStart = textarea.selectionEnd = startPos + variableTag.length;
         }
 
-        function openPasswordModal() { 
-            if (!window.Cashtop?.can?.('settings.edit')) { showToast('لا تملك صلاحية تعديل الإعدادات', 'error'); return; }
-            document.getElementById('passwordModal').classList.add('active'); 
+        function normalizeLoginName(value) { return String(value || '').trim().toLowerCase(); }
+
+        function currentAccountDatasets() {
+            const parse = (key, fallback) => { try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); } catch (_) { return fallback; } };
+            return {
+                access: parse('cashtop_company_access', {}),
+                branches: parse('cashtop_branches', []),
+                employees: parse('cashtop_employees', []),
+                agents: parse('cashtop_sales_agents', [])
+            };
         }
-        
-        function closePasswordModal() { 
-            document.getElementById('passwordModal').classList.remove('active'); 
+
+        function usernameBelongsToAnotherAccount(username, session, datasets) {
+            const wanted = normalizeLoginName(username);
+            const current = normalizeLoginName(session.username);
+            if (!wanted || wanted === current) return false;
+            const role = String(session.role || '').toLowerCase();
+            if (normalizeLoginName(datasets.access?.manager?.username) === wanted && !['admin','owner','company-admin'].includes(role)) return true;
+            if ((datasets.branches || []).some(branch => normalizeLoginName(branch.managerUsername) === wanted && !(['branch-admin','branch_manager','manager'].includes(role) && (String(branch.id) === String(session.branchRecordId || session.branchId))))) return true;
+            if ((datasets.employees || []).some(employee => normalizeLoginName(employee.username) === wanted && !(role === 'employee' && String(employee.id) === String(session.uid)))) return true;
+            if ((datasets.agents || []).some(agent => normalizeLoginName(agent.username) === wanted && !(role === 'representative' && String(agent.id) === String(session.uid)))) return true;
+            return false;
+        }
+
+        function openPasswordModal() {
+            if (!window.Cashtop?.can?.('settings.edit')) { showToast('لا تملك صلاحية تعديل الإعدادات', 'error'); return; }
+            const session = window.Cashtop?.getSession?.() || {};
+            const usernameInput = document.getElementById('newUsername');
+            if (usernameInput) usernameInput.value = session.username || '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+            document.getElementById('passwordModal').classList.add('active');
+            setTimeout(() => usernameInput?.focus(), 30);
+        }
+
+        function closePasswordModal() {
+            document.getElementById('passwordModal').classList.remove('active');
             document.getElementById('passwordForm').reset();
         }
 
         async function handlePasswordChange(event) {
             event.preventDefault();
             if (!window.Cashtop?.can?.('settings.edit')) { showToast('لا تملك صلاحية تعديل الإعدادات', 'error'); return; }
-            const pass = document.getElementById('newPassword').value;
-            const conf = document.getElementById('confirmPassword').value;
-            if (pass !== conf) return showToast('خطأ: كلمات المرور غير متطابقة!', 'error');
+
+            const username = String(document.getElementById('newUsername')?.value || '').trim();
+            const pass = document.getElementById('newPassword')?.value || '';
+            const conf = document.getElementById('confirmPassword')?.value || '';
+            if (username.length < 2) return showToast('اسم المستخدم يجب أن يحتوي على حرفين على الأقل.', 'error');
+            if ((pass || conf) && pass !== conf) return showToast('كلمات المرور غير متطابقة.', 'error');
+            if (pass && pass.length < 4) return showToast('كلمة المرور الجديدة يجب أن تكون 4 أحرف على الأقل.', 'error');
 
             const session = window.Cashtop?.getSession?.() || {};
             const role = String(session.role || '').toLowerCase();
+            const oldUsername = String(session.username || '').trim();
+            const datasets = currentAccountDatasets();
+            if (usernameBelongsToAnotherAccount(username, session, datasets)) return showToast('اسم المستخدم مستخدم من حساب آخر في الشركة.', 'error');
+
             let updated = false;
+            let effectivePassword = pass;
 
             if (['admin', 'owner', 'company-admin'].includes(role)) {
-                const access = JSON.parse(localStorage.getItem('cashtop_company_access')) || {};
+                const access = datasets.access || {};
+                effectivePassword = pass || String(access.manager?.password || '');
                 access.manager = {
                     ...(access.manager || {}),
                     id: session.uid || access.manager?.id,
-                    username: session.username || access.manager?.username,
-                    displayName: session.displayName || access.manager?.displayName,
-                    role: 'admin', active: true, password: pass
+                    username,
+                    displayName: session.displayName || access.manager?.displayName || username,
+                    role: 'admin', active: true, password: effectivePassword, credentialsUpdatedAt: Date.now()
                 };
                 access.companyKey = session.companyKey || access.companyKey || '';
                 access.companyId = session.companyId || access.companyId || '';
@@ -694,43 +750,66 @@
 
                 const rawGet = key => Storage.prototype.getItem.call(localStorage, key);
                 const rawSet = (key, value) => Storage.prototype.setItem.call(localStorage, key, String(value));
-                const users = JSON.parse(rawGet('cashtop_admin_users') || '[]');
+                let users = [];
+                try { users = JSON.parse(rawGet('cashtop_admin_users') || '[]') || []; } catch (_) { users = []; }
                 const index = users.findIndex(user =>
                     String(user.companyKey || '').toUpperCase() === String(session.companyKey || '').toUpperCase() &&
-                    String(user.username || '').toLowerCase() === String(session.username || '').toLowerCase()
+                    normalizeLoginName(user.username) === normalizeLoginName(oldUsername)
                 );
                 if (index >= 0) {
-                    users[index].password = pass;
+                    users[index].username = username;
+                    if (effectivePassword) users[index].password = effectivePassword;
                     rawSet('cashtop_admin_users', JSON.stringify(users));
                 }
                 updated = true;
             } else if (role === 'employee' || String(session.uid || '').startsWith('EMP_')) {
-                const employees = JSON.parse(localStorage.getItem('cashtop_employees')) || [];
+                const employees = datasets.employees || [];
                 const employee = employees.find(item => String(item.id) === String(session.uid)) ||
-                    employees.find(item => String(item.username || '').toLowerCase() === String(session.username || '').toLowerCase());
+                    employees.find(item => normalizeLoginName(item.username) === normalizeLoginName(oldUsername));
                 if (employee) {
-                    employee.password = pass;
+                    effectivePassword = pass || String(employee.password || '');
+                    employee.username = username;
+                    if (effectivePassword) employee.password = effectivePassword;
                     localStorage.setItem('cashtop_employees', JSON.stringify(employees));
                     updated = true;
                 }
             } else if (['branch-admin', 'branch_manager', 'manager'].includes(role)) {
-                const branches = JSON.parse(localStorage.getItem('cashtop_branches')) || [];
+                const branches = datasets.branches || [];
                 const branchLookupId = session.branchRecordId || (String(session.branchId || '') !== 'MAIN' ? session.branchId : null);
                 const branch = branches.find(item => branchLookupId && String(item.id) === String(branchLookupId)) ||
-                    branches.find(item => String(item.managerUsername || '').toLowerCase() === String(session.username || '').toLowerCase());
+                    branches.find(item => normalizeLoginName(item.managerUsername) === normalizeLoginName(oldUsername));
                 if (branch) {
-                    branch.managerPassword = pass;
+                    effectivePassword = pass || String(branch.managerPassword || '');
+                    branch.managerUsername = username;
+                    if (effectivePassword) branch.managerPassword = effectivePassword;
                     branch.managerActive = true;
                     localStorage.setItem('cashtop_branches', JSON.stringify(branches));
                     updated = true;
                 }
+            } else if (role === 'representative' || String(session.uid || '').startsWith('AG_')) {
+                const agents = datasets.agents || [];
+                const agent = agents.find(item => String(item.id) === String(session.uid)) ||
+                    agents.find(item => normalizeLoginName(item.username) === normalizeLoginName(oldUsername));
+                if (agent) {
+                    effectivePassword = pass || String(agent.password || '');
+                    agent.username = username;
+                    if (effectivePassword) agent.password = effectivePassword;
+                    localStorage.setItem('cashtop_sales_agents', JSON.stringify(agents));
+                    updated = true;
+                }
             }
 
-            if (!updated) return showToast('تعذر تحديد حساب المستخدم الحالي لتغيير كلمة مروره.', 'error');
-            showToast('تم تحديث كلمة المرور وإضافتها إلى طابور مزامنة Turso.', 'success');
+            if (!updated) return showToast('تعذر تحديد حساب المستخدم الحالي لتحديث بيانات الدخول.', 'error');
+
+            const nextSession = { ...session, username };
+            window.Cashtop?.persistSession?.(nextSession);
+            const currentUser = document.getElementById('ctCurrentUser');
+            if (currentUser && (!session.displayName || session.displayName === oldUsername)) currentUser.textContent = username;
+
             closePasswordModal();
+            showToast(pass ? 'تم تحديث اسم المستخدم وكلمة المرور وإضافتهما للمزامنة.' : 'تم تحديث اسم المستخدم وإضافته للمزامنة.', 'success');
             try { await window.CashtopTurso?.syncAll?.(); }
-            catch (error) { console.warn('Password sync:', error); }
+            catch (error) { console.warn('Credentials sync:', error); showToast('تم الحفظ محلياً وسيتم إرسال التغيير عند المزامنة القادمة.', 'warning'); }
         }
 
         function buildCustomerPortalUrl() {
@@ -824,7 +903,8 @@ function saveSystemSettings(event) {
                 baseCurrencyId: currentBaseCurrencyPreset().id,
                 currencies: collectCurrencies(true),
                 alertLimit: String(document.getElementById('sysAlertLimit').value || '').trim() === '' ? (previousSettings.alertLimit ?? null) : parseInt(document.getElementById('sysAlertLimit').value),
-                profitRate: String(document.getElementById('sysProfitRate').value || '').trim() === '' ? (previousSettings.profitRate ?? null) : parseFloat(document.getElementById('sysProfitRate').value),
+                profitRate: String(document.getElementById('sysProfitRate').value || '').trim() === '' ? (previousSettings.profitRate ?? 25) : Math.max(0, parseFloat(document.getElementById('sysProfitRate').value)),
+                inventoryAccountingMethod: ['fifo','lifo'].includes(String(document.getElementById('sysInventoryAccountingMethod')?.value || '').toLowerCase()) ? String(document.getElementById('sysInventoryAccountingMethod').value).toLowerCase() : 'default',
                 qtyByPrice: document.getElementById('sysQtyByPriceToggle').checked,
                 allowFractionQty: document.getElementById('sysFractionQtyToggle').checked,
                 roundInvoicePrintTotals: document.getElementById('sysRoundInvoicePrintToggle')?.checked === true,

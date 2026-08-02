@@ -188,13 +188,25 @@
           ['رصيده بعد الفاتورة', `${money(previousBalance + Number(invoice.debt || 0))} ${currency}`],
           ['رصيد الحساب الحالي', `${money(currentBalance)} ${currency}`]
         ])}
-        ${summaryTable([
-          ['مجموع الفاتورة', `${invoiceDocumentMoney(invoiceDocumentAmount(Number(invoice.total || 0) + Number(invoice.discount || 0) - Number(invoice.tax || 0)))} ${currency}`],
-          ['دفعة نقدية', `${invoiceDocumentMoney(invoiceDocumentAmount(invoice.paid))} ${currency}`],
-          ['الخصم/الإضافة', `${money(Number(invoice.tax || 0) - Number(invoice.discount || 0))} ${currency}`],
-          ['صافي الفاتورة', `${invoiceDocumentMoney(invoiceDocumentAmount(invoice.total))} ${currency}`]
-        ])}
+        ${summaryTable((() => {
+          const shipping = Number(invoice.shippingCost || 0);
+          const tax = Number(invoice.tax || 0);
+          const discount = Number(invoice.discount || 0);
+          const subtotal = Number.isFinite(Number(invoice.subtotal))
+            ? Number(invoice.subtotal)
+            : Number(invoice.total || 0) + discount - tax - shipping;
+          const rows = [
+            ['مجموع الفاتورة', `${invoiceDocumentMoney(invoiceDocumentAmount(subtotal))} ${currency}`]
+          ];
+          if (discount > 0) rows.push(['الخصم', `- ${money(discount)} ${currency}`]);
+          if (tax > 0) rows.push([invoice.taxName ? `الضريبة - ${invoice.taxName}` : 'الضريبة', `+ ${money(tax)} ${currency}`]);
+          if (shipping > 0) rows.push(['الشحن', `+ ${money(shipping)} ${currency}`]);
+          rows.push(['دفعة نقدية', `${invoiceDocumentMoney(invoiceDocumentAmount(invoice.paid))} ${currency}`]);
+          rows.push(['صافي الفاتورة', `${invoiceDocumentMoney(invoiceDocumentAmount(invoice.total))} ${currency}`]);
+          return rows;
+        })())}
       </div>
+      ${(invoice.shippingAddress || invoice.shippingNote) ? `<div class="ct-doc-note-row"><div class="note-value">${esc([invoice.shippingAddress ? `العنوان: ${invoice.shippingAddress}` : '', invoice.shippingNote ? `الملاحظة: ${invoice.shippingNote}` : ''].filter(Boolean).join(' — '))}</div><div class="note-label">الشحن</div></div>` : ''}
       <div class="ct-doc-note-row"><div class="note-value">${esc(invoice.notes || '')}</div><div class="note-label">ملاحظات</div></div>
       <div class="ct-doc-signature">${esc(company.name)}<br>${esc(invoice.branchName || company.branch)}<br>[ التوقيع ]</div>
       <div class="ct-doc-print-date">تاريخ الطباعة: ${esc(parts.printed)}</div>

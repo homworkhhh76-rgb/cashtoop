@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v85-offline-first-durable-sync-autocomplete';
+const CACHE_VERSION = 'v92-modal-layers-credentials-purchase-unit-cache-first-v1';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = 'cash-top-2-remote-static-persistent-v1';
 
@@ -19,6 +19,7 @@ const LOCAL_ASSETS = [
   './barcode-tools.js',
   './branches.html',
   './cashier.html',
+  './categories.html',
   './cashtop-core.css',
   './cashtop-core.js',
   './turso-config.js',
@@ -379,6 +380,7 @@ async function matchCachedLocal(request) {
   return null;
 }
 
+// R86: application-shell navigation is intentionally cache-first even while online.
 async function localCacheFirst(request) {
   const cache = await caches.open(APP_CACHE);
   const cached = await matchCachedLocal(request);

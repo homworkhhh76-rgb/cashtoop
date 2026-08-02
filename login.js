@@ -209,18 +209,19 @@
       rawSet('cashtop_admin_licenses', JSON.stringify(licenses));
       setTenantBinding(companyKey, tenantId);
     }
-    if (!license) return { license: null, users, access: accessFromScan, branches: [], employees: [] };
+    if (!license) return { license: null, users, access: accessFromScan, branches: [], employees: [], agents: [] };
     const tenantId = String(boundTenant || license.tenantId || license.companyId || license.id);
     const access = decodeJsonValue(rawGet(namespaceKey(tenantId, 'cashtop_company_access')), accessFromScan || {});
     if (access && Object.keys(access).length) {
       const accessTenant = String(access.tenantId || access.companyId || tenantId);
       if (accessTenant !== tenantId || (access.companyKey && normalizeKey(access.companyKey) !== companyKey)) {
-        return { license: null, users: [], access: null, branches: [], employees: [], tenantMismatch: true };
+        return { license: null, users: [], access: null, branches: [], employees: [], agents: [], tenantMismatch: true };
       }
     }
     const branches = normalizeArray(rawGet(namespaceKey(tenantId, 'cashtop_branches')));
     const employees = normalizeArray(rawGet(namespaceKey(tenantId, 'cashtop_employees')));
-    return { license, users, access, branches, employees, companyId: tenantId, tenantId };
+    const agents = normalizeArray(rawGet(namespaceKey(tenantId, 'cashtop_sales_agents')));
+    return { license, users, access, branches, employees, agents, companyId: tenantId, tenantId };
   }
 
   function authenticateContext(context, companyKey, username, password) {
@@ -228,7 +229,8 @@
       ...(context || {}),
       users: normalizeArray(context?.users),
       branches: normalizeArray(context?.branches),
-      employees: normalizeArray(context?.employees)
+      employees: normalizeArray(context?.employees),
+      agents: normalizeArray(context?.agents)
     };
     const checked = validateLicense(context.license || context.access);
     if (!checked.ok) throw new Error(checked.message);
@@ -283,6 +285,28 @@
           branchId: isMain ? 'MAIN' : (employeeBranch?.id || employee.branchId || 'MAIN'),
           dataBranchId: isMain ? 'MAIN' : (employeeBranch?.id || employee.branchId || 'MAIN'),
           branchName: employeeBranch?.name || employee.branchName || 'الفرع الرئيسي'
+        };
+      }
+    }
+
+    if (!account) {
+      const agent = context.agents.find(item => normalizeUsername(item.username) === uname);
+      if (agent) {
+        const agentBranch = resolveBranch(context.branches, agent.branchRecordId || agent.branchId || 'MAIN');
+        const isMain = !agent.branchId || String(agent.branchId).toUpperCase() === 'MAIN' || agentBranch?.isMain === true;
+        const defaultPermissions = {
+          'pos.access': true, 'sales.create': true, 'sales.print': true, 'sales.image': true,
+          'sales.discount': true, 'sales.credit': true, 'sales.hold': true, 'sales.clearCart': true
+        };
+        account = {
+          id: agent.id, username: agent.username, password: agent.password,
+          displayName: `${agent.name || agent.username} (مندوب)`, role: 'representative',
+          active: accountIsActive(agent) && agent.cashierAccess !== false && (isMain || accountIsActive(agentBranch)),
+          permissions: { ...defaultPermissions, ...(agent.permissions || {}) },
+          branchRecordId: agentBranch?.id || null,
+          branchId: isMain ? 'MAIN' : (agentBranch?.id || agent.branchId || 'MAIN'),
+          dataBranchId: isMain ? 'MAIN' : (agentBranch?.id || agent.branchId || 'MAIN'),
+          branchName: agentBranch?.name || agent.branchName || 'الفرع الرئيسي'
         };
       }
     }
@@ -430,14 +454,16 @@
     const tenantId = sanitizeSegment(remote.tenantId || remote.companyId);
     if (!base || !root || !tenantId) return remote;
     const datasetUrl = key => `${base}/${root}/${tenantId}/datasets/${sanitizeSegment(key)}.json`;
-    const [branchesPayload, employeesPayload] = await Promise.all([
+    const [branchesPayload, employeesPayload, agentsPayload] = await Promise.all([
       fetchJson(datasetUrl('cashtop_branches'), 10000).catch(() => null),
-      fetchJson(datasetUrl('cashtop_employees'), 10000).catch(() => null)
+      fetchJson(datasetUrl('cashtop_employees'), 10000).catch(() => null),
+      fetchJson(datasetUrl('cashtop_sales_agents'), 10000).catch(() => null)
     ]);
     const node = remote.node && typeof remote.node === 'object' ? remote.node : { meta: {}, datasets: {} };
     node.datasets = node.datasets && typeof node.datasets === 'object' ? node.datasets : {};
     if (branchesPayload != null) node.datasets.cashtop_branches = branchesPayload;
     if (employeesPayload != null) node.datasets.cashtop_employees = employeesPayload;
+    if (agentsPayload != null) node.datasets.cashtop_sales_agents = agentsPayload;
     return { ...remote, node };
   }
 
@@ -498,15 +524,17 @@
           remote = await fetchLoginBootstrap(companyKey, boundTenant);
         } else {
           const datasetBase = `${base}/${root}/${boundTenant}`;
-          const [meta, accessPayload, branchesPayload, employeesPayload] = await Promise.all([
+          const [meta, accessPayload, branchesPayload, employeesPayload, agentsPayload] = await Promise.all([
             fetchJson(`${datasetBase}/meta.json`, 9000).catch(() => ({})),
             fetchJson(`${datasetBase}/datasets/cashtop_company_access.json`, 10000),
             fetchJson(`${datasetBase}/datasets/cashtop_branches.json`, 9000).catch(() => null),
-            fetchJson(`${datasetBase}/datasets/cashtop_employees.json`, 9000).catch(() => null)
+            fetchJson(`${datasetBase}/datasets/cashtop_employees.json`, 9000).catch(() => null),
+            fetchJson(`${datasetBase}/datasets/cashtop_sales_agents.json`, 9000).catch(() => null)
           ]);
           const node = { meta: meta || {}, datasets: { cashtop_company_access: accessPayload } };
           if (branchesPayload != null) node.datasets.cashtop_branches = branchesPayload;
           if (employeesPayload != null) node.datasets.cashtop_employees = employeesPayload;
+          if (agentsPayload != null) node.datasets.cashtop_sales_agents = agentsPayload;
           remote = { root, companyId: boundTenant, tenantId: boundTenant, node, access: datasetValue(node, 'cashtop_company_access', {}) || {} };
         }
       } catch (error) { console.warn('[CASH TOP LOGIN] database tenant path:', root, error); continue; }

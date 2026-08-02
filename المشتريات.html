@@ -213,18 +213,18 @@
             .modal-footer button { width: 100%; justify-content: center;}
         }
     
-        .purchase-currency-wrap{display:none}.purchase-currency-wrap.active{display:block}.purchase-currency-wrap small{display:block;color:#64748b;font-size:11px;margin-top:4px}
+        .purchase-currency-wrap{display:flex}.purchase-currency-field{display:none}.purchase-currency-wrap.active .purchase-currency-field{display:block}.purchase-currency-wrap small{display:block;color:#64748b;font-size:11px;margin-top:4px}
         .purchase-unit-chain-box{margin:12px 0;padding:12px;border:1px solid #dbeafe;border-radius:10px;background:#f8fbff}.purchase-unit-chain-box .chain-caption{font-size:12px;font-weight:800;color:#475569;margin-bottom:8px}.purchase-unit-prices{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;margin-top:10px}.purchase-unit-price-item{position:relative}.purchase-unit-price-item label{display:block;font-size:11px;font-weight:800;color:#475569;margin-bottom:4px}.purchase-unit-price-item input{width:100%}
     </style>
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=85">
-    <script src="cashtop-core.js?v=85"></script>
-    <script src="multi-system.js?v=85"></script>
-    <script src="turso-config.js?v=85"></script><script src="turso-rtdb.js?v=85"></script>
-    <script src="accounting-engine.js?v=85"></script>
-    <script src="turso-sync.js?v=85"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=90">
+    <script src="cashtop-core.js?v=90"></script>
+    <script src="multi-system.js?v=90"></script>
+    <script src="turso-config.js?v=90"></script><script src="turso-rtdb.js?v=90"></script>
+    <script src="accounting-engine.js?v=90"></script>
+    <script src="turso-sync.js?v=90"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -358,7 +358,7 @@
                 <div class="invoice-card">
                     <div class="invoice-title-box">
                         <h2>تفاصيل فاتورة المورد والدفع والخصم</h2>
-                        <p>اختر المورد أو «بدون مورد»، واختر صندوق السداد أو «بدون صندوق»، ثم أكمل التاريخ والخصم.</p>
+                        <p>اختر المورد أو «بدون مورد»، واختر طريقة الدفع، ثم أكمل التاريخ والخصم.</p>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
@@ -372,8 +372,8 @@
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <select class="form-control" id="accountSelect" onchange="handlePurchaseAccountChange()"></select>
-                            <label>صندوق السداد (يمكن اختيار بدون صندوق)</label>
+                            <select class="form-control" id="accountSelect" data-ct-site-dropdown="true" data-ct-icon="fa-wallet" onchange="handlePurchaseAccountChange()"></select>
+                            <label>طريقة الدفع</label>
                         </div>
                         <div class="form-group">
                             <input type="date" class="form-control" id="invDateBox" required>
@@ -381,10 +381,14 @@
                         </div>
                     </div>
                     <div class="form-row purchase-currency-wrap" id="purchaseCurrencyWrap">
-                        <div class="form-group">
-                            <select class="form-control" id="purchaseCurrencySelect" onchange="handlePurchaseCurrencyChange()"></select>
+                        <div class="form-group purchase-currency-field">
+                            <select class="form-control" id="purchaseCurrencySelect" data-ct-site-dropdown="true" data-ct-icon="fa-coins" onchange="handlePurchaseCurrencyChange()"></select>
                             <label>عملة السداد</label>
                             <small id="purchaseCurrencyHint"></small>
+                        </div>
+                        <div class="form-group">
+                            <select class="form-control" id="purchaseTaxSelect" data-ct-site-dropdown="true" data-ct-icon="fa-receipt" onchange="handlePurchaseTaxChange()"><option value="none">بدون ضريبة</option></select>
+                            <label>الضريبة</label>
                         </div>
                     </div>
                 </div>
@@ -676,15 +680,19 @@
                 rebuildPurchaseOptions();
                 refreshWarehouseSelects();
             }
-            if (!key || ['cashtop_suppliers','cashtop_funds_db','cashtop_funds_db_v4','cashtop_settings'].includes(key)) {
+            if (!key || ['cashtop_suppliers','cashtop_funds_db','cashtop_funds_db_v4','cashtop_settings','cashtop_tax_settings'].includes(key)) {
                 const localFunds = localStorage.getItem('cashtop_funds_db') || localStorage.getItem('cashtop_funds_db_v4');
                 if (localFunds) {
                     try { fundsDB = JSON.parse(localFunds) || { accounts: [], accountLogs: [] }; } catch (_) {}
                 } else fundsDB = { accounts: [], accountLogs: [] };
                 populatePurchaseCurrencySelect();
+                populatePurchaseTaxSelect();
                 populateSelects();
             }
         }
+
+
+        window.addEventListener('cashtop:tax-settings-changed', () => { populatePurchaseTaxSelect(purchaseTaxSelection()); calculateInvoiceFinance(); });
 
         function purchaseCurrencyConfig() {
             return window.CashtopMulti?.getCurrencyConfig?.() || { enabled:false, baseCurrencyId:'ILS', base:{id:'ILS',symbol:'₪',code:'ILS',ratePer100Base:100}, currencies:[{id:'ILS',name:'شيكل',symbol:'₪',code:'ILS',ratePer100Base:100}] };
@@ -694,6 +702,21 @@
             const cfg = purchaseCurrencyConfig();
             return document.getElementById('purchaseCurrencySelect')?.value || cfg.baseCurrencyId;
         }
+
+        function purchaseTaxSelection() { return document.getElementById('purchaseTaxSelect')?.value || 'none'; }
+        function populatePurchaseTaxSelect(preferred = '') {
+            const select = document.getElementById('purchaseTaxSelect');
+            if (!select) return;
+            const cfg = window.Cashtop?.getTaxSettings?.() || {};
+            const rates = (window.Cashtop?.getTaxRates?.() || []).filter(row => row && row.active !== false && Number(row.rate || 0) >= 0);
+            const firstInit = select.dataset.taxInitialized !== '1';
+            const requested = String(preferred || (firstInit && cfg.defaultPurchaseTaxId ? `tax:${cfg.defaultPurchaseTaxId}` : select.value) || 'none');
+            select.innerHTML = '<option value="none">بدون ضريبة</option>' + rates.map(row => `<option value="tax:${row.id}">${row.name} (${Number(row.rate || 0).toFixed(2).replace(/\.00$/,'')}%)</option>`).join('');
+            select.value = [...select.options].some(option => option.value === requested) ? requested : 'none';
+            select.dataset.taxInitialized = '1';
+            window.CashtopMulti?.refreshEnhancedSelect?.(select);
+        }
+        function handlePurchaseTaxChange() { calculateInvoiceFinance(); }
 
         function purchaseBaseSymbol() { return purchaseCurrencyConfig().base?.symbol || purchaseCurrencyConfig().base?.code || '₪'; }
 
@@ -720,12 +743,14 @@
 
         function handlePurchaseCurrencyChange() {
             purchaseMultiPayments = [];
+            setPurchasePaidMultiState(false);
             populatePurchaseCurrencySelect(purchaseCurrencyId());
             populateSelects();
             calculateInvoiceFinance();
         }
 
         function populateSelects() {
+            populatePurchaseTaxSelect(purchaseTaxSelection());
             const supplierSelect = document.getElementById('supplierSelect');
             const previousSupplier = supplierSelect?.value || PURCHASE_NO_SUPPLIER_VALUE;
             let supHtml = `<option value="${PURCHASE_NO_SUPPLIER_VALUE}">بدون مورد (مشتريات عابرة)</option>`;
@@ -742,7 +767,7 @@
             const accounts = window.Cashtop?.sortFundAccountsForDropdown?.(activeAccounts) || activeAccounts;
             const preferredAccount = window.Cashtop?.getDefaultFundAccount?.(accounts);
             let fundHtml = `<option value="${PURCHASE_NO_ACCOUNT_VALUE}">بدون صندوق (لا حركة نقدية)</option>`;
-            if (accounts.length > 1) fundHtml += `<option value="${PURCHASE_MULTI_PAYMENT_VALUE}">دفع متعدد</option>`;
+            fundHtml += `<option value="${PURCHASE_MULTI_PAYMENT_VALUE}">الدفع المتعدد</option>`;
             accounts.forEach(f => {
                 const cur = window.CashtopMulti?.getCurrency?.(f.currencyId || cfg.baseCurrencyId) || cfg.base;
                 fundHtml += `<option value="${f.id}">${f.name} (متوفر: ${Number(f.balance || 0).toFixed(2)} ${cur.symbol || cur.code})</option>`;
@@ -753,6 +778,15 @@
             else if (accounts.some(acc => String(acc.id) === String(previous))) accountSelect.value = previous;
             else if (preferredAccount) accountSelect.value = String(preferredAccount.id);
             else accountSelect.value = PURCHASE_NO_ACCOUNT_VALUE;
+        }
+
+        function setPurchasePaidMultiState(enabled) {
+            const input = document.getElementById('moneyPaid');
+            if (!input) return;
+            input.disabled = Boolean(enabled);
+            input.title = enabled ? 'يتم احتساب المبلغ المدفوع تلقائياً من طرق الدفع المتعدد' : '';
+            input.style.opacity = enabled ? '.72' : '';
+            input.style.cursor = enabled ? 'not-allowed' : '';
         }
 
         function openPurchaseMultiPayment() {
@@ -767,15 +801,26 @@
                 transactionCurrencyId: currencyId,
                 direction: 'out',
                 maxTransactionAmount: maxNative,
+                showInvoiceSummary: true,
+                invoiceAmount: maxNative,
                 initialSplits: purchaseMultiPayments,
                 defaultTransactionAmount: purchaseMultiPayments.length ? 0 : currentPaid,
                 onSave: (splits, totalNative) => {
                     purchaseMultiPayments = splits.map(item => ({...item}));
                     const select = document.getElementById('accountSelect');
-                    if (select) select.value = PURCHASE_MULTI_PAYMENT_VALUE;
+                    if (select) { select.value = PURCHASE_MULTI_PAYMENT_VALUE; window.CashtopMulti?.refreshEnhancedSelect?.(select); }
                     const paidInput = document.getElementById('moneyPaid');
                     if (paidInput) paidInput.value = Number(totalNative).toFixed(3).replace(/\.?0+$/,'');
+                    setPurchasePaidMultiState(true);
                     calculateInvoiceFinance();
+                },
+                onClose: () => {
+                    if (!purchaseMultiPayments.length) {
+                        const select = document.getElementById('accountSelect');
+                        if (select?.value === PURCHASE_MULTI_PAYMENT_VALUE) select.value = PURCHASE_NO_ACCOUNT_VALUE;
+                        setPurchasePaidMultiState(false);
+                        calculateInvoiceFinance();
+                    }
                 }
             });
         }
@@ -784,10 +829,14 @@
             const select = document.getElementById('accountSelect');
             if (!select) return;
             if (select.value === PURCHASE_MULTI_PAYMENT_VALUE) {
-                if (!openPurchaseMultiPayment()) select.value = '';
+                setPurchasePaidMultiState(true);
+                if (!purchaseMultiPayments.length) document.getElementById('moneyPaid').value = 0;
+                if (!openPurchaseMultiPayment()) { select.value = PURCHASE_NO_ACCOUNT_VALUE; setPurchasePaidMultiState(false); }
             } else {
                 purchaseMultiPayments = [];
+                setPurchasePaidMultiState(false);
             }
+            calculateInvoiceFinance();
         }
 
         /* ========================================================== */
@@ -1344,7 +1393,7 @@
                 warehouseId: String(incoming.destinationStoreId || 'shop'),
                 warehouseName: String(incoming.destinationStoreName || 'المحل / المخزون الرئيسي'),
                 quantityPieces, remainingPieces: quantityPieces,
-                cost: Math.max(0, Number(incoming.newCost || 0)),
+                cost: Math.max(0, Number(incoming.inventoryCost ?? incoming.newCost ?? 0)),
                 createdAt: new Date().toISOString()
             };
         }
@@ -1391,7 +1440,7 @@
         }
 
         function createNewPurchasedProduct(incoming, purchaseId) {
-            const product = { ...incoming, cost: Number(incoming.newCost || 0), stockPieces: 0, storeStocks: {} };
+            const product = { ...incoming, cost: Number(incoming.inventoryCost ?? incoming.newCost ?? 0), stockPieces: 0, storeStocks: {} };
             if (Array.isArray(incoming.variants)) {
                 product.variants = incoming.variants.map(variant => ({ ...variant, qty: 0, storeStocks: {} }));
             }
@@ -1412,8 +1461,8 @@
             if (Number.isFinite(Number(direct))) return Math.max(0, Number(direct));
             try {
                 const settings = JSON.parse(localStorage.getItem('cashtop_settings') || '{}') || {};
-                return Math.max(0, Number(settings.profitRate || 0));
-            } catch (_) { return 0; }
+                return (settings.profitRate === undefined || settings.profitRate === null || String(settings.profitRate).trim() === '') ? 25 : Math.max(0, Number(settings.profitRate));
+            } catch (_) { return 25; }
         }
 
         function purchaseSaleFromCost(cost) {
@@ -1493,7 +1542,7 @@
                 ? (parseFloat(document.getElementById('purchaseDiscount')?.value) || 0) : 0;
             const purchaseDiscount = Math.min(grandTotal, Math.max(0, requestedDiscount));
             const taxableSubtotal = Math.max(0, grandTotal - purchaseDiscount);
-            const taxInfo = window.Cashtop?.calculateTax?.(taxableSubtotal, 'purchase') || { tax: 0, charged: false, total: taxableSubtotal };
+            const taxInfo = window.Cashtop?.calculateTax?.(taxableSubtotal, 'purchase', purchaseTaxSelection()) || { tax: 0, charged: false, total: taxableSubtotal };
             const purchaseTax = Number(taxInfo.tax || 0);
             const payableTotal = Number(taxInfo.total ?? taxableSubtotal);
             lastPurchasePayableBase = payableTotal;
@@ -1504,7 +1553,13 @@
             document.getElementById('finalTotalRequired').textContent = moneyDisplay(payableTotal) + " " + baseSymbol;
             const cfg = purchaseCurrencyConfig();
             const currencyId = cfg.enabled ? purchaseCurrencyId() : cfg.baseCurrencyId;
-            const paidNative = parseFloat(document.getElementById('moneyPaid').value) || 0;
+            const isMultiPayment = document.getElementById('accountSelect')?.value === PURCHASE_MULTI_PAYMENT_VALUE;
+            const paidInput = document.getElementById('moneyPaid');
+            const paidNative = isMultiPayment
+                ? purchaseMultiPayments.reduce((sum, payment) => sum + Number(payment.transactionAmount || 0), 0)
+                : (parseFloat(paidInput?.value) || 0);
+            if (isMultiPayment && paidInput) paidInput.value = Number(paidNative).toFixed(3).replace(/\.?0+$/,'');
+            setPurchasePaidMultiState(isMultiPayment);
             const paid = window.CashtopMulti?.toBase?.(paidNative, currencyId) ?? paidNative;
             const debt = Math.max(0, payableTotal - paid);
             document.getElementById('finalDebt').textContent = moneyDisplay(debt) + " " + baseSymbol;
@@ -1689,11 +1744,12 @@
                 ? (parseFloat(document.getElementById('purchaseDiscount')?.value) || 0) : 0;
             const purchaseDiscount = Math.min(invoiceTotal, Math.max(0, requestedDiscount));
             const taxableSubtotal = Math.max(0, invoiceTotal - purchaseDiscount);
-            const purchaseTaxInfo = window.Cashtop?.calculateTax?.(taxableSubtotal, 'purchase') || { tax: 0, charged: false, total: taxableSubtotal };
+            const purchaseTaxInfo = window.Cashtop?.calculateTax?.(taxableSubtotal, 'purchase', purchaseTaxSelection()) || { tax: 0, charged: false, total: taxableSubtotal };
             const purchaseTax = Number(purchaseTaxInfo.tax || 0);
             const payableInvoiceTotal = Number(purchaseTaxInfo.total ?? taxableSubtotal);
-            if (paidAmount > payableInvoiceTotal) { showToast("المبلغ المدفوع لا يمكن أن يتجاوز إجمالي الفاتورة", "error"); return; }
             const debtAmount = Math.max(0, payableInvoiceTotal - paidAmount);
+            const inventoryCostFactor = invoiceTotal > 0 ? Math.max(0, payableInvoiceTotal / invoiceTotal) : 1;
+            productsToSaveLog.forEach(item => { item.inventoryCost = Math.max(0, Number(item.newCost || 0)) * inventoryCostFactor; });
 
             // 1. تحديث المنتجات في المخزن المختار مع معادلة متوسط التكلفة (WAC)
             productsToSaveLog.forEach(newProduct => {
@@ -1707,7 +1763,10 @@
                 const oldQuantity = getProductTotalStock(existing);
                 const incomingQuantity = Math.max(0, Number(newProduct.newStockPieces || 0));
                 const oldCost = Math.max(0, Number(existing.cost || 0));
-                const incomingCost = Math.max(0, Number(newProduct.newCost || 0));
+                // تكلفة الرصيد السابق تحفظ مرة واحدة حتى يستطيع FIFO/LIFO التعامل
+                // مع مخزون تم إنشاؤه قبل نظام الدفعات، بدون تغيير السلوك الافتراضي.
+                if (oldQuantity > 0 && !Number.isFinite(Number(existing.inventoryLegacyCost))) existing.inventoryLegacyCost = oldCost;
+                const incomingCost = Math.max(0, Number(newProduct.inventoryCost ?? newProduct.newCost ?? 0));
                 const combinedQuantity = oldQuantity + incomingQuantity;
                 if (combinedQuantity > 0) existing.cost = ((oldQuantity * oldCost) + (incomingQuantity * incomingCost)) / combinedQuantity;
                 existing.pricePiece = newProduct.pricePiece;
@@ -1780,7 +1839,12 @@
                 discount: purchaseDiscount,
                 netSubtotal: taxableSubtotal,
                 tax: purchaseTax,
+                taxSelection: purchaseTaxSelection(),
+                taxId: purchaseTaxInfo.taxId || null,
+                taxName: purchaseTaxInfo.taxName || 'بدون ضريبة',
+                taxRate: Number(purchaseTaxInfo.rate || 0),
                 taxSettings: window.Cashtop?.getTaxSettings?.() || {},
+                accountingMethod: window.Cashtop?.getInventoryAccountingMethod?.() || 'default',
                 total: payableInvoiceTotal,
                 paid: paidAmount,
                 paidNative: paidNative,
@@ -1796,7 +1860,8 @@
                     productId: item.id,
                     name: item.name,
                     quantityPieces: parseFloat(item.newStockPieces) || 0,
-                    purchaseCost: parseFloat(item.newCost) || 0,
+                    purchaseCostBeforeTax: parseFloat(item.newCost) || 0,
+                    purchaseCost: parseFloat(item.inventoryCost ?? item.newCost) || 0,
                     addType: item.addType || 'piece',
                     unitName: item.unitName || '',
                     pieceName: item.pieceName || '',
@@ -1845,6 +1910,7 @@
             document.getElementById('invIdBox').value = `INV-${Date.now().toString().slice(-5)}`;
             document.getElementById('moneyPaid').value = 0;
             purchaseMultiPayments = [];
+            setPurchasePaidMultiState(false);
             if (document.getElementById('purchaseDiscount')) document.getElementById('purchaseDiscount').value = 0;
             document.getElementById('productsContainer').innerHTML = '';
             productRowCounter = 0;

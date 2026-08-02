@@ -36,15 +36,16 @@
         .card-stat { font-size: 22px; font-weight: 700; }
         .card-icon-side { opacity: 0.3; font-size: 26px; }
         .action-bar { background-color: white; padding: 15px; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap; }
-        .invoice-report-tools { background:#fff; padding:14px 15px; border-radius:4px; box-shadow:0 2px 5px rgba(0,0,0,.05); display:flex; align-items:end; gap:10px; flex-wrap:wrap; }
-        .invoice-report-field { display:flex; flex-direction:column; gap:5px; min-width:150px; }
+        .invoice-report-tools { background:#fff; padding:12px 15px; border-radius:4px; box-shadow:0 2px 5px rgba(0,0,0,.05); display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+        .invoice-report-field { display:flex; flex-direction:column; gap:5px; min-width:150px; position:relative; }
         .invoice-report-field label { font-size:11px; font-weight:700; color:#64748b; }
         .invoice-report-field select, .invoice-report-field input { height:38px; border:1px solid #d2d6de; border-radius:4px; padding:6px 10px; font:600 12px Cairo; background:#fff; outline:none; }
         .invoice-report-field select:focus, .invoice-report-field input:focus { border-color:#00c0ef; }
-        .invoice-report-actions { display:flex; gap:8px; margin-inline-start:auto; flex-wrap:wrap; }
-        .btn-report-export { border:0; border-radius:4px; padding:9px 15px; color:#fff; font:700 12px Cairo; cursor:pointer; display:inline-flex; align-items:center; gap:7px; }
+        .invoice-period-trigger-wrap{position:relative;display:inline-flex}.invoice-period-native{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;opacity:0!important;pointer-events:none!important}.btn-filter-invoices{background:#2563eb;color:#fff;border:0;border-radius:3px;padding:8px 18px;font:700 13px Cairo;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px}.btn-filter-invoices:hover{background:#1d4ed8}.invoice-report-actions { display:flex; gap:8px; flex-wrap:wrap; }
+        .btn-report-export { border:0; border-radius:3px; padding:8px 18px; color:#fff; font:700 13px Cairo; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:7px; }
         .btn-report-excel { background:#15803d; } .btn-report-pdf { background:#dc2626; }
-        .report-period-note { font-size:11px; color:#64748b; align-self:center; }
+        .report-period-note { font-size:11px; color:#64748b; align-self:center; margin-inline-start:auto; }
+        .invoice-custom-range-row{display:none;width:100%;grid-template-columns:repeat(2,minmax(180px,1fr));gap:10px;padding-top:2px}.invoice-custom-range-row.active{display:grid}
         .search-box { display: flex; align-items: center; flex: 1; max-width: 500px; position: relative; }
         .search-control { width: 100%; padding: 8px 38px 8px 12px; font-size: 13px; border: 1px solid #d2d6de; border-radius: 3px; outline: none; transition: border-color 0.2s; }
         .search-control:focus { border-color: #00c0ef; }
@@ -74,7 +75,7 @@
 
         /* التجاوب */
         @media (max-width: 992px) { .top-cards-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } .main-card { padding: 15px 12px; min-height: 75px; } .card-content-side { gap: 8px; } .card-stat { font-size: 18px; } .table-container { overflow-x: auto; } .data-table { min-width: 1050px; } }
-        @media (max-width: 768px) { body { padding: 10px; } .action-bar { flex-direction: column; align-items: stretch; } .search-box { max-width: 100%; } .btn-create-invoice { justify-content: center; } .invoice-report-tools{align-items:stretch}.invoice-report-field{min-width:calc(50% - 6px);flex:1}.invoice-report-actions{width:100%;margin-inline-start:0}.btn-report-export{flex:1;justify-content:center} }
+        @media (max-width: 768px) { body { padding: 10px; } .action-bar { flex-direction: column; align-items: stretch; } .search-box { max-width: 100%; } .btn-create-invoice { justify-content: center; } .sales-action-buttons{grid-template-columns:repeat(2,minmax(0,1fr))!important}.invoice-report-tools{display:none}.invoice-custom-range-row{grid-template-columns:repeat(2,minmax(0,1fr))}.report-period-note{width:100%;margin:0;text-align:center}.btn-report-export,.btn-filter-invoices{width:100%;padding:9px 6px;font-size:11px} }
 
         /* إضافات للبرمجة (النافذة المنبثقة للطباعة والتفاصيل) */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
@@ -124,7 +125,7 @@
         .btn-confirm-delete { background:#dc2626; color:#fff; }
 
         /* ترحيل مجموعة فواتير المبيعات */
-        .sales-action-buttons { display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+        .sales-action-buttons { display:grid; grid-template-columns:repeat(5,max-content); align-items:center; gap:9px; }
         .btn-batch-invoices { background:#605ca8; color:#fff; border:0; padding:8px 18px; border-radius:3px; font-size:13px; font-family:inherit; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; }
         .btn-batch-invoices:hover { background:#514d91; }
         .batch-modal-content { width:min(1120px, 96vw); max-width:1120px; height:min(92vh, 900px); border-top-color:#605ca8; display:flex; flex-direction:column; }
@@ -173,7 +174,7 @@
 
         @media (max-width:768px) {
             .sales-action-buttons { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); width:100%; }
-            .btn-create-invoice, .btn-batch-invoices { width:100%; padding:9px 6px; font-size:11px; }
+            .btn-create-invoice, .btn-batch-invoices, .btn-filter-invoices, .sales-action-buttons .btn-report-export { width:100%; padding:9px 6px; font-size:11px; }
             .batch-modal-content { width:100vw; height:100dvh; max-height:none; border-radius:0; }
             .batch-modal-content .modal-body { padding:9px; }
             .batch-invoice-body { padding:9px; }
@@ -194,16 +195,28 @@
             .batch-input { font-size:10px; padding-inline:5px; }
         }
         @media (max-width:600px) { .receipt-meta { grid-template-columns:1fr; } .invoice-receipt { padding:14px; } }
-    </style>
+    
+        /* R91: على الجوال تبقى تصفية + Excel + PDF في صف واحد متساوي. */
+        @media (max-width: 768px) {
+            .sales-action-buttons { grid-template-columns:repeat(6,minmax(0,1fr)) !important; gap:7px !important; }
+            .sales-action-buttons > .btn-batch-invoices,
+            .sales-action-buttons > .btn-create-invoice { grid-column:span 3; min-width:0; }
+            .sales-action-buttons > .invoice-period-trigger-wrap,
+            .sales-action-buttons > .btn-report-export { grid-column:span 2; min-width:0; width:100%; }
+            .sales-action-buttons > .invoice-period-trigger-wrap { display:flex; }
+            .sales-action-buttons > .invoice-period-trigger-wrap .btn-filter-invoices,
+            .sales-action-buttons > .btn-report-export { width:100%; min-width:0; padding:9px 4px; font-size:10.5px; white-space:nowrap; }
+        }
+</style>
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=85">
-    <script src="cashtop-core.js?v=85"></script>
-    <script src="multi-system.js?v=85"></script>
-    <script src="turso-config.js?v=85"></script><script src="turso-rtdb.js?v=85"></script>
-    <script src="accounting-engine.js?v=85"></script>
-    <script src="turso-sync.js?v=85"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=90">
+    <script src="cashtop-core.js?v=90"></script>
+    <script src="multi-system.js?v=90"></script>
+    <script src="turso-config.js?v=90"></script><script src="turso-rtdb.js?v=90"></script>
+    <script src="accounting-engine.js?v=90"></script>
+    <script src="turso-sync.js?v=90"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -350,38 +363,20 @@
                 <i class="fa-solid fa-magnifying-glass"></i>
                 <input type="text" id="searchInput" class="search-control" placeholder="ابحث مباشرة برقم الفاتورة، اسم العميل..." oninput="filterTable()">
             </div>
-            <div class="sales-action-buttons" data-ct-permission="sales.create">
-                <button type="button" class="btn-batch-invoices" onclick="openBatchInvoiceModal()"><i class="fa-solid fa-layer-group"></i> ترحيل فواتير مبيعات</button>
-                <a href="cashier.html" class="btn-create-invoice"><i class="fa-solid fa-plus"></i> فاتورة من الكاشير</a>
-            </div>
-        </div>
-
-        <div class="invoice-report-tools">
-            <div class="invoice-report-field">
-                <label for="invoicePeriodFilter">تصفية التقرير</label>
-                <select id="invoicePeriodFilter" onchange="handleInvoicePeriodChange()">
-                    <option value="daily">يومي - اليوم</option>
-                    <option value="weekly">أسبوعي - الأسبوع الحالي</option>
-                    <option value="monthly">شهري - الشهر الحالي</option>
-                    <option value="yearly">سنوي - السنة الحالية</option>
-                    <option value="custom">من تاريخ إلى تاريخ</option>
-                    <option value="all" selected>كل الفواتير</option>
-                </select>
-            </div>
-            <div class="invoice-report-field custom-invoice-range" style="display:none">
-                <label for="invoiceDateFrom">من تاريخ</label>
-                <input type="date" id="invoiceDateFrom" onchange="filterTable()">
-            </div>
-            <div class="invoice-report-field custom-invoice-range" style="display:none">
-                <label for="invoiceDateTo">إلى تاريخ</label>
-                <input type="date" id="invoiceDateTo" onchange="filterTable()">
-            </div>
-            <span class="report-period-note" id="invoiceReportPeriodLabel"></span>
-            <div class="invoice-report-actions">
+            <div class="sales-action-buttons">
+                <button type="button" class="btn-batch-invoices" data-ct-permission="sales.create" onclick="openBatchInvoiceModal()"><i class="fa-solid fa-layer-group"></i> ترحيل فواتير مبيعات</button>
+                <a href="cashier.html" class="btn-create-invoice" data-ct-permission="sales.create"><i class="fa-solid fa-plus"></i> فاتورة من الكاشير</a>
+                <span class="invoice-period-trigger-wrap"><button type="button" class="btn-filter-invoices" onclick="openInvoicePeriodFilter()"><i class="fa-solid fa-filter"></i> تصفية</button><select id="invoicePeriodFilter" class="invoice-period-native" onchange="handleInvoicePeriodChange()"><option value="daily">يومي - اليوم</option><option value="weekly">أسبوعي - الأسبوع الحالي</option><option value="monthly">شهري - الشهر الحالي</option><option value="yearly">سنوي - السنة الحالية</option><option value="custom">من تاريخ إلى تاريخ</option><option value="all" selected>كل الفواتير</option></select></span>
                 <button type="button" class="btn-report-export btn-report-excel" onclick="exportInvoicesExcel()"><i class="fa-solid fa-file-excel"></i> Excel</button>
                 <button type="button" class="btn-report-export btn-report-pdf" onclick="exportInvoicesPdf()"><i class="fa-solid fa-file-pdf"></i> PDF</button>
             </div>
         </div>
+
+        <div class="invoice-custom-range-row" id="invoiceCustomRangeRow">
+            <div class="invoice-report-field custom-invoice-range"><label for="invoiceDateFrom">من تاريخ</label><input type="date" id="invoiceDateFrom" onchange="filterTable()"></div>
+            <div class="invoice-report-field custom-invoice-range"><label for="invoiceDateTo">إلى تاريخ</label><input type="date" id="invoiceDateTo" onchange="filterTable()"></div>
+        </div>
+        <span class="report-period-note" id="invoiceReportPeriodLabel" hidden></span>
 
         <!-- سجل الفواتير -->
         <div class="table-container">

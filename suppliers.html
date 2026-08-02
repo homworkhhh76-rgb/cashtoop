@@ -194,12 +194,12 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=85">
-    <script src="cashtop-core.js?v=85"></script>
-    <script src="multi-system.js?v=85"></script>
-    <script src="turso-config.js?v=85"></script><script src="turso-rtdb.js?v=85"></script>
-    <script src="accounting-engine.js?v=85"></script>
-    <script src="turso-sync.js?v=85"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=90">
+    <script src="cashtop-core.js?v=90"></script>
+    <script src="multi-system.js?v=90"></script>
+    <script src="turso-config.js?v=90"></script><script src="turso-rtdb.js?v=90"></script>
+    <script src="accounting-engine.js?v=90"></script>
+    <script src="turso-sync.js?v=90"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -437,8 +437,8 @@
                         <input type="number" step="0.01" class="form-control" placeholder="0.00" required id="payAmountInput" min="0.01">
                     </div>
                     <div class="form-group">
-                        <label>الحساب المصروف منه (الصندوق)</label>
-                        <select class="form-control" id="payVaultSelect" required onchange="handleSupplierVaultChange()">
+                        <label>طريقة الدفع</label>
+                        <select class="form-control" id="payVaultSelect" data-ct-site-dropdown="true" data-ct-icon="fa-wallet" required onchange="handleSupplierVaultChange()">
                             <!-- تعبأ ديناميكياً من fundsDB -->
                         </select>
                     </div>
@@ -700,7 +700,7 @@
         function populateVaults() {
             const select = document.getElementById('payVaultSelect');
             if(!select)return; const cfg=supplierPayCurrencyConfig(),previous=select.value||'';
-            select.innerHTML = '<option value="">-- اختر الصندوق المالي --</option>';
+            select.innerHTML = '<option value="">-- اختر طريقة الدفع --</option>';
             if(fundsDB.accounts) {
                 fundsDB.accounts.forEach(a=>{if(!a.currencyId)a.currencyId=cfg.baseCurrencyId;});
                 const rawActiveAccounts=(fundsDB.accounts||[]).filter(a=>window.Cashtop?.isFundActive?window.Cashtop.isFundActive(a):(a.disabled!==true&&a.active!==false&&String(a.status||'').toLowerCase()!=='inactive'));
@@ -713,7 +713,7 @@
                 else if(preferredAccount)select.value=String(preferredAccount.id);
             }
         }
-        function openSupplierMultiPayment(){const amountNative=Math.max(0,Number(document.getElementById('payAmountInput')?.value||0));if(!(amountNative>0)){showToast('أدخل مبلغ الدفعة أولاً ثم اختر دفع متعدد.','warning');return false;}const cfg=supplierPayCurrencyConfig(),currencyId=cfg.enabled?supplierPayCurrencyId():cfg.baseCurrencyId;return window.CashtopMulti?.openMultiPayment?.({title:'دفع متعدد للمورد',accounts:(fundsDB.accounts||[]).filter(a=>window.Cashtop?.isFundActive?window.Cashtop.isFundActive(a):(a.disabled!==true&&a.active!==false&&String(a.status||'').toLowerCase()!=='inactive')),transactionCurrencyId:currencyId,direction:'out',requireExact:true,exactTransactionAmount:amountNative,initialSplits:supplierMultiPayments,defaultTransactionAmount:supplierMultiPayments.length?0:amountNative,onSave:(splits)=>{supplierMultiPayments=splits.map(item=>({...item}));const select=document.getElementById('payVaultSelect');if(select)select.value=SUPPLIER_MULTI_PAYMENT_VALUE;}});}
+        function openSupplierMultiPayment(){const amountNative=Math.max(0,Number(document.getElementById('payAmountInput')?.value||0));if(!(amountNative>0)){showToast('أدخل مبلغ الدفعة أولاً ثم اختر دفع متعدد.','warning');return false;}const cfg=supplierPayCurrencyConfig(),currencyId=cfg.enabled?supplierPayCurrencyId():cfg.baseCurrencyId;return window.CashtopMulti?.openMultiPayment?.({title:'دفع متعدد للمورد',accounts:(fundsDB.accounts||[]).filter(a=>window.Cashtop?.isFundActive?window.Cashtop.isFundActive(a):(a.disabled!==true&&a.active!==false&&String(a.status||'').toLowerCase()!=='inactive')),transactionCurrencyId:currencyId,direction:'out',requireExact:true,exactTransactionAmount:amountNative,initialSplits:supplierMultiPayments,defaultTransactionAmount:supplierMultiPayments.length?0:amountNative,onSave:(splits)=>{supplierMultiPayments=splits.map(item=>({...item}));const select=document.getElementById('payVaultSelect');if(select){select.value=SUPPLIER_MULTI_PAYMENT_VALUE;window.CashtopMulti?.refreshEnhancedSelect?.(select);}}});}
         function handleSupplierVaultChange(){const select=document.getElementById('payVaultSelect');if(!select)return;if(select.value===SUPPLIER_MULTI_PAYMENT_VALUE){if(!openSupplierMultiPayment())select.value='';}else supplierMultiPayments=[];}
 
         /* ========================================================== */
@@ -934,8 +934,8 @@
             let vault = isMultiPayment?null:fundsDB.accounts.find(a => String(a.id) === String(vaultId));
             if(!sup || (!isMultiPayment&&!vault)) { showToast('خطأ في تحديد المورد أو الصندوق!', 'error'); return;}
             let payments=[];
-            if(isMultiPayment){payments=supplierMultiPayments.map(item=>({...item}));const totalBase=payments.reduce((sum,p)=>sum+Number(p.baseAmount||0),0);if(!payments.length||Math.abs(totalBase-amount)>0.01){showToast('توزيع الدفع المتعدد لا يساوي مبلغ الدفعة.','error');return;}const insufficient=payments.find(p=>{const a=fundsDB.accounts.find(x=>String(x.id)===String(p.accountId));return !a||Number(p.accountAmount||0)>Number(a.balance||0)+1e-9;});if(insufficient){const a=fundsDB.accounts.find(x=>String(x.id)===String(insufficient.accountId));showToast(`الصندوق [${a?.name||'المحدد'}] لا يحتوي رصيداً كافياً.`,'error');return;}}
-            else{const settlement=window.CashtopMulti?.settleToAccount?.(amountNative,currencyId,vault)||{accountAmount:amountNative,accountCurrencyId:vault.currencyId||currencyId,baseAmount:amount};if(Number(vault.balance||0)<Number(settlement.accountAmount||0)){showToast('الصندوق المحدد لا يحتوي رصيداً كافياً بعد تحويل العملة!','error');return;}payments=[{accountId:vault.id,accountName:vault.name,transactionAmount:amountNative,transactionCurrencyId:currencyId,baseAmount:amount,accountAmount:Number(settlement.accountAmount||0),accountCurrencyId:settlement.accountCurrencyId}];}
+            if(isMultiPayment){payments=supplierMultiPayments.map(item=>({...item}));const totalBase=payments.reduce((sum,p)=>sum+Number(p.baseAmount||0),0);if(!payments.length||Math.abs(totalBase-amount)>0.01){showToast('توزيع الدفع المتعدد لا يساوي مبلغ الدفعة.','error');return;}const insufficient=payments.find(p=>{const a=fundsDB.accounts.find(x=>String(x.id)===String(p.accountId));return !a||Number(p.accountAmount||0)>Number(a.balance||0)+1e-9;});if(insufficient){const a=fundsDB.accounts.find(x=>String(x.id)===String(insufficient.accountId));showToast(`الطريقة الدفع [${a?.name||'المحدد'}] لا يحتوي رصيداً كافياً.`,'error');return;}}
+            else{const settlement=window.CashtopMulti?.settleToAccount?.(amountNative,currencyId,vault)||{accountAmount:amountNative,accountCurrencyId:vault.currencyId||currencyId,baseAmount:amount};if(Number(vault.balance||0)<Number(settlement.accountAmount||0)){showToast('طريقة الدفع المحددة لا يحتوي رصيداً كافياً بعد تحويل العملة!','error');return;}payments=[{accountId:vault.id,accountName:vault.name,transactionAmount:amountNative,transactionCurrencyId:currencyId,baseAmount:amount,accountAmount:Number(settlement.accountAmount||0),accountCurrencyId:settlement.accountCurrencyId}];}
             let movId = 'spay_' + Date.now();
             payments.forEach((payment,index)=>{const account=fundsDB.accounts.find(a=>String(a.id)===String(payment.accountId));if(!account)return;account.balance-=Number(payment.accountAmount||0);fundsDB.accountLogs.push({id:`LOG_SPAY_${movId}_${index}`,sourceType:'supplierPayment',sourceId:movId,accountId:account.id,date:logDate,type:'سحب',amount:Number(payment.accountAmount||0),baseAmount:Number(payment.baseAmount||0),currencyId:payment.accountCurrencyId||account.currencyId,transactionAmount:Number(payment.transactionAmount||0),transactionCurrencyId:currencyId,notes:`سداد${isMultiPayment?' متعدد':''} لمورد [${sup.name}] | ${notes}`,refType:'supplierPayment',refId:movId});});
 
@@ -950,7 +950,7 @@
             
             closeModal('payModal');
             initLayout();
-            showToast('تم تسجيل الدفعة وخصمها من الصندوق.', 'success');
+            showToast('تم تسجيل الدفعة وخصمها من طريقة الدفع.', 'success');
         }
 
         /* ========================================================== */

@@ -226,11 +226,16 @@ function initializeInvoiceReportFilters() {
   handleInvoicePeriodChange(false);
 }
 
+
+function openInvoicePeriodFilter() {
+  const select = document.getElementById('invoicePeriodFilter');
+  if (!select) return;
+  select.dispatchEvent(new MouseEvent('click', { bubbles:true, cancelable:true, view:window }));
+}
+
 function handleInvoicePeriodChange(runFilter = true) {
   const mode = document.getElementById('invoicePeriodFilter')?.value || 'all';
-  document.querySelectorAll('.custom-invoice-range').forEach(element => {
-    element.style.display = mode === 'custom' ? 'flex' : 'none';
-  });
+  document.getElementById('invoiceCustomRangeRow')?.classList.toggle('active', mode === 'custom');
   const label = document.getElementById('invoiceReportPeriodLabel');
   if (label) label.textContent = selectedInvoiceReportRange().label;
   if (runFilter) filterTable();
@@ -464,11 +469,13 @@ function invoiceMarkup(invoice, options = {}) {
     </table>
     <div class="receipt-totals">
       ${(Number(invoice.discount) || 0) > 0 ? `<div class="receipt-total-row"><span>الخصم</span><strong>- ${money(invoice.discount)} ${currency}</strong></div>` : ''}
-      ${(Number(invoice.tax) || 0) > 0 ? `<div class="receipt-total-row"><span>الضريبة</span><strong>${money(invoice.tax)} ${currency}</strong></div>` : ''}
+      ${(Number(invoice.tax) || 0) > 0 ? `<div class="receipt-total-row"><span>${invoice.taxName ? `الضريبة - ${escapeHtml(invoice.taxName)}` : 'الضريبة'}</span><strong>+ ${money(invoice.tax)} ${currency}</strong></div>` : ''}
+      ${(Number(invoice.shippingCost) || 0) > 0 ? `<div class="receipt-total-row"><span>الشحن</span><strong>+ ${money(invoice.shippingCost)} ${currency}</strong></div>` : ''}
       <div class="receipt-total-row final"><span>الإجمالي النهائي</span><strong>${money(invoice.total)} ${currency}</strong></div>
       <div class="receipt-total-row"><span>المدفوع</span><strong>${money(invoice.paid)} ${currency}</strong></div>
       <div class="receipt-total-row"><span>المتبقي</span><strong>${money(invoice.debt)} ${currency}</strong></div>
     </div>
+    ${(invoice.shippingAddress || invoice.shippingNote) ? `<div class="receipt-notes">${invoice.shippingAddress ? `<div><strong>عنوان الشحن:</strong> ${escapeHtml(invoice.shippingAddress)}</div>` : ''}${invoice.shippingNote ? `<div><strong>ملاحظة الشحن:</strong> ${escapeHtml(invoice.shippingNote)}</div>` : ''}</div>` : ''}
     ${invoice.notes ? `<div class="receipt-notes"><strong>ملاحظات:</strong> ${escapeHtml(invoice.notes)}</div>` : ''}
     ${printer.showFooterText !== false ? '<div class="receipt-footer">شكراً لتعاملكم معنا · يرجى الاحتفاظ بالفاتورة</div>' : ''}
   </div>`;
@@ -597,7 +604,7 @@ function confirmDeleteInvoice() {
   const invoice = allInvoices.find(item => String(item.id) === String(pendingDeleteInvoiceId));
   if (!invoice) return hideDeleteModal();
 
-  const snapshotKeys = [DB_KEY, 'cashtop_sales_reversals', 'cashtop_products', 'cashtop_materials', 'cashtop_customers', 'cashtop_funds_db', 'cashtop_sales_offers'];
+  const snapshotKeys = [DB_KEY, 'cashtop_sales_reversals', 'cashtop_products', 'cashtop_materials', 'cashtop_customers', 'cashtop_funds_db', 'cashtop_sales_offers', 'cashtop_sales_agents'];
   const snapshots = Object.fromEntries(snapshotKeys.map(key => [key, localStorage.getItem(key)]));
   const confirmButton = document.querySelector('#deleteModal .btn-confirm-delete');
   deleteInvoiceInProgress = true;
@@ -625,6 +632,7 @@ function confirmDeleteInvoice() {
     if (reversed.customers) changes.cashtop_customers = reversed.customers;
     if (reversed.funds) changes.cashtop_funds_db = reversed.funds;
     if (reversed.offersChanged) changes.cashtop_sales_offers = reversed.offers;
+    if (reversed.agents) changes.cashtop_sales_agents = reversed.agents;
     if (window.Cashtop?.atomicSetItems) window.Cashtop.atomicSetItems(changes, { label: 'delete-sales-invoice' });
     else Object.entries(changes).forEach(([key, value]) => localStorage.setItem(key, JSON.stringify(value)));
     hideDeleteModal();
@@ -677,6 +685,32 @@ function reverseInvoiceMovements(invoice) {
   const products = readJson('cashtop_products', []);
   const materials = readJson('cashtop_materials', []);
   const recipes = readJson('cashtop_manufacturing_recipes', []);
+  const agents = readJson('cashtop_sales_agents', []);
+  const custodyAgent = invoice.stockSource === 'agent_custody' && invoice.stockAgentId
+    ? agents.find(agent => String(agent.id) === String(invoice.stockAgentId)) : null;
+
+  const addBackToAgentCustody = item => {
+    if (!custodyAgent || !item || item.isCustom) return;
+    if (!Array.isArray(custodyAgent.carStock)) custodyAgent.carStock = [];
+    const pieces = Math.max(0, Number(item.qty || 0) * invoiceItemFactor(item));
+    if (!(pieces > 0)) return;
+    const match = custodyAgent.carStock.find(row => String(row.id) === String(item.id ?? item.productId) && (item.isVariant
+      ? row.isVariant && String(row.vSize || row.variantSize || '') === String(item.variantSize || '') && String(row.vColor || row.variantColor || '') === String(item.variantColor || '')
+      : !row.isVariant));
+    if (match) {
+      const factor = Math.max(0.000001, Number(match.transferFactor || match.piecesPerUnit || 1));
+      match.qty = Math.max(0, Number(match.qty || 0)) + pieces / factor;
+    } else {
+      const product = products.find(row => String(row.id) === String(item.id ?? item.productId));
+      custodyAgent.carStock.push({
+        id: item.id ?? item.productId, name: item.name || product?.name || 'صنف',
+        cartId: item.isVariant ? `${item.id}_${item.variantSize || ''}_${item.variantColor || ''}` : (item.id ?? item.productId),
+        qty: pieces, transferUnit: 'piece', transferFactor: 1, piecesPerUnit: 1, pieceName: item.pieceName || product?.pieceName || 'قطعة',
+        price: Number(item.price || 0), pricePiece: Number(product?.pricePiece ?? product?.price ?? item.price ?? 0),
+        isVariant: Boolean(item.isVariant), vSize: item.variantSize || '', vColor: item.variantColor || ''
+      });
+    }
+  };
 
   const addBaseStock = (collection, id, quantity, allocations = []) => {
     const record = collection.find(entry => String(entry?.id) === String(id));
@@ -688,6 +722,7 @@ function reverseInvoiceMovements(invoice) {
 
   (invoice.items || []).forEach(item => {
     if (!item || item.isCustom) return;
+    if (custodyAgent) { addBackToAgentCustody(item); return; }
     const product = products.find(entry => String(entry.id) === String(item.id ?? item.productId));
     if (!product || product.untrackedStock === true) return;
     const quantity = Math.max(0, Number(item.qty || 0));
@@ -782,6 +817,16 @@ function reverseInvoiceMovements(invoice) {
     }
   }
 
+  const commissionAgentId = invoice.commissionAgentId || invoice.representativeId;
+  if (commissionAgentId) {
+    const commissionAgent = agents.find(agent => String(agent.id) === String(commissionAgentId));
+    if (commissionAgent) {
+      commissionAgent.totalSales = Math.max(0, Number(commissionAgent.totalSales || 0) - Number(invoice.commissionSaleBase || invoice.subtotal || 0));
+      commissionAgent.totalCommission = Math.max(0, Number(commissionAgent.totalCommission || 0) - Number(invoice.commissionAmount || 0));
+      commissionAgent.updatedAt = new Date().toISOString();
+    }
+  }
+
   const offers = readJson('cashtop_sales_offers', []);
   let offersChanged = false;
   (invoice.offerIds || []).forEach(offerId => {
@@ -791,7 +836,7 @@ function reverseInvoiceMovements(invoice) {
       offersChanged = true;
     }
   });
-  return { products, materials, customers, funds, offers, offersChanged };
+  return { products, materials, customers, funds, offers, offersChanged, agents };
 }
 
 // =============================================================

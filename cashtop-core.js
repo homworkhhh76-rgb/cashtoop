@@ -43,7 +43,7 @@
   };
 
   const DATA_KEYS = [
-    'cashtop_products', 'cashtop_materials', 'cashtop_material_purchases', 'cashtop_customers', 'cashtop_customer_groups',
+    'cashtop_products', 'cashtop_product_categories', 'cashtop_materials', 'cashtop_material_purchases', 'cashtop_customers', 'cashtop_customer_groups',
     'cashtop_suppliers', 'cashtop_supplier_movements', 'cashtop_invoices', 'cashtop_sales_reversals', 'cashtop_sales_returns',
     'cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_purchase_returns', 'cashtop_expenses',
     'cashtop_expense_types', 'cashtop_funds_db', 'cashtop_vouchers',
@@ -70,7 +70,7 @@
   const OPENING_BALANCES_KEY = 'cashtop_opening_balances';
   const LEGACY_FINANCIAL_GROUP_ID = 'FG_LEGACY';
   const FINANCIAL_GROUP_SCOPED_KEYS = new Set([
-    'cashtop_products', 'cashtop_materials', 'cashtop_material_purchases',
+    'cashtop_products', 'cashtop_product_categories', 'cashtop_materials', 'cashtop_material_purchases',
     'cashtop_customers', 'cashtop_suppliers', 'cashtop_supplier_movements',
     'cashtop_invoices', 'cashtop_sales_reversals', 'cashtop_sales_returns', 'cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_purchase_returns',
     'cashtop_expenses', 'cashtop_funds_db', 'cashtop_vouchers',
@@ -89,7 +89,7 @@
     'cashtop_salary_payments', 'cashtop_archive_index'
   ]);
   const FINANCIAL_GROUP_CARRY_KEYS = new Set([
-    'cashtop_products', 'cashtop_materials', 'cashtop_customers',
+    'cashtop_products', 'cashtop_product_categories', 'cashtop_materials', 'cashtop_customers',
     'cashtop_suppliers', 'cashtop_funds_db', 'cashtop_workers', 'cashtop_sales_agents'
   ]);
 
@@ -170,7 +170,7 @@
 
   const PAGE_PERMISSIONS = {
     'لوحة التحكم.html': 'dashboard.view', 'cashier.html': 'pos.access', 'invoices.html': 'sales.invoices.view', 'مرجع المبيعات.html': 'sales.invoices.view',
-    'المشتريات.html': 'purchases.view', 'مرجع المشتريات.html': 'purchaseReturns.view', 'products.html': 'products.view', 'materials.html': 'materials.view',
+    'المشتريات.html': 'purchases.view', 'مرجع المشتريات.html': 'purchaseReturns.view', 'products.html': 'products.view', 'categories.html': 'products.view', 'materials.html': 'materials.view',
     'warehouses.html': 'warehouses.view', 'branches.html': ['branches.view', 'inventory.transfer'], 'units.html': 'units.view',
     'shortages.html': 'shortages.view', 'barcode-generator.html': 'barcode.view', 'customers.html': 'customers.view',
     'customer-groups.html': 'customerGroups.view', 'suppliers.html': 'suppliers.view', 'المناديب.html': 'agents.view',
@@ -205,7 +205,7 @@
       exportHistoryExcel: 'products.export', exportHistoryPdf: 'products.export'
     },
     'cashier.html': {
-      holdInvoice: 'sales.hold', openSuspendedModal: 'sales.hold', clearBasket: 'sales.clearCart',
+      holdInvoice: 'sales.hold', openSuspendedModal: 'sales.hold', deleteSuspendedInvoice: 'sales.hold', clearBasket: 'sales.clearCart',
       applyDiscountValue: 'sales.discount', handleQuickProductSubmit: 'products.create'
     },
     'مرجع المبيعات.html': {
@@ -229,6 +229,9 @@
       confirmTransferAction: 'inventory.transfer', addProdToTransfer: 'inventory.transfer', addVariantToTransferById: 'inventory.transfer',
       exportExcel: 'products.export', exportPDF: 'products.export', exportImage: 'products.export',
       exportTransferExcel: 'products.export', exportTransferPDF: 'products.export', exportTransferImage: 'products.export'
+    },
+    'categories.html': {
+      openCategoryModal: 'products.edit', saveCategory: 'products.edit', deleteCategory: 'products.edit', toggleCategoryProduct: 'products.edit'
     },
     'materials.html': {
       openMaterialModal: 'materials.manage', saveMaterialPurchase: 'materials.manage', editMaterial: 'materials.manage', deleteMaterial: 'materials.manage',
@@ -263,7 +266,7 @@
       exportAllSuppliersExcel: 'suppliers.export', exportAllSuppliersPDF: 'suppliers.export',
       exportIndividualPDF: 'suppliers.export', exportIndividualExcel: 'suppliers.export'
     },
-    'tax-settings.html': { saveTax: 'tax.edit' },
+    'tax-settings.html': { saveTax: 'tax.edit', confirmDelete: 'tax.edit' },
     'units.html': { openModal: 'units.manage', saveUnit: 'units.manage', editUnit: 'units.manage', deleteUnit: 'units.manage' },
     'warehouses.html': {
       openTransferModal: 'inventory.transfer', openTransferVariantModal: 'inventory.transfer', processTransfer: 'inventory.transfer',
@@ -376,7 +379,7 @@
     cashtop_barcode_settings: {},
     cashtop_sms_template: '',
     cashtop_invoice_message_template: 'مرحباً {name}، فاتورتك رقم {invoice} لدى {store}. الأصناف:\n{items}\nالإجمالي: {total}، المدفوع: {paid}، المتبقي: {balance}.',
-    cashtop_tax_settings: { enabled: false, salesRate: 0, purchaseRate: 0, salesBearer: 'customer', purchaseBearer: 'business', pricesIncludeTax: false },
+    cashtop_tax_settings: { enabled: false, salesRate: 0, purchaseRate: 0, salesBearer: 'customer', purchaseBearer: 'business', pricesIncludeTax: false, rates: [], defaultSalesTaxId: null, defaultPurchaseTaxId: null },
     cashtop_notification_settings: { lowStockThreshold: 5, debtOverdueDays: 30, inactiveCustomerDays: 45, expiryWarningDays: 30, enabled: false, dailySummaryEnabled: true },
     cashtop_archive_index: { lastCompactionAt: 0, archivedCounts: {} }
   };
@@ -1741,7 +1744,7 @@
 
 
   const BRANCH_SCOPED_ARRAY_KEYS = new Set([
-    'cashtop_customers', 'cashtop_customer_groups', 'cashtop_suppliers', 'cashtop_supplier_movements',
+    'cashtop_product_categories', 'cashtop_customers', 'cashtop_customer_groups', 'cashtop_suppliers', 'cashtop_supplier_movements',
     'cashtop_invoices', 'cashtop_sales_reversals', 'cashtop_sales_returns', 'cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_purchase_returns', 'cashtop_expenses',
     'cashtop_expense_types', 'cashtop_vouchers', 'cashtop_stores', 'cashtop_transfer_history',
     'cashtop_workers', 'cashtop_sales_agents', 'cashtop_agent_movements', 'cashtop_journal', 'cashtop_journal_reversal_archive',
@@ -1752,6 +1755,12 @@
 
   function isCompanyAdminRole(role) {
     return ['admin', 'owner', 'company-admin'].includes(String(role || '').toLowerCase());
+  }
+
+  function isBasicStaffRole(session = getSession()) {
+    const role = String(session?.role || '').toLowerCase();
+    return ['employee', 'representative', 'sales-representative', 'sales-agent', 'agent'].includes(role)
+      || String(session?.uid || '').startsWith('AG_');
   }
 
   function deepClone(value) {
@@ -3093,8 +3102,31 @@
        still use their legacy render functions. */
     const style = document.createElement('style');
     style.id = 'ctPerformanceGuards';
-    style.textContent = 'tbody tr{content-visibility:auto;contain-intrinsic-size:auto 44px}.ct-lazy-table-sentinel,.ct-virtual-spacer,.ct-virtual-window-sentinel{content-visibility:visible!important;contain:none!important}html{scroll-behavior:auto}body{overscroll-behavior-y:contain}.ct-sidebar,.ct-topbar,.ct-bottom-nav,.modal-box,.modal-content{transform:translateZ(0);backface-visibility:hidden}button,a,input,select,textarea{touch-action:manipulation}';
+    style.textContent = '[hidden]{display:none!important}tbody tr{content-visibility:auto;contain-intrinsic-size:auto 44px}.product-item-card,.category-card{content-visibility:auto;contain-intrinsic-size:auto 150px;contain:layout paint style}.ct-lazy-table-sentinel,.ct-virtual-spacer,.ct-virtual-window-sentinel{content-visibility:visible!important;contain:none!important}html{scroll-behavior:auto}body{overscroll-behavior-y:contain}.ct-sidebar,.ct-topbar,.ct-bottom-nav,.modal-box,.modal-content,.ct-select-popover{transform:translate3d(0,0,0);backface-visibility:hidden;will-change:transform,opacity;contain:layout style}button,a,input,select,textarea{touch-action:manipulation}@media(prefers-reduced-motion:no-preference){.modal-box,.modal-content,.ct-select-popover,.product-item-card,.category-card{transition-property:transform,opacity,box-shadow,border-color!important;transition-duration:100ms!important}}';
     document.head.appendChild(style);
+
+    // Normalize legacy field captions without rewriting every page template. The
+    // class is applied only when a group has a direct label and a real control.
+    const markFloatingLabels = (scope = document) => {
+      const candidates = [
+        ...(scope?.matches?.('.form-group,.ct-form-group,.invoice-report-field') ? [scope] : []),
+        ...(scope?.querySelectorAll?.('.form-group,.ct-form-group,.invoice-report-field') || [])
+      ];
+      candidates.forEach(group => {
+        const label = [...group.children].find(child => child.tagName === 'LABEL');
+        if (!label) return;
+        const control = group.querySelector(':scope > input,:scope > select,:scope > textarea,:scope > .form-control,:scope > .ct-input,:scope > .autocomplete,:scope > .input-with-btn');
+        if (control) group.classList.add('ct-floating-label');
+      });
+    };
+    markFloatingLabels(document);
+    if (!document.documentElement.dataset.ctFloatingObserver) {
+      document.documentElement.dataset.ctFloatingObserver = '1';
+      const observer = new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => {
+        if (node?.nodeType === 1) markFloatingLabels(node);
+      })));
+      observer.observe(document.body, { childList:true, subtree:true });
+    }
 
     /* Convert common inline search handlers to a 300ms debounced listener. */
     document.querySelectorAll('input[type="text"],input[type="search"],input:not([type])').forEach(input => {
@@ -3456,7 +3488,27 @@
     session.entitlementVersion = access.authVersion || access.updatedAt || session.entitlementVersion || 0;
 
     const role = String(session.role || '').toLowerCase();
-    if (role === 'employee' || String(session.uid || '').startsWith('EMP_')) {
+    if (role === 'representative' || String(session.uid || '').startsWith('AG_')) {
+      const agents = normalizeArrayValue(rawGet(namespaceKey('cashtop_sales_agents', companyId)), []);
+      const agent = agents.find(item => String(item.id) === String(session.uid)) ||
+        agents.find(item => String(item.username || '').toLowerCase() === String(session.username || '').toLowerCase());
+      if (!agent || !branchRecordIsActive(agent) || agent.cashierAccess === false) return { ok: false, reason: 'user-disabled' };
+      const branches = normalizeArrayValue(rawGet(namespaceKey('cashtop_branches', companyId)), []);
+      const agentBranch = resolveSessionBranch(branches, agent.branchRecordId || agent.branchId || 'MAIN');
+      const agentOnMain = !agent.branchId || String(agent.branchId).toUpperCase() === 'MAIN' || agentBranch?.isMain === true;
+      if (!agentBranch || (!agentOnMain && !branchRecordIsActive(agentBranch))) return { ok: false, reason: 'user-disabled' };
+      const defaults = {
+        'pos.access': true, 'sales.create': true, 'sales.print': true, 'sales.image': true,
+        'sales.discount': true, 'sales.credit': true, 'sales.hold': true, 'sales.clearCart': true
+      };
+      session.displayName = `${agent.name || agent.username || 'مندوب'} (مندوب)`;
+      session.permissions = normalizePermissions({ ...defaults, ...(agent.permissions || {}) });
+      session.branchRecordId = agentBranch.id || null;
+      session.branchId = agentOnMain ? 'MAIN' : agentBranch.id;
+      session.dataBranchId = session.branchId;
+      session.branchName = agentBranch.name || agent.branchName || DEFAULT_MAIN_BRANCH_NAME;
+      session.authVersion = agent.authVersion || agent.updatedAt || 0;
+    } else if (role === 'employee' || String(session.uid || '').startsWith('EMP_')) {
       const employees = normalizeArrayValue(rawGet(namespaceKey('cashtop_employees', companyId)), []);
       const employee = employees.find(item => String(item.id) === String(session.uid)) ||
         employees.find(item => String(item.username || '').toLowerCase() === String(session.username || '').toLowerCase());
@@ -3617,7 +3669,7 @@
 
   const PAGE_TITLES = {
     'لوحة التحكم.html': 'لوحة التحكم', 'cashier.html': 'نقطة البيع والكاشير',
-    'products.html': 'المنتجات والمخزون', 'materials.html': 'الأصناف الخام', 'invoices.html': 'فواتير المبيعات',
+    'products.html': 'المنتجات والمخزون', 'categories.html': 'إدارة التصنيفات', 'materials.html': 'الأصناف الخام', 'invoices.html': 'فواتير المبيعات',
     'المشتريات.html': 'فواتير المشتريات', 'مرجع المبيعات.html': 'مرتجع المبيعات', 'مرجع المشتريات.html': 'مرتجع المشتريات',
     'customers.html': 'العملاء', 'customer-groups.html': 'مجموعات العملاء',
     'suppliers.html': 'الموردون', 'accounts.html': 'الحسابات والصناديق', 'financial-groups.html': 'المجموعات المالية',
@@ -3666,7 +3718,7 @@
       ['fa-house','الرئيسية', [['لوحة التحكم.html','لوحة التحكم']]],
       ['fa-cash-register','المبيعات', [['cashier.html','الكاشير'],['invoices.html','فواتير المبيعات'],['مرجع المبيعات.html','مرتجع المبيعات'],['sales-offers.html','عروض المبيعات'],backupLink('sales')]],
       ['fa-cart-shopping','المشتريات', [['المشتريات.html','فواتير المشتريات'],['مرجع المشتريات.html','مرتجع المشتريات'],['suppliers.html','الموردون'],backupLink('purchases')]],
-      ['fa-boxes-stacked','المخزون والفروع', [['products.html','المنتجات'],['materials.html','الأصناف'],['warehouses.html','المخازن'],['branches.html','الفروع'],['units.html','الوحدات'],['shortages.html','النواقص'],['barcode-generator.html','الباركود'],backupLink('inventory')]],
+      ['fa-boxes-stacked','المخزون والفروع', [['products.html','المنتجات'],['categories.html','التصنيفات'],['materials.html','الأصناف'],['warehouses.html','المخازن'],['branches.html','الفروع'],['units.html','الوحدات'],['shortages.html','النواقص'],['barcode-generator.html','الباركود'],backupLink('inventory')]],
       ['fa-industry','التصنيع', [['ادارة التصنيع.html','إدارة التصنيع'],backupLink('manufacturing')]],
       ['fa-handshake','العملاء والعلاقات', [['customers.html','العملاء'],['customer-groups.html','مجموعات العملاء'],['المناديب.html','المناديب'],backupLink('relationships')]],
       ['fa-calculator','المالية والمحاسبة', [['accounts.html','الصناديق والحسابات'],['financial-groups.html','المجموعات المالية'],['sands.html','سندات القبض والصرف'],['journal.html','دفتر الأستاذ'],['المصاريف.html','المصاريف'],backupLink('finance')]],
@@ -3708,7 +3760,7 @@
     const host = document.getElementById('ctPageHost');
     if (!host || host.dataset.logoutOnly === 'true') return;
     host.dataset.logoutOnly = 'true';
-    host.innerHTML = `<div style="max-width:520px;margin:45px auto;background:#fff;border-top:4px solid #605ca8;border-radius:10px;padding:24px;text-align:center;box-shadow:0 8px 25px rgba(15,23,42,.08)"><i class="fa-solid fa-right-from-bracket" style="font-size:38px;color:#605ca8"></i><h2 style="font-size:18px;margin:14px 0 6px">إعدادات الحساب</h2><p style="font-size:12px;color:#64748b;line-height:1.8">لا يملك هذا الحساب صلاحية إعدادات النظام. الإجراء المتاح هو تسجيل الخروج فقط.</p><button type="button" data-ct-action="logout" style="border:0;background:#dd4b39;color:#fff;border-radius:7px;padding:11px 24px;font:700 13px Cairo;cursor:pointer"><i class="fa-solid fa-right-from-bracket"></i> تسجيل الخروج</button></div>`;
+    host.innerHTML = `<div style="max-width:560px;margin:45px auto;background:#fff;border-top:4px solid #605ca8;border-radius:12px;padding:24px;text-align:center;box-shadow:0 8px 25px rgba(15,23,42,.08)"><i class="fa-solid fa-mobile-screen-button" style="font-size:38px;color:#605ca8"></i><h2 style="font-size:18px;margin:14px 0 6px">التطبيق والحساب</h2><p style="font-size:12px;color:#64748b;line-height:1.8">هذا الحساب لا يملك صلاحية إعدادات الشركة. يمكنك تثبيت التطبيق على الجهاز أو تسجيل الخروج.</p><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:18px"><button type="button" data-ct-action="install-app" style="border:0;background:#605ca8;color:#fff;border-radius:8px;padding:12px 16px;font:800 12px Cairo;cursor:pointer"><i class="fa-solid fa-download"></i> تثبيت التطبيق</button><button type="button" data-ct-action="logout" style="border:0;background:#dd4b39;color:#fff;border-radius:8px;padding:12px 16px;font:800 12px Cairo;cursor:pointer"><i class="fa-solid fa-right-from-bracket"></i> تسجيل الخروج</button></div></div>`;
   }
 
   function firstAllowedPage(session = getSession()) {
@@ -4189,8 +4241,16 @@
   }
 
   function getProfitRate() {
-    const rate = Number(getSystemSettings().profitRate || 0);
-    return Number.isFinite(rate) ? Math.max(0, rate) : 0;
+    const settings = getSystemSettings();
+    const raw = settings.profitRate;
+    if (raw === undefined || raw === null || String(raw).trim() === '') return 25;
+    const rate = Number(raw);
+    return Number.isFinite(rate) ? Math.max(0, rate) : 25;
+  }
+
+  function getInventoryAccountingMethod() {
+    const method = String(getSystemSettings().inventoryAccountingMethod || 'default').trim().toLowerCase();
+    return ['fifo', 'lifo'].includes(method) ? method : 'default';
   }
 
   function salePriceFromCost(cost, rate = getProfitRate()) {
@@ -4283,7 +4343,7 @@
 
 
   function renderSyncAndCacheMaintenancePanel() {
-    if (FILE !== 'setting.html' || document.getElementById('ctSyncCacheMaintenancePanel')) return;
+    if (FILE !== 'setting.html' || document.getElementById('ctSyncCacheMaintenancePanel') || isBasicStaffRole()) return;
     const host = document.getElementById('ctPageHost');
     if (!host || host.dataset.logoutOnly === 'true') return;
 
@@ -4302,7 +4362,7 @@
         .ct-maintenance-btn:disabled{opacity:.6;cursor:wait}.ct-cache-refresh-btn{background:#605ca8;color:#fff}.ct-queue-reset-btn{background:#fff1f2;color:#be123c;border:1px solid #fecdd3}
         @media(max-width:620px){.ct-maintenance-actions{grid-template-columns:1fr}.ct-sync-cache-maintenance{padding:14px}}
       </style>
-      <div class="ct-maintenance-head"><strong><i class="fa-solid fa-cloud-arrow-up"></i> المزامنة وتحديث التطبيق</strong><span class="ct-maintenance-version">R60</span></div>
+      <div class="ct-maintenance-head"><strong><i class="fa-solid fa-cloud-arrow-up"></i> المزامنة وتحديث التطبيق</strong><span class="ct-maintenance-version">R92</span></div>
       <p class="ct-maintenance-description">تحديث الكاش يحفظ العمليات المعلقة في IndexedDB أولاً، ثم ينزّل ملفات الموقع الجديدة ويعيد فتح التطبيق. تصفير الطابور يحذف العمليات القديمة فقط ولا يحذف البيانات المحلية.</p>
       <div class="ct-maintenance-status"><i class="fa-solid fa-list-check"></i><span>العمليات المعلقة حالياً: <b id="ctMaintenanceQueueCount">0</b></span></div>
       <div class="ct-maintenance-actions">
@@ -4311,7 +4371,9 @@
       </div>`;
 
     const subscription = document.getElementById('ctSubscriptionPanel');
-    if (subscription?.nextSibling) host.insertBefore(panel, subscription.nextSibling);
+    const smsCard = host.querySelector('.sms-card');
+    if (subscription?.parentNode) subscription.insertAdjacentElement('afterend', panel);
+    else if (smsCard?.parentNode) smsCard.insertAdjacentElement('afterend', panel);
     else host.prepend(panel);
 
     const queueCount = panel.querySelector('#ctMaintenanceQueueCount');
@@ -4359,7 +4421,7 @@
   }
 
   function renderSubscriptionPanel(session = getSession()) {
-    if (FILE !== 'setting.html') return;
+    if (FILE !== 'setting.html' || isBasicStaffRole(session)) { document.getElementById('ctSubscriptionPanel')?.remove(); return; }
     document.getElementById('ctSubscriptionPanel')?.remove();
     const access = getCompanyAccess();
     const plan = currentPlan();
@@ -4426,7 +4488,9 @@
       </div>
       <div class="ct-company-key"><span>مفتاح الشركة</span><code>${esc(companyKey || '—')}</code></div>
       ${details}`;
-    host.prepend(panel);
+    const smsCard = host.querySelector('.sms-card');
+    if (smsCard?.parentNode) smsCard.insertAdjacentElement('afterend', panel);
+    else host.prepend(panel);
   }
 
   function setText(id, value) {
@@ -4554,7 +4618,8 @@
   }
 
   async function installPwa() {
-    if (!can('app.install')) {
+    const installSession = getSession();
+    if (!can('app.install', installSession) && !isBasicStaffRole(installSession)) {
       showToast('لا تملك صلاحية تثبيت التطبيق.', 'error');
       return { installed: false, denied: true };
     }
@@ -4931,24 +4996,56 @@
   }
 
   function getTaxSettings() {
-    return Object.assign({
+    const cfg = Object.assign({
       enabled: false, salesRate: 0, purchaseRate: 0,
-      salesBearer: 'customer', purchaseBearer: 'business', pricesIncludeTax: false
+      salesBearer: 'customer', purchaseBearer: 'business', pricesIncludeTax: false,
+      rates: [], defaultSalesTaxId: null, defaultPurchaseTaxId: null
     }, safeJson(localStorage.getItem('cashtop_tax_settings'), {}) || {});
+    cfg.rates = Array.isArray(cfg.rates) ? cfg.rates.map((item, index) => ({
+      id: String(item?.id ?? `tax_${index}`),
+      name: String(item?.name || 'ضريبة').trim() || 'ضريبة',
+      rate: Math.max(0, Math.min(100, Number(item?.rate) || 0)),
+      active: item?.active !== false
+    })).filter(item => item.active) : [];
+    if (cfg.defaultSalesTaxId != null) cfg.defaultSalesTaxId = String(cfg.defaultSalesTaxId);
+    if (cfg.defaultPurchaseTaxId != null) cfg.defaultPurchaseTaxId = String(cfg.defaultPurchaseTaxId);
+    return cfg;
   }
 
-  function calculateTax(amount, kind = 'sales') {
+  function getTaxRates() {
+    return getTaxSettings().rates.map(item => ({ ...item }));
+  }
+
+  function calculateTax(amount, kind = 'sales', taxSelection = 'default') {
     const cfg = getTaxSettings();
     const base = Math.max(0, Number(amount) || 0);
-    const rate = Math.max(0, Number(kind === 'purchase' ? cfg.purchaseRate : cfg.salesRate) || 0);
-    const enabled = Boolean(cfg.enabled && rate > 0);
     const bearer = kind === 'purchase' ? cfg.purchaseBearer : cfg.salesBearer;
     const charged = kind === 'sales' ? bearer === 'customer' : bearer === 'business';
-    if (!enabled) return { enabled: false, rate, tax: 0, bearer, charged: false, included: false, total: base };
+    const selection = String(taxSelection ?? 'default');
+    let selectedTax = null;
+    const explicitTaxSelection = selection.startsWith('tax:');
+    if (selection === 'none') {
+      return { enabled: false, rate: 0, tax: 0, bearer, charged: false, included: false, total: base, taxId: null, taxName: 'بدون ضريبة' };
+    }
+    if (selection.startsWith('tax:')) {
+      const wantedId = selection.slice(4);
+      selectedTax = cfg.rates.find(item => String(item.id) === wantedId) || null;
+    } else if (taxSelection && typeof taxSelection === 'object') {
+      const wantedId = taxSelection.id ?? taxSelection.taxId;
+      selectedTax = cfg.rates.find(item => String(item.id) === String(wantedId)) || null;
+      if (!selectedTax && Number.isFinite(Number(taxSelection.rate))) selectedTax = { id: wantedId ?? null, name: taxSelection.name || taxSelection.taxName || 'ضريبة', rate: Number(taxSelection.rate), active: true };
+    } else if (selection === 'default') {
+      const defaultId = kind === 'purchase' ? cfg.defaultPurchaseTaxId : cfg.defaultSalesTaxId;
+      selectedTax = cfg.rates.find(item => String(item.id) === String(defaultId)) || cfg.rates[0] || null;
+    }
+    const legacyRate = Math.max(0, Number(kind === 'purchase' ? cfg.purchaseRate : cfg.salesRate) || 0);
+    const rate = Math.max(0, Number(selectedTax?.rate ?? (explicitTaxSelection ? 0 : legacyRate)) || 0);
+    const enabled = Boolean(cfg.enabled && rate > 0);
+    if (!enabled) return { enabled: false, rate, tax: 0, bearer, charged: false, included: false, total: base, taxId: selectedTax?.id ?? null, taxName: selectedTax?.name || '' };
     const included = Boolean(cfg.pricesIncludeTax);
     const tax = included ? base * rate / (100 + rate) : base * rate / 100;
     const total = included ? base : base + (charged ? tax : 0);
-    return { enabled, rate, tax, bearer, charged, included, total };
+    return { enabled, rate, tax, bearer, charged, included, total, taxId: selectedTax?.id ?? null, taxName: selectedTax?.name || '' };
   }
 
   function getSmartNotifications() {
@@ -5294,12 +5391,19 @@
     const margin = 8;
     const width = Math.max(160, Math.min(Math.min(420, window.innerWidth - 16), rect.width));
     popover.style.width = `${width}px`;
-    const measuredHeight = Math.min(popover.scrollHeight, 420);
+    const renderedHeight = popover.getBoundingClientRect().height || popover.scrollHeight || 0;
+    const measuredHeight = Math.min(Math.max(42, renderedHeight), 420, Math.max(42, window.innerHeight - margin * 2));
+    const direction = String(select.dataset.ctDropdownDirection || 'auto').toLowerCase();
     let top = rect.bottom + 6;
-    if (top + measuredHeight > window.innerHeight - margin && rect.top > measuredHeight + margin) {
+    if (direction === 'up') {
+      // A forced-up menu stays above its control; if there is not enough room,
+      // pin its top to the viewport and let the options area scroll internally.
+      top = Math.max(margin, rect.top - measuredHeight - 6);
+      popover.style.maxHeight = `${Math.max(80, rect.top - margin - 6)}px`;
+    } else if (direction !== 'down' && top + measuredHeight > window.innerHeight - margin && rect.top > measuredHeight + margin) {
       top = rect.top - measuredHeight - 6;
     }
-    top = Math.max(margin, Math.min(top, window.innerHeight - measuredHeight - margin));
+    top = Math.max(margin, Math.min(top, window.innerHeight - Math.min(measuredHeight, window.innerHeight - margin * 2) - margin));
     let left = rect.right - width;
     left = Math.max(margin, Math.min(left, window.innerWidth - width - margin));
     popover.style.top = `${top}px`;
@@ -5533,6 +5637,7 @@
     applyPermissionVisibility,
     toggleSidebar,
     closeTransientUi,
+    enhanceAllSelects,
     rawGet,
     rawSet,
     getRawCompanyDataset,
@@ -5559,12 +5664,12 @@
     syncImportedData,
     applyRemoteDataset,
     validateSessionLocal,
-    getTaxSettings, calculateTax,
+    getTaxSettings, getTaxRates, calculateTax,
     getNotificationSettings, getSmartNotifications, updateNotificationBadge, requestNotificationPermission, notificationBrandIcon, showTodayProfitNotification,
     archiveRecords, readArchivedRecords, compactCompletedData,
     getSyncQueue, enqueueSyncOperation, completeSyncOperation, clearSyncQueue, resetSyncQueueCompletely, preservePendingSyncState, updateSyncBadge, restoreSyncQueueBackup, migrateLegacySyncQueues,
     setSyncProgress, restoreDurableCompanyData,
-    getSystemSettings, getProfitRate, salePriceFromCost, applySystemBranding, recordIdentity, sortNewestFirstRecords,
+    getSystemSettings, getProfitRate, getInventoryAccountingMethod, salePriceFromCost, applySystemBranding, recordIdentity, sortNewestFirstRecords,
     debounce, runWhenIdle, renderVirtualRows, runWorkerTask, queryRecords, atomicSetItems, recoverAtomicTransactions,
     captureModalDraft, restoreModalDraft, clearModalDraft, getAuditPending, getAuditPendingAsync, getAuditPendingCountAsync, completeAuditPending, completeAuditPendingAsync, getRecentAuditCache,
   });
@@ -5668,7 +5773,7 @@
     };
     setInterval(refreshSessionAccess, 4000);
     window.addEventListener('cashtop:remote-applied', event => {
-      if (['cashtop_employees','cashtop_branches','cashtop_company_access'].includes(event.detail?.key)) refreshSessionAccess();
+      if (['cashtop_employees','cashtop_sales_agents','cashtop_branches','cashtop_company_access'].includes(event.detail?.key)) refreshSessionAccess();
       if (event.detail?.key === 'cashtop_settings') applySystemBranding();
       if (event.detail?.key === FINANCIAL_GROUPS_KEY) {
         const effective = currentFinancialGroupId();

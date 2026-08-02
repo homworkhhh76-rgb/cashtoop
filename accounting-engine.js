@@ -36,6 +36,13 @@
       const factor = window.CashtopMulti?.factorForUnit?.(item, item.selectedUnit)
         ?? (item.selectedUnit === 'unit' ? n(item.piecesPerUnit || 1) : 1);
       const pieces = quantity * Math.max(0.000001, n(factor) || 1);
+      const allocations = Array.isArray(item.lotAllocations) ? item.lotAllocations : [];
+      if (allocations.length) {
+        const allocatedPieces = allocations.reduce((total, row) => total + Math.max(0, n(row.quantityPieces)), 0);
+        const allocatedCost = allocations.reduce((total, row) => total + Math.max(0, n(row.quantityPieces)) * Math.max(0, n(row.cost)), 0);
+        const fallbackCost = Number.isFinite(Number(item.costPerPiece)) ? n(item.costPerPiece) : n(item.cost || item.costPrice || 0);
+        return sum + allocatedCost + Math.max(0, pieces - allocatedPieces) * fallbackCost;
+      }
       const costPerPiece = Number.isFinite(Number(item.costPerPiece))
         ? n(item.costPerPiece)
         : n(item.cost || item.costPrice || 0);

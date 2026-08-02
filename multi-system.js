@@ -245,56 +245,88 @@
     return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   }
 
+  // R86: use the exact native site dropdown engine from cashtop-core.js.
+  // These compatibility helpers remain because payment pages call them after
+  // rebuilding options or setting a value programmatically.
+  function ensureSiteDropdownStyles() {}
+  function closeSiteDropdowns() { window.Cashtop?.closeTransientUi?.({ closeSidebar:true }); }
+  function refreshEnhancedSelect(select) {
+    if (!select || select.tagName !== 'SELECT') return;
+    window.Cashtop?.enhanceAllSelects?.(select);
+  }
+  function enhanceSiteSelect(selectOrId) {
+    const select = typeof selectOrId === 'string' ? document.getElementById(selectOrId) : selectOrId;
+    if (!select || select.tagName !== 'SELECT') return null;
+    window.Cashtop?.enhanceAllSelects?.(select);
+    return select;
+  }
+  function enhanceTaggedSelects(root = document) {
+    root.querySelectorAll?.('select[data-ct-site-dropdown="true"]').forEach(enhanceSiteSelect);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => enhanceTaggedSelects(document), { once:true });
+  else queueMicrotask(() => enhanceTaggedSelects(document));
+
   function ensureMultiPaymentUi() {
     if (document.getElementById('ctMultiPaymentModal')) return;
+    ensureSiteDropdownStyles();
     const style = document.createElement('style');
     style.id = 'ctMultiPaymentStyles';
     style.textContent = `
-      #ctMultiPaymentModal{position:fixed;inset:0;z-index:16000;background:rgba(15,23,42,.58);display:none;align-items:center;justify-content:center;padding:14px;font-family:Cairo,Arial,sans-serif}
-      #ctMultiPaymentModal.active{display:flex}
-      #ctMultiPaymentModal .ct-mp-box{width:min(680px,96vw);max-height:min(88vh,760px);overflow:auto;background:#fff;border-radius:12px;border-top:4px solid #00a65a;box-shadow:0 22px 65px rgba(15,23,42,.28);padding:16px;direction:rtl}
-      #ctMultiPaymentModal .ct-mp-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:11px;border-bottom:1px solid #edf2f7;margin-bottom:12px}
-      #ctMultiPaymentModal .ct-mp-title{font-size:15px;font-weight:800;color:#1e293b;display:flex;align-items:center;gap:8px}
-      #ctMultiPaymentModal .ct-mp-title i{color:#00a65a}
-      #ctMultiPaymentModal .ct-mp-close{border:0;background:transparent;font-size:25px;color:#94a3b8;cursor:pointer}
-      #ctMultiPaymentModal .ct-mp-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px}
-      #ctMultiPaymentModal .ct-mp-stat{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:9px}
-      #ctMultiPaymentModal .ct-mp-stat span{display:block;font-size:9px;color:#64748b;font-weight:700;margin-bottom:3px}
-      #ctMultiPaymentModal .ct-mp-stat b{display:block;font-size:12px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-      #ctMultiPaymentModal .ct-mp-rows{display:flex;flex-direction:column;gap:8px}
-      #ctMultiPaymentModal .ct-mp-row{display:grid;grid-template-columns:minmax(170px,1.3fr) minmax(130px,.8fr) 36px;gap:8px;align-items:start;padding:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px}
-      #ctMultiPaymentModal .ct-mp-field{position:relative;padding-top:7px;min-width:0}
-      #ctMultiPaymentModal .ct-mp-field label{position:absolute;top:0;right:10px;background:#f8fafc;padding:0 5px;font-size:9px;font-weight:800;color:#475569;z-index:1}
-      #ctMultiPaymentModal .ct-mp-field select,#ctMultiPaymentModal .ct-mp-field input{width:100%;height:42px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;padding:8px 10px;font:700 11px Cairo;color:#334155;outline:none}
-      #ctMultiPaymentModal .ct-mp-field select:focus,#ctMultiPaymentModal .ct-mp-field input:focus{border-color:#00a65a;box-shadow:0 0 0 3px rgba(0,166,90,.10)}
-      #ctMultiPaymentModal .ct-mp-hint{font-size:9px;color:#64748b;line-height:1.6;margin-top:4px;min-height:14px}
-      #ctMultiPaymentModal .ct-mp-remove{width:36px;height:36px;margin-top:9px;border:0;border-radius:7px;background:#fff1f2;color:#e11d48;cursor:pointer}
-      #ctMultiPaymentModal .ct-mp-toolbar{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px}
-      #ctMultiPaymentModal .ct-mp-add{border:1px dashed #94a3b8;background:#fff;color:#475569;border-radius:7px;padding:8px 11px;font:800 10px Cairo;cursor:pointer}
-      #ctMultiPaymentModal .ct-mp-message{font-size:10px;color:#64748b;line-height:1.7}
-      #ctMultiPaymentModal .ct-mp-footer{display:flex;justify-content:flex-end;gap:8px;border-top:1px solid #edf2f7;padding-top:12px;margin-top:12px}
-      #ctMultiPaymentModal .ct-mp-btn{border:0;border-radius:7px;padding:10px 18px;font:800 11px Cairo;cursor:pointer}
-      #ctMultiPaymentModal .ct-mp-cancel{background:#f1f5f9;color:#475569}
-      #ctMultiPaymentModal .ct-mp-save{background:#00a65a;color:#fff}
-      @media(max-width:560px){#ctMultiPaymentModal{padding:8px}#ctMultiPaymentModal .ct-mp-box{width:98vw;padding:12px}#ctMultiPaymentModal .ct-mp-summary{grid-template-columns:1fr 1fr}#ctMultiPaymentModal .ct-mp-stat:last-child{grid-column:1/-1}#ctMultiPaymentModal .ct-mp-row{grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr) 32px;gap:5px;padding:8px}#ctMultiPaymentModal .ct-mp-remove{width:32px;height:36px}#ctMultiPaymentModal .ct-mp-field select,#ctMultiPaymentModal .ct-mp-field input{font-size:10px;padding:7px}}
+      #ctMultiPaymentModal{position:fixed;inset:0;z-index:17000;background:rgba(15,23,42,.60);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;padding:12px;font-family:Cairo,Arial,sans-serif;direction:rtl}
+      #ctMultiPaymentModal.active{display:flex;animation:ctMpFade .14s ease-out}
+      #ctMultiPaymentModal .ct-mp-box{width:min(650px,98vw);max-height:92vh;overflow:hidden;background:#fff;border-radius:18px;box-shadow:0 24px 70px rgba(15,23,42,.30);display:flex;flex-direction:column;transform:translateZ(0);animation:ctMpPop .15s cubic-bezier(.2,.8,.2,1)}
+      @keyframes ctMpFade{from{opacity:0}to{opacity:1}}@keyframes ctMpPop{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
+      #ctMultiPaymentModal .ct-mp-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px 18px;border-bottom:1px solid #f1f5f9;background:#fafafa}
+      #ctMultiPaymentModal .ct-mp-title{font-size:16px;font-weight:900;color:#1e293b;display:flex;align-items:center;gap:9px}#ctMultiPaymentModal .ct-mp-title:before{content:'';width:7px;height:24px;border-radius:10px;background:#605ca8}
+      #ctMultiPaymentModal .ct-mp-close{border:1px solid #f1f5f9;background:#fff;width:32px;height:32px;border-radius:9px;font-size:23px;line-height:1;color:#94a3b8;cursor:pointer;display:grid;place-items:center}
+      #ctMultiPaymentModal .ct-mp-body{padding:14px 16px 8px;overflow:auto;overscroll-behavior:contain}
+      #ctMultiPaymentModal .ct-mp-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-bottom:12px}
+      #ctMultiPaymentModal .ct-mp-stat{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px;text-align:center;min-width:0}
+      #ctMultiPaymentModal .ct-mp-stat span{display:block;font-size:9px;color:#64748b;font-weight:800;margin-bottom:3px}#ctMultiPaymentModal .ct-mp-stat b{display:block;font-size:13px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      #ctMultiPaymentModal .ct-mp-invoice-summary{grid-template-columns:1fr 1fr;margin-bottom:14px}
+      #ctMultiPaymentModal .ct-mp-invoice-summary .ct-mp-stat{border:2px dashed #c7d2fe;background:#eef2ff55;padding:12px}
+      #ctMultiPaymentModal .ct-mp-invoice-summary .ct-mp-stat:last-child{border-color:#fecaca;background:#fff1f255}
+      #ctMultiPaymentModal .ct-mp-invoice-summary .ct-mp-stat.complete{border-color:#a7f3d0;background:#ecfdf555}.ct-mp-invoice-summary .ct-mp-stat.over{border-color:#fde68a!important;background:#fffbeb!important}
+      #ctMultiPaymentModal .ct-mp-section-head{display:flex;justify-content:space-between;align-items:center;background:#f8fafc;border:1px solid #f1f5f9;border-radius:10px;padding:8px 10px;margin-bottom:9px}
+      #ctMultiPaymentModal .ct-mp-section-head b{font-size:11px;color:#475569}#ctMultiPaymentModal .ct-mp-add{border:1px solid #e0e7ff;background:#fff;color:#605ca8;border-radius:8px;padding:6px 10px;font:800 10px Cairo;cursor:pointer;display:flex;align-items:center;gap:5px}
+      #ctMultiPaymentModal .ct-mp-rows{display:flex;flex-direction:column;gap:8px;padding-bottom:4px}
+      #ctMultiPaymentModal .ct-mp-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 40px;gap:8px;align-items:center;position:relative}
+      #ctMultiPaymentModal .ct-mp-field{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:6px 10px;min-width:0;box-shadow:0 1px 2px rgba(15,23,42,.03)}
+      #ctMultiPaymentModal .ct-mp-field>label{display:block;font-size:9px;font-weight:800;color:#94a3b8;margin-bottom:1px}
+      #ctMultiPaymentModal .ct-mp-field input{width:100%;height:27px;border:0!important;background:transparent;padding:0;font:800 13px Cairo;color:#1e293b;outline:none!important;box-shadow:none!important;text-align:right}
+      #ctMultiPaymentModal .ct-mp-field select{width:100%;min-height:28px;border:0!important;background:transparent!important;padding:0 2px!important;font:800 12px Cairo!important;color:#1e293b!important;box-shadow:none!important}
+      #ctMultiPaymentModal .ct-mp-hint{font-size:8.5px;color:#64748b;line-height:1.45;margin-top:2px;min-height:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      #ctMultiPaymentModal .ct-mp-remove{width:38px;height:40px;border:1px solid #e2e8f0;border-radius:11px;background:#f8fafc;color:#94a3b8;cursor:pointer;transition:.14s}.ct-mp-remove:hover{background:#fff1f2!important;border-color:#fecdd3!important;color:#e11d48!important}
+      #ctMultiPaymentModal .ct-mp-message{font-size:9.5px;color:#64748b;line-height:1.65;margin-top:9px}
+      #ctMultiPaymentModal .ct-mp-footer{display:flex;justify-content:flex-end;gap:8px;border-top:1px solid #f1f5f9;padding:12px 16px;background:#fafafa}
+      #ctMultiPaymentModal .ct-mp-btn{border:0;border-radius:11px;padding:10px 18px;font:900 11px Cairo;cursor:pointer}.ct-mp-cancel{background:#fff!important;color:#64748b!important;border:1px solid #e2e8f0!important}.ct-mp-save{background:#605ca8!important;color:#fff!important}
+      @media(max-width:560px){#ctMultiPaymentModal{padding:7px}#ctMultiPaymentModal .ct-mp-box{width:100%;max-height:94vh;border-radius:16px}#ctMultiPaymentModal .ct-mp-summary{grid-template-columns:1fr 1fr}#ctMultiPaymentModal .ct-mp-summary:not(.ct-mp-invoice-summary) .ct-mp-stat:last-child{grid-column:1/-1}#ctMultiPaymentModal .ct-mp-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 34px;gap:5px}#ctMultiPaymentModal .ct-mp-field{padding:5px 8px}#ctMultiPaymentModal .ct-mp-remove{width:34px;height:38px}}
+      @media(prefers-reduced-motion:reduce){#ctMultiPaymentModal.active,#ctMultiPaymentModal .ct-mp-box{animation:none!important}}
     `;
     document.head.appendChild(style);
     const modal = document.createElement('div');
     modal.id = 'ctMultiPaymentModal';
     modal.innerHTML = `
       <div class="ct-mp-box" role="dialog" aria-modal="true">
-        <div class="ct-mp-head"><div class="ct-mp-title"><i class="fa-solid fa-wallet"></i><span id="ctMpTitle">دفع متعدد من الصناديق</span></div><button type="button" class="ct-mp-close" id="ctMpClose">×</button></div>
-        <div class="ct-mp-summary">
-          <div class="ct-mp-stat"><span>عملة العملية</span><b id="ctMpCurrency">-</b></div>
-          <div class="ct-mp-stat"><span id="ctMpLimitLabel">قيمة العملية</span><b id="ctMpLimit">-</b></div>
-          <div class="ct-mp-stat"><span>إجمالي المبلغ المدفوع</span><b id="ctMpTotal">0</b></div>
+        <div class="ct-mp-head"><div class="ct-mp-title"><span id="ctMpTitle">تفاصيل السداد</span></div><button type="button" class="ct-mp-close" id="ctMpClose">×</button></div>
+        <div class="ct-mp-body">
+          <div class="ct-mp-summary ct-mp-invoice-summary" id="ctMpInvoiceSummary">
+            <div class="ct-mp-stat"><span id="ctMpInvoiceLabel">مبلغ الفاتورة</span><b id="ctMpInvoiceAmount">0</b></div>
+            <div class="ct-mp-stat" id="ctMpRemainingCard"><span id="ctMpRemainingLabel">مكتمل</span><b id="ctMpRemaining">0</b></div>
+          </div>
+          <div class="ct-mp-section-head"><b>سجل المدفوعات</b><button type="button" class="ct-mp-add" id="ctMpAdd"><i class="fa-solid fa-plus"></i> إضافة دفعة</button></div>
+          <div class="ct-mp-rows" id="ctMpRows"></div>
+          <div class="ct-mp-message" id="ctMpMessage"></div>
         </div>
-        <div class="ct-mp-rows" id="ctMpRows"></div>
-        <div class="ct-mp-toolbar"><button type="button" class="ct-mp-add" id="ctMpAdd"><i class="fa-solid fa-plus"></i> إضافة صندوق</button><div class="ct-mp-message" id="ctMpMessage"></div></div>
-        <div class="ct-mp-footer"><button type="button" class="ct-mp-btn ct-mp-cancel" id="ctMpCancel">إلغاء</button><button type="button" class="ct-mp-btn ct-mp-save" id="ctMpSave"><i class="fa-solid fa-floppy-disk"></i> حفظ</button></div>
+        <div class="ct-mp-footer"><button type="button" class="ct-mp-btn ct-mp-cancel" id="ctMpCancel">إلغاء</button><button type="button" class="ct-mp-btn ct-mp-save" id="ctMpSave"><i class="fa-solid fa-check"></i> حفظ وتأكيد</button></div>
       </div>`;
     document.body.appendChild(modal);
-    const close = () => { modal.classList.remove('active'); multiPaymentContext = null; };
+    const close = () => {
+      const ctx = multiPaymentContext;
+      modal.classList.remove('active');
+      multiPaymentContext = null;
+      try { ctx?.onClose?.(); } catch (_) {}
+    };
     document.getElementById('ctMpClose').addEventListener('click', close);
     document.getElementById('ctMpCancel').addEventListener('click', close);
     modal.addEventListener('click', event => { if (event.target === modal) close(); });
@@ -307,7 +339,7 @@
     return (ctx.accounts || []).map(account => {
       const currency = getCurrency(account.currencyId || getCurrencyConfig().baseCurrencyId);
       const selected = String(account.id) === String(selectedId) ? ' selected' : '';
-      return `<option value="${escapeHtml(account.id)}"${selected}>${escapeHtml(account.name || 'صندوق')} — ${Number(account.balance || 0).toFixed(2)} ${escapeHtml(currency.symbol || currency.code)}</option>`;
+      return `<option value="${escapeHtml(account.id)}"${selected}>${escapeHtml(account.name || 'طريقة دفع')} — ${Number(account.balance || 0).toFixed(2)} ${escapeHtml(currency.symbol || currency.code)}</option>`;
     }).join('');
   }
 
@@ -320,10 +352,11 @@
     const accountId = split.accountId || fallbackAccount?.id || '';
     const amount = Number(split.transactionAmount ?? split.amount ?? 0);
     row.innerHTML = `
-      <div class="ct-mp-field"><label>الصندوق / الحساب</label><select class="ct-mp-account">${multiPaymentAccountOptions(accountId)}</select><div class="ct-mp-hint ct-mp-account-hint"></div></div>
+      <div class="ct-mp-field"><label>طريقة الدفع</label><select class="ct-mp-account" data-ct-site-dropdown="true" data-ct-icon="fa-wallet">${multiPaymentAccountOptions(accountId)}</select><div class="ct-mp-hint ct-mp-account-hint"></div></div>
       <div class="ct-mp-field"><label>المبلغ المدفوع</label><input class="ct-mp-amount" type="number" min="0" step="any" inputmode="decimal" placeholder="0.00" value="${Number.isFinite(amount) && amount > 0 ? amount : ''}"><div class="ct-mp-hint ct-mp-amount-hint"></div></div>
-      <button type="button" class="ct-mp-remove" title="حذف الصندوق"><i class="fa-solid fa-trash-can"></i></button>`;
+      <button type="button" class="ct-mp-remove" title="حذف طريقة الدفع"><i class="fa-solid fa-trash-can"></i></button>`;
     rows.appendChild(row);
+    enhanceSiteSelect(row.querySelector('.ct-mp-account'));
     row.querySelector('.ct-mp-remove').addEventListener('click', () => { row.remove(); updateMultiPaymentUi(); });
     row.querySelector('.ct-mp-account').addEventListener('change', updateMultiPaymentUi);
     row.querySelector('.ct-mp-amount').addEventListener('input', updateMultiPaymentUi);
@@ -339,7 +372,7 @@
       const settlement = account ? settleToAccount(transactionAmount, ctx.transactionCurrencyId, account) : null;
       return account && settlement ? {
         accountId: account.id,
-        accountName: account.name || 'صندوق',
+        accountName: account.name || 'طريقة دفع',
         transactionAmount,
         transactionCurrencyId: ctx.transactionCurrencyId,
         baseAmount: Number(settlement.baseAmount || 0),
@@ -371,11 +404,23 @@
     const totalNative = splits.reduce((sum, item) => sum + Number(item.transactionAmount || 0), 0);
     const totalEl = document.getElementById('ctMpTotal');
     if (totalEl) totalEl.textContent = `${Number(totalNative).toFixed(3).replace(/\.?0+$/,'')} ${transactionCurrency.symbol || transactionCurrency.code}`;
+    const targetAmount = ctx.showInvoiceSummary
+      ? Number(ctx.invoiceAmount || 0)
+      : (ctx.requireExact ? Number(ctx.exactTransactionAmount || 0) : (Number.isFinite(Number(ctx.maxTransactionAmount)) ? Number(ctx.maxTransactionAmount) : 0));
+    const remainingValue = targetAmount - totalNative;
+    const remainingEl = document.getElementById('ctMpRemaining');
+    const remainingLabel = document.getElementById('ctMpRemainingLabel');
+    if (remainingEl) remainingEl.textContent = `${Math.abs(remainingValue).toFixed(3).replace(/\.?0+$/,'')} ${transactionCurrency.symbol || transactionCurrency.code}`;
+    const remainingCard = document.getElementById('ctMpRemainingCard');
+    remainingCard?.classList.remove('complete','over');
+    if (remainingValue < -1e-9) { if (remainingLabel) remainingLabel.textContent = ctx.showInvoiceSummary ? 'الباقي للعميل' : 'الزيادة'; remainingCard?.classList.add('over'); }
+    else if (Math.abs(remainingValue) <= 1e-9) { if (remainingLabel) remainingLabel.textContent = 'مكتمل'; remainingCard?.classList.add('complete'); }
+    else if (remainingLabel) remainingLabel.textContent = 'المتبقي';
     const message = document.getElementById('ctMpMessage');
     if (message) {
       if (ctx.requireExact) message.textContent = `يجب أن يساوي الإجمالي ${Number(ctx.exactTransactionAmount || 0).toFixed(3).replace(/\.?0+$/,'')} ${transactionCurrency.symbol || transactionCurrency.code}.`;
-      else if (Number.isFinite(Number(ctx.maxTransactionAmount))) message.textContent = `لا يمكن أن يتجاوز الإجمالي ${Number(ctx.maxTransactionAmount || 0).toFixed(3).replace(/\.?0+$/,'')} ${transactionCurrency.symbol || transactionCurrency.code}.`;
-      else message.textContent = 'يمكن توزيع المبلغ على أكثر من صندوق حتى لو اختلفت العملات.';
+      else if (ctx.enforceMaximum && Number.isFinite(Number(ctx.maxTransactionAmount))) message.textContent = `الحد الأعلى ${Number(ctx.maxTransactionAmount || 0).toFixed(3).replace(/\.?0+$/,'')} ${transactionCurrency.symbol || transactionCurrency.code}.`;
+      else message.textContent = 'يمكن توزيع المبلغ على أكثر من طريقة دفع حتى لو اختلفت العملات.';
     }
   }
 
@@ -383,13 +428,13 @@
     const ctx = multiPaymentContext;
     if (!ctx) return;
     const splits = readMultiPaymentRows().filter(item => item.transactionAmount > 0);
-    if (!splits.length) { window.Cashtop?.showToast?.('أدخل مبلغاً في صندوق واحد على الأقل.', 'error'); return; }
+    if (!splits.length) { window.Cashtop?.showToast?.('أدخل مبلغاً في طريقة دفع واحدة على الأقل.', 'error'); return; }
     const ids = splits.map(item => String(item.accountId));
-    if (new Set(ids).size !== ids.length) { window.Cashtop?.showToast?.('لا يمكن تكرار الصندوق نفسه أكثر من مرة.', 'error'); return; }
+    if (new Set(ids).size !== ids.length) { window.Cashtop?.showToast?.('لا يمكن تكرار طريقة الدفع نفسها أكثر من مرة.', 'error'); return; }
     const totalNative = splits.reduce((sum, item) => sum + Number(item.transactionAmount || 0), 0);
     const tolerance = 1e-6;
-    if (Number.isFinite(Number(ctx.maxTransactionAmount)) && totalNative - Number(ctx.maxTransactionAmount) > tolerance) {
-      window.Cashtop?.showToast?.('إجمالي الدفع المتعدد أكبر من قيمة الفاتورة.', 'error'); return;
+    if (ctx.enforceMaximum && Number.isFinite(Number(ctx.maxTransactionAmount)) && totalNative - Number(ctx.maxTransactionAmount) > tolerance) {
+      window.Cashtop?.showToast?.('إجمالي طرق الدفع أكبر من الحد المحدد لهذه العملية.', 'error'); return;
     }
     if (ctx.requireExact && Math.abs(totalNative - Number(ctx.exactTransactionAmount || 0)) > tolerance) {
       window.Cashtop?.showToast?.('إجمالي المبالغ يجب أن يساوي قيمة العملية.', 'error'); return;
@@ -401,7 +446,7 @@
       });
       if (insufficient) {
         const account = (ctx.accounts || []).find(item => String(item.id) === String(insufficient.accountId));
-        window.Cashtop?.showToast?.(`رصيد الصندوق [${account?.name || 'المحدد'}] غير كافٍ.`, 'error'); return;
+        window.Cashtop?.showToast?.(`رصيد طريقة الدفع [${account?.name || 'المحددة'}] غير كافٍ.`, 'error'); return;
       }
     }
     try { ctx.onSave?.(splits, totalNative); } catch (error) { console.error(error); window.Cashtop?.showToast?.(error?.message || 'تعذر حفظ الدفع المتعدد.', 'error'); return; }
@@ -413,31 +458,29 @@
     ensureMultiPaymentUi();
     const cfg = getCurrencyConfig();
     const accounts = Array.isArray(options.accounts) ? options.accounts.filter(account => Boolean(account) && account.disabled !== true && account.active !== false && String(account.status || '').toLowerCase() !== 'inactive') : [];
-    if (!accounts.length) { window.Cashtop?.showToast?.('لا توجد صناديق متاحة.', 'error'); return false; }
+    if (!accounts.length) { window.Cashtop?.showToast?.('لا توجد طرق دفع متاحة.', 'error'); return false; }
     multiPaymentContext = {
       accounts,
       transactionCurrencyId: options.transactionCurrencyId || cfg.baseCurrencyId,
       maxTransactionAmount: Number.isFinite(Number(options.maxTransactionAmount)) ? Math.max(0, Number(options.maxTransactionAmount)) : null,
+      enforceMaximum: options.enforceMaximum === true,
       exactTransactionAmount: Number.isFinite(Number(options.exactTransactionAmount)) ? Math.max(0, Number(options.exactTransactionAmount)) : 0,
       requireExact: options.requireExact === true,
       direction: options.direction === 'out' ? 'out' : 'in',
-      onSave: typeof options.onSave === 'function' ? options.onSave : null
+      showInvoiceSummary: options.showInvoiceSummary === true,
+      invoiceAmount: Number.isFinite(Number(options.invoiceAmount)) ? Math.max(0, Number(options.invoiceAmount)) : (Number.isFinite(Number(options.maxTransactionAmount)) ? Math.max(0, Number(options.maxTransactionAmount)) : 0),
+      onSave: typeof options.onSave === 'function' ? options.onSave : null,
+      onClose: typeof options.onClose === 'function' ? options.onClose : null
     };
     const currency = getCurrency(multiPaymentContext.transactionCurrencyId);
-    document.getElementById('ctMpTitle').textContent = options.title || (multiPaymentContext.direction === 'out' ? 'دفع متعدد من الصناديق' : 'تحصيل متعدد إلى الصناديق');
-    document.getElementById('ctMpCurrency').textContent = `${currency.name} (${currency.symbol || currency.code})`;
-    const limitLabel = document.getElementById('ctMpLimitLabel');
-    const limit = document.getElementById('ctMpLimit');
-    if (multiPaymentContext.requireExact) {
-      limitLabel.textContent = 'قيمة العملية';
-      limit.textContent = `${Number(multiPaymentContext.exactTransactionAmount).toFixed(3).replace(/\.?0+$/,'')} ${currency.symbol || currency.code}`;
-    } else if (multiPaymentContext.maxTransactionAmount != null) {
-      limitLabel.textContent = 'الحد الأعلى للدفع';
-      limit.textContent = `${Number(multiPaymentContext.maxTransactionAmount).toFixed(3).replace(/\.?0+$/,'')} ${currency.symbol || currency.code}`;
-    } else {
-      limitLabel.textContent = 'نوع العملية';
-      limit.textContent = multiPaymentContext.direction === 'out' ? 'صادر' : 'وارد';
-    }
+    const summaryTarget = multiPaymentContext.showInvoiceSummary
+      ? Number(multiPaymentContext.invoiceAmount || 0)
+      : (multiPaymentContext.requireExact ? Number(multiPaymentContext.exactTransactionAmount || 0) : Number(multiPaymentContext.maxTransactionAmount || 0));
+    const invoiceLabel = document.getElementById('ctMpInvoiceLabel');
+    if (invoiceLabel) invoiceLabel.textContent = multiPaymentContext.showInvoiceSummary ? 'مبلغ الفاتورة' : 'مبلغ العملية';
+    const invoiceAmountEl = document.getElementById('ctMpInvoiceAmount');
+    if (invoiceAmountEl) invoiceAmountEl.textContent = `${summaryTarget.toFixed(3).replace(/\.?0+$/,'')} ${currency.symbol || currency.code}`;
+    document.getElementById('ctMpTitle').textContent = options.title || 'تفاصيل السداد';
     const rows = document.getElementById('ctMpRows');
     rows.innerHTML = '';
     const initial = Array.isArray(options.initialSplits) && options.initialSplits.length ? options.initialSplits : [{ accountId: accounts[0]?.id, transactionAmount: options.defaultTransactionAmount || 0 }];
@@ -468,6 +511,9 @@
     ensureAccountCurrency,
     nativeToBaseForAccount,
     MULTI_PAYMENT_VALUE,
+    enhanceSiteSelect,
+    refreshEnhancedSelect,
+    enhanceTaggedSelects,
     openMultiPayment
   };
 })();

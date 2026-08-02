@@ -129,6 +129,9 @@
       .ct-print-receipt .total-col:last-child{border-left:none}
       .ct-print-receipt .total-label{font-size:8.5px;font-weight:700;margin-bottom:1px;color:#222;white-space:nowrap}
       .ct-print-receipt .total-val{font-size:10px;font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;max-width:100%}
+      .ct-print-receipt .adjustments{display:flex;flex-direction:column;gap:2px;margin:4px 0;font-size:9px;font-weight:700}
+      .ct-print-receipt .adjustment-row{display:flex;justify-content:space-between;gap:8px}
+      .ct-print-receipt .shipping-info{font-size:8.5px;line-height:1.35;margin:4px 0;text-align:right}
       .ct-print-receipt .receipt-footer{text-align:center;margin-top:3px;font-weight:600}
       .ct-print-receipt .terms{font-size:8px;margin-top:2px;line-height:1.35;font-weight:600}
       .ct-print-receipt .barcode-container{text-align:center;margin-top:4px}
@@ -177,6 +180,8 @@
       .ct-custom-receipt .receipt-table th:first-child,.ct-custom-receipt .receipt-table td:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .ct-custom-receipt .resizer,.ct-custom-receipt .delete-btn{display:none!important}
       .ct-custom-receipt img{max-width:100%;object-fit:contain}
+      .ct-custom-receipt .ct-custom-auto-adjustments{position:absolute;right:5%;left:5%;border-top:1px dashed #000;border-bottom:1px dashed #000;padding:5px 2px;font-size:10px;font-weight:800;line-height:1.6}
+      .ct-custom-receipt .ct-custom-auto-adjustments>div{display:flex;justify-content:space-between;gap:8px}
       @media print{html,body{background:#fff!important}.ct-custom-receipt{box-shadow:none!important;border:none!important;background:#fff!important}.ct-custom-receipt *{visibility:visible!important}}
     `;
   }
@@ -213,6 +218,10 @@
       subtotal: printMoney(displaySubtotal),
       discount: money(invoice?.discount || 0),
       tax: money(invoice?.tax || 0),
+      shipping: money(invoice?.shippingCost || 0),
+      shipping_cost: money(invoice?.shippingCost || 0),
+      shipping_address: invoice?.shippingAddress || '',
+      shipping_note: invoice?.shippingNote || '',
       total: printMoney(displayTotal),
       paid: printMoney(displayPaid),
       remaining: printMoney(displayRemaining),
@@ -271,6 +280,20 @@
       const height = parseFloat(el.style.height) || (el.matches('.type-table') ? 55 + Math.max(1, items.length) * 27 : 35);
       maxBottom = Math.max(maxBottom, top + height + 25);
     });
+    const autoAdjustments = [];
+    const rawDesign = String(design.receiptHTML || '');
+    const taxValue = Math.max(0, number(invoice?.tax));
+    const shippingValue = Math.max(0, number(invoice?.shippingCost));
+    if (taxValue > 0 && !rawDesign.includes('{{tax}}')) autoAdjustments.push(`<div><span>${invoice?.taxName ? `الضريبة - ${escapeHtml(invoice.taxName)}` : 'الضريبة'}</span><strong>+ ${money(taxValue)}</strong></div>`);
+    if (shippingValue > 0 && !rawDesign.includes('{{shipping}}') && !rawDesign.includes('{{shipping_cost}}')) autoAdjustments.push(`<div><span>الشحن</span><strong>+ ${money(shippingValue)}</strong></div>`);
+    if (autoAdjustments.length) {
+      const block = document.createElement('div');
+      block.className = 'ct-custom-auto-adjustments';
+      block.style.top = `${Math.ceil(maxBottom)}px`;
+      block.innerHTML = autoAdjustments.join('');
+      receipt.appendChild(block);
+      maxBottom += 52 + (autoAdjustments.length - 1) * 18;
+    }
     receipt.style.height = Math.ceil(maxBottom) + 'px';
 
     return { type, css: customDesignCss(type), html: receipt.outerHTML };
@@ -291,6 +314,9 @@
     const paid = number(invoice?.paid);
     const remaining = Math.max(0, number(invoice?.debt ?? (total - paid)));
     const displaySubtotal=printAmount(subtotal), displayTotal=printAmount(total), displayPaid=printAmount(paid), displayRemaining=printAmount(remaining);
+    const discount = Math.max(0, number(invoice?.discount));
+    const tax = Math.max(0, number(invoice?.tax));
+    const shipping = Math.max(0, number(invoice?.shippingCost));
     const currency = currencyLabel(settings);
     const date = new Date(invoice?.date || Date.now());
     const dateText = Number.isFinite(date.getTime()) ? date.toLocaleDateString('en-GB') : '-';
@@ -323,6 +349,8 @@
         <div class="dashed-line"></div>
         <table class="receipt-table"><thead><tr><th>الصنف</th><th>الوحدة</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead><tbody>${rows}</tbody></table>
         <div class="dashed-line"></div>
+        ${(discount > 0 || tax > 0 || shipping > 0) ? `<div class="adjustments">${discount > 0 ? `<div class="adjustment-row"><span>الخصم</span><strong>- ${money(discount)} ${escapeHtml(currency)}</strong></div>` : ''}${tax > 0 ? `<div class="adjustment-row"><span>${invoice?.taxName ? `الضريبة - ${escapeHtml(invoice.taxName)}` : 'الضريبة'}</span><strong>+ ${money(tax)} ${escapeHtml(currency)}</strong></div>` : ''}${shipping > 0 ? `<div class="adjustment-row"><span>الشحن</span><strong>+ ${money(shipping)} ${escapeHtml(currency)}</strong></div>` : ''}</div>` : ''}
+        ${(invoice?.shippingAddress || invoice?.shippingNote) ? `<div class="shipping-info">${invoice?.shippingAddress ? `<div><strong>عنوان الشحن:</strong> ${escapeHtml(invoice.shippingAddress)}</div>` : ''}${invoice?.shippingNote ? `<div><strong>ملاحظة الشحن:</strong> ${escapeHtml(invoice.shippingNote)}</div>` : ''}</div>` : ''}
         <div class="totals-horizontal-box">
           <div class="total-col"><span class="total-label">الإجمالي</span><span class="total-val">${printMoney(displaySubtotal)} ${escapeHtml(currency)}</span></div>
           <div class="total-col"><span class="total-label">الصافي</span><span class="total-val">${printMoney(displayTotal)} ${escapeHtml(currency)}</span></div>

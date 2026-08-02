@@ -693,10 +693,10 @@ select[data-ct-enhanced="true"]:not([multiple]):focus {
 }
 
 .ct-select-backdrop {
-  position: fixed; inset: 0; z-index: 8990; background: transparent;
+  position: fixed; inset: 0; z-index: 20040; background: transparent;
 }
 .ct-select-popover {
-  position: fixed; z-index: 9000; width: min(420px, calc(100vw - 20px));
+  position: fixed; z-index: 20050; width: min(420px, calc(100vw - 20px));
   max-height: min(420px, calc(100dvh - 24px)); overflow: hidden;
   background: #fff; border: 1px solid #f1f5f9; border-radius: 8px;
   box-shadow: 0 12px 28px rgba(15,23,42,.15); direction: rtl;
@@ -1683,3 +1683,162 @@ button,a,.action-btn,.btn,input,select,textarea{touch-action:manipulation}
 
 /* R84 high-refresh rendering hints: compositor-friendly motion without forcing heavy effects. */
 @media (prefers-reduced-motion: no-preference){.ct-select-popover,.ct-sidebar,.ct-bottom-nav,.modal-overlay,.modal-box,.sr-modal-box{will-change:transform,opacity} .ct-page-host{scroll-behavior:auto}}
+
+
+/* R86 — high-refresh rendering: keep interactions compositor-friendly and reduce avoidable layout/paint work. */
+@media (prefers-reduced-motion: no-preference){
+  .ct-site-select-menu,.ct-multi-payment-modal,.ct-multi-payment-modal *,.dropdown-options,.modal-overlay.active>.modal-box,.modal-overlay.active>.modal-content{backface-visibility:hidden}
+  .ct-site-select-menu,.dropdown-options{will-change:transform,opacity;contain:layout paint style}
+  .ct-multi-payment-modal{will-change:transform,opacity;contain:layout paint}
+}
+@media (min-width:769px){
+  .table-responsive,.table-container,.data-table-wrap{content-visibility:auto;contain-intrinsic-size:1px 480px}
+}
+
+
+/* R89 high-refresh rendering guards */
+[hidden] { display: none !important; }
+html.ct-app-page { scroll-behavior: auto; }
+html.ct-app-page body { overscroll-behavior-y: contain; }
+html.ct-app-page tbody tr { content-visibility: auto; contain-intrinsic-size: auto 44px; }
+html.ct-app-page .product-item-card,
+html.ct-app-page .category-card { content-visibility: auto; contain-intrinsic-size: auto 150px; contain: layout paint style; }
+html.ct-app-page .ct-sidebar,
+html.ct-app-page .ct-topbar,
+html.ct-app-page .ct-bottom-nav,
+html.ct-app-page .modal-box,
+html.ct-app-page .modal-content,
+html.ct-app-page .ct-select-popover { transform: translateZ(0); backface-visibility: hidden; will-change: transform, opacity; }
+html.ct-app-page button,
+html.ct-app-page a,
+html.ct-app-page input,
+html.ct-app-page select,
+html.ct-app-page textarea { touch-action: manipulation; }
+@media (prefers-reduced-motion: no-preference) {
+  html.ct-app-page .modal-box,
+  html.ct-app-page .modal-content,
+  html.ct-app-page .ct-select-popover,
+  html.ct-app-page .product-item-card,
+  html.ct-app-page .category-card {
+    transition-property: transform, opacity, box-shadow, border-color !important;
+    transition-duration: 120ms !important;
+  }
+}
+
+
+/* R90: unified field captions sit inside the control border across legacy forms. */
+.ct-original-page .form-group:has(> .form-control, > input, > select, > textarea, > .autocomplete, > .input-with-btn),
+.ct-original-page .ct-form-group:has(> .ct-input),
+.ct-original-page .invoice-report-field:has(> input, > select),
+.ct-original-page .ct-floating-label { position:relative; }
+.ct-original-page .form-group:has(> .form-control, > input, > select, > textarea, > .autocomplete, > .input-with-btn) > label:first-child,
+.ct-original-page .ct-form-group:has(> .ct-input) > label:first-child,
+.ct-original-page .invoice-report-field:has(> input, > select) > label:first-child,
+.ct-original-page .ct-floating-label > label:first-child {
+  position:absolute !important; z-index:6; top:-8px !important; right:10px !important; left:auto !important;
+  display:inline-flex; width:auto !important; margin:0 !important; padding:0 5px !important; line-height:16px;
+  background:#fff !important; color:#605ca8 !important; font-size:10px !important; font-weight:800 !important;
+  transform:none !important; pointer-events:none;
+}
+.ct-original-page .form-group:focus-within > label:first-child,
+.ct-original-page .ct-form-group:focus-within > label:first-child,
+.ct-original-page .invoice-report-field:focus-within > label:first-child,
+.ct-original-page .ct-floating-label:focus-within > label:first-child { color:#4f4b91 !important; }
+
+
+/* R91: lightweight high-refresh interactions for suspended invoices and report controls. */
+html.ct-app-page .suspended-list,
+html.ct-app-page .sales-action-buttons { contain: layout style; }
+html.ct-app-page .suspended-item { backface-visibility:hidden; transform:translateZ(0); }
+@media (prefers-reduced-motion:no-preference) {
+  html.ct-app-page .suspended-item button,
+  html.ct-app-page .sales-action-buttons button,
+  html.ct-app-page .sales-action-buttons a {
+    transition-property:transform,opacity,background-color,border-color !important;
+    transition-duration:100ms !important;
+    transition-timing-function:cubic-bezier(.2,.8,.2,1) !important;
+  }
+}
+
+/* ===== Revision 54 / R92: strict layer order — dialogs > dropdowns > sidebar =====
+   All application dialogs must cover the navigation drawer. Dropdown popovers
+   are rendered in document.body, so they receive the highest interactive layer
+   and stay usable even when the select belongs to an open dialog. */
+:root {
+  --ct-sidebar-layer: 2400;
+  --ct-sidebar-backdrop-layer: 2390;
+  --ct-dialog-layer: 30000;
+  --ct-dropdown-backdrop-layer: 31000;
+  --ct-dropdown-layer: 31010;
+  --ct-toast-layer: 32000;
+}
+
+.ct-app-shell,
+.ct-main-wrapper,
+.ct-page-host,
+.ct-original-page {
+  isolation: auto !important;
+}
+
+.ct-sidebar { z-index: var(--ct-sidebar-layer) !important; }
+.ct-sidebar-overlay { z-index: var(--ct-sidebar-backdrop-layer) !important; }
+
+/* Common legacy and modern dialog wrappers used across CASH TOP. */
+.modal-overlay,
+.modal-overlay.active,
+.ct-modal,
+.ct-modal.open,
+.sr-modal,
+.sr-modal.show,
+[role="dialog"].modal,
+[role="dialog"].show {
+  z-index: var(--ct-dialog-layer) !important;
+}
+
+/* Keep fixed dialogs anchored to the real viewport rather than a page/sidebar column. */
+.ct-page-host .modal-overlay,
+.ct-original-page .modal-overlay,
+.ct-page-host .ct-modal,
+.ct-original-page .ct-modal,
+.ct-page-host .sr-modal,
+.ct-original-page .sr-modal {
+  position: fixed !important;
+}
+
+/* Site dropdown engine always sits above dialogs and closes after a normal selection. */
+.ct-select-backdrop { z-index: var(--ct-dropdown-backdrop-layer) !important; }
+.ct-select-popover { z-index: var(--ct-dropdown-layer) !important; }
+.ct-core-toast-wrap,
+.ct-page-host #toast-container,
+#toast-container { z-index: var(--ct-toast-layer) !important; }
+
+/* When a dialog is open the drawer remains visually and interactively below it. */
+html:has(.modal-overlay.active) .ct-sidebar,
+html:has(.ct-modal.open) .ct-sidebar,
+html:has(.sr-modal.show) .ct-sidebar {
+  z-index: var(--ct-sidebar-layer) !important;
+}
+
+/* R92 desktop repair for legacy fixed dialogs that are contained by the main column. */
+@media (min-width: 769px) {
+  .ct-main-wrapper:has(.modal-overlay.active, .ct-modal.open, .sr-modal.show),
+  .ct-page-host:has(.modal-overlay.active, .ct-modal.open, .sr-modal.show),
+  .ct-original-page:has(.modal-overlay.active, .ct-modal.open, .sr-modal.show) {
+    overflow: visible !important;
+  }
+  .ct-page-host .modal-overlay.active,
+  .ct-original-page .modal-overlay.active,
+  .ct-page-host .ct-modal.open,
+  .ct-original-page .ct-modal.open,
+  .ct-page-host .sr-modal.show,
+  .ct-original-page .sr-modal.show {
+    top: 0 !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-width: none !important;
+    max-height: none !important;
+  }
+}

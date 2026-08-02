@@ -243,12 +243,12 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=85">
-    <script src="cashtop-core.js?v=85"></script>
-    <script src="multi-system.js?v=85"></script>
-    <script src="turso-config.js?v=85"></script><script src="turso-rtdb.js?v=85"></script>
-    <script src="accounting-engine.js?v=85"></script>
-    <script src="turso-sync.js?v=85"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=90">
+    <script src="cashtop-core.js?v=90"></script>
+    <script src="multi-system.js?v=90"></script>
+    <script src="turso-config.js?v=90"></script><script src="turso-rtdb.js?v=90"></script>
+    <script src="accounting-engine.js?v=90"></script>
+    <script src="turso-sync.js?v=90"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -522,7 +522,7 @@
                     <div class="customer-money-summary">
                         <div class="summary-item"><span>العميل</span><strong id="paymentCustomerName">-</strong></div>
                         <div class="summary-item"><span>الرصيد الحالي</span><strong id="paymentCurrentBalance">0.00 ₪</strong></div>
-                        <div class="summary-item"><span>الصندوق المختار</span><strong id="paymentSelectedAccountName">-</strong></div>
+                        <div class="summary-item"><span>طريقة الدفع المختارة</span><strong id="paymentSelectedAccountName">-</strong></div>
                     </div>
                     <div class="form-row customer-payment-currency" id="customerPaymentCurrencyWrap">
                         <div class="form-group">
@@ -537,8 +537,8 @@
                             <label for="paymentAmount">مبلغ الدفعة</label>
                         </div>
                         <div class="form-group">
-                            <select class="form-control" id="paymentAccount" required onchange="handleCustomerPaymentAccountChange()"></select>
-                            <label for="paymentAccount">الصندوق / الحساب المستلم</label>
+                            <select class="form-control" id="paymentAccount" data-ct-site-dropdown="true" data-ct-icon="fa-wallet" required onchange="handleCustomerPaymentAccountChange()"></select>
+                            <label for="paymentAccount">طريقة الدفع</label>
                         </div>
                     </div>
                     <div class="form-row">
@@ -551,7 +551,7 @@
                             <label for="paymentNotes">ملاحظات</label>
                         </div>
                     </div>
-                    <div class="customer-money-hint"><i class="fa-solid fa-circle-info"></i> عند الحفظ ستُضاف الدفعة إلى رصيد الصندوق المختار، وتُخصم مباشرة من رصيد العميل، وتظهر كسند قبض في السجل وتتم مزامنتها.</div>
+                    <div class="customer-money-hint"><i class="fa-solid fa-circle-info"></i> عند الحفظ ستُضاف الدفعة إلى رصيد طريقة الدفع المختارة، وتُخصم مباشرة من رصيد العميل، وتظهر كسند قبض في السجل وتتم مزامنتها.</div>
                     <div class="customer-money-preview payment"><span>الرصيد بعد الدفعة</span><strong id="paymentBalancePreview">0.00 ₪</strong></div>
                 </div>
                 <div class="modal-footer">
@@ -1043,7 +1043,7 @@
             const amountNative=Math.max(0,numeric(document.getElementById('paymentAmount')?.value));
             if(!(amountNative>0)){showToast('أدخل مبلغ الدفعة أولاً ثم اختر دفع متعدد.','warning');return false;}
             const funds=getFundsDb(),cfg=customerPaymentCurrencyConfig(),currencyId=cfg.enabled?customerPaymentCurrencyId():cfg.baseCurrencyId;
-            return window.CashtopMulti?.openMultiPayment?.({title:'تحصيل متعدد من العميل',accounts:(funds.accounts||[]).filter(account => window.Cashtop?.isFundActive ? window.Cashtop.isFundActive(account) : (account?.disabled !== true && account?.active !== false && String(account?.status || '').toLowerCase() !== 'inactive')),transactionCurrencyId:currencyId,direction:'in',requireExact:true,exactTransactionAmount:amountNative,initialSplits:customerMultiPayments,defaultTransactionAmount:customerMultiPayments.length?0:amountNative,onSave:(splits)=>{customerMultiPayments=splits.map(item=>({...item}));const select=document.getElementById('paymentAccount');if(select)select.value=CUSTOMER_MULTI_PAYMENT_VALUE;updatePaymentAccountLabel();}});
+            return window.CashtopMulti?.openMultiPayment?.({title:'تحصيل متعدد من العميل',accounts:(funds.accounts||[]).filter(account => window.Cashtop?.isFundActive ? window.Cashtop.isFundActive(account) : (account?.disabled !== true && account?.active !== false && String(account?.status || '').toLowerCase() !== 'inactive')),transactionCurrencyId:currencyId,direction:'in',requireExact:true,exactTransactionAmount:amountNative,initialSplits:customerMultiPayments,defaultTransactionAmount:customerMultiPayments.length?0:amountNative,onSave:(splits)=>{customerMultiPayments=splits.map(item=>({...item}));const select=document.getElementById('paymentAccount');if(select){select.value=CUSTOMER_MULTI_PAYMENT_VALUE;window.CashtopMulti?.refreshEnhancedSelect?.(select);}updatePaymentAccountLabel();}});
         }
         function handleCustomerPaymentAccountChange(){const select=document.getElementById('paymentAccount');if(!select)return;if(select.value===CUSTOMER_MULTI_PAYMENT_VALUE){if(!openCustomerMultiPayment())populatePaymentAccounts();}else customerMultiPayments=[];updatePaymentAccountLabel();}
 
