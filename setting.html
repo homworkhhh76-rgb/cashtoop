@@ -140,12 +140,12 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=90">
-    <script src="cashtop-core.js?v=90"></script>
-    <script src="multi-system.js?v=90"></script>
-    <script src="turso-config.js?v=90"></script><script src="turso-rtdb.js?v=90"></script>
-    <script src="accounting-engine.js?v=90"></script>
-    <script src="turso-sync.js?v=90"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=93">
+    <script src="cashtop-core.js?v=93"></script>
+    <script src="multi-system.js?v=93"></script>
+    <script src="turso-config.js?v=93"></script><script src="turso-rtdb.js?v=93"></script>
+    <script src="accounting-engine.js?v=93"></script>
+    <script src="turso-sync.js?v=93"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -812,15 +812,33 @@
             catch (error) { console.warn('Credentials sync:', error); showToast('تم الحفظ محلياً وسيتم إرسال التغيير عند المزامنة القادمة.', 'warning'); }
         }
 
-        function buildCustomerPortalUrl() {
+        function customerPortalPublicBase(settings = {}) {
+            // R93: never leak Android/file-system paths into a link intended for customers.
+            // On hosted installations keep the current public host/path. When the app is
+            // opened through file:// use the production domain that owns this build.
+            if (/^https?:$/i.test(location.protocol) && location.hostname && location.hostname !== 'localhost') {
+                const folder = location.pathname.replace(/[^/]*$/, '').replace(/\/$/, '');
+                return `${location.origin}${folder}`.replace(/\/$/, '');
+            }
+            const saved = String(settings?.customerPortalUrl || '').trim();
+            if (/^https?:\/\//i.test(saved)) {
+                try {
+                    const url = new URL(saved);
+                    const folder = url.pathname.replace(/customer-portal\.html.*$/i, '').replace(/\/$/, '');
+                    return `${url.origin}${folder}`.replace(/\/$/, '');
+                } catch (_) {}
+            }
+            return 'https://www.cashtoop.com';
+        }
+        function buildCustomerPortalUrl(settings = {}) {
             const session = window.Cashtop?.getSession?.() || {};
             const companyKey = String(session.companyKey || '').trim();
-            const base = location.href.split('/').slice(0, -1).join('/');
+            const base = customerPortalPublicBase(settings);
             return companyKey ? `${base}/customer-portal.html#/${encodeURIComponent(companyKey)}` : `${base}/customer-portal.html`;
         }
         function updateCustomerPortalUrl(settings = {}) {
             const input = document.getElementById('sysCustomerPortalUrl');
-            if (input) input.value = settings.customerPortalUrl || buildCustomerPortalUrl();
+            if (input) input.value = buildCustomerPortalUrl(settings);
         }
         async function copyCustomerPortalUrl() {
             const url = document.getElementById('sysCustomerPortalUrl')?.value || buildCustomerPortalUrl();
@@ -910,7 +928,7 @@ function saveSystemSettings(event) {
                 roundInvoicePrintTotals: document.getElementById('sysRoundInvoicePrintToggle')?.checked === true,
                 quantityStep: String(document.getElementById('sysQuantityStep').value || '').trim() === '' ? (previousSettings.quantityStep ?? null) : Math.max(0.000001, parseFloat(document.getElementById('sysQuantityStep').value)),
                 appName: 'كاش توب 2',
-                customerPortalUrl: buildCustomerPortalUrl(),
+                customerPortalUrl: buildCustomerPortalUrl(previousSettings),
                 logo: savedLogoData || previousSettings.logo || '' // حفظ مسار الشعار
             };
 

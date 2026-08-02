@@ -4362,7 +4362,7 @@
         .ct-maintenance-btn:disabled{opacity:.6;cursor:wait}.ct-cache-refresh-btn{background:#605ca8;color:#fff}.ct-queue-reset-btn{background:#fff1f2;color:#be123c;border:1px solid #fecdd3}
         @media(max-width:620px){.ct-maintenance-actions{grid-template-columns:1fr}.ct-sync-cache-maintenance{padding:14px}}
       </style>
-      <div class="ct-maintenance-head"><strong><i class="fa-solid fa-cloud-arrow-up"></i> المزامنة وتحديث التطبيق</strong><span class="ct-maintenance-version">R92</span></div>
+      <div class="ct-maintenance-head"><strong><i class="fa-solid fa-cloud-arrow-up"></i> المزامنة وتحديث التطبيق</strong><span class="ct-maintenance-version">R93</span></div>
       <p class="ct-maintenance-description">تحديث الكاش يحفظ العمليات المعلقة في IndexedDB أولاً، ثم ينزّل ملفات الموقع الجديدة ويعيد فتح التطبيق. تصفير الطابور يحذف العمليات القديمة فقط ولا يحذف البيانات المحلية.</p>
       <div class="ct-maintenance-status"><i class="fa-solid fa-list-check"></i><span>العمليات المعلقة حالياً: <b id="ctMaintenanceQueueCount">0</b></span></div>
       <div class="ct-maintenance-actions">
@@ -5481,7 +5481,40 @@
         check.className = 'ct-select-check';
         check.textContent = option.selected ? '✓' : '';
         row.append(text, check);
-        row.addEventListener('click', () => {
+        // R93: expose a deliberate long-press gesture on modern dropdown options.
+        // Pages such as expense types can use it for safe contextual actions without
+        // changing normal tap/click selection behaviour.
+        let longPressTimer = 0;
+        let longPressStart = null;
+        let longPressFired = false;
+        const cancelLongPress = () => {
+          if (longPressTimer) clearTimeout(longPressTimer);
+          longPressTimer = 0;
+          longPressStart = null;
+        };
+        row.addEventListener('pointerdown', event => {
+          if (option.disabled || (event.button !== undefined && event.button !== 0)) return;
+          longPressFired = false;
+          longPressStart = { id:event.pointerId, x:event.clientX, y:event.clientY };
+          longPressTimer = setTimeout(() => {
+            longPressTimer = 0;
+            if (!longPressStart) return;
+            longPressFired = true;
+            try { navigator.vibrate?.(18); } catch (_) {}
+            select.dispatchEvent(new CustomEvent('cashtop:select-option-longpress', {
+              bubbles:true,
+              detail:{ select, option, optionIndex:index, value:option.value, label:label || '—' }
+            }));
+          }, 650);
+        });
+        row.addEventListener('pointermove', event => {
+          if (!longPressStart || event.pointerId !== longPressStart.id) return;
+          if (Math.hypot(event.clientX-longPressStart.x,event.clientY-longPressStart.y)>10) cancelLongPress();
+        }, {passive:true});
+        row.addEventListener('pointerup', cancelLongPress, {passive:true});
+        row.addEventListener('pointercancel', cancelLongPress, {passive:true});
+        row.addEventListener('click', event => {
+          if (longPressFired) { longPressFired = false; event.preventDefault(); event.stopPropagation(); return; }
           if (option.disabled) return;
           if (select.multiple) {
             option.selected = !option.selected;

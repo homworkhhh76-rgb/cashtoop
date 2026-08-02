@@ -562,7 +562,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       'مرجع المشتريات.html': ['cashtop_purchase_returns', 'cashtop_purchases', 'cashtop_products', 'cashtop_suppliers'],
       'المصاريف.html': ['cashtop_expenses', 'cashtop_expense_types', 'cashtop_funds_db'],
       'accounts.html': ['cashtop_funds_db', 'cashtop_vouchers', 'cashtop_transfer_history'],
-      'journal.html': ['cashtop_journal', 'cashtop_funds_db', 'cashtop_purchase_reversals'],
+      'journal.html': ['cashtop_journal', 'cashtop_funds_db', 'cashtop_invoices', 'cashtop_purchases', 'cashtop_expenses', 'cashtop_vouchers', 'cashtop_sales_returns', 'cashtop_purchase_returns', 'cashtop_material_purchases', 'cashtop_salary_payments', 'cashtop_suppliers', 'cashtop_workers', 'cashtop_sales_agents', 'cashtop_agent_movements', 'cashtop_purchase_reversals'],
       'branches.html': ['cashtop_branches', 'cashtop_stores', 'cashtop_employees', 'cashtop_products'],
       'warehouses.html': ['cashtop_stores', 'cashtop_products', 'cashtop_transfer_history'],
       'units.html': ['cashtop_units', 'cashtop_products'],

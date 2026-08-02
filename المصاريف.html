@@ -179,16 +179,17 @@
         }
     
         .expense-currency-wrap{display:none}.expense-currency-wrap.active{display:flex}.expense-currency-wrap small{display:block;font-size:11px;color:#64748b;margin-top:4px}
-    </style>
+    #deleteExpenseTypeModal{z-index:30600!important}
+</style>
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=90">
-    <script src="cashtop-core.js?v=90"></script>
-    <script src="multi-system.js?v=90"></script>
-    <script src="turso-config.js?v=90"></script><script src="turso-rtdb.js?v=90"></script>
-    <script src="accounting-engine.js?v=90"></script>
-    <script src="turso-sync.js?v=90"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=93">
+    <script src="cashtop-core.js?v=93"></script>
+    <script src="multi-system.js?v=93"></script>
+    <script src="turso-config.js?v=93"></script><script src="turso-rtdb.js?v=93"></script>
+    <script src="accounting-engine.js?v=93"></script>
+    <script src="turso-sync.js?v=93"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -466,6 +467,20 @@
         </div>
     </div>
 
+    <!-- R93: حذف نوع مصروف عبر الضغط المطول على الخيار -->
+    <div class="modal-overlay" id="deleteExpenseTypeModal">
+        <div class="modal-box" style="max-width:430px;border-top-color:#605ca8;">
+            <div style="width:66px;height:66px;border-radius:50%;background:#f3f2fb;color:#605ca8;display:grid;place-items:center;font-size:28px;margin:0 auto 14px;box-shadow:0 8px 24px rgba(96,92,168,.16);"><i class="fa-solid fa-folder-minus"></i></div>
+            <h3 style="text-align:center;color:#1e293b;margin:0 0 8px;font-weight:900;">حذف نوع المصروف</h3>
+            <p style="text-align:center;color:#64748b;font-size:12px;line-height:1.8;margin:0 0 18px;">سيتم حذف <strong id="deleteExpenseTypeName" style="color:#4f4b91"></strong> من قوائم التصنيف. المصاريف المسجلة سابقاً لن تُحذف.</p>
+            <input type="hidden" id="deleteExpenseTypeId">
+            <div class="modal-footer" style="display:flex;flex-direction:row;justify-content:center;border:none;padding:0;gap:10px;">
+                <button type="button" class="btn-cancel" style="min-width:120px" onclick="closeModal('deleteExpenseTypeModal')">إلغاء</button>
+                <button type="button" class="btn-submit-type" style="background:#e11d48;min-width:120px" onclick="confirmDeleteExpenseType()"><i class="fa-solid fa-trash-can"></i> حذف</button>
+            </div>
+        </div>
+    </div>
+
     <!-- نافذة تأكيد الحذف (عكس القيود) -->
     <div class="modal-overlay" id="deleteModal">
         <div class="modal-box" style="max-width: 400px;">
@@ -527,12 +542,14 @@
         window.onload = function() {
             try {
                 expensesDB = JSON.parse(localStorage.getItem('cashtop_expenses')) || [];
-                expenseTypesDB = JSON.parse(localStorage.getItem('cashtop_expense_types')) || [
+                const storedExpenseTypesRaw = localStorage.getItem('cashtop_expense_types');
+                expenseTypesDB = storedExpenseTypesRaw ? (JSON.parse(storedExpenseTypesRaw) || []) : [
                     { id: 'et_1', name: 'مصاريف تشغيلية', notes: '', parentId: '' },
                     { id: 'et_2', name: 'إيجارات وفواتير', notes: '', parentId: '' },
                     { id: 'et_3', name: 'مرتبات وأجور', notes: '', parentId: '' }
                 ];
                 normalizeExpenseTypes();
+                if (!storedExpenseTypesRaw) setTimeout(() => persistExpenseTypes('seed-expense-types'), 0);
                 
                 const localFunds = localStorage.getItem('cashtop_funds_db') || localStorage.getItem('cashtop_funds_db_v4');
                 fundsDB = localFunds ? (JSON.parse(localFunds) || { accounts: [], accountLogs: [] }) : { accounts: [], accountLogs: [] };
@@ -560,14 +577,46 @@
             calculateStats();
         }
         window.addEventListener('cashtop:funds-changed', refreshExpenseFunds);
-        window.addEventListener('cashtop:remote-applied', event => { if (event.detail?.key === 'cashtop_funds_db') refreshExpenseFunds(); });
-        window.addEventListener('storage', event => { if (!event.key || String(event.key).includes('cashtop_funds_db')) refreshExpenseFunds(); });
+        window.addEventListener('cashtop:remote-applied', event => {
+            if (event.detail?.key === 'cashtop_funds_db') refreshExpenseFunds();
+            if (event.detail?.key === 'cashtop_expense_types') reloadExpenseTypesFromStorage();
+        });
+        window.addEventListener('storage', event => {
+            if (!event.key || String(event.key).includes('cashtop_funds_db')) refreshExpenseFunds();
+            if (event.key === 'cashtop_expense_types') reloadExpenseTypesFromStorage();
+        });
+        window.addEventListener('cashtop:durable-restored', event => {
+            const sets = event.detail?.datasets || [];
+            if (!sets.length || sets.includes('cashtop_expense_types')) reloadExpenseTypesFromStorage();
+        });
+        window.addEventListener('cashtop:data-changed', event => {
+            if (event.detail?.key === 'cashtop_expense_types' && event.detail?.source !== 'المصاريف.html') reloadExpenseTypesFromStorage();
+        });
+        window.addEventListener('cashtop:pull-end', () => reloadExpenseTypesFromStorage());
 
         function normalizeExpenseTypes() {
             expenseTypesDB = (Array.isArray(expenseTypesDB) ? expenseTypesDB : []).map(type => ({
                 ...type,
                 parentId: type?.parentId ? String(type.parentId) : ''
             }));
+        }
+
+        function reloadExpenseTypesFromStorage() {
+            try {
+                const fresh = JSON.parse(localStorage.getItem('cashtop_expense_types') || '[]');
+                expenseTypesDB = Array.isArray(fresh) ? fresh : [];
+                normalizeExpenseTypes();
+                populateTypesSelect();
+                renderTable();
+            } catch (error) { console.error('expense types reload', error); }
+        }
+
+        function persistExpenseTypes(label = 'save-expense-types', includeExpenses = false) {
+            const changes = { cashtop_expense_types: expenseTypesDB };
+            if (includeExpenses) changes.cashtop_expenses = expensesDB;
+            if (window.Cashtop?.atomicSetItems) window.Cashtop.atomicSetItems(changes, { label });
+            else Object.entries(changes).forEach(([key,value]) => localStorage.setItem(key, JSON.stringify(value)));
+            window.dispatchEvent(new CustomEvent('cashtop:sync-now', { detail:{ reason:label } }));
         }
 
         function expenseMainTypes() {
@@ -588,10 +637,11 @@
                 return { main: expenseTypeById(storedType.parentId), subtype: storedType };
             }
             const subtype = expenseTypeById(expense?.subtypeId);
-            return {
-                main: storedType,
-                subtype: subtype?.parentId && String(subtype.parentId) === String(storedType?.id || '') ? subtype : null
-            };
+            const main = storedType || (expense?.typeName ? { id:'', name:String(expense.typeName), legacy:true } : null);
+            const resolvedSubtype = subtype?.parentId && String(subtype.parentId) === String(storedType?.id || '')
+                ? subtype
+                : (!storedType && expense?.subtypeName ? { id:'', name:String(expense.subtypeName), legacy:true } : null);
+            return { main, subtype: resolvedSubtype };
         }
 
         function populateTypesSelect() {
@@ -829,11 +879,62 @@
                 parentId
             });
 
-            localStorage.setItem('cashtop_expense_types', JSON.stringify(expenseTypesDB));
+            persistExpenseTypes('save-expense-type');
             populateTypesSelect();
             closeModal('typeModal');
             showToast(parentId ? 'تمت إضافة المصروف الفرعي وربطه بالتصنيف الأساسي.' : 'تمت إضافة تصنيف المصروفات الأساسي.', 'success');
         }
+
+        function openDeleteExpenseTypeModal(typeId) {
+            const type = expenseTypeById(typeId);
+            if (!type) return;
+            document.getElementById('deleteExpenseTypeId').value = String(type.id);
+            document.getElementById('deleteExpenseTypeName').textContent = type.name || 'هذا النوع';
+            window.Cashtop?.closeTransientUi?.({ closeSidebar:false });
+            openModal('deleteExpenseTypeModal');
+        }
+
+        function confirmDeleteExpenseType() {
+            const typeId = document.getElementById('deleteExpenseTypeId').value;
+            const target = expenseTypeById(typeId);
+            if (!target) { closeModal('deleteExpenseTypeModal'); return; }
+            const children = target.parentId ? [] : expenseSubtypes(target.id);
+            const removedIds = new Set([String(target.id), ...children.map(item => String(item.id))]);
+            const names = new Map([target, ...children].map(item => [String(item.id), String(item.name || '')]));
+            let touchedExpenses = false;
+            expensesDB = (Array.isArray(expensesDB) ? expensesDB : []).map(expense => {
+                const typeMatch = removedIds.has(String(expense?.typeId || ''));
+                const subtypeMatch = removedIds.has(String(expense?.subtypeId || ''));
+                if (!typeMatch && !subtypeMatch) return expense;
+                touchedExpenses = true;
+                const oldType = expenseTypeById(expense?.typeId);
+                const oldSubtype = expenseTypeById(expense?.subtypeId);
+                return {
+                    ...expense,
+                    typeName: expense.typeName || (oldType?.parentId ? names.get(String(oldType.parentId)) : oldType?.name) || target.name || '',
+                    subtypeName: expense.subtypeName || (oldSubtype?.name || (oldType?.parentId ? oldType.name : '')) || '',
+                    typeId: typeMatch ? '' : expense.typeId,
+                    subtypeId: subtypeMatch ? '' : expense.subtypeId
+                };
+            });
+            expenseTypesDB = expenseTypesDB.filter(type => !removedIds.has(String(type.id)));
+            persistExpenseTypes('delete-expense-type', touchedExpenses);
+            closeModal('deleteExpenseTypeModal');
+            populateTypesSelect();
+            renderTable();
+            showToast(children.length ? 'تم حذف التصنيف الأساسي وفروعه من القوائم.' : 'تم حذف نوع المصروف بنجاح.', 'success');
+        }
+
+        document.addEventListener('cashtop:select-option-longpress', event => {
+            const select = event.detail?.select;
+            const value = String(event.detail?.value || '');
+            if (!select || !value) return;
+            if (!['expTypeSelect','filterTypeSelect','expSubtypeSelect','filterSubtypeSelect','typeParentSelect'].includes(select.id)) return;
+            if (!expenseTypeById(value)) return;
+            event.preventDefault();
+            window.Cashtop?.closeTransientUi?.({ closeSidebar:false });
+            setTimeout(() => openDeleteExpenseTypeModal(value), 0);
+        });
 
         // ==========================================
         //  إضافة وتعديل مصروف (الربط المالي المعقد)

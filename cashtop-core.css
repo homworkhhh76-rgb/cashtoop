@@ -1842,3 +1842,23 @@ html:has(.sr-modal.show) .ct-sidebar {
     max-height: none !important;
   }
 }
+
+
+/* ===== R93: nested financial dialogs + high-refresh rendering ===== */
+:root { --ct-nested-dialog-layer:30500; }
+#ctMultiPaymentModal { z-index:var(--ct-nested-dialog-layer) !important; }
+/* Native-site select popovers remain above the nested payment window. */
+.ct-select-backdrop { z-index:31000 !important; }
+.ct-select-popover { z-index:31010 !important; }
+@media (prefers-reduced-motion:no-preference) {
+  .ct-page-host, .ct-original-page, .dashboard-container, .ledger-page, .mfg-page { scroll-behavior:auto; }
+  .modal-overlay.active .modal-box,
+  .modal-overlay.active .modal-content,
+  #ctMultiPaymentModal.active .ct-mp-box,
+  .ct-select-popover { transform:translate3d(0,0,0); backface-visibility:hidden; }
+}
+/* Avoid repainting off-screen heavy tables/cards while preserving layout size. */
+.ledger-page tbody tr,
+#expensesTableBody tr,
+#recipesBody tr,
+#shortagesTableBody tr { content-visibility:auto; contain-intrinsic-size:auto 44px; }

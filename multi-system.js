@@ -240,6 +240,7 @@
 
   const MULTI_PAYMENT_VALUE = '__MULTI_PAYMENT__';
   let multiPaymentContext = null;
+  const multiPaymentDrafts = new Map();
 
   function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -272,7 +273,7 @@
     const style = document.createElement('style');
     style.id = 'ctMultiPaymentStyles';
     style.textContent = `
-      #ctMultiPaymentModal{position:fixed;inset:0;z-index:17000;background:rgba(15,23,42,.60);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;padding:12px;font-family:Cairo,Arial,sans-serif;direction:rtl}
+      #ctMultiPaymentModal{position:fixed;inset:0;z-index:30500;background:rgba(15,23,42,.60);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;padding:12px;font-family:Cairo,Arial,sans-serif;direction:rtl}
       #ctMultiPaymentModal.active{display:flex;animation:ctMpFade .14s ease-out}
       #ctMultiPaymentModal .ct-mp-box{width:min(650px,98vw);max-height:92vh;overflow:hidden;background:#fff;border-radius:18px;box-shadow:0 24px 70px rgba(15,23,42,.30);display:flex;flex-direction:column;transform:translateZ(0);animation:ctMpPop .15s cubic-bezier(.2,.8,.2,1)}
       @keyframes ctMpFade{from{opacity:0}to{opacity:1}}@keyframes ctMpPop{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
@@ -321,15 +322,21 @@
         <div class="ct-mp-footer"><button type="button" class="ct-mp-btn ct-mp-cancel" id="ctMpCancel">إلغاء</button><button type="button" class="ct-mp-btn ct-mp-save" id="ctMpSave"><i class="fa-solid fa-check"></i> حفظ وتأكيد</button></div>
       </div>`;
     document.body.appendChild(modal);
-    const close = () => {
+    const close = (reason = 'dismiss') => {
       const ctx = multiPaymentContext;
+      if (ctx?.draftKey) {
+        if (reason === 'cancel') multiPaymentDrafts.delete(ctx.draftKey);
+        else {
+          try { multiPaymentDrafts.set(ctx.draftKey, readMultiPaymentRows().map(item => ({...item}))); } catch (_) {}
+        }
+      }
       modal.classList.remove('active');
       multiPaymentContext = null;
-      try { ctx?.onClose?.(); } catch (_) {}
+      try { ctx?.onClose?.({ reason, preserved: reason !== 'cancel' }); } catch (_) {}
     };
-    document.getElementById('ctMpClose').addEventListener('click', close);
-    document.getElementById('ctMpCancel').addEventListener('click', close);
-    modal.addEventListener('click', event => { if (event.target === modal) close(); });
+    document.getElementById('ctMpClose').addEventListener('click', () => close('dismiss'));
+    document.getElementById('ctMpCancel').addEventListener('click', () => close('cancel'));
+    modal.addEventListener('click', event => { if (event.target === modal) close('dismiss'); });
     document.getElementById('ctMpAdd').addEventListener('click', () => addMultiPaymentRow({}));
     document.getElementById('ctMpSave').addEventListener('click', saveMultiPaymentModal);
   }
@@ -450,6 +457,7 @@
       }
     }
     try { ctx.onSave?.(splits, totalNative); } catch (error) { console.error(error); window.Cashtop?.showToast?.(error?.message || 'تعذر حفظ الدفع المتعدد.', 'error'); return; }
+    if (ctx.draftKey) multiPaymentDrafts.delete(ctx.draftKey);
     document.getElementById('ctMultiPaymentModal')?.classList.remove('active');
     multiPaymentContext = null;
   }
@@ -459,9 +467,16 @@
     const cfg = getCurrencyConfig();
     const accounts = Array.isArray(options.accounts) ? options.accounts.filter(account => Boolean(account) && account.disabled !== true && account.active !== false && String(account.status || '').toLowerCase() !== 'inactive') : [];
     if (!accounts.length) { window.Cashtop?.showToast?.('لا توجد طرق دفع متاحة.', 'error'); return false; }
+    const transactionCurrencyId = options.transactionCurrencyId || cfg.baseCurrencyId;
+    const draftKey = String(options.draftKey || [
+      options.title || 'multi-payment', options.direction || 'in', transactionCurrencyId,
+      Number(options.exactTransactionAmount || 0), Number(options.maxTransactionAmount || 0), Number(options.invoiceAmount || 0),
+      accounts.map(account => String(account.id)).join(',')
+    ].join('|'));
     multiPaymentContext = {
       accounts,
-      transactionCurrencyId: options.transactionCurrencyId || cfg.baseCurrencyId,
+      draftKey,
+      transactionCurrencyId,
       maxTransactionAmount: Number.isFinite(Number(options.maxTransactionAmount)) ? Math.max(0, Number(options.maxTransactionAmount)) : null,
       enforceMaximum: options.enforceMaximum === true,
       exactTransactionAmount: Number.isFinite(Number(options.exactTransactionAmount)) ? Math.max(0, Number(options.exactTransactionAmount)) : 0,
@@ -483,7 +498,9 @@
     document.getElementById('ctMpTitle').textContent = options.title || 'تفاصيل السداد';
     const rows = document.getElementById('ctMpRows');
     rows.innerHTML = '';
-    const initial = Array.isArray(options.initialSplits) && options.initialSplits.length ? options.initialSplits : [{ accountId: accounts[0]?.id, transactionAmount: options.defaultTransactionAmount || 0 }];
+    const explicitInitial = Array.isArray(options.initialSplits) && options.initialSplits.length ? options.initialSplits : null;
+    const preservedInitial = !explicitInitial && multiPaymentDrafts.get(draftKey)?.length ? multiPaymentDrafts.get(draftKey) : null;
+    const initial = explicitInitial || preservedInitial || [{ accountId: accounts[0]?.id, transactionAmount: options.defaultTransactionAmount || 0 }];
     initial.forEach(split => addMultiPaymentRow(split));
     document.getElementById('ctMultiPaymentModal').classList.add('active');
     updateMultiPaymentUi();

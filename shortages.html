@@ -20,6 +20,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="barcode-tools.js?v=93"></script>
     
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
@@ -148,16 +150,19 @@
             .modal-footer { flex-direction: column-reverse; gap: 8px; }
             .modal-footer button { width: 100%; padding: 12px; }
         }
+
+        /* R93: تأسيس صنف سريع احترافي بوحدات وباركود لكل مستوى */
+        .quick-barcode-shell{position:relative}.quick-barcode-shell .form-control{padding-left:42px}.quick-barcode-camera{position:absolute;left:4px;top:50%;transform:translateY(-50%);width:34px;height:32px;border:0;border-radius:7px;background:#f3f2fb;color:#605ca8;cursor:pointer;display:grid;place-items:center;z-index:3}.quick-barcode-camera:hover{background:#e7e5f5}.quick-units-panel{border:1px dashed #cbd5e1;background:#f8fafc;border-radius:9px;padding:10px;margin:3px 0 16px;overflow-x:auto;-webkit-overflow-scrolling:touch}.quick-units-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}.quick-units-head strong{font-size:12px;color:#475569}.quick-unit-row{display:grid;grid-template-columns:minmax(120px,.65fr) minmax(145px,.75fr) minmax(230px,1.3fr);gap:8px;align-items:center;min-width:600px;margin-bottom:9px}.quick-unit-row:last-child{margin-bottom:0}.quick-unit-name{height:40px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;display:flex;align-items:center;padding:0 10px;font-size:11px;font-weight:900;color:#475569;white-space:nowrap}.quick-unit-field{position:relative}.quick-unit-field>label{position:absolute;top:-8px;right:9px;background:#fff;padding:0 4px;font-size:9px;font-weight:900;color:#605ca8;z-index:4}.quick-unit-field .form-control{height:40px;background:#fff}.quick-units-panel::-webkit-scrollbar{height:6px}.quick-units-panel::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:999px}#quickBarcodeScannerModal{z-index:30600!important}#quickBarcodeReader{height:min(55vh,420px);background:#0f172a;border-radius:10px;overflow:hidden}#quickBarcodeStatus{font-size:11px;color:#64748b;text-align:center;margin-top:8px;line-height:1.6}
     </style>
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=90">
-    <script src="cashtop-core.js?v=90"></script>
-    <script src="multi-system.js?v=90"></script>
-    <script src="turso-config.js?v=90"></script><script src="turso-rtdb.js?v=90"></script>
-    <script src="accounting-engine.js?v=90"></script>
-    <script src="turso-sync.js?v=90"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=93">
+    <script src="cashtop-core.js?v=93"></script>
+    <script src="multi-system.js?v=93"></script>
+    <script src="turso-config.js?v=93"></script><script src="turso-rtdb.js?v=93"></script>
+    <script src="accounting-engine.js?v=93"></script>
+    <script src="turso-sync.js?v=93"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -392,35 +397,58 @@
                         <label>اسم المنتج</label>
                     </div>
                     <div class="form-group">
-                        <input type="text" id="prodBarcode" class="form-control" placeholder="اختياري - أو يولد آلياً">
+                        <div class="quick-barcode-shell">
+                            <input type="text" id="prodBarcode" class="form-control quick-barcode-input" placeholder="مرر قارئ الباركود أو اكتب يدوياً" autocomplete="off">
+                            <button type="button" class="quick-barcode-camera" onclick="openQuickBarcodeScanner('prodBarcode')" title="قراءة الباركود بالكاميرا"><i class="fa-solid fa-barcode"></i></button>
+                        </div>
                         <label>باركود الصنف</label>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <input type="number" step="any" id="prodQty" class="form-control" placeholder="0" required min="0">
-                        <label>الكمية الابتدائية (الرصيد)</label>
+                        <select id="prodUnitTemplate" class="form-control" data-ct-site-dropdown="true" onchange="renderQuickUnitDetails()"></select>
+                        <label>الوحدة</label>
                     </div>
                     <div class="form-group">
-                        <input type="number" id="prodLimit" class="form-control" placeholder="مثال: 5" required min="1">
-                        <label>حد النواقص المخصص للصنف</label>
+                        <select id="prodStockUnit" class="form-control" data-ct-site-dropdown="true"></select>
+                        <label>وحدة الكمية الابتدائية</label>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <input type="number" step="0.01" id="prodCost" class="form-control" placeholder="0.00" required>
-                        <label>سعر التكلفة للقطعة (₪)</label>
+                        <input type="number" step="any" id="prodQty" class="form-control" placeholder="0" required min="0">
+                        <label>الكمية الابتدائية</label>
                     </div>
                     <div class="form-group">
-                        <input type="number" step="0.01" id="prodPrice" class="form-control" placeholder="0.00" required>
-                        <label>سعر البيع (₪)</label>
+                        <input type="number" id="prodLimit" class="form-control" placeholder="مثال: 5" required min="1">
+                        <label>حد النواقص</label>
                     </div>
+                </div>
+                <div class="form-row full-width">
+                    <div class="form-group">
+                        <input type="number" step="0.01" id="prodCost" class="form-control" placeholder="0.00" required min="0">
+                        <label>سعر التكلفة للوحدة الصغرى (₪)</label>
+                    </div>
+                </div>
+                <div class="quick-units-panel">
+                    <div class="quick-units-head"><strong><i class="fa-solid fa-layer-group" style="color:#605ca8"></i> أسعار وباركود الوحدات</strong><small style="color:#64748b;font-size:9px">كل باركود يضيف نفس المنتج حسب وحدته في الكاشير</small></div>
+                    <div id="quickUnitDetails"></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn-cancel" onclick="closeModal('productModal')">إلغاء</button>
                     <button type="submit" class="btn-submit-prod"><i class="fa-solid fa-floppy-disk"></i> حفظ الصنف بالمخزن</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- R93: ماسح باركود سريع لأي حقل باركود داخل تأسيس الصنف -->
+    <div class="modal-overlay" id="quickBarcodeScannerModal">
+        <div class="modal-box" style="max-width:560px;border-top:4px solid #605ca8">
+            <div class="modal-header"><div class="modal-title"><i class="fa-solid fa-camera" style="color:#605ca8"></i> قراءة الباركود بالكاميرا</div><button type="button" class="modal-close" onclick="closeQuickBarcodeScanner()">&times;</button></div>
+            <div id="quickBarcodeReader"></div>
+            <div id="quickBarcodeStatus">وجّه الكاميرا نحو الباركود وسيتم إدخاله في الحقل المحدد تلقائياً.</div>
+            <div class="modal-footer"><button type="button" class="btn-cancel" onclick="closeQuickBarcodeScanner()">إغلاق</button></div>
         </div>
     </div>
 
@@ -446,13 +474,20 @@
         let globalAlertLimit = 5; // يمكن جلبه من إعدادات النظام لاحقاً
         let productsData = [];
         let suppliersData = [];
+        let unitsData = [];
         let shortageList = []; 
+        let quickBarcodeTarget = null;
+        let quickBarcodeController = null;
+        let quickBarcodeRequestId = 0;
 
         // قراءة البيانات الفعلية من LocalStorage (نفس قاعدة بيانات المخزون)
         function loadDatabase() {
             try {
                 const localProducts = localStorage.getItem('cashtop_products');
                 if (localProducts) productsData = JSON.parse(localProducts);
+
+                const localUnits = JSON.parse(localStorage.getItem('cashtop_units') || '[]');
+                unitsData = window.CashtopMulti?.normalizeUnits?.(localUnits) || (Array.isArray(localUnits) ? localUnits : []);
 
                 const localSuppliers = localStorage.getItem('cashtop_suppliers');
                 if (localSuppliers) {
@@ -705,49 +740,117 @@
             }
         }
 
+        function quickPieceTemplate(){return {id:'__PIECE__',name:'قطعة',chain:[{id:'piece',name:'قطعة',factorToPrevious:1,factorToBase:1}]};}
+        function selectedQuickTemplate(){
+            const id=document.getElementById('prodUnitTemplate')?.value||'__PIECE__';
+            if(id==='__PIECE__')return quickPieceTemplate();
+            return unitsData.find(unit=>String(unit.id)===String(id))||quickPieceTemplate();
+        }
+        function populateQuickUnitTemplates(){
+            const select=document.getElementById('prodUnitTemplate');if(!select)return;
+            const current=select.value||'__PIECE__';
+            select.innerHTML='<option value="__PIECE__">قطعة فقط</option>'+unitsData.map(unit=>`<option value="${String(unit.id).replace(/"/g,'&quot;')}">${String(unit.name||unit.chain?.[unit.chain.length-1]?.name||'وحدة')}</option>`).join('');
+            select.value=[...select.options].some(option=>String(option.value)===String(current))?current:'__PIECE__';
+            window.CashtopMulti?.refreshEnhancedSelect?.(select);
+        }
+        function renderQuickUnitDetails(){
+            const template=window.CashtopMulti?.normalizeUnitTemplate?.(selectedQuickTemplate())||selectedQuickTemplate();
+            const chain=Array.isArray(template.chain)&&template.chain.length?template.chain:quickPieceTemplate().chain;
+            const host=document.getElementById('quickUnitDetails');
+            const stockUnit=document.getElementById('prodStockUnit');
+            const previousStock=stockUnit?.value||chain[0].id;
+            if(stockUnit){stockUnit.innerHTML=chain.map(level=>`<option value="${level.id}">${level.name}${Number(level.factorToBase||1)>1?` — ${Number(level.factorToBase)} ${chain[0].name}`:''}</option>`).join('');stockUnit.value=chain.some(level=>String(level.id)===String(previousStock))?previousStock:chain[0].id;window.CashtopMulti?.refreshEnhancedSelect?.(stockUnit);}
+            if(host)host.innerHTML=chain.map((level,index)=>{
+                const priceDefault=Number(level.salePrice||0);
+                const barcodeDefault=index===0?String(document.getElementById('prodBarcode')?.value||level.barcode||''):String(level.barcode||'');
+                return `<div class="quick-unit-row" data-unit-id="${level.id}" data-factor="${Number(level.factorToBase||1)}">
+                  <div class="quick-unit-name"><i class="fa-solid fa-box" style="color:#605ca8;margin-left:6px"></i>${level.name}${index?` × ${Number(level.factorToBase||1)} ${chain[0].name}`:''}</div>
+                  <div class="quick-unit-field"><label>سعر البيع</label><input type="number" min="0" step="0.01" class="form-control quick-unit-price" value="${priceDefault||''}" placeholder="0.00"></div>
+                  <div class="quick-unit-field"><label>باركود ${level.name}</label><div class="quick-barcode-shell"><input type="text" class="form-control quick-unit-barcode quick-barcode-input" data-unit-index="${index}" value="${barcodeDefault.replace(/"/g,'&quot;')}" placeholder="مرر القارئ أو اكتب الباركود" autocomplete="off"><button type="button" class="quick-barcode-camera" onclick="openQuickBarcodeScanner(this.previousElementSibling)" title="قراءة بالكاميرا"><i class="fa-solid fa-barcode"></i></button></div></div>
+                </div>`;
+            }).join('');
+            window.Cashtop?.enhanceAllSelects?.(document.getElementById('productModal'));
+        }
         function openProductModal() {
             document.getElementById('productForm').reset();
+            populateQuickUnitTemplates();
+            document.getElementById('prodUnitTemplate').value='__PIECE__';
+            document.getElementById('prodLimit').value=globalAlertLimit;
+            renderQuickUnitDetails();
             openModal('productModal');
         }
-
+        function collectQuickUnitChain(){
+            const template=window.CashtopMulti?.normalizeUnitTemplate?.(selectedQuickTemplate())||selectedQuickTemplate();
+            const rows=[...document.querySelectorAll('#quickUnitDetails .quick-unit-row')];
+            const prices={},barcodes={};
+            rows.forEach(row=>{const id=row.dataset.unitId;prices[id]=Number(row.querySelector('.quick-unit-price')?.value||0);barcodes[id]=String(row.querySelector('.quick-unit-barcode')?.value||'').trim();});
+            return window.CashtopMulti?.buildProductUnitChain?.(template,prices,barcodes)||template.chain.map(level=>({...level,salePrice:Number(prices[level.id]||0),barcode:String(barcodes[level.id]||'')}));
+        }
+        function quickBarcodeExists(code){
+            const normalized=String(code||'').trim();if(!normalized)return false;
+            return productsData.some(product=>{
+                const chain=window.CashtopMulti?.normalizeProductChain?.(product)||[];
+                return [product.barcode,product.pieceBarcode,product.unitBarcode,...chain.map(level=>level.barcode),...(product.variants||[]).map(v=>v.barcode)].some(value=>String(value||'').trim()===normalized);
+            });
+        }
         function saveQuickProduct(e) {
             e.preventDefault();
-            const name = document.getElementById('prodName').value.trim();
-            const barcode = document.getElementById('prodBarcode').value.trim() || `BC_${Date.now().toString().slice(-6)}`;
-            const qty = parseFloat(document.getElementById('prodQty').value);
-            const limit = parseInt(document.getElementById('prodLimit').value);
-            const cost = parseFloat(document.getElementById('prodCost').value);
-            const price = parseFloat(document.getElementById('prodPrice').value);
-
-            // تأسيس صنف يتوافق مع بنية صفحة المنتجات
-            const newProduct = {
-                id: `P_${Date.now()}`,
-                name: name,
-                barcode: barcode,
-                unitBarcode: "",
-                stockPieces: qty,
-                inputQty: qty,
-                cost: cost,
-                pricePiece: price,
-                priceUnit: price,
-                unitId: null,
-                unitName: "",
-                pieceName: "قطعة",
-                piecesPerUnit: 1,
-                addType: "piece",
-                hasVariants: false,
-                variants: [],
-                alertLimit: limit // حفظ الحد المخصص
+            const name=document.getElementById('prodName').value.trim();
+            const qty=Number(document.getElementById('prodQty').value||0);
+            const limit=Math.max(1,Number(document.getElementById('prodLimit').value||globalAlertLimit));
+            const cost=Math.max(0,Number(document.getElementById('prodCost').value||0));
+            if(!name){showToast('أدخل اسم المنتج.','error');return;}
+            const unitChain=collectQuickUnitChain();
+            if(!unitChain.length){showToast('اختر وحدة صحيحة.','error');return;}
+            const base=unitChain[0],top=unitChain[unitChain.length-1];
+            let mainBarcode=String(document.getElementById('prodBarcode').value||base.barcode||'').trim();
+            if(mainBarcode&&!base.barcode)base.barcode=mainBarcode;
+            if(!mainBarcode)mainBarcode=String(base.barcode||'').trim()||`BC_${Date.now().toString().slice(-8)}`;
+            base.barcode=String(base.barcode||mainBarcode).trim();
+            const allCodes=unitChain.map(level=>String(level.barcode||'').trim()).filter(Boolean);
+            if(new Set(allCodes).size!==allCodes.length){showToast('لا يمكن تكرار نفس الباركود لأكثر من وحدة داخل المنتج.','error');return;}
+            const duplicate=allCodes.find(quickBarcodeExists);if(duplicate){showToast(`الباركود ${duplicate} مستخدم في منتج آخر.`,'error');return;}
+            const stockUnitId=document.getElementById('prodStockUnit').value||base.id;
+            const stockLevel=unitChain.find(level=>String(level.id)===String(stockUnitId))||base;
+            const stockPieces=Math.max(0,qty)*Math.max(.000001,Number(stockLevel.factorToBase||1));
+            const template=selectedQuickTemplate();
+            const unitPrices=Object.fromEntries(unitChain.map(level=>[level.id,Number(level.salePrice||0)]));
+            const unitBarcodes=Object.fromEntries(unitChain.map(level=>[level.id,String(level.barcode||'')]));
+            const newProduct={
+                id:`P_${Date.now()}_${Math.random().toString(36).slice(2,5)}`,name,barcode:base.barcode||mainBarcode,pieceBarcode:base.barcode||mainBarcode,unitBarcode:top.barcode||'',
+                stockPieces,inputQty:qty,inputUnitId:stockLevel.id,cost,price:Number(base.salePrice||0),pricePiece:Number(base.salePrice||0),priceUnit:Number(top.salePrice||0),
+                unitId:template.id==='__PIECE__'?null:template.id,unitName:top.name||base.name,pieceName:base.name||'قطعة',piecesPerUnit:Number(top.factorToBase||1),
+                unitChain,unitPrices,unitBarcodes,addType:unitChain.length>1?'unit':'piece',hasVariants:false,variants:[],alertLimit:limit,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()
             };
-
             productsData.push(newProduct);
-            localStorage.setItem('cashtop_products', JSON.stringify(productsData));
-            
-            showToast('📦 تم تأسيس الصنف الجديد وحفظه بالمخزن بنجاح!', 'success');
+            if(window.Cashtop?.atomicSetItems)window.Cashtop.atomicSetItems({cashtop_products:productsData},{label:'save-quick-product-with-units'});else localStorage.setItem('cashtop_products',JSON.stringify(productsData));
+            showToast('تم تأسيس الصنف مع الوحدات وأسعار البيع والباركود بنجاح.','success');
+            document.getElementById('productForm').reset();
             closeModal('productModal');
             initPage();
         }
 
+        async function openQuickBarcodeScanner(target){
+            quickBarcodeTarget=typeof target==='string'?document.getElementById(target):target;
+            if(!quickBarcodeTarget)return;
+            const requestId=++quickBarcodeRequestId;
+            openModal('quickBarcodeScannerModal');
+            const status=document.getElementById('quickBarcodeStatus');if(status)status.textContent='جاري تشغيل الكاميرا...';
+            try{
+                const controller=await window.CashtopBarcode.startCameraScanner({container:'quickBarcodeReader',sound:true,soundUrl:'qr.mp3',continuous:false,onDetected:code=>{
+                    if(requestId!==quickBarcodeRequestId||!quickBarcodeTarget)return;
+                    quickBarcodeTarget.value=String(code||'').trim();
+                    quickBarcodeTarget.dispatchEvent(new Event('input',{bubbles:true}));quickBarcodeTarget.dispatchEvent(new Event('change',{bubbles:true}));
+                    if(quickBarcodeTarget.id==='prodBarcode'){const baseField=document.querySelector('#quickUnitDetails .quick-unit-barcode[data-unit-index="0"]');if(baseField)baseField.value=quickBarcodeTarget.value;}
+                    showToast('تمت قراءة الباركود.','success');closeQuickBarcodeScanner();
+                },onError:(error,message)=>{console.error(error);if(status)status.textContent=message||window.CashtopBarcode.getErrorMessage(error);}});
+                if(requestId!==quickBarcodeRequestId){await controller?.stop?.();return;}quickBarcodeController=controller;
+            }catch(error){if(requestId===quickBarcodeRequestId){if(status)status.textContent=window.CashtopBarcode?.getErrorMessage?.(error)||'تعذر تشغيل الكاميرا.';}}
+        }
+        async function closeQuickBarcodeScanner(){
+            quickBarcodeRequestId++;const controller=quickBarcodeController;quickBarcodeController=null;closeModal('quickBarcodeScannerModal');
+            try{await controller?.stop?.();}catch(_){}const reader=document.getElementById('quickBarcodeReader');if(reader)reader.innerHTML='';
+        }
         function customLimitPrompt(productId) {
             let p = productsData.find(x => x.id === productId);
             if(p) {
@@ -767,7 +870,19 @@
             loadSuppliersDropdown();
             extractShortages();
             renderFilteredTable();
+            populateQuickUnitTemplates();
         }
+
+        window.addEventListener('load', () => {
+            window.CashtopBarcode?.bindBarcodeFieldEnter?.('.quick-barcode-input', (value,input) => {
+                if(input?.id==='prodBarcode'){
+                    const baseField=document.querySelector('#quickUnitDetails .quick-unit-barcode[data-unit-index="0"]');
+                    if(baseField&&value)baseField.value=value;
+                }
+            });
+        });
+        window.addEventListener('pagehide', () => { closeQuickBarcodeScanner(); });
+        window.addEventListener('cashtop:remote-applied', event => { if(event.detail?.key==='cashtop_units'){loadDatabase();populateQuickUnitTemplates();} });
 
         // تشغيل عند بدء الصفحة
         window.onload = initPage;

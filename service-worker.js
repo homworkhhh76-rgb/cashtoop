@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v92-modal-layers-credentials-purchase-unit-cache-first-v1';
+const CACHE_VERSION = 'v93-ledger-expense-types-manufacturing-barcode-nested-payments-cache-first-v1';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = 'cash-top-2-remote-static-persistent-v1';
 
