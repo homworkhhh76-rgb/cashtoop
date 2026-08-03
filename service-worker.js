@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v93-ledger-expense-types-manufacturing-barcode-nested-payments-cache-first-v1';
+const CACHE_VERSION = 'v94-storage-login-clock-cache-first-v1';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = 'cash-top-2-remote-static-persistent-v1';
 
@@ -531,6 +531,14 @@ self.addEventListener('message', event => {
       // يُخدم فوراً من Cache Storage حتى مع وجود الإنترنت، والتحديث الشبكي
       // المحدود يحدث بعد الاستجابة فقط كي لا ينافس فتح الصفحة أو الرسم.
       await warmRemoteStaticAssetsOnce();
+    })());
+    return;
+  }
+  if (data.type === 'TRIM_OLD_CACHES') {
+    event.waitUntil((async () => {
+      const keep = new Set([APP_CACHE, REMOTE_STATIC_CACHE, NOTIFICATION_META_CACHE]);
+      const names = await caches.keys();
+      await Promise.all(names.filter(name => !keep.has(name)).map(name => caches.delete(name)));
     })());
     return;
   }

@@ -10,9 +10,118 @@
   window.addEventListener('pageshow', keepPortraitOrientation, { passive: true });
   window.addEventListener('orientationchange', keepPortraitOrientation, { passive: true });
 
-  const rawGet = key => Storage.prototype.getItem.call(localStorage, key);
-  const rawSet = (key, value) => Storage.prototype.setItem.call(localStorage, key, String(value));
-  const rawRemove = key => Storage.prototype.removeItem.call(localStorage, key);
+  const LOGIN_DURABLE_DB = 'cashtop-local-durable-v2';
+  const LOGIN_DURABLE_STORE = 'kv';
+  const LOGIN_DURABLE_GLOBAL_KEYS = new Set([
+    'cashtop_remembered_key', 'cashtop_device_id', 'cashtop_admin_licenses', 'cashtop_admin_users',
+    'cashtop_superadmin_session', 'cashtop_tenant_bindings', 'cashtop_persistent_session_v1',
+    'cashtop_server_clock_v1'
+  ]);
+  const loginOverflowMemory = new Map();
+  let loginDurableDbPromise = null;
+  let loginDurableWriteChain = Promise.resolve();
+
+  function isQuotaError(error) {
+    return error?.name === 'QuotaExceededError' || error?.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+      /quota|storage.*full|exceeded/i.test(String(error?.message || ''));
+  }
+  function isLoginDurableKey(key) {
+    return LOGIN_DURABLE_GLOBAL_KEYS.has(String(key || '')) ||
+      /^(?:cashtop_data::|cashtop_meta::|ct_sync_queue::|ct_sync_queue_reset_at::|ct_sync_queue_revision::|cashtop_tx::)/.test(String(key || ''));
+  }
+  function openLoginDurableDb() {
+    if (!('indexedDB' in window)) return Promise.resolve(null);
+    if (loginDurableDbPromise) return loginDurableDbPromise;
+    loginDurableDbPromise = new Promise(resolve => {
+      try {
+        const request = indexedDB.open(LOGIN_DURABLE_DB, 2);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains(LOGIN_DURABLE_STORE)) db.createObjectStore(LOGIN_DURABLE_STORE, { keyPath:'key' });
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => resolve(null);
+        request.onblocked = () => resolve(null);
+      } catch (_) { resolve(null); }
+    });
+    return loginDurableDbPromise;
+  }
+  async function persistLoginDurable(key, value) {
+    if (!isLoginDurableKey(key)) return false;
+    const db = await openLoginDurableDb();
+    if (!db) return false;
+    return new Promise(resolve => {
+      try {
+        const tx = db.transaction(LOGIN_DURABLE_STORE, 'readwrite');
+        tx.objectStore(LOGIN_DURABLE_STORE).put({ key:String(key), value:String(value), savedAt:Date.now() });
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = tx.onabort = () => resolve(false);
+      } catch (_) { resolve(false); }
+    });
+  }
+  async function deleteLoginDurable(key) {
+    if (!isLoginDurableKey(key)) return false;
+    const db = await openLoginDurableDb();
+    if (!db) return false;
+    return new Promise(resolve => {
+      try {
+        const tx = db.transaction(LOGIN_DURABLE_STORE, 'readwrite');
+        tx.objectStore(LOGIN_DURABLE_STORE).delete(String(key));
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = tx.onabort = () => resolve(false);
+      } catch (_) { resolve(false); }
+    });
+  }
+  function queueLoginDurableWrite(key, value) {
+    if (!isLoginDurableKey(key)) return;
+    loginDurableWriteChain = loginDurableWriteChain.catch(() => false).then(() => persistLoginDurable(key, value)).catch(() => false);
+  }
+  async function restoreLoginDurableGlobals() {
+    const db = await openLoginDurableDb();
+    if (!db) return 0;
+    const rows = await new Promise(resolve => {
+      try {
+        const tx = db.transaction(LOGIN_DURABLE_STORE, 'readonly');
+        const req = tx.objectStore(LOGIN_DURABLE_STORE).getAll();
+        req.onsuccess = () => resolve(Array.isArray(req.result) ? req.result : []);
+        req.onerror = () => resolve([]);
+      } catch (_) { resolve([]); }
+    });
+    let restored = 0;
+    for (const row of rows) {
+      const key = String(row?.key || '');
+      if (!LOGIN_DURABLE_GLOBAL_KEYS.has(key)) continue;
+      if (Storage.prototype.getItem.call(localStorage, key) != null) continue;
+      const value = String(row?.value ?? '');
+      loginOverflowMemory.set(key, value);
+      try { Storage.prototype.setItem.call(localStorage, key, value); loginOverflowMemory.delete(key); } catch (_) {}
+      restored += 1;
+    }
+    return restored;
+  }
+  const loginDurableGlobalsReady = restoreLoginDurableGlobals().catch(() => 0);
+
+  const rawGet = key => loginOverflowMemory.has(String(key)) ? loginOverflowMemory.get(String(key)) : Storage.prototype.getItem.call(localStorage, key);
+  const rawSet = (key, value) => {
+    const stringKey = String(key);
+    const stringValue = String(value);
+    try {
+      Storage.prototype.setItem.call(localStorage, stringKey, stringValue);
+      loginOverflowMemory.delete(stringKey);
+    } catch (error) {
+      if (!isQuotaError(error) || !isLoginDurableKey(stringKey)) throw error;
+      // إذا امتلأ localStorage لا نمنع تسجيل الدخول: نحفظ القيمة في IndexedDB
+      // ونحتفظ بها في الذاكرة حتى تنتهي عملية الدخول الحالية.
+      loginOverflowMemory.set(stringKey, stringValue);
+    }
+    queueLoginDurableWrite(stringKey, stringValue);
+  };
+  const rawRemove = key => {
+    const stringKey = String(key);
+    loginOverflowMemory.delete(stringKey);
+    try { Storage.prototype.removeItem.call(localStorage, stringKey); } catch (_) {}
+    loginDurableWriteChain = loginDurableWriteChain.catch(() => false).then(() => deleteLoginDurable(stringKey)).catch(() => false);
+  };
   const rawKey = index => Storage.prototype.key.call(localStorage, index);
   const backendSettings = window.CASHTOP_TURSO || {};
   const backendBase = String(backendSettings.config?.databaseURL || '').replace(/\/+$/, '');
@@ -30,6 +139,28 @@
   const PERSISTENT_SESSION_KEY = 'cashtop_persistent_session_v1';
   const WINDOW_SESSION_PREFIX = 'CASHTOP_SESSION_V2:';
   const parse = (value, fallback) => { try { return JSON.parse(value) ?? fallback; } catch (_) { return fallback; } };
+  const SERVER_CLOCK_KEY = 'cashtop_server_clock_v1';
+  let observedServerClock = null;
+  function observeServerClock(response, requestStartedAt = Date.now(), responseAt = Date.now()) {
+    try {
+      const header = response?.headers?.get?.('date');
+      const serverAt = header ? new Date(header).getTime() : NaN;
+      if (!Number.isFinite(serverAt)) return;
+      const midpoint = requestStartedAt + Math.max(0, responseAt - requestStartedAt) / 2;
+      const snapshot = { offsetMs: serverAt - midpoint, observedAt: Date.now(), source:'http-date' };
+      observedServerClock = snapshot;
+      rawSet(SERVER_CLOCK_KEY, JSON.stringify(snapshot));
+    } catch (_) {}
+  }
+  function trustedNowMs() {
+    const cached = observedServerClock || parse(rawGet(SERVER_CLOCK_KEY), null);
+    const offset = Number(cached?.offsetMs);
+    const observedAt = Number(cached?.observedAt);
+    // احتفظ بتصحيح ساعة الجهاز لمدة 30 يوماً. هذا يمنع أجهزة اللابتوب ذات
+    // الساعة/المنطقة الزمنية الخاطئة من رفض مفتاح نشط.
+    if (Number.isFinite(offset) && Number.isFinite(observedAt) && Date.now() - observedAt < 30 * 86400000) return Date.now() + offset;
+    return Date.now();
+  }
   function writeSession(session) {
     const serialized = JSON.stringify(session || {});
     try { sessionStorage.setItem(TAB_SESSION_KEY, serialized); } catch (_) {}
@@ -160,9 +291,11 @@
     if (license.status && license.status !== 'active') return { ok: false, message: 'تم إيقاف مفتاح الشركة. راجع مسؤول النظام.' };
     const start = license.startAt ? new Date(license.startAt).getTime() : 0;
     const end = license.endAt ? new Date(license.endAt).getTime() : 0;
-    if (start && Number.isFinite(start) && Date.now() < start) return { ok: false, message: 'مدة المفتاح لم تبدأ بعد.' };
-    if (end && Number.isFinite(end) && Date.now() >= end) return { ok: false, message: 'انتهت مدة مفتاح الشركة.' };
-    return { ok: true, end };
+    const now = trustedNowMs();
+    /* المفاتيح في لوحة الإدارة تبدأ لحظة إنشائها ولا يوجد جدولة لبدء مستقبلي.
+       لذلك status=active هو المرجع، ولا نرفض الدخول بسبب ساعة لابتوب متأخرة. */
+    if (end && Number.isFinite(end) && now >= end) return { ok: false, message: 'انتهت مدة مفتاح الشركة.' };
+    return { ok: true, start, end, now };
   }
 
   function saveRemembered(key) {
@@ -325,7 +458,9 @@
       branchName: account.branchName || '', companyKey, tenantId, companyId: tenantId,
       companyName: license.companyName || context.access?.companyName || 'الشركة',
       licenseId: license.id || license.licenseId || tenantId, licenseStart: license.startAt || '', licenseEnd: license.endAt || '',
-      plan: license.plan || context.access?.plan || 'pro', customLimits: context.access?.customLimits || license.customLimits || null, status: license.status || 'active', loginAt: new Date().toISOString(), lastLicenseCheck: Date.now()
+      plan: license.plan || context.access?.plan || 'pro', customLimits: context.access?.customLimits || license.customLimits || null, status: license.status || 'active', loginAt: new Date().toISOString(), lastLicenseCheck: trustedNowMs(),
+      serverClockOffsetMs: Number((observedServerClock || parse(rawGet(SERVER_CLOCK_KEY), {}))?.offsetMs || 0),
+      serverClockObservedAt: Number((observedServerClock || parse(rawGet(SERVER_CLOCK_KEY), {}))?.observedAt || 0)
     };
     writeSession(session);
     setTenantBinding(companyKey, tenantId);
@@ -353,7 +488,9 @@
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), timeout);
         try {
+          const requestStartedAt = Date.now();
           const response = await fetch(targetUrl, { cache: 'no-store', signal: controller.signal, headers: { Accept: 'application/json' } });
+          observeServerClock(response, requestStartedAt, Date.now());
           if ([408, 425, 429, 500, 502, 503, 504].includes(response.status) && attempt === 0) {
             await new Promise(resolve => setTimeout(resolve, 220));
             continue;
@@ -633,6 +770,7 @@
 
   async function handleLogin(event) {
     event.preventDefault();
+    await loginDurableGlobalsReady;
     const key = normalizeKey(document.getElementById('companyKey').value);
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value;
@@ -658,6 +796,7 @@
           throw remoteError || localError;
         }
       }
+      await loginDurableWriteChain.catch(() => false);
       showStatus('تم تسجيل الدخول بنجاح. جاري فتح لوحة التحكم...', 'success');
       setTimeout(() => location.replace('لوحة التحكم.html'), 80);
     } catch (error) {
@@ -686,7 +825,7 @@
   window.addEventListener('DOMContentLoaded', () => {
     const existingSession = readTabSession();
     const existingEnd = existingSession?.licenseEnd ? new Date(existingSession.licenseEnd).getTime() : 0;
-    if (existingSession && existingSession.status !== 'stopped' && (!existingEnd || existingEnd > Date.now()) && !new URLSearchParams(location.search).get('reason')) {
+    if (existingSession && existingSession.status !== 'stopped' && (!existingEnd || existingEnd > trustedNowMs()) && !new URLSearchParams(location.search).get('reason')) {
       location.replace('لوحة التحكم.html'); return;
     }
     const rememberedKey = rawGet('cashtop_remembered_key');

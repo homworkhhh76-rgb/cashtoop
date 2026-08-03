@@ -243,12 +243,12 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=93">
-    <script src="cashtop-core.js?v=93"></script>
-    <script src="multi-system.js?v=93"></script>
-    <script src="turso-config.js?v=93"></script><script src="turso-rtdb.js?v=93"></script>
-    <script src="accounting-engine.js?v=93"></script>
-    <script src="turso-sync.js?v=93"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=94">
+    <script src="cashtop-core.js?v=94"></script>
+    <script src="multi-system.js?v=94"></script>
+    <script src="turso-config.js?v=94"></script><script src="turso-rtdb.js?v=94"></script>
+    <script src="accounting-engine.js?v=94"></script>
+    <script src="turso-sync.js?v=94"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -1260,7 +1260,7 @@
             }
         }
 
-        function saveCustomer(e) {
+        async function saveCustomer(e) {
             e?.preventDefault?.();
             if (customerSaveBusy) return;
             const nameInput = document.getElementById('cNameInput');
@@ -1318,8 +1318,25 @@
                     return { ...group, customerIds: [...new Set(filtered)], updatedAt: new Date().toISOString() };
                 });
 
-                localStorage.setItem('cashtop_customers', JSON.stringify(next));
-                localStorage.setItem('cashtop_customer_groups', JSON.stringify(nextGroups));
+                const commitCustomer = () => {
+                    if (window.Cashtop?.atomicSetItems) {
+                        return window.Cashtop.atomicSetItems({
+                            cashtop_customers: next,
+                            cashtop_customer_groups: nextGroups
+                        }, { label: editingValue ? 'edit-customer' : 'add-customer', action: editingValue ? 'edit' : 'create' });
+                    }
+                    localStorage.setItem('cashtop_customers', JSON.stringify(next));
+                    localStorage.setItem('cashtop_customer_groups', JSON.stringify(nextGroups));
+                    return { changed:true };
+                };
+                try {
+                    commitCustomer();
+                } catch (storageError) {
+                    const quotaLike = storageError?.name === 'QuotaExceededError' || /quota|storage.*full|exceeded/i.test(String(storageError?.message || ''));
+                    if (!quotaLike || !window.Cashtop?.recoverStoragePressure) throw storageError;
+                    await window.Cashtop.recoverStoragePressure();
+                    commitCustomer();
+                }
                 customersData = next;
                 groupsData = nextGroups;
                 renderTable();
@@ -1327,7 +1344,14 @@
                 showToast(editingValue ? 'تم تحديث العميل بنجاح' : 'تمت إضافة العميل بنجاح', 'success');
             } catch (error) {
                 console.error(error);
-                showToast('تعذر حفظ العميل. أعد المحاولة بعد التأكد من مساحة التخزين.', 'error');
+                const message = String(error?.message || '');
+                if (error?.code === 'CASHTOP_PLAN_LIMIT' || /وصلت خطة/.test(message)) {
+                    showToast(message, 'error');
+                } else if (error?.name === 'QuotaExceededError' || /quota|storage.*full|exceeded/i.test(message)) {
+                    showToast('تعذر الحفظ بعد محاولة تحرير مساحة التخزين المحلية. أغلق تبويبات قديمة للتطبيق ثم أعد المحاولة.', 'error');
+                } else {
+                    showToast(message || 'تعذر حفظ العميل. أعد المحاولة.', 'error');
+                }
             } finally {
                 customerSaveBusy = false;
                 if (submit) submit.disabled = false;

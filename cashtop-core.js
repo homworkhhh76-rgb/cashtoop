@@ -33,7 +33,8 @@
     'cashtop_admin_users',
     'cashtop_superadmin_session',
     'cashtop_tenant_bindings',
-    'cashtop_persistent_session_v1'
+    'cashtop_persistent_session_v1',
+    'cashtop_server_clock_v1'
   ]);
 
   const ALIASES = {
@@ -397,8 +398,15 @@
   let durableWriteChain = Promise.resolve();
   let durableReadyPromise = Promise.resolve({ restored: 0 });
 
+  const DURABLE_GLOBAL_KEYS = new Set([
+    ...GLOBAL_KEYS,
+    'ct_storage_persistence_v1',
+    'cashtop_indexeddb_notice_shown_v1'
+  ]);
+
   function isDurableLocalKey(key) {
     return typeof key === 'string' && (
+      DURABLE_GLOBAL_KEYS.has(key) ||
       key.startsWith('cashtop_data::') ||
       key.startsWith('cashtop_meta::') ||
       key.startsWith('ct_sync_queue::') ||
@@ -560,6 +568,15 @@
       return true;
     };
 
+    // استرجع المفاتيح العامة الصغيرة أيضاً. هذه مهمة لاستمرار الجلسة وربط
+    // الشركة حتى لو امتلأ localStorage واضطررنا لحفظها في IndexedDB.
+    for (const record of records) {
+      const key = String(record?.key || '');
+      if (!DURABLE_GLOBAL_KEYS.has(key)) continue;
+      if (rawGet(key) !== null) continue;
+      if (writeRestored(key, String(record?.value ?? ''))) restored += 1;
+    }
+
     // البيانات أولاً، مع السماح لـ IndexedDB باستبدال القيم الفارغة التي أنشأها seed.
     for (const record of records) {
       const key = String(record?.key || '');
@@ -618,6 +635,19 @@
 
   function safeJson(value, fallback = null) {
     try { return JSON.parse(value); } catch (_) { return fallback; }
+  }
+
+  function trustedNowMs(session = null) {
+    const activeSession = session || getSession?.() || {};
+    let offset = Number(activeSession?.serverClockOffsetMs);
+    let observedAt = Number(activeSession?.serverClockObservedAt);
+    if (!Number.isFinite(offset) || !Number.isFinite(observedAt)) {
+      const snapshot = safeJson(rawGet('cashtop_server_clock_v1'), {}) || {};
+      offset = Number(snapshot.offsetMs);
+      observedAt = Number(snapshot.observedAt);
+    }
+    if (Number.isFinite(offset) && Number.isFinite(observedAt) && Date.now() - observedAt < 30 * 86400000) return Date.now() + offset;
+    return Date.now();
   }
 
   function normalizeArrayValue(value, fallback = []) {
@@ -3474,10 +3504,10 @@
     if (access.status && access.status !== 'active') return { ok: false, reason: 'stopped' };
     if (access.deleted === true) return { ok: false, reason: 'deleted' };
     const accessEnd = access.endAt ? new Date(access.endAt).getTime() : 0;
-    if (accessEnd && Number.isFinite(accessEnd) && Date.now() >= accessEnd) return { ok: false, reason: 'expired' };
+    if (accessEnd && Number.isFinite(accessEnd) && trustedNowMs(session) >= accessEnd) return { ok: false, reason: 'expired' };
     if (session.status && session.status !== 'active') return { ok: false, reason: 'stopped' };
     const end = session.licenseEnd ? new Date(session.licenseEnd).getTime() : null;
-    if (end && Number.isFinite(end) && Date.now() >= end) return { ok: false, reason: 'expired' };
+    if (end && Number.isFinite(end) && trustedNowMs(session) >= end) return { ok: false, reason: 'expired' };
 
     session.companyName = access.companyName || session.companyName;
     session.status = access.status || session.status || 'active';
@@ -5699,7 +5729,7 @@
     validateSessionLocal,
     getTaxSettings, getTaxRates, calculateTax,
     getNotificationSettings, getSmartNotifications, updateNotificationBadge, requestNotificationPermission, notificationBrandIcon, showTodayProfitNotification,
-    archiveRecords, readArchivedRecords, compactCompletedData,
+    archiveRecords, readArchivedRecords, compactCompletedData, trustedNowMs,
     getSyncQueue, enqueueSyncOperation, completeSyncOperation, clearSyncQueue, resetSyncQueueCompletely, preservePendingSyncState, updateSyncBadge, restoreSyncQueueBackup, migrateLegacySyncQueues,
     setSyncProgress, restoreDurableCompanyData,
     getSystemSettings, getProfitRate, getInventoryAccountingMethod, salePriceFromCost, applySystemBranding, recordIdentity, sortNewestFirstRecords,
@@ -5834,6 +5864,42 @@
       });
     }
 
+    const maximizeBrowserStorage = async (options = {}) => {
+      const result = { persisted:false, usage:0, quota:0, compacted:false };
+      try {
+        if (navigator.storage?.persisted) result.persisted = await navigator.storage.persisted();
+        if (!result.persisted && navigator.storage?.persist) result.persisted = await navigator.storage.persist();
+      } catch (_) {}
+      try {
+        if (navigator.storage?.estimate) {
+          const estimate = await navigator.storage.estimate();
+          result.usage = Number(estimate?.usage || 0);
+          result.quota = Number(estimate?.quota || 0);
+        }
+      } catch (_) {}
+      const ratio = result.quota > 0 ? result.usage / result.quota : 0;
+      if (options.forceCompact === true || ratio >= 0.82) {
+        try { await compactCompletedData(true); result.compacted = true; } catch (_) {}
+      }
+      try {
+        const ready = await navigator.serviceWorker?.ready;
+        ready?.active?.postMessage?.({ type:'TRIM_OLD_CACHES' });
+      } catch (_) {}
+      return result;
+    };
+    window.Cashtop.maximizeBrowserStorage = maximizeBrowserStorage;
+    window.Cashtop.recoverStoragePressure = async () => {
+      const result = await maximizeBrowserStorage({ forceCompact:true });
+      try {
+        const audit = safeJson(localStorage.getItem('cashtop_audit_log'), []) || [];
+        if (Array.isArray(audit) && audit.length > 80) localStorage.setItem('cashtop_audit_log', JSON.stringify(audit.slice(-80)));
+      } catch (_) {}
+      return result;
+    };
+    window.addEventListener('cashtop:local-storage-pressure', () => {
+      window.Cashtop.recoverStoragePressure?.().catch(() => null);
+    });
+
     if (navigator.storage && typeof navigator.storage.persist === 'function') {
       const requestPersistentStorage = async () => {
         try {
@@ -5849,6 +5915,7 @@
         }
       };
       requestPersistentStorage();
+      setTimeout(() => maximizeBrowserStorage().catch(() => null), 800);
       /* بعض المتصفحات لا تمنح التخزين الدائم إلا بعد تفاعل واضح من المستخدم. */
       document.addEventListener('pointerdown', requestPersistentStorage, { once: true, passive: true });
     }
