@@ -4941,12 +4941,21 @@
     if (!isBackupImportEnabled()) throw new Error('استيراد النسخ مقفل لهذا المفتاح. افتحه من لوحة المشرف أولاً.');
     const text = await file.text();
     const backup = safeJson(text, null);
-    if (!backup || !['cashtop-backup-v2', 'cashtop-backup-v3', 'cashtop-backup-v4'].includes(backup.format) || !backup.datasets) throw new Error('صيغة النسخة الاحتياطية غير صحيحة');
+    const backupFormat = String(backup?.format || '').trim();
+    const compatibleBackup = /^cashtop-backup-v\d+$/i.test(backupFormat);
+    if (!backup || !compatibleBackup || !backup.datasets || typeof backup.datasets !== 'object' || Array.isArray(backup.datasets)) {
+      throw new Error('صيغة النسخة الاحتياطية غير صحيحة');
+    }
     const session = getSession() || {};
     const currentCompany = String(session.tenantId || session.companyId || session.companyKey || '');
-    const backupTenant = String(backup.tenantId || backup.companyId || '');
-    // v74: business data may be restored from any company/key backup. Identity,
-    // subscription and manager fields are always kept from the current session.
+    const sourceCompany = String(backup.tenantId || backup.companyId || backup.companyKey || '');
+    /*
+     * R95: مصدر النسخة لا يقيّد الاستعادة. يسمح باستيراد نسخة كاملة مأخوذة
+     * من أي مفتاح/شركة إلى الشركة المفتوحة حالياً. لا ننقل هوية المصدر أو
+     * الترخيص أو الخطة أو المدير؛ هذه القيم تبقى دائماً من الجلسة الحالية.
+     * هذا يجعل نقل بيانات شركة إلى مفتاح جديد ممكناً بدون ربط المفتاحين.
+     */
+    const crossCompanyRestore = Boolean(sourceCompany && currentCompany && sourceCompany !== currentCompany);
 
     const importedKeys = [];
     const currentAccess = getCompanyAccess();
@@ -4995,7 +5004,9 @@
       enqueueSyncOperation(canonical, { forceReplace: true });
       importedKeys.push(canonical);
     });
-    showToast('تم دمج النسخة محلياً دون تكرار السجلات، ويجري رفع التغييرات الآن.', 'success');
+    showToast(crossCompanyRestore
+      ? 'تم استيراد بيانات النسخة من شركة أخرى إلى الشركة الحالية مع إبقاء المفتاح والترخيص الحاليين.'
+      : 'تم دمج النسخة محلياً دون تكرار السجلات، ويجري رفع التغييرات الآن.', 'success');
     const syncResult = await syncImportedData(importedKeys);
     if (Number(syncResult?.remaining || getSyncQueue().length) === 0) {
       showToast('تمت مزامنة النسخة الاحتياطية بالكامل مع قاعدة البيانات.', 'success');
