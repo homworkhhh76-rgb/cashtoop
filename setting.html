@@ -52,6 +52,13 @@
         .logo-input-row .form-control { flex:1; }
         .btn-logo-url { width:42px; height:42px; border:0; border-radius:6px; background:#3c8dbc; color:#fff; cursor:pointer; flex:0 0 42px; font-size:16px; }
         .btn-logo-url:hover { background:#2f76a5; }
+        .image-source-switch { display:inline-flex;align-items:center;background:#e5e7eb;border:1px solid #d1d5db;border-radius:10px;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.06); }
+        .image-source-switch button { border:0;background:transparent;color:#475569;padding:10px 12px;font-family:inherit;font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;cursor:pointer;transition:.18s; }
+        .image-source-switch button:hover { background:#dbe1e8; }
+        .image-source-switch .divider { height:20px;border-right:1px dotted #94a3b8; }
+        .logo-picker-row { display:flex;gap:8px;align-items:center;flex-wrap:wrap;min-height:42px; }
+        .logo-upload-status { font-size:11px;color:#64748b;font-weight:700;display:none; }
+        .logo-upload-status.active { display:inline-flex;align-items:center;gap:5px; }
         .preview-box { width: 65px; height: 65px; border: 2px dashed #ccc; border-radius: 6px; display: flex; align-items: center; justify-content: center; overflow: hidden; background-color: #fafafa; flex-shrink: 0; }
         .preview-box img { width: 100%; height: 100%; object-fit: cover; }
         .preview-box i { font-size: 24px; color: #aaa; }
@@ -140,12 +147,12 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=95">
-    <script src="cashtop-core.js?v=95"></script>
-    <script src="multi-system.js?v=95"></script>
-    <script src="turso-config.js?v=95"></script><script src="turso-rtdb.js?v=95"></script>
-    <script src="accounting-engine.js?v=95"></script>
-    <script src="turso-sync.js?v=95"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=98">
+    <script src="cashtop-core.js?v=98"></script>
+    <script src="multi-system.js?v=98"></script>
+    <script src="turso-config.js?v=98"></script><script src="turso-rtdb.js?v=98"></script>
+    <script src="accounting-engine.js?v=98"></script>
+    <script src="turso-sync.js?v=98"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -274,12 +281,19 @@
                             <i class="fa-solid fa-image"></i>
                         </div>
                         <div class="form-group" style="flex: 1;">
-                            <div class="logo-input-row">
-                                <input type="file" class="form-control" id="sysCompanyLogo" accept="image/*" onchange="previewAndValidateLogo(this)">
+                            <div class="logo-picker-row">
+                                <div class="image-source-switch" aria-label="مصدر صورة الشعار">
+                                    <button type="button" onclick="document.getElementById('sysCompanyLogoCamera').click()" title="التقاط صورة بالكاميرا"><i class="fa-solid fa-camera"></i><span>كاميرا</span></button>
+                                    <span class="divider"></span>
+                                    <button type="button" onclick="document.getElementById('sysCompanyLogoGallery').click()" title="اختيار من المعرض"><i class="fa-solid fa-image"></i><span>المعرض</span></button>
+                                </div>
                                 <button type="button" class="btn-logo-url" title="إضافة الشعار من رابط" onclick="openLogoUrlModal()"><i class="fa-solid fa-link"></i></button>
+                                <span class="logo-upload-status" id="logoUploadStatus"><i class="fa-solid fa-circle-notch fa-spin"></i> جاري ضغط ورفع الصورة...</span>
+                                <input type="file" id="sysCompanyLogoCamera" accept="image/*" capture="environment" hidden onchange="uploadCompanyLogo(this)">
+                                <input type="file" id="sysCompanyLogoGallery" accept="image/*" hidden onchange="uploadCompanyLogo(this)">
                             </div>
-                            <label for="sysCompanyLogo">شعار النظام (ملف أو رابط مباشر)</label>
-                            <span class="error-msg" id="logoError">حجم الصورة كبير جداً! يجب أن لا يتجاوز 100KB.</span>
+                            <label>شعار النظام</label>
+                            <span class="error-msg" id="logoError">تعذر ضغط أو رفع الصورة. حاول بصورة أخرى.</span>
                         </div>
                     </div>
 
@@ -501,7 +515,7 @@
             setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3000);
         }
 
-        let savedLogoData = null; // متغير لحفظ الصورة كـ Base64
+        let savedLogoData = null; // يحفظ رابط الصورة العام فقط؛ ملف الصورة موجود في مخزن الصور
 
         function syncInvoiceDesignLogo(newLogo) {
             try {
@@ -525,6 +539,7 @@
         // تحميل الإعدادات عند فتح الصفحة
         window.addEventListener('load', function() {
             loadSettings();
+            setTimeout(() => migrateLegacyCompanyLogoIfNeeded().catch(() => null), 700);
             updateInstallButtonState();
         });
         window.addEventListener('cashtop:remote-applied', event => {
@@ -584,30 +599,58 @@
             }
         }
 
-        // معاينة وحفظ الشعار كـ Base64
-        function previewAndValidateLogo(input) {
-            const file = input.files[0];
+        // رفع شعار الشركة إلى مخزن الصور المخصص؛ قاعدة النظام تحفظ الرابط فقط.
+        async function persistCompanyLogoUrl(url, oldUrl = '') {
+            const settings = JSON.parse(localStorage.getItem('cashtop_settings') || '{}') || {};
+            settings.logo = url || '';
+            localStorage.setItem('cashtop_settings', JSON.stringify(settings));
+            savedLogoData = url || '';
+            syncInvoiceDesignLogo(savedLogoData);
+            window.Cashtop?.applySystemBranding?.();
+            window.dispatchEvent(new CustomEvent('cashtop:sync-now', { detail: { reason:'company-logo-image' } }));
+            window.Cashtop?.syncNow?.({ manual:false });
+            if (oldUrl && oldUrl !== url && window.CashtopImages?.isManagedUrl?.(oldUrl)) {
+                window.CashtopImages.remove(oldUrl).catch(() => null);
+            }
+        }
+
+        async function uploadCompanyLogo(input) {
+            const file = input?.files?.[0];
+            if (!file) return;
+            if (!window.Cashtop?.can?.('settings.edit')) { input.value=''; return showToast('لا تملك صلاحية تعديل الشعار', 'error'); }
+            const status = document.getElementById('logoUploadStatus');
             const errorElement = document.getElementById('logoError');
             const previewBox = document.getElementById('logoPreviewBox');
-
-            if (file) {
-                // التحقق من الحجم (100KB = 102400 Bytes)
-                if (file.size > 102400) {
-                    errorElement.style.display = 'block';
-                    input.value = '';
-                    previewBox.innerHTML = '<i class="fa-solid fa-image"></i>';
-                    savedLogoData = null;
-                    return;
-                }
-                errorElement.style.display = 'none';
-                
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    savedLogoData = e.target.result; // حفظ كـ Base64 لرفعه للـ LocalStorage
-                    previewBox.innerHTML = `<img src="${e.target.result}" alt="الشعار">`;
-                };
-                reader.readAsDataURL(file);
+            const previous = savedLogoData || (JSON.parse(localStorage.getItem('cashtop_settings') || '{}')?.logo || '');
+            status?.classList.add('active');
+            if (errorElement) errorElement.style.display = 'none';
+            try {
+                if (!window.CashtopImages?.upload) throw new Error('IMAGE_STORAGE_NOT_READY');
+                const uploaded = await window.CashtopImages.upload(file, { folder:'company', entityId:'company-logo', maxSizeKB:50 });
+                previewBox.innerHTML = `<img src="${uploaded.url.replace(/"/g, '&quot;')}" alt="الشعار">`;
+                await persistCompanyLogoUrl(uploaded.url, previous);
+                showToast(`تم ضغط الشعار ورفعه (${uploaded.sizeKB}KB) وحفظ رابطه للمزامنة.`, 'success');
+            } catch (error) {
+                console.error('Company logo upload:', error);
+                if (errorElement) errorElement.style.display = 'block';
+                showToast('تعذر رفع الشعار إلى مخزن الصور.', 'error');
+            } finally {
+                status?.classList.remove('active');
+                input.value = '';
             }
+        }
+
+        async function migrateLegacyCompanyLogoIfNeeded() {
+            const settings = JSON.parse(localStorage.getItem('cashtop_settings') || '{}') || {};
+            const legacy = String(settings.logo || '');
+            if (!legacy.startsWith('data:image/') || !window.CashtopImages?.upload) return;
+            try {
+                const blob = await (await fetch(legacy)).blob();
+                const uploaded = await window.CashtopImages.upload(blob, { folder:'company', entityId:'company-logo', maxSizeKB:50 });
+                document.getElementById('logoPreviewBox').innerHTML = `<img src="${uploaded.url.replace(/"/g, '&quot;')}" alt="الشعار">`;
+                await persistCompanyLogoUrl(uploaded.url, '');
+                showToast('تم نقل شعار الشركة القديم إلى مخزن الصور الجديد.', 'success');
+            } catch (error) { console.warn('Legacy logo migration:', error); }
         }
 
         function openLogoUrlModal() {
@@ -635,15 +678,11 @@
                     image.onerror = () => { clearTimeout(timer); reject(new Error('load')); };
                     image.src = url;
                 });
-                savedLogoData = url;
+                const previous = savedLogoData || (JSON.parse(localStorage.getItem('cashtop_settings') || '{}')?.logo || '');
                 document.getElementById('logoPreviewBox').innerHTML = `<img src="${url.replace(/"/g, '&quot;')}" alt="الشعار">`;
-                const settings = JSON.parse(localStorage.getItem('cashtop_settings')) || {};
-                settings.logo = url;
-                localStorage.setItem('cashtop_settings', JSON.stringify(settings));
-                syncInvoiceDesignLogo(url);
+                await persistCompanyLogoUrl(url, previous);
                 closeLogoUrlModal();
-                window.Cashtop?.applySystemBranding?.();
-                showToast('تم حفظ رابط الشعار وإضافته إلى مزامنة Turso.', 'success');
+                showToast('تم حفظ رابط الشعار وإضافته إلى المزامنة.', 'success');
             } catch (_) {
                 showToast('تعذر تحميل الصورة من الرابط. تأكد أن الرابط مباشر ومتاح.', 'error');
             } finally {

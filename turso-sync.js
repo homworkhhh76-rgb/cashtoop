@@ -19,7 +19,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   const TRANSPORT_KEY = `ct_sync_transport_v1::${cfg.projectId || 'default'}`;
   const CLOUD_DATA_KEYS = core.DATA_KEYS.filter(key => key !== 'cashtop_audit_log');
   const usagePolicy = settings.usagePolicy || {};
-  const AUTO_REMOTE_CHECK_MS = Math.max(8000, Number(usagePolicy.remoteCheckMs || 15000));
+  const AUTO_REMOTE_CHECK_MS = Math.max(7000, Number(usagePolicy.remoteCheckMs || 10000));
   const NAV_REMOTE_CHECK_MS = Math.max(3000, Number(usagePolicy.navigationCheckMs || 5000));
   const FULL_REFRESH_MS = Math.max(3600000, Number(usagePolicy.fullRefreshMs || 43200000));
   const WRITE_DEBOUNCE_MS = Math.max(500, Number(usagePolicy.writeDebounceMs || 1800));
@@ -1749,6 +1749,16 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       window.dispatchEvent(new CustomEvent('cashtop:sync-complete', {
         detail: { processed: uploaded, pulled, uploaded, failed: failedKeys.length, remaining, partial: failedKeys.length > 0, lowUsage: true }
       }));
+      // After a successful local upload, make one delayed revision check. This
+      // closes the small race where another device saves immediately after our
+      // metadata probe and ensures the current page converges without requiring
+      // the user to refresh. Never pull over a newly-created pending local edit.
+      if (uploaded > 0 && remaining === 0) {
+        setTimeout(() => {
+          if (document.hidden || core.getSyncQueue().length) return;
+          checkRemoteAndPull(true).catch(() => null);
+        }, 1800);
+      }
       return {
         processed: uploaded,
         pulled,
@@ -2177,20 +2187,33 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     else checkRemoteAndPull(false).catch(() => null);
   });
 
-  // Near-live cross-device check: one exact metadata row every few seconds while
-  // visible; only the current page datasets are read when that revision changed.
+  // Near-live cross-device check + stuck-queue watchdog. A pending local edit
+  // no longer disables remote polling forever: while a queue exists we actively
+  // re-arm the uploader; once it drains the next tick checks remote revisions.
+  const resumeSyncRuntime = () => {
+    datasetRetryState.clear();
+    if (core.getSyncQueue().length) scheduleSync(40);
+    else checkRemoteAndPull(false).catch(() => null);
+  };
   pollTimer = setInterval(() => {
-    if (document.hidden || core.getSyncQueue().length) return;
+    if (document.hidden) return;
+    if (core.getSyncQueue().length) { scheduleSync(40); return; }
     checkRemoteAndPull(false).catch(() => null);
   }, AUTO_REMOTE_CHECK_MS);
+  window.addEventListener('focus', resumeSyncRuntime, { passive:true });
+  window.addEventListener('pageshow', resumeSyncRuntime, { passive:true });
+  navigator.connection?.addEventListener?.('change', resumeSyncRuntime);
 
-  window.addEventListener('pagehide', () => {
+  window.addEventListener('pagehide', event => {
     clearTimeout(scheduledSync);
     clearTimeout(backgroundPullTimer);
     clearTimeout(realtimePullTimer);
     stopRealtimeStream();
-    if (pollTimer) clearInterval(pollTimer);
-  }, { once: true });
+    // In BFCache the document can come back without re-running this script.
+    // Keep the watchdog interval alive in that case; pageshow will immediately
+    // resume pending upload / remote revision checking.
+    if (!event.persisted && pollTimer) clearInterval(pollTimer);
+  });
 
   if (AUDIT_CLOUD_ENABLED) {
     setTimeout(async()=>{if(navigator.onLine===false)return;try{const {token,location}=await cheapDatabaseAccess();await pruneRemoteAuditTrailRecent(location,token,100);await cleanupLegacyAuditTrail(location,token)}catch(_){}},5000);

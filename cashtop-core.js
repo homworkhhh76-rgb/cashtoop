@@ -2657,6 +2657,37 @@
     else clearTimeout(id);
   }
 
+  let recordsStreamLoaderTimer = 0;
+  let recordsStreamLoaderHideTimer = 0;
+  function setRecordsStreamLoading(active, label = 'جاري تحميل السجلات...') {
+    let node = document.getElementById('ctRecordsStreamLoader');
+    if (active) {
+      clearTimeout(recordsStreamLoaderHideTimer);
+      if (!node) {
+        node = document.createElement('div');
+        node.id = 'ctRecordsStreamLoader';
+        node.className = 'ct-records-stream-loader';
+        node.innerHTML = '<span class="ct-records-spinner" aria-hidden="true"></span><span class="ct-records-loader-label"></span>';
+        document.body?.appendChild(node);
+      }
+      const text = node.querySelector('.ct-records-loader-label');
+      if (text) text.textContent = label;
+      clearTimeout(recordsStreamLoaderTimer);
+      recordsStreamLoaderTimer = setTimeout(() => node?.classList.add('active'), 35);
+      return;
+    }
+    clearTimeout(recordsStreamLoaderTimer);
+    recordsStreamLoaderHideTimer = setTimeout(() => node?.classList.remove('active'), 45);
+  }
+
+  function runVirtualPaint(task, label = 'جاري تحميل السجلات...') {
+    setRecordsStreamLoading(true, label);
+    requestAnimationFrame(() => {
+      try { task(); }
+      finally { requestAnimationFrame(() => setRecordsStreamLoading(false)); }
+    });
+  }
+
   /**
    * Lazy table renderer: only the first chunk is inserted initially. More rows
    * are appended when the user approaches the sentinel. This is intentionally
@@ -2686,10 +2717,10 @@
        below the visible area are replaced by lightweight spacer rows, then are
        recreated when the user scrolls back. This prevents long-running POS
        sessions and multi-year logs from exhausting mobile RAM. */
-    const windowThreshold = Math.max(300, Number(options.windowThreshold || 500));
+    const windowThreshold = Math.max(180, Number(options.windowThreshold || 260));
     if (typeof IntersectionObserver === 'function' && list.length > windowThreshold) {
       const rowHeight = Math.max(32, Number(options.rowHeight || 48));
-      const windowSize = Math.max(120, Number(options.windowSize || 260));
+      const windowSize = Math.max(64, Math.min(112, Number(options.windowSize || 96)));
       const shiftSize = Math.max(40, Math.min(windowSize - 40, Number(options.shiftSize || Math.floor(windowSize / 2))));
       let start = 0;
       let end = Math.min(list.length, windowSize);
@@ -2754,8 +2785,10 @@
           start = Math.max(0, start - shiftSize);
           end = Math.min(list.length, start + windowSize);
         }
-        renderWindow();
-        requestAnimationFrame(() => { shifting = false; });
+        runVirtualPaint(() => {
+          renderWindow();
+          shifting = false;
+        });
       }, { root: null, rootMargin: '900px 0px' });
 
       // Direct scrollbar jumps can skip the edge sentinels. Recenter the DOM
@@ -2785,7 +2818,7 @@
         if (Math.abs(desiredStart - start) < Math.max(20, Math.floor(shiftSize / 3))) return;
         start = desiredStart;
         end = Math.min(list.length, start + windowSize);
-        renderWindow();
+        runVirtualPaint(renderWindow);
       };
       const onScroll = () => {
         if (!scrollRaf) scrollRaf = requestAnimationFrame(recenterFromViewport);
@@ -2837,9 +2870,11 @@
       token.observer = new IntersectionObserver(entries => {
         if (entries.some(entry => entry.isIntersecting)) {
           token.observer.disconnect();
+          setRecordsStreamLoading(true);
           token.idleId = runWhenIdle(() => {
             appendChunk();
             if (sentinel && cursor < list.length) token.observer.observe(sentinel);
+            requestAnimationFrame(() => setRecordsStreamLoading(false));
           }, 250);
         }
       }, { rootMargin: '700px 0px' });
@@ -2859,13 +2894,124 @@
     return { rendered: cursor, total: list.length };
   }
 
+  /**
+   * Windowed grid renderer for POS/product cards. Only rows near the scroll
+   * viewport exist in DOM, so thousands of products do not create thousands of
+   * cards/listeners/images at once. The complete record array stays in memory
+   * for compatibility with existing business logic, but the DOM stays small.
+   */
+  const pendingVirtualGrids = new WeakMap();
+
+  function renderVirtualGrid(container, records, cardFactory, options = {}) {
+    if (!container || typeof cardFactory !== 'function') return { rendered:0, total:0 };
+    const previous = pendingVirtualGrids.get(container);
+    previous?.cleanup?.();
+
+    const list = Array.isArray(records) ? records : [];
+    const minItemWidth = Math.max(70, Number(options.minItemWidth || 110));
+    const gap = Math.max(0, Number(options.gap || 10));
+    const estimatedRowHeight = Math.max(70, Number(options.rowHeight || 150));
+    const overscanRows = Math.max(1, Number(options.overscanRows || 3));
+    const maxDomItems = Math.max(48, Math.min(120, Number(options.maxDomItems || 96)));
+    const token = { cancelled:false, cleanup:null };
+    pendingVirtualGrids.set(container, token);
+    container.replaceChildren();
+
+    if (!list.length) {
+      if (options.emptyHtml) container.innerHTML = options.emptyHtml;
+      return { rendered:0, total:0, windowed:true };
+    }
+
+    let raf = 0;
+    let lastSignature = '';
+    let resizeObserver = null;
+
+    const columns = () => {
+      const style = getComputedStyle(container);
+      const width = Math.max(1, container.clientWidth - (parseFloat(style.paddingLeft)||0) - (parseFloat(style.paddingRight)||0));
+      if (options.columns) return Math.max(1, Number(options.columns));
+      return Math.max(1, Math.floor((width + gap) / (minItemWidth + gap)));
+    };
+
+    const spacer = (height, cls) => {
+      const node = document.createElement('div');
+      node.className = `ct-virtual-grid-spacer ${cls}`;
+      node.style.cssText = `grid-column:1/-1;height:${Math.max(0,height)}px;min-height:${Math.max(0,height)}px;pointer-events:none;`;
+      return node;
+    };
+
+    const render = () => {
+      raf = 0;
+      if (token.cancelled || !container.isConnected) return;
+      const cols = columns();
+      const viewportHeight = Math.max(container.clientHeight || 0, 320);
+      const visibleRows = Math.max(2, Math.ceil(viewportHeight / estimatedRowHeight));
+      const desiredRows = Math.max(2, Math.min(Math.ceil(maxDomItems / cols), visibleRows + overscanRows * 2));
+      const totalRows = Math.ceil(list.length / cols);
+      const scrollTop = Math.max(0, container.scrollTop || 0);
+      const firstVisibleRow = Math.floor(scrollTop / estimatedRowHeight);
+      let startRow = Math.max(0, firstVisibleRow - overscanRows);
+      let endRow = Math.min(totalRows, startRow + desiredRows);
+      if (endRow - startRow < desiredRows) startRow = Math.max(0, endRow - desiredRows);
+      const start = Math.min(list.length, startRow * cols);
+      const end = Math.min(list.length, endRow * cols);
+      const signature = `${cols}:${start}:${end}:${list.length}`;
+      if (signature === lastSignature) return;
+      lastSignature = signature;
+
+      const fragment = document.createDocumentFragment();
+      if (startRow > 0) fragment.appendChild(spacer(startRow * estimatedRowHeight, 'ct-virtual-grid-top'));
+      for (let index=start; index<end; index+=1) {
+        const card = cardFactory(list[index], index);
+        if (!card) continue;
+        try {
+          card.style.contentVisibility = 'auto';
+          card.style.containIntrinsicSize = `${estimatedRowHeight-gap}px`;
+        } catch (_) {}
+        fragment.appendChild(card);
+      }
+      const bottomRows = Math.max(0, totalRows - endRow);
+      if (bottomRows) fragment.appendChild(spacer(bottomRows * estimatedRowHeight, 'ct-virtual-grid-bottom'));
+      container.replaceChildren(fragment);
+      options.onProgress?.({ rendered:end-start, total:list.length, start, end, columns:cols, windowed:true });
+    };
+
+    let gridHasRendered = false;
+    const renderWithState = () => { render(); gridHasRendered = true; };
+    const schedule = () => {
+      if (raf) return;
+      if (gridHasRendered) setRecordsStreamLoading(true, 'جاري تحميل المنتجات...');
+      raf = requestAnimationFrame(() => {
+        render();
+        gridHasRendered = true;
+        requestAnimationFrame(() => setRecordsStreamLoading(false));
+      });
+    };
+    container.addEventListener('scroll', schedule, { passive:true });
+    window.addEventListener('resize', schedule, { passive:true });
+    if (typeof ResizeObserver === 'function') {
+      resizeObserver = new ResizeObserver(schedule);
+      resizeObserver.observe(container);
+    }
+    token.cleanup = () => {
+      token.cancelled = true;
+      if (raf) cancelAnimationFrame(raf);
+      container.removeEventListener('scroll', schedule);
+      window.removeEventListener('resize', schedule);
+      resizeObserver?.disconnect?.();
+    };
+    renderWithState();
+    return { rendered:Math.min(list.length,maxDomItems), total:list.length, windowed:true };
+  }
+
+
   let sharedWorker = null;
   let workerSequence = 0;
   const workerPending = new Map();
   function getSharedWorker() {
     if (sharedWorker || typeof Worker !== 'function') return sharedWorker;
     try {
-      sharedWorker = new Worker('cashtop-worker.js?v=1');
+      sharedWorker = new Worker('cashtop-worker.js?v=2');
       sharedWorker.onmessage = event => {
         const { id, result, error } = event.data || {};
         const pending = workerPending.get(id);
@@ -4777,7 +4923,7 @@
       };
     });
     return {
-      format: 'cashtop-backup-v4',
+      format: 'cashtop-backup-v5',
       exportedAt: new Date().toISOString(),
       tenantId: session.tenantId || session.companyId || session.companyKey,
       companyId: session.tenantId || session.companyId || session.companyKey,
@@ -4937,25 +5083,97 @@
     return storageValue;
   }
 
+  function normalizeBackupEnvelope(payload) {
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null;
+    const knownFormats = new Set(['cashtop-backup-v1', 'cashtop-backup-v2', 'cashtop-backup-v3', 'cashtop-backup-v4', 'cashtop-backup-v5']);
+    const candidateStores = [payload.datasets, payload.data, payload.storage, payload.localStorage, payload.companyData];
+    let source = candidateStores.find(value => value && typeof value === 'object' && !Array.isArray(value));
+    if (!source) {
+      const topLevel = Object.fromEntries(Object.entries(payload).filter(([key]) => isManagedKey(key)));
+      if (Object.keys(topLevel).length) source = topLevel;
+    }
+    if (!source) return null;
+    const datasets = {};
+    Object.entries(source).forEach(([key, entry]) => {
+      if (!isManagedKey(key)) return;
+      if (entry && typeof entry === 'object' && !Array.isArray(entry) && ('value' in entry || 'exists' in entry || entry.valueEncoding)) {
+        datasets[key] = entry;
+      } else if (typeof entry === 'string') {
+        datasets[key] = { exists: true, value: entry, valueEncoding: 'local-storage-raw-v1' };
+      } else {
+        datasets[key] = entry;
+      }
+    });
+    if (!Object.keys(datasets).length) return null;
+    return {
+      ...payload,
+      format: knownFormats.has(payload.format) ? payload.format : 'cashtop-backup-v1',
+      tenantId: payload.tenantId || payload.companyId || payload.meta?.tenantId || payload.meta?.companyId || '',
+      companyId: payload.companyId || payload.tenantId || payload.meta?.companyId || payload.meta?.tenantId || '',
+      companyKey: payload.companyKey || payload.key || payload.meta?.companyKey || payload.meta?.key || '',
+      companyName: payload.companyName || payload.meta?.companyName || '',
+      datasets
+    };
+  }
+
+  function remapImportedCompanyIdentity(value, sourceIdentity = {}, targetIdentity = {}) {
+    const sourceTokens = new Set([sourceIdentity.tenantId, sourceIdentity.companyId, sourceIdentity.companyKey]
+      .map(value => String(value || '').trim()).filter(Boolean));
+    const targetTenant = String(targetIdentity.tenantId || targetIdentity.companyId || '').trim();
+    const targetKey = String(targetIdentity.companyKey || '').trim();
+    const visit = (node, depth = 0) => {
+      if (depth > 30 || node === null || node === undefined) return node;
+      if (Array.isArray(node)) return node.map(item => visit(item, depth + 1));
+      if (typeof node !== 'object') return node;
+      const output = {};
+      Object.entries(node).forEach(([field, fieldValue]) => {
+        if (field === 'tenantId' || field === 'companyId') {
+          const token = String(fieldValue || '').trim();
+          output[field] = (!token || sourceTokens.has(token)) && targetTenant ? targetTenant : fieldValue;
+          return;
+        }
+        if (field === 'companyKey') {
+          const token = String(fieldValue || '').trim();
+          output[field] = (!token || sourceTokens.has(token)) && targetKey ? targetKey : fieldValue;
+          return;
+        }
+        output[field] = visit(fieldValue, depth + 1);
+      });
+      return output;
+    };
+    return visit(value);
+  }
+
+  function remapImportedStorageValue(canonical, storageValue, backup, session) {
+    if (canonical === 'cashtop_company_access' || ['cashtop_sms_template', 'cashtop_invoice_message_template'].includes(canonical)) return storageValue;
+    const parsed = safeJson(storageValue, null);
+    if (parsed === null || parsed === undefined) return storageValue;
+    const remapped = remapImportedCompanyIdentity(parsed, {
+      tenantId: backup.tenantId, companyId: backup.companyId, companyKey: backup.companyKey
+    }, {
+      tenantId: session.tenantId || session.companyId, companyId: session.companyId || session.tenantId, companyKey: session.companyKey
+    });
+    return JSON.stringify(remapped);
+  }
+
   async function importBackupFile(file) {
     if (!isBackupImportEnabled()) throw new Error('استيراد النسخ مقفل لهذا المفتاح. افتحه من لوحة المشرف أولاً.');
     const text = await file.text();
-    const backup = safeJson(text, null);
-    const backupFormat = String(backup?.format || '').trim();
-    const compatibleBackup = /^cashtop-backup-v\d+$/i.test(backupFormat);
-    if (!backup || !compatibleBackup || !backup.datasets || typeof backup.datasets !== 'object' || Array.isArray(backup.datasets)) {
-      throw new Error('صيغة النسخة الاحتياطية غير صحيحة');
-    }
+    const parsedBackup = safeJson(text, null);
+    const backup = normalizeBackupEnvelope(parsedBackup);
+    if (!backup || !backup.datasets) throw new Error('صيغة النسخة الاحتياطية غير صحيحة أو لا تحتوي بيانات قابلة للاستيراد.');
     const session = getSession() || {};
     const currentCompany = String(session.tenantId || session.companyId || session.companyKey || '');
-    const sourceCompany = String(backup.tenantId || backup.companyId || backup.companyKey || '');
-    /*
-     * R95: مصدر النسخة لا يقيّد الاستعادة. يسمح باستيراد نسخة كاملة مأخوذة
-     * من أي مفتاح/شركة إلى الشركة المفتوحة حالياً. لا ننقل هوية المصدر أو
-     * الترخيص أو الخطة أو المدير؛ هذه القيم تبقى دائماً من الجلسة الحالية.
-     * هذا يجعل نقل بيانات شركة إلى مفتاح جديد ممكناً بدون ربط المفتاحين.
-     */
-    const crossCompanyRestore = Boolean(sourceCompany && currentCompany && sourceCompany !== currentCompany);
+    const currentCompanyKey = String(session.companyKey || '').trim().toUpperCase();
+    const backupTenant = String(backup.tenantId || backup.companyId || backup.companyKey || '');
+    const backupCompanyKey = String(backup.companyKey || '').trim().toUpperCase();
+    const crossCompanyImport = Boolean(
+      (backupTenant && currentCompany && backupTenant !== currentCompany) ||
+      (backupCompanyKey && currentCompanyKey && backupCompanyKey !== currentCompanyKey)
+    );
+    // R95: business data can be restored from any company/key backup, including
+    // legacy envelopes. Embedded tenant references are remapped to the current
+    // company, while login, subscription and manager identity stay untouched.
 
     const importedKeys = [];
     const currentAccess = getCompanyAccess();
@@ -4984,17 +5202,25 @@
           : JSON.stringify(entry));
 
       if (canonical === 'cashtop_company_access') {
+        // نسخة شركة/مفتاح آخر لا تلمس ملف الاشتراك أو تسجيل الدخول الحالي مطلقاً.
+        if (crossCompanyImport) return;
         const importedAccess = safeJson(storageValue, {}) || {};
-        const mergedAccess = { ...importedAccess };
+        // عند نقل نسخة من شركة أخرى لا نستورد ملف الترخيص/الدخول الخاص بها نهائياً.
+        // في النسخة التابعة لنفس الشركة يمكن الاحتفاظ بالحقول غير الحساسة فقط.
+        const mergedAccess = crossCompanyImport ? { ...currentAccess } : { ...importedAccess };
         protectedAccessFields.forEach(field => {
           if (Object.prototype.hasOwnProperty.call(currentAccess, field)) mergedAccess[field] = currentAccess[field];
         });
         mergedAccess.tenantId = session.tenantId || session.companyId || currentAccess.tenantId || currentAccess.companyId || currentCompany || '';
         mergedAccess.companyId = mergedAccess.tenantId;
         mergedAccess.companyKey = session.companyKey || currentAccess.companyKey || '';
+        mergedAccess.companyName = currentAccess.companyName || session.companyName || mergedAccess.companyName || '';
+        mergedAccess.status = currentAccess.status || session.status || mergedAccess.status || 'active';
+        mergedAccess.plan = currentAccess.plan || session.plan || mergedAccess.plan || 'pro';
         mergedAccess.backupImportEnabled = currentAccess.backupImportEnabled === true;
         storageValue = JSON.stringify(mergedAccess);
       } else {
+        storageValue = remapImportedStorageValue(canonical, storageValue, backup, session);
         storageValue = mergeBackupDataset(canonical, oldRaw, storageValue);
       }
 
@@ -5004,8 +5230,8 @@
       enqueueSyncOperation(canonical, { forceReplace: true });
       importedKeys.push(canonical);
     });
-    showToast(crossCompanyRestore
-      ? 'تم استيراد بيانات النسخة من شركة أخرى إلى الشركة الحالية مع إبقاء المفتاح والترخيص الحاليين.'
+    showToast(crossCompanyImport
+      ? 'تم نقل بيانات النسخة من الشركة الأخرى إلى الشركة الحالية مع إبقاء المفتاح والخطة وتسجيل الدخول كما هي.'
       : 'تم دمج النسخة محلياً دون تكرار السجلات، ويجري رفع التغييرات الآن.', 'success');
     const syncResult = await syncImportedData(importedKeys);
     if (Number(syncResult?.remaining || getSyncQueue().length) === 0) {
@@ -5475,7 +5701,8 @@
 
     const optionsHost = document.createElement('div');
     optionsHost.className = 'ct-select-options';
-    const optionCount = [...select.options].filter(option => !option.hidden).length;
+    const sourceSelectOptions = [...select.options];
+    const optionCount = sourceSelectOptions.filter(option => !option.hidden).length;
     let searchInput = null;
 
     if (optionCount > 8) {
@@ -5493,12 +5720,26 @@
     function renderOptions(query = '') {
       const normalized = String(query || '').trim().toLocaleLowerCase('ar');
       optionsHost.innerHTML = '';
-      let visible = 0;
-      let lastGroup = null;
-      [...select.options].forEach((option, index) => {
+      const matched = [];
+      sourceSelectOptions.forEach((option, index) => {
         if (option.hidden) return;
         const label = (option.textContent || '').trim();
         if (normalized && !label.toLocaleLowerCase('ar').includes(normalized)) return;
+        matched.push({ option, index, label });
+      });
+
+      // Never build thousands of option buttons just to open a dropdown. Keep
+      // selected values first, then a small searchable window. The original
+      // <select> remains complete, so business logic and saved values are not
+      // changed at all.
+      const softLimit = normalized ? 220 : 140;
+      const selectedRows = matched.filter(row => row.option.selected);
+      const restRows = matched.filter(row => !row.option.selected);
+      const renderRows = [...selectedRows, ...restRows].slice(0, Math.max(softLimit, selectedRows.length));
+      let visible = 0;
+      let lastGroup = null;
+
+      renderRows.forEach(({ option, index, label }) => {
         const group = option.parentElement?.tagName === 'OPTGROUP' ? option.parentElement.label : '';
         if (group && group !== lastGroup) {
           const groupEl = document.createElement('div');
@@ -5522,9 +5763,6 @@
         check.className = 'ct-select-check';
         check.textContent = option.selected ? '✓' : '';
         row.append(text, check);
-        // R93: expose a deliberate long-press gesture on modern dropdown options.
-        // Pages such as expense types can use it for safe contextual actions without
-        // changing normal tap/click selection behaviour.
         let longPressTimer = 0;
         let longPressStart = null;
         let longPressFired = false;
@@ -5576,6 +5814,11 @@
         empty.className = 'ct-select-empty';
         empty.textContent = 'لا توجد خيارات مطابقة';
         optionsHost.appendChild(empty);
+      } else if (matched.length > renderRows.length) {
+        const hint = document.createElement('div');
+        hint.className = 'ct-select-empty ct-select-more-hint';
+        hint.textContent = `يوجد ${matched.length - renderRows.length} خيار إضافي — اكتب في البحث للوصول إليه بسرعة`;
+        optionsHost.appendChild(hint);
       }
     }
 
@@ -5592,7 +5835,8 @@
       footer.appendChild(done);
       popover.appendChild(footer);
     }
-    searchInput?.addEventListener('input', () => renderOptions(searchInput.value));
+    let selectSearchTimer = 0;
+    searchInput?.addEventListener('input', () => { clearTimeout(selectSearchTimer); selectSearchTimer = setTimeout(() => renderOptions(searchInput.value), 70); });
 
     document.body.append(backdrop, popover);
     ctSelectBackdrop = backdrop;
@@ -5676,6 +5920,435 @@
     }
   }
 
+
+  /* ============================================================
+   * R96 — Dedicated image storage (products + company branding)
+   * Images live in the image storage service; only the public URL
+   * is persisted in the normal company datasets.
+   * ============================================================ */
+  const IMAGE_STORAGE_CONFIG = Object.freeze({
+    storageZone: 'amanwar1',
+    pullHost: 'amanwar1.b-cdn.net',
+    accessKey: 'bd094c93-3387-44e5-8ee02b4ff7c3-f22d-4060',
+    rootFolder: 'cashtop-images',
+    maxSizeKB: 50,
+    maxDimension: 500
+  });
+  const IMAGE_DELETE_QUEUE_KEY = 'cashtop_pending_image_deletes_v1';
+
+  function safeImagePathPart(value, fallback = 'item') {
+    const cleaned = String(value || '').trim().replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '');
+    return (cleaned || fallback).slice(0, 80);
+  }
+
+  function imageTenantFolder() {
+    const session = getSession?.() || {};
+    return safeImagePathPart(session.companyId || session.tenantId || tenantIdFromSession?.() || companyIdFromSession?.() || 'company', 'company');
+  }
+
+  function isManagedImageUrl(url) {
+    try {
+      const parsed = new URL(String(url || ''));
+      return parsed.hostname.toLowerCase() === IMAGE_STORAGE_CONFIG.pullHost.toLowerCase() &&
+        parsed.pathname.replace(/^\/+/, '').startsWith(`${IMAGE_STORAGE_CONFIG.rootFolder}/`);
+    } catch (_) { return false; }
+  }
+
+  function managedImagePathFromUrl(url) {
+    if (!isManagedImageUrl(url)) return '';
+    try { return decodeURIComponent(new URL(url).pathname.replace(/^\/+/, '')); } catch (_) { return ''; }
+  }
+
+  function canvasBlob(canvas, quality) {
+    return new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('IMAGE_COMPRESS_FAILED')), 'image/jpeg', quality));
+  }
+
+  async function loadBitmapForImage(file) {
+    if (typeof createImageBitmap === 'function') {
+      try { return await createImageBitmap(file, { imageOrientation: 'from-image' }); } catch (_) {}
+    }
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(reader.error || new Error('IMAGE_READ_FAILED'));
+      reader.onload = () => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error('IMAGE_DECODE_FAILED'));
+        image.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function compressSquareImage(file, maxSizeKB = IMAGE_STORAGE_CONFIG.maxSizeKB) {
+    if (!(file instanceof Blob)) throw new Error('INVALID_IMAGE_FILE');
+    const bitmap = await loadBitmapForImage(file);
+    const width = Number(bitmap.width || bitmap.naturalWidth || 0);
+    const height = Number(bitmap.height || bitmap.naturalHeight || 0);
+    if (!width || !height) throw new Error('INVALID_IMAGE_DIMENSIONS');
+    const sourceSize = Math.min(width, height);
+    const sourceX = Math.max(0, (width - sourceSize) / 2);
+    const sourceY = Math.max(0, (height - sourceSize) / 2);
+    const limitBytes = Math.max(8, Number(maxSizeKB || 50)) * 1024;
+    let target = Math.min(sourceSize, IMAGE_STORAGE_CONFIG.maxDimension);
+    let best = null;
+    try {
+      while (target >= 64) {
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(target));
+        canvas.height = canvas.width;
+        const ctx = canvas.getContext('2d', { alpha:false });
+        if (!ctx) throw new Error('CANVAS_UNAVAILABLE');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(bitmap, sourceX, sourceY, sourceSize, sourceSize, 0, 0, canvas.width, canvas.height);
+        for (let quality = 0.88; quality >= 0.06; quality -= 0.06) {
+          const blob = await canvasBlob(canvas, Math.max(0.1, quality));
+          if (!best || blob.size < best.size) best = blob;
+          if (blob.size <= limitBytes) return blob;
+        }
+        target = Math.floor(target * 0.78);
+      }
+      if (best && best.size <= limitBytes) return best;
+      throw new Error('IMAGE_TOO_LARGE_AFTER_COMPRESSION');
+    } finally {
+      try { bitmap.close?.(); } catch (_) {}
+    }
+  }
+
+  async function uploadManagedImage(file, options = {}) {
+    const folder = safeImagePathPart(options.folder || 'misc', 'misc');
+    const entityId = safeImagePathPart(options.entityId || options.name || `img_${Date.now()}`, 'item');
+    const blob = await compressSquareImage(file, options.maxSizeKB || IMAGE_STORAGE_CONFIG.maxSizeKB);
+    const unique = `${entityId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
+    const path = `${IMAGE_STORAGE_CONFIG.rootFolder}/${imageTenantFolder()}/${folder}/${unique}`;
+    const endpoint = `https://storage.bunnycdn.com/${IMAGE_STORAGE_CONFIG.storageZone}/${path.split('/').map(encodeURIComponent).join('/')}`;
+    const response = await fetch(endpoint, {
+      method: 'PUT',
+      headers: { 'AccessKey': IMAGE_STORAGE_CONFIG.accessKey, 'Content-Type': 'image/jpeg' },
+      body: blob
+    });
+    if (!response.ok) throw new Error(`IMAGE_UPLOAD_FAILED_${response.status}`);
+    const url = `https://${IMAGE_STORAGE_CONFIG.pullHost}/${path.split('/').map(encodeURIComponent).join('/')}`;
+    return { url, path, sizeBytes: blob.size, sizeKB: Math.round(blob.size / 102.4) / 10 };
+  }
+
+  function readImageDeleteQueue() {
+    try {
+      const value = safeJson(localStorage.getItem(IMAGE_DELETE_QUEUE_KEY), []);
+      return Array.isArray(value) ? value.filter(isManagedImageUrl) : [];
+    } catch (_) { return []; }
+  }
+
+  function writeImageDeleteQueue(queue) {
+    try { localStorage.setItem(IMAGE_DELETE_QUEUE_KEY, JSON.stringify([...new Set(queue)].slice(-300))); } catch (_) {}
+  }
+
+  async function deleteManagedImage(url, options = {}) {
+    if (!isManagedImageUrl(url)) return { ok:true, managed:false };
+    const path = managedImagePathFromUrl(url);
+    if (!path) return { ok:true, managed:false };
+    try {
+      const endpoint = `https://storage.bunnycdn.com/${IMAGE_STORAGE_CONFIG.storageZone}/${path.split('/').map(encodeURIComponent).join('/')}`;
+      const response = await fetch(endpoint, { method:'DELETE', headers:{ 'AccessKey': IMAGE_STORAGE_CONFIG.accessKey } });
+      if (!response.ok && response.status !== 404) throw new Error(`IMAGE_DELETE_FAILED_${response.status}`);
+      const queue = readImageDeleteQueue().filter(item => item !== url);
+      writeImageDeleteQueue(queue);
+      return { ok:true, managed:true };
+    } catch (error) {
+      if (options.queue !== false) {
+        const queue = readImageDeleteQueue();
+        if (!queue.includes(url)) queue.push(url);
+        writeImageDeleteQueue(queue);
+      }
+      return { ok:false, managed:true, queued:options.queue !== false, error };
+    }
+  }
+
+  async function flushManagedImageDeletes() {
+    const queue = readImageDeleteQueue();
+    if (!queue.length || navigator.onLine === false) return { total:queue.length, removed:0 };
+    let removed = 0;
+    for (const url of [...queue]) {
+      const result = await deleteManagedImage(url, { queue:false });
+      if (result.ok) removed += 1;
+    }
+    return { total:queue.length, removed };
+  }
+
+
+  /* R97 — offline-first image outbox. Selection only compresses and stores the
+     <=50KB blob locally. Saving the business record is never blocked by image
+     network I/O. Upload happens after save (or when connectivity returns), then
+     only the public URL is written into cashtop_products and synchronized. */
+  const IMAGE_OUTBOX_DB = 'cashtop-image-outbox-v1';
+  const IMAGE_OUTBOX_STORE = 'uploads';
+  const pendingImageObjectUrls = new Map();
+  let imageOutboxDbPromise = null;
+  let imageFlushRunning = false;
+
+  function openImageOutboxDb() {
+    if (!('indexedDB' in window)) return Promise.resolve(null);
+    if (imageOutboxDbPromise) return imageOutboxDbPromise;
+    imageOutboxDbPromise = new Promise(resolve => {
+      try {
+        const request = indexedDB.open(IMAGE_OUTBOX_DB, 1);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains(IMAGE_OUTBOX_STORE)) db.createObjectStore(IMAGE_OUTBOX_STORE, { keyPath:'id' });
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => resolve(null);
+        request.onblocked = () => resolve(null);
+      } catch (_) { resolve(null); }
+    });
+    return imageOutboxDbPromise;
+  }
+
+  async function imageOutboxPut(record) {
+    const db = await openImageOutboxDb();
+    if (!db) throw new Error('IMAGE_LOCAL_STORAGE_UNAVAILABLE');
+    return new Promise((resolve, reject) => {
+      try {
+        const tx = db.transaction(IMAGE_OUTBOX_STORE, 'readwrite');
+        tx.objectStore(IMAGE_OUTBOX_STORE).put(record);
+        tx.oncomplete = () => resolve(record);
+        tx.onerror = () => reject(tx.error || new Error('IMAGE_LOCAL_SAVE_FAILED'));
+        tx.onabort = () => reject(tx.error || new Error('IMAGE_LOCAL_SAVE_ABORTED'));
+      } catch (error) { reject(error); }
+    });
+  }
+
+  async function imageOutboxGet(id) {
+    const db = await openImageOutboxDb();
+    if (!db || !id) return null;
+    return new Promise(resolve => {
+      try {
+        const tx = db.transaction(IMAGE_OUTBOX_STORE, 'readonly');
+        const req = tx.objectStore(IMAGE_OUTBOX_STORE).get(String(id));
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => resolve(null);
+      } catch (_) { resolve(null); }
+    });
+  }
+
+  async function imageOutboxList() {
+    const db = await openImageOutboxDb();
+    if (!db) return [];
+    return new Promise(resolve => {
+      try {
+        const tx = db.transaction(IMAGE_OUTBOX_STORE, 'readonly');
+        const req = tx.objectStore(IMAGE_OUTBOX_STORE).getAll();
+        req.onsuccess = () => resolve(Array.isArray(req.result) ? req.result : []);
+        req.onerror = () => resolve([]);
+      } catch (_) { resolve([]); }
+    });
+  }
+
+  async function imageOutboxDelete(id) {
+    const db = await openImageOutboxDb();
+    if (!db || !id) return false;
+    return new Promise(resolve => {
+      try {
+        const tx = db.transaction(IMAGE_OUTBOX_STORE, 'readwrite');
+        tx.objectStore(IMAGE_OUTBOX_STORE).delete(String(id));
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => resolve(false);
+      } catch (_) { resolve(false); }
+    });
+  }
+
+  function pendingImagePreviewUrl(id, blob) {
+    const key = String(id || '');
+    if (!key || !(blob instanceof Blob)) return '';
+    if (pendingImageObjectUrls.has(key)) return pendingImageObjectUrls.get(key);
+    const url = URL.createObjectURL(blob);
+    pendingImageObjectUrls.set(key, url);
+    return url;
+  }
+
+  async function prepareManagedImage(file, options = {}) {
+    const blob = await compressSquareImage(file, options.maxSizeKB || IMAGE_STORAGE_CONFIG.maxSizeKB);
+    const id = crypto.randomUUID ? `IMGQ_${crypto.randomUUID()}` : `IMGQ_${Date.now()}_${Math.random().toString(36).slice(2,9)}`;
+    const record = {
+      id,
+      tenant:imageTenantFolder(),
+      folder:safeImagePathPart(options.folder || 'products', 'products'),
+      entityId:safeImagePathPart(options.entityId || 'pending', 'pending'),
+      blob,
+      sizeBytes:blob.size,
+      state:'draft',
+      createdAt:Date.now(),
+      attempts:0
+    };
+    await imageOutboxPut(record);
+    return { id, pendingId:id, blob, localUrl:pendingImagePreviewUrl(id, blob), sizeBytes:blob.size, sizeKB:Math.round(blob.size/102.4)/10 };
+  }
+
+  async function discardPreparedImage(id) {
+    const key = String(id || '');
+    if (!key) return false;
+    const url = pendingImageObjectUrls.get(key);
+    if (url) { try { URL.revokeObjectURL(url); } catch (_) {} pendingImageObjectUrls.delete(key); }
+    return imageOutboxDelete(key);
+  }
+
+  async function commitPreparedImage(id, target = {}) {
+    const record = await imageOutboxGet(id);
+    if (!record) return false;
+    const next = {
+      ...record,
+      state:'queued',
+      folder:safeImagePathPart(target.folder || record.folder || 'products', 'products'),
+      entityId:safeImagePathPart(target.entityId || target.recordId || record.entityId || 'item', 'item'),
+      datasetKey:String(target.datasetKey || 'cashtop_products'),
+      recordId:String(target.recordId || target.entityId || ''),
+      oldUrl:String(target.oldUrl || ''),
+      committedAt:Date.now(),
+      nextAttemptAt:0
+    };
+    await imageOutboxPut(next);
+    setTimeout(() => flushPendingImageUploads().catch(() => null), 20);
+    try { navigator.serviceWorker?.ready?.then(reg => reg.sync?.register?.('cashtop-image-outbox')).catch(() => null); } catch (_) {}
+    return true;
+  }
+
+  async function uploadPreparedBlob(record) {
+    const blob = record?.blob;
+    if (!(blob instanceof Blob)) throw new Error('IMAGE_PENDING_BLOB_MISSING');
+    const folder = safeImagePathPart(record.folder || 'products', 'products');
+    const entityId = safeImagePathPart(record.entityId || record.recordId || 'item', 'item');
+    const unique = `${entityId}_${Date.now()}_${Math.random().toString(36).slice(2,8)}.jpg`;
+    const path = `${IMAGE_STORAGE_CONFIG.rootFolder}/${imageTenantFolder()}/${folder}/${unique}`;
+    const endpoint = `https://storage.bunnycdn.com/${IMAGE_STORAGE_CONFIG.storageZone}/${path.split('/').map(encodeURIComponent).join('/')}`;
+    const response = await fetch(endpoint, { method:'PUT', headers:{'AccessKey':IMAGE_STORAGE_CONFIG.accessKey,'Content-Type':'image/jpeg'}, body:blob });
+    if (!response.ok) throw new Error(`IMAGE_UPLOAD_FAILED_${response.status}`);
+    const url = `https://${IMAGE_STORAGE_CONFIG.pullHost}/${path.split('/').map(encodeURIComponent).join('/')}`;
+    return { url, path, sizeBytes:blob.size, sizeKB:Math.round(blob.size/102.4)/10 };
+  }
+
+  function applyUploadedImageToDataset(record, uploaded) {
+    const datasetKey = String(record.datasetKey || 'cashtop_products');
+    const recordId = String(record.recordId || '');
+    if (!datasetKey || !recordId) return { applied:false, missingTarget:true };
+    const rows = safeJson(localStorage.getItem(datasetKey), []);
+    if (!Array.isArray(rows)) return { applied:false, missingTarget:true };
+    const target = rows.find(item => String(item?.id || item?.productId || '') === recordId);
+    if (!target) return { applied:false, missingTarget:true };
+    // If the user chose another picture after this queued one, never let an old
+    // upload overwrite the newer selection.
+    if (String(target.imagePendingId || '') !== String(record.id)) return { applied:false, stale:true };
+    target.imageUrl = uploaded.url;
+    target.imageStoragePath = uploaded.path;
+    delete target.imagePendingId;
+    target.updatedAt = new Date().toISOString();
+    localStorage.setItem(datasetKey, JSON.stringify(rows));
+    window.dispatchEvent(new CustomEvent('cashtop:image-uploaded', { detail:{ datasetKey, recordId, url:uploaded.url, pendingId:record.id } }));
+    return { applied:true };
+  }
+
+  async function flushPendingImageUploads(options = {}) {
+    if (imageFlushRunning) return { busy:true };
+    if (navigator.onLine === false && options.force !== true) return { offline:true };
+    imageFlushRunning = true;
+    let uploadedCount = 0;
+    try {
+      const now = Date.now();
+      const rows = (await imageOutboxList())
+        .filter(row => row?.state === 'queued' && row.tenant === imageTenantFolder() && Number(row.nextAttemptAt || 0) <= now)
+        .sort((a,b)=>Number(a.committedAt||a.createdAt||0)-Number(b.committedAt||b.createdAt||0));
+      for (const record of rows.slice(0, 12)) {
+        try {
+          const uploaded = await uploadPreparedBlob(record);
+          const applied = applyUploadedImageToDataset(record, uploaded);
+          if (!applied.applied) {
+            // Product was deleted or image selection superseded while upload was
+            // in flight. Remove the now-orphaned remote file immediately.
+            await deleteManagedImage(uploaded.url).catch(() => null);
+          } else if (record.oldUrl && record.oldUrl !== uploaded.url && isManagedImageUrl(record.oldUrl)) {
+            await deleteManagedImage(record.oldUrl).catch(() => null);
+          }
+          await imageOutboxDelete(record.id);
+          const localUrl = pendingImageObjectUrls.get(record.id);
+          if (localUrl) { try { URL.revokeObjectURL(localUrl); } catch (_) {} pendingImageObjectUrls.delete(record.id); }
+          uploadedCount += 1;
+        } catch (error) {
+          const attempts = Math.min(12, Number(record.attempts || 0) + 1);
+          const delay = Math.min(15*60*1000, 2500 * (2 ** Math.min(8, attempts-1)));
+          await imageOutboxPut({ ...record, state:'queued', attempts, lastError:String(error?.message || error), nextAttemptAt:Date.now()+delay });
+          if (navigator.onLine === false) break;
+        }
+      }
+      return { uploaded:uploadedCount, remaining:(await imageOutboxList()).filter(row=>row?.state==='queued').length };
+    } finally { imageFlushRunning = false; }
+  }
+
+  async function hydratePendingImageElement(img) {
+    if (!(img instanceof HTMLImageElement)) return false;
+    const id = String(img.dataset.ctPendingImage || '');
+    if (!id || img.dataset.ctPendingHydrated === id) return false;
+    const record = await imageOutboxGet(id);
+    if (!record?.blob) return false;
+    const url = pendingImagePreviewUrl(id, record.blob);
+    if (!url) return false;
+    img.dataset.ctPendingHydrated = id;
+    img.src = url;
+    return true;
+  }
+
+  function hydratePendingImages(root = document) {
+    const items = [
+      ...(root instanceof HTMLImageElement && root.matches('[data-ct-pending-image]') ? [root] : []),
+      ...(root?.querySelectorAll?.('img[data-ct-pending-image]') || [])
+    ];
+    items.forEach(img => hydratePendingImageElement(img).catch(() => null));
+  }
+
+  async function cleanupImageOutboxDrafts() {
+    const cutoff = Date.now() - 24*60*60*1000;
+    const rows = await imageOutboxList();
+    await Promise.all(rows.filter(row => row?.state === 'draft' && Number(row.createdAt||0)<cutoff).map(row => discardPreparedImage(row.id)));
+  }
+
+  window.CashtopImages = Object.assign(window.CashtopImages || {}, {
+    upload: uploadManagedImage,
+    compress: compressSquareImage,
+    prepare: prepareManagedImage,
+    commit: commitPreparedImage,
+    discard: discardPreparedImage,
+    flushUploads: flushPendingImageUploads,
+    hydrate: hydratePendingImages,
+    remove: deleteManagedImage,
+    flushDeletes: flushManagedImageDeletes,
+    isManagedUrl: isManagedImageUrl,
+    pathFromUrl: managedImagePathFromUrl,
+    maxSizeKB: IMAGE_STORAGE_CONFIG.maxSizeKB
+  });
+  window.addEventListener('online', () => {
+    flushManagedImageDeletes().catch(() => null);
+    flushPendingImageUploads().catch(() => null);
+  });
+  setTimeout(() => {
+    cleanupImageOutboxDrafts().catch(() => null);
+    hydratePendingImages(document);
+    flushManagedImageDeletes().catch(() => null);
+    flushPendingImageUploads().catch(() => null);
+  }, 800);
+  // Some Android WebViews do not emit a reliable `online` event after a weak
+  // connection recovers. A lightweight visible-page watchdog retries only the
+  // image outbox; it performs no upload when the queue is empty.
+  setInterval(() => {
+    if (document.hidden || navigator.onLine === false) return;
+    flushPendingImageUploads().catch(() => null);
+  }, 30000);
+  if (typeof MutationObserver === 'function') {
+    const imageHydrator = new MutationObserver(mutations => mutations.forEach(mutation => mutation.addedNodes.forEach(node => {
+      if (node?.nodeType === 1) hydratePendingImages(node);
+    })));
+    const startImageHydrator = () => document.body && imageHydrator.observe(document.body, { childList:true, subtree:true });
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startImageHydrator, { once:true }); else startImageHydrator();
+  }
+
   window.Cashtop = Object.assign(window.Cashtop || {}, {
     FILE,
     DATA_KEYS: [...DATA_KEYS],
@@ -5733,6 +6406,7 @@
     normalizeArray: normalizeArrayValue,
     getAllCompanyData,
     exportBackup,
+    setRecordsStreamLoading,
     importBackupFile,
     isBackupImportEnabled,
     syncImportedData,
@@ -5744,7 +6418,7 @@
     getSyncQueue, enqueueSyncOperation, completeSyncOperation, clearSyncQueue, resetSyncQueueCompletely, preservePendingSyncState, updateSyncBadge, restoreSyncQueueBackup, migrateLegacySyncQueues,
     setSyncProgress, restoreDurableCompanyData,
     getSystemSettings, getProfitRate, getInventoryAccountingMethod, salePriceFromCost, applySystemBranding, recordIdentity, sortNewestFirstRecords,
-    debounce, runWhenIdle, renderVirtualRows, runWorkerTask, queryRecords, atomicSetItems, recoverAtomicTransactions,
+    debounce, runWhenIdle, renderVirtualRows, renderVirtualGrid, runWorkerTask, queryRecords, atomicSetItems, recoverAtomicTransactions,
     captureModalDraft, restoreModalDraft, clearModalDraft, getAuditPending, getAuditPendingAsync, getAuditPendingCountAsync, completeAuditPending, completeAuditPendingAsync, getRecentAuditCache,
   });
 

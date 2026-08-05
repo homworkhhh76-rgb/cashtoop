@@ -19,7 +19,7 @@
     
     <!-- استيراد مكتبة قارئ الباركود السريع والكاميرا -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-    <script src="barcode-tools.js?v=95"></script>
+    <script src="barcode-tools.js?v=98"></script>
 
     <!-- استيراد مكتبات التصدير (PDF, Excel, Image) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -114,6 +114,17 @@
         .barcode-input-wrapper { display: flex; gap: 5px; width: 100%; }
         .btn-barcode-scan { background-color: #e2e8f0; border: 1px solid #ccc; padding: 0 14px; border-radius: 4px; cursor: pointer; color: #3b82f6; font-size: 15px; transition: 0.2s; }
         .btn-barcode-scan:hover { background-color: #cbd5e1; color: #1d4ed8; }
+        .product-image-picker { display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid #dbe2ea;border-radius:8px;background:#f8fafc;min-height:66px; }
+        .product-image-preview,.product-record-thumb { width:45px;height:45px;border-radius:8px;background:#f0f8ff;color:#3c8dbc;display:flex;align-items:center;justify-content:center;overflow:hidden;flex:0 0 45px;font-size:20px; }
+        .product-image-preview img,.product-record-thumb img { width:100%;height:100%;object-fit:cover;display:block; }
+        .product-image-source { display:inline-flex;align-items:center;background:#e5e7eb;border:1px solid #d1d5db;border-radius:10px;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.06); }
+        .product-image-source button { border:0;background:transparent;color:#475569;padding:9px 12px;font-family:inherit;font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;cursor:pointer;transition:.18s; }
+        .product-image-source button:hover { background:#dbe1e8; }
+        .product-image-source .divider { height:20px;border-right:1px dotted #94a3b8; }
+        .product-image-status { color:#64748b;font-size:11px;font-weight:700;display:none; }
+        .product-image-status.active { display:inline-flex;align-items:center;gap:5px; }
+        .product-name-with-thumb { display:flex;align-items:center;gap:9px;text-align:right; }
+        .product-name-with-thumb .product-name-copy { min-width:0; }
 
         #interactive video { width: 100% !important; height: auto !important; border-radius: 4px; }
 
@@ -265,12 +276,12 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=95">
-    <script src="cashtop-core.js?v=95"></script>
-    <script src="multi-system.js?v=95"></script>
-    <script src="turso-config.js?v=95"></script><script src="turso-rtdb.js?v=95"></script>
-    <script src="accounting-engine.js?v=95"></script>
-    <script src="turso-sync.js?v=95"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=98">
+    <script src="cashtop-core.js?v=98"></script>
+    <script src="multi-system.js?v=98"></script>
+    <script src="turso-config.js?v=98"></script><script src="turso-rtdb.js?v=98"></script>
+    <script src="accounting-engine.js?v=98"></script>
+    <script src="turso-sync.js?v=98"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -490,6 +501,25 @@
                             <option value="piece">قطعة</option>
                         </select>
                         <label for="addTypeSelect">طريقة الإضافة</label>
+                    </div>
+                </div>
+
+                <div class="form-row full-width">
+                    <div class="product-image-picker">
+                        <div class="product-image-preview" id="productImagePreview"><i class="fa-solid fa-box"></i></div>
+                        <div style="display:flex;flex-direction:column;gap:7px;min-width:0;flex:1;">
+                            <div class="product-image-source">
+                                <button type="button" onclick="document.getElementById('pImageCameraInput').click()" title="التقاط صورة بالكاميرا"><i class="fa-solid fa-camera"></i><span>كاميرا</span></button>
+                                <span class="divider"></span>
+                                <button type="button" onclick="document.getElementById('pImageGalleryInput').click()" title="اختيار صورة من المعرض"><i class="fa-solid fa-image"></i><span>المعرض</span></button>
+                            </div>
+                            <span class="product-image-status" id="productImageStatus"><i class="fa-solid fa-circle-notch fa-spin"></i> جاري ضغط الصورة محلياً...</span>
+                        </div>
+                        <input type="hidden" id="pImageUrl" value="">
+                        <input type="hidden" id="pImageStoragePath" value="">
+                        <input type="hidden" id="pImagePendingId" value="">
+                        <input type="file" id="pImageCameraInput" accept="image/*" capture="environment" hidden onchange="handleProductImageSelection(this)">
+                        <input type="file" id="pImageGalleryInput" accept="image/*" hidden onchange="handleProductImageSelection(this)">
                     </div>
                 </div>
 
@@ -1459,6 +1489,53 @@
             document.getElementById('invoiceDebt').innerText = debt > 0 ? moneyDisplay(debt) : "0.00";
         }
 
+        function setProductImageState(url = '', path = '', pendingId = '') {
+            const imageUrl = String(url || '');
+            const pending = String(pendingId || '');
+            document.getElementById('pImageUrl').value = imageUrl;
+            document.getElementById('pImageStoragePath').value = String(path || '');
+            const pendingInput = document.getElementById('pImagePendingId');
+            if (pendingInput) pendingInput.value = pending;
+            const preview = document.getElementById('productImagePreview');
+            if (preview) {
+                if (pending) {
+                    preview.innerHTML = `<img src="${imageUrl ? imageUrl.replace(/"/g, '&quot;') : ''}" data-ct-pending-image="${pending.replace(/"/g,'&quot;')}" alt="صورة المنتج">`;
+                    window.CashtopImages?.hydrate?.(preview);
+                } else {
+                    preview.innerHTML = imageUrl
+                        ? `<img src="${imageUrl.replace(/"/g, '&quot;')}" alt="صورة المنتج" onerror="this.parentElement.innerHTML='<i class=&quot;fa-solid fa-box&quot;></i>'">`
+                        : '<i class="fa-solid fa-box"></i>';
+                }
+            }
+        }
+
+        async function handleProductImageSelection(input) {
+            const file = input?.files?.[0];
+            if (!file) return;
+            const status = document.getElementById('productImageStatus');
+            const modal = document.getElementById('productModal');
+            if (modal) modal.dataset.imagePreparing = '1';
+            status?.classList.add('active');
+            try {
+                if (!window.CashtopImages?.prepare) throw new Error('IMAGE_STORAGE_NOT_READY');
+                const previousPending = String(document.getElementById('pImagePendingId')?.value || '');
+                if (previousPending) await window.CashtopImages.discard?.(previousPending).catch(() => null);
+                const prepared = await window.CashtopImages.prepare(file, { folder:'products', maxSizeKB:50 });
+                // Keep the current remote URL until the new image is really uploaded.
+                // This means another device never sees a broken/temporary URL.
+                const currentUrl = String(document.getElementById('pImageUrl')?.value || '');
+                setProductImageState(currentUrl, '', prepared.pendingId);
+                showToast(`تم ضغط الصورة (${prepared.sizeKB}KB). سيتم رفعها بعد حفظ المنتج.`, 'success');
+            } catch (error) {
+                console.error('Product image prepare:', error);
+                showToast('تعذر تجهيز صورة المنتج. حاول بصورة أخرى.', 'error');
+            } finally {
+                status?.classList.remove('active');
+                if (modal) modal.dataset.imagePreparing = '0';
+                input.value = '';
+            }
+        }
+
         function buildProductObject() {
             const form = document.getElementById('productForm');
             const nameInput = document.getElementById('pNameInput');
@@ -1576,6 +1653,8 @@
                 destinationStoreId, destinationStoreName,
                 expiryDate: String(document.getElementById('pExpiryDate')?.value || ''),
                 batchNumber: String(document.getElementById('pBatchNumber')?.value || '').trim(),
+                imageUrl: String(document.getElementById('pImageUrl')?.value || ''),
+                imagePendingId: String(document.getElementById('pImagePendingId')?.value || ''),
                 updatedAt: new Date().toISOString()
             };
         }
@@ -1600,6 +1679,8 @@
                 document.getElementById('pSalePieceInUnit').value = '';
                 document.getElementById('pExpiryDate').value = '';
                 document.getElementById('pBatchNumber').value = '';
+                setProductImageState('', '', '');
+                document.getElementById('productModal').dataset.originalImageUrl = '';
                 
                 if(document.getElementById('hasVariantsToggle').checked) {
                     document.getElementById('variantsTableBody').innerHTML = '';
@@ -1638,7 +1719,14 @@
         }
 
         function deleteStagedItem(index) {
+            const removed = stagedProducts[index];
             stagedProducts.splice(index, 1);
+            if (removed?.imagePendingId) window.CashtopImages?.discard?.(removed.imagePendingId).catch(() => null);
+            // Existing remote images belong to the saved product and must not be
+            // deleted merely because a staged purchase/edit row was removed.
+            if (removed?.imageUrl && !removed?.id && window.CashtopImages?.isManagedUrl?.(removed.imageUrl) && !productsData.some(item => item.imageUrl === removed.imageUrl)) {
+                window.CashtopImages.remove(removed.imageUrl).catch(() => null);
+            }
             renderStagedTable();
             calculatePurchaseTotals();
             showToast("تمت إزالة المنتج من المسودة", "warning");
@@ -1649,6 +1737,8 @@
             
             document.getElementById('editingId').value = prod.id;
             document.getElementById('pNameInput').value = prod.name || '';
+            setProductImageState(prod.imageUrl || '', '', prod.imagePendingId || '');
+            document.getElementById('productModal').dataset.originalImageUrl = '';
             document.getElementById('addTypeSelect').value = productAddMethodValue(prod);
             toggleAddType();
 
@@ -1823,6 +1913,8 @@
             existing.piecesPerUnit = incoming.piecesPerUnit;
             existing.addType = incoming.addType;
             existing.updatedAt = incoming.updatedAt;
+            if (incoming.imageUrl) existing.imageUrl = incoming.imageUrl;
+            if (incoming.imagePendingId) existing.imagePendingId = incoming.imagePendingId;
 
             if (incoming.hasVariants && Array.isArray(incoming.variants)) {
                 existing.hasVariants = true;
@@ -1851,6 +1943,7 @@
         }
 
         function saveFinalPurchase() {
+            if (document.getElementById('productModal')?.dataset.imagePreparing === '1') { showToast('لحظة حتى يكتمل ضغط الصورة محلياً.', 'warning'); return; }
             if (purchaseSaveBusy) return;
             purchaseSaveBusy = true;
             const saveButton = document.getElementById('btnFinalSave');
@@ -1961,6 +2054,8 @@
                         items: purchaseInvoiceItems.map(item => ({
                             productId: item.id,
                             name: item.name,
+                            imageUrl: item.imageUrl || '',
+                            imagePendingId: item.imagePendingId || '',
                             quantityPieces: Number(item.stockPieces || 0),
                             purchaseCostBeforeTax: Number(item.cost || 0),
                             purchaseCost: Number(item.inventoryCost ?? item.cost ?? 0),
@@ -2007,6 +2102,15 @@
                     fundsData = nextFunds;
                     suppliersData = nextSuppliers;
                 }
+                // Image network work starts only AFTER the product transaction is saved.
+                // The compressed blob is already durable in IndexedDB, so offline save is instant.
+                invoiceItems.forEach(item => {
+                    if (!item?.imagePendingId) return;
+                    window.CashtopImages?.commit?.(item.imagePendingId, {
+                        folder:'products', datasetKey:'cashtop_products', recordId:item.id,
+                        entityId:item.id, oldUrl:item.imageUrl || ''
+                    }).catch(error => console.warn('Queue product image upload:', error));
+                });
                 stagedProducts = [];
                 renderStagedTable();
                 showToast(isEditMode ? 'تم تحديث المنتج بنجاح' : (hasPurchaseItems ? 'تم حفظ المنتجات وإصدار فاتورة المشتريات بنجاح' : 'تم حفظ المنتج بنجاح'), 'success');
@@ -2106,7 +2210,7 @@
                     : `<span title="باركود القطعة"><i class="fa-solid fa-barcode"></i> ${prod.barcode || 'لايوجد'}</span>`;
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td><strong>${prod.name || 'بدون اسم'}</strong><br><small style="color:#777; display:inline-block; margin-top:3px;">${barcodeDisplay}</small>${variantBadge}</td>
+                    <td><div class="product-name-with-thumb"><div class="product-record-thumb">${(prod.imageUrl || prod.imagePendingId) ? `<img src="${String(prod.imageUrl||'').replace(/"/g,'&quot;')}" ${prod.imagePendingId?`data-ct-pending-image="${String(prod.imagePendingId).replace(/"/g,'&quot;')}"`:''} alt="${String(prod.name||'منتج').replace(/"/g,'&quot;')}" onerror="if(!this.dataset.ctPendingImage)this.parentElement.innerHTML='<i class=&quot;fa-solid fa-box&quot;></i>'">` : '<i class="fa-solid fa-box"></i>'}</div><div class="product-name-copy"><strong>${prod.name || 'بدون اسم'}</strong><br><small style="color:#777; display:inline-block; margin-top:3px;">${barcodeDisplay}</small>${variantBadge}</div></div></td>
                     <td>${prod.untrackedStock === true ? '<span style="color:#94a3b8;">—</span>' : `<span class="badge-stock">${pStock <= 0 ? (compositeInfo ? 'المخزون نفد' : 'نفد المخزون') : stockStr}</span>`}</td>
                     <td><span class="badge-unit">${productUnitChainLabel(prod)}</span></td>
                     <td style="color: #444; font-weight:bold;">${moneyDisplay(pCost)} ${productBaseSymbol()}</td>
@@ -2200,6 +2304,8 @@
             renderStagedTable();
             document.getElementById('editingId').value = prod.id;
             document.getElementById('pNameInput').value = prod.name || '';
+            setProductImageState(prod.imageUrl || '', '', prod.imagePendingId || '');
+            document.getElementById('productModal').dataset.originalImageUrl = prod.imageUrl || '';
             document.getElementById('addTypeSelect').value = productAddMethodValue(prod);
             toggleAddType();
             document.getElementById('sysUnitSelect').value = prod.unitId || 'none';
@@ -2233,15 +2339,20 @@
             calculatePurchaseTotals();
         }
 
-        function deleteProduct(productId) {
+        async function deleteProduct(productId) {
             const prod = productsData.find(p => String(p.id) === String(productId));
             if (!prod) return;
             if (!confirm(`هل تريد حذف المنتج [${prod.name}]؟ لن يتم إنشاء أي قيد عكسي أو حركة مالية.`)) return;
             productsData = productsData.filter(p => String(p.id) !== String(productId));
             localStorage.setItem('cashtop_products', JSON.stringify(productsData));
+            if (prod.imagePendingId) window.CashtopImages?.discard?.(prod.imagePendingId).catch(() => null);
+            if (prod.imageUrl && window.CashtopImages?.isManagedUrl?.(prod.imageUrl)) {
+                window.CashtopImages.remove(prod.imageUrl).catch(() => null);
+            }
             updateDatalistOptions();
             renderTable();
-            showToast('تم حذف المنتج فقط بدون إنشاء قيد عكسي', 'success');
+            window.dispatchEvent(new CustomEvent('cashtop:sync-now', { detail:{ reason:'delete-product-image-aware' } }));
+            showToast('تم حذف المنتج وصورته المرتبطة بدون إنشاء قيد عكسي', 'success');
         }
 
         function openProductModal() {
@@ -2249,6 +2360,8 @@
             document.getElementById('productForm').reset();
             document.getElementById('productModal').dataset.mode = 'create';
             document.getElementById('editingId').value = '';
+            setProductImageState('', '');
+            document.getElementById('productModal').dataset.originalImageUrl = '';
             toggleAddType();
             document.getElementById('variantsTableBody').innerHTML = '';
             document.getElementById('invoiceDiscountInput').value = '';

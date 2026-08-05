@@ -254,24 +254,18 @@ function reportInvoices() {
   return filterInvoicesBySelectedPeriod(visibleInvoices()).slice().sort((a, b) => (invoiceDateValue(b)?.getTime() || 0) - (invoiceDateValue(a)?.getTime() || 0));
 }
 
-function invoiceReportRowsHtml(invoices) {
-  return invoices.map(invoice => `<tr>
-    <td>#${escapeHtml(String(invoice.id || '').replace('INV_', ''))}</td>
-    <td>${escapeHtml(invoice.customer || 'عميل نقدي')}</td>
-    <td>${escapeHtml(invoice.paymentMethod || 'كاش')}</td>
-    <td>${escapeHtml(invoiceStatusText(invoice))}</td>
-    <td>${escapeHtml(invoiceSellerName(invoice))}</td>
-    <td>${money(invoice.total)}</td>
-    <td>${money(invoice.paid)}</td>
-    <td>${money(invoice.debt)}</td>
-    <td>${escapeHtml(invoiceDateValue(invoice)?.toLocaleString('en-GB') || '-')}</td>
-  </tr>`).join('');
-}
-
-function invoiceReportHeaderHtml(range) {
+function invoiceReportCompanyHeader(range, extra = {}) {
+  if (window.CashtopExport?.buildCompanyReportHeader) {
+    return window.CashtopExport.buildCompanyReportHeader({
+      title: extra.title || 'تقرير فواتير المبيعات',
+      subtitle: range?.label || '',
+      account: extra.account || '',
+      accountNo: extra.accountNo || ''
+    });
+  }
   const settings = getSystemSettings();
   const logo = settings.logo ? `<img src="${escapeHtml(settings.logo)}" alt="شعار المحل" style="width:72px;height:72px;object-fit:contain">` : '';
-  return `<div class="report-brand">${logo}<div><h1>${escapeHtml(settings.companyName || 'كاش توب')}</h1><div>تقرير فواتير المبيعات</div><small>${escapeHtml(range.label)}</small></div></div>`;
+  return `<div class="report-brand">${logo}<div><h1>${escapeHtml(settings.companyName || 'كاش توب')}</h1><div>${escapeHtml(extra.title || 'تقرير فواتير المبيعات')}</div><small>${escapeHtml(range?.label || '')}</small></div></div>`;
 }
 
 function invoiceReportSummary(invoices) {
@@ -281,6 +275,45 @@ function invoiceReportSummary(invoices) {
     acc.debt += Number(invoice.debt || 0);
     return acc;
   }, { total: 0, paid: 0, debt: 0 });
+}
+
+function reportItemRows(invoice, itemSlice = null) {
+  const items = Array.isArray(itemSlice) ? itemSlice : (Array.isArray(invoice?.items) ? invoice.items : []);
+  return items.map((item, index) => {
+    const qty = Number(item.qty ?? item.quantity ?? item.purchaseQuantity ?? 0) || 0;
+    const unit = invoiceItemUnitName(item);
+    const price = Number(item.price ?? item.salePrice ?? 0) || 0;
+    return `<tr><td>${index + 1}</td><td style="text-align:right">${escapeHtml(item.name || 'صنف')}</td><td>${escapeHtml(String(qty))}</td><td>${escapeHtml(unit)}</td><td>${money(price)}</td><td>${money(qty * price)}</td></tr>`;
+  }).join('') || '<tr><td colspan="6">لا توجد أصناف داخل الفاتورة</td></tr>';
+}
+
+function detailedInvoiceBlock(invoice, range, options = {}) {
+  const settings = getSystemSettings();
+  const currency = currencyLabel();
+  const allItems = Array.isArray(invoice.items) ? invoice.items : [];
+  const items = Array.isArray(options.items) ? options.items : allItems;
+  const continuation = options.continuation ? ' — تكملة' : '';
+  const shipping = Number(invoice.shippingCost || 0);
+  const tax = Number(invoice.tax || 0);
+  const discount = Number(invoice.discount || 0);
+  const subtotal = Number.isFinite(Number(invoice.subtotal)) ? Number(invoice.subtotal) : Number(invoice.total || 0) + discount - tax - shipping;
+  return `<section class="ct-invoice-export-card">
+    ${invoiceReportCompanyHeader(range, { title:`فاتورة مبيعات #${String(invoice.id || '').replace('INV_','')}${continuation}` })}
+    <div class="ct-invoice-export-meta"><span><b>العميل:</b> ${escapeHtml(invoice.customer || 'عميل نقدي')}</span><span><b>التاريخ:</b> ${escapeHtml(invoiceDateValue(invoice)?.toLocaleString('en-GB') || '-')}</span><span><b>الدفع:</b> ${escapeHtml(invoice.paymentMethod || 'كاش')}</span><span><b>الموظف:</b> ${escapeHtml(invoiceSellerName(invoice))}</span></div>
+    <table class="ct-invoice-items-export"><thead><tr><th>#</th><th>اسم الصنف</th><th>الكمية</th><th>الوحدة</th><th>السعر</th><th>الإجمالي</th></tr></thead><tbody>${reportItemRows(invoice, items)}</tbody></table>
+    ${options.showSummary === false ? '' : `<div class="ct-invoice-export-summary"><span>قبل الخصم: <b>${money(subtotal)} ${escapeHtml(currency)}</b></span><span>الخصم: <b>${money(discount)} ${escapeHtml(currency)}</b></span><span>الضريبة: <b>${money(tax)} ${escapeHtml(currency)}</b></span><span>الشحن: <b>${money(shipping)} ${escapeHtml(currency)}</b></span><span>الإجمالي: <b>${money(invoice.total)} ${escapeHtml(currency)}</b></span><span>المدفوع: <b>${money(invoice.paid)} ${escapeHtml(currency)}</b></span><span>الدين: <b>${money(invoice.debt)} ${escapeHtml(currency)}</b></span></div>`}
+    ${invoice.notes ? `<div class="ct-invoice-export-notes"><b>ملاحظات:</b> ${escapeHtml(invoice.notes)}</div>` : ''}
+  </section>`;
+}
+
+function invoiceExportStyles() {
+  return `<style>
+    body{font-family:Cairo,Arial,sans-serif;direction:rtl;color:#111827}.ct-invoice-export-card{page-break-after:always;margin:0 0 20px;padding:12px;background:#fff}.ct-invoice-export-card:last-child{page-break-after:auto}
+    .ct-invoice-export-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;border:1px solid #94a3b8;border-bottom:0;font-size:10px}.ct-invoice-export-meta span{padding:7px;border-left:1px solid #cbd5e1;text-align:center}.ct-invoice-export-meta span:last-child{border-left:0}
+    .ct-invoice-items-export{width:100%;border-collapse:collapse;font-size:10px}.ct-invoice-items-export th,.ct-invoice-items-export td{border:1px solid #64748b;padding:6px;text-align:center}.ct-invoice-items-export th{background:#eef2ff;color:#172554;font-weight:800}
+    .ct-invoice-export-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid #94a3b8;border-top:0}.ct-invoice-export-summary span{padding:7px;text-align:center;border-left:1px solid #cbd5e1;font-size:10px}.ct-invoice-export-summary span:nth-child(4n){border-left:0}.ct-invoice-export-notes{border:1px solid #cbd5e1;border-top:0;padding:8px;font-size:10px}
+    @media(max-width:700px){.ct-invoice-export-meta,.ct-invoice-export-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  </style>`;
 }
 
 function downloadInvoiceReportBlob(content, filename, type) {
@@ -300,12 +333,10 @@ function exportInvoicesExcel() {
   if (!invoices.length) return notify('لا توجد فواتير ضمن الفترة المحددة للتصدير', 'warning');
   const range = selectedInvoiceReportRange();
   const summary = invoiceReportSummary(invoices);
-  const html = `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><style>
-    body{font-family:Cairo,Arial,sans-serif;direction:rtl}.report-brand{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:18px;text-align:center}.report-brand h1{margin:0;font-size:22px}.report-brand small{display:block;margin-top:6px;color:#555}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #777;padding:7px;text-align:center}th{background:#e8eef7;font-weight:700}.summary td{font-weight:700;background:#f3f4f6}
-  </style></head><body>${invoiceReportHeaderHtml(range)}<table><thead><tr><th>رقم الفاتورة</th><th>العميل</th><th>طريقة الدفع</th><th>الحالة</th><th>الموظف / المدير</th><th>الإجمالي</th><th>المدفوع</th><th>الدين</th><th>التاريخ</th></tr></thead><tbody>${invoiceReportRowsHtml(invoices)}<tr class="summary"><td colspan="5">الإجماليات (${invoices.length} فاتورة)</td><td>${money(summary.total)}</td><td>${money(summary.paid)}</td><td>${money(summary.debt)}</td><td>${escapeHtml(range.label)}</td></tr></tbody></table></body></html>`;
-  const filename = `فواتير_المبيعات_${new Date().toISOString().slice(0, 10)}.xls`;
-  downloadInvoiceReportBlob('﻿' + html, filename, 'application/vnd.ms-excel;charset=utf-8');
-  notify('تم تجهيز ملف Excel لتفاصيل سجل الفواتير خلال الفترة المحددة', 'success');
+  const invoiceBlocks = invoices.map(invoice => detailedInvoiceBlock(invoice, range)).join('');
+  const html = `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">${invoiceExportStyles()}<style>.ct-invoice-export-card{page-break-after:auto;margin-bottom:28px}.ct-pro-report-logo img{max-width:78px;max-height:78px}.ct-report-total{border:2px solid #172554;padding:10px;text-align:center;font-weight:800;margin:12px 0 20px}</style></head><body><div class="ct-report-total">${escapeHtml(range.label)} — عدد الفواتير: ${invoices.length} — الإجمالي: ${money(summary.total)} — المدفوع: ${money(summary.paid)} — الدين: ${money(summary.debt)}</div>${invoiceBlocks}</body></html>`;
+  downloadInvoiceReportBlob('\ufeff' + html, `فواتير_المبيعات_بالتفاصيل_${new Date().toISOString().slice(0, 10)}.xls`, 'application/vnd.ms-excel;charset=utf-8');
+  notify('تم تجهيز Excel وفيه محتويات كل فاتورة وأصنافها', 'success');
 }
 
 async function exportInvoicesPdf() {
@@ -313,20 +344,18 @@ async function exportInvoicesPdf() {
   if (!invoices.length) return notify('لا توجد فواتير ضمن الفترة المحددة للتصدير', 'warning');
   if (!window.CashtopExport?.exportHtmlPagesToPDF) return notify('وحدة تصدير PDF غير متاحة حالياً', 'error');
   const range = selectedInvoiceReportRange();
-  const summary = invoiceReportSummary(invoices);
-  const chunkSize = 22;
-  const chunks = [];
-  for (let i = 0; i < invoices.length; i += chunkSize) chunks.push(invoices.slice(i, i + chunkSize));
-  const pages = chunks.map((chunk, index) => `<section dir="rtl" style="font-family:Cairo,Arial,sans-serif;padding:28px 34px;background:#fff;color:#111;min-height:100%;box-sizing:border-box">
-    <style>.report-brand{display:flex;align-items:center;justify-content:center;gap:16px;text-align:center;margin-bottom:16px}.report-brand h1{margin:0;font-size:24px}.report-brand small{display:block;color:#64748b;margin-top:4px}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #cbd5e1;padding:7px 5px;text-align:center}th{background:#e2e8f0;font-weight:800}.report-footer{margin-top:14px;display:flex;justify-content:space-between;font-size:11px;color:#475569}.summary-box{display:flex;gap:14px;justify-content:center;margin:12px 0}.summary-box span{border:1px solid #94a3b8;border-radius:6px;padding:7px 12px;font-weight:700}</style>
-    ${invoiceReportHeaderHtml(range)}
-    ${index === 0 ? `<div class="summary-box"><span>عدد الفواتير: ${invoices.length}</span><span>الإجمالي: ${money(summary.total)}</span><span>المدفوع: ${money(summary.paid)}</span><span>الدين: ${money(summary.debt)}</span></div>` : ''}
-    <table><thead><tr><th>رقم الفاتورة</th><th>العميل</th><th>طريقة الدفع</th><th>الحالة</th><th>الموظف / المدير</th><th>الإجمالي</th><th>المدفوع</th><th>الدين</th><th>التاريخ</th></tr></thead><tbody>${invoiceReportRowsHtml(chunk)}</tbody></table>
-    <div class="report-footer"><span>${escapeHtml(getSystemSettings().companyName || 'كاش توب')}</span><span>صفحة ${index + 1} من ${chunks.length}</span></div>
-  </section>`);
+  const pages = [];
+  const itemsPerPage = 16;
+  invoices.forEach(invoice => {
+    const items = Array.isArray(invoice.items) ? invoice.items : [];
+    const chunks = items.length ? Array.from({length:Math.ceil(items.length/itemsPerPage)}, (_,i)=>items.slice(i*itemsPerPage,(i+1)*itemsPerPage)) : [[]];
+    chunks.forEach((chunk, index) => {
+      pages.push(`<section dir="rtl" style="font-family:Cairo,Arial,sans-serif;padding:20px 26px;background:#fff;color:#111;min-height:100%;box-sizing:border-box">${invoiceExportStyles()}${detailedInvoiceBlock(invoice, range, {items:chunk, continuation:index>0, showSummary:index===chunks.length-1})}</section>`);
+    });
+  });
   try {
-    await window.CashtopExport.exportHtmlPagesToPDF(pages, `فواتير_المبيعات_${new Date().toISOString().slice(0, 10)}`, { orientation: 'landscape', format: 'a4', scale: 1.4 });
-    notify('تم تنزيل تقرير PDF للفواتير خلال الفترة المحددة', 'success');
+    await window.CashtopExport.exportHtmlPagesToPDF(pages, `فواتير_المبيعات_بالتفاصيل_${new Date().toISOString().slice(0, 10)}`, { orientation: 'portrait', format: 'a4', scale: 1.35 });
+    notify('تم تنزيل PDF ويحتوي محتويات كل فاتورة وأصنافها', 'success');
   } catch (error) {
     console.error(error);
     notify('تعذر إنشاء ملف PDF. تحقق من تحميل الشعار ومكتبات التصدير.', 'error');

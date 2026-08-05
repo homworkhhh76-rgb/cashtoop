@@ -30,6 +30,41 @@
     return /^(l|landscape)$/i.test(String(value || '')) ? 'landscape' : 'portrait';
   }
 
+
+  function companyReportProfile() {
+    let settings = {};
+    try { settings = JSON.parse(localStorage.getItem('cashtop_settings') || '{}') || {}; } catch (_) {}
+    const session = window.Cashtop?.getSession?.() || {};
+    return {
+      name: cleanText(settings.companyName || session.companyName || 'كاش توب'),
+      address: cleanText(settings.address || ''),
+      phone: cleanText(settings.phone || ''),
+      logo: cleanText(settings.logo || ''),
+      branch: cleanText(session.branchName || '')
+    };
+  }
+
+  function buildCompanyReportHeader(options = {}) {
+    const company = { ...companyReportProfile(), ...(options.company || {}) };
+    const title = cleanText(options.title || 'تقرير');
+    const subtitle = cleanText(options.subtitle || '');
+    const account = cleanText(options.account || '');
+    const accountNo = cleanText(options.accountNo || '');
+    const sideBlock = `<div class="ct-pro-company-side"><strong>${escapeHtml(company.name)}</strong>${company.address ? `<span>${escapeHtml(company.address)}</span>` : ''}${company.phone ? `<span dir="ltr">${escapeHtml(company.phone)}</span>` : ''}${company.branch ? `<small>${escapeHtml(company.branch)}</small>` : ''}</div>`;
+    return `<div class="ct-pro-report-header">
+      ${sideBlock}
+      <div class="ct-pro-report-logo">${company.logo ? `<img src="${escapeHtml(company.logo)}" alt="شعار المحل" crossorigin="anonymous">` : '<div class="ct-pro-logo-placeholder"></div>'}</div>
+      ${sideBlock}
+    </div>
+    <div class="ct-pro-report-title"><strong>${escapeHtml(title)}</strong>${account ? `<span>${escapeHtml(account)}${accountNo ? ` <b>(${escapeHtml(accountNo)})</b>` : ''}</span>` : ''}${subtitle ? `<small>${escapeHtml(subtitle)}</small>` : ''}</div>
+    <style>
+      .ct-pro-report-header{display:grid;grid-template-columns:1fr 120px 1fr;align-items:center;gap:12px;border-bottom:1px solid #94a3b8;padding:5px 2px 12px;margin-bottom:12px;direction:rtl}
+      .ct-pro-company-side{display:flex;flex-direction:column;gap:3px;text-align:center;color:#111827;line-height:1.55;min-width:0}.ct-pro-company-side strong{font-size:15px;color:#172554}.ct-pro-company-side span{font-size:10px}.ct-pro-company-side small{font-size:9px;color:#64748b}
+      .ct-pro-report-logo{text-align:center;border-inline:1px solid #cbd5e1;min-height:84px;display:flex;align-items:center;justify-content:center}.ct-pro-report-logo img{width:78px;height:78px;object-fit:contain;display:block}.ct-pro-logo-placeholder{width:68px;height:68px;border:1px dashed #cbd5e1;border-radius:50%}
+      .ct-pro-report-title{border:1px solid #334155;border-radius:6px;padding:9px 14px;margin:7px 0 12px;display:flex;align-items:center;justify-content:center;gap:18px;flex-wrap:wrap;text-align:center;color:#172554}.ct-pro-report-title strong{font-size:15px}.ct-pro-report-title span{font-size:13px;font-weight:700}.ct-pro-report-title small{width:100%;font-size:9px;color:#64748b;margin-top:-8px}
+    </style>`;
+  }
+
   function ensureScript(src, readyCheck) {
     if (readyCheck()) return Promise.resolve();
     if (scriptPromises.has(src)) return scriptPromises.get(src);
@@ -321,6 +356,8 @@
   window.CashtopExport = Object.freeze({
     cleanText,
     safeFileName,
+    companyReportProfile,
+    buildCompanyReportHeader,
     exportDataTablePDF,
     exportElementTablesToPDF,
     exportHtmlPagesToPDF,

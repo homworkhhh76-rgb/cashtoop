@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v95-cross-company-restore-cache-first-v1';
+const CACHE_VERSION = 'v98-detailed-export-stream-loader-cache-first-v1';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = 'cash-top-2-remote-static-persistent-v1';
 
@@ -101,7 +101,8 @@ const REMOTE_STATIC_HOSTS = new Set([
   'cdnjs.cloudflare.com',
   'cdn.jsdelivr.net',
   'unpkg.com',
-  'www.gstatic.com'
+  'www.gstatic.com',
+  'amanwar1.b-cdn.net'
 ]);
 
 /* Prevent background network refreshes from competing with UI rendering.

@@ -175,12 +175,12 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=95">
-    <script src="cashtop-core.js?v=95"></script>
-    <script src="multi-system.js?v=95"></script>
-    <script src="turso-config.js?v=95"></script><script src="turso-rtdb.js?v=95"></script>
-    <script src="accounting-engine.js?v=95"></script>
-    <script src="turso-sync.js?v=95"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=98">
+    <script src="cashtop-core.js?v=98"></script>
+    <script src="multi-system.js?v=98"></script>
+    <script src="turso-config.js?v=98"></script><script src="turso-rtdb.js?v=98"></script>
+    <script src="accounting-engine.js?v=98"></script>
+    <script src="turso-sync.js?v=98"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -1541,26 +1541,24 @@
 
             let agentHistory = agentMovementsData.filter(m => m.agentId === id);
 
-            if (agentHistory.length === 0) {
+            agentHistory = agentHistory.slice().reverse();
+            const makeAgentHistoryRow = mov => {
+                let colorCode = '#333';
+                if(mov.type.includes('تحميل')) colorCode = '#f39c12';
+                if(mov.type.includes('إرجاع')) colorCode = '#d35400';
+                if(mov.type.includes('تسوية')) colorCode = '#3b82f6';
+                if(mov.type.includes('توريد')) colorCode = '#00a65a';
+                if(mov.type.includes('صرف')) colorCode = '#8e44ad';
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td style="direction:ltr;">${mov.date}</td><td style="color:${colorCode}; font-weight:bold;">${mov.type}</td><td style="font-size:12px; line-height:1.6; text-align:right;">${mov.details}</td><td style="font-weight:bold;">${Number(mov.amount||0).toFixed(2)}</td>`;
+                return tr;
+            };
+            if (window.Cashtop?.renderVirtualRows) {
+                window.Cashtop.renderVirtualRows(tbody, agentHistory, makeAgentHistoryRow, {chunkSize:70,eagerLimit:140,windowThreshold:260,windowSize:160,rowHeight:52,colspan:4,emptyHtml:'<tr><td colspan="4" style="color:#999;padding:20px;text-align:center;">لا يوجد أي حركات مسجلة لهذا المندوب.</td></tr>'});
+            } else if (!agentHistory.length) {
                 tbody.innerHTML = `<tr><td colspan="4" style="color:#999; padding:20px; text-align:center;">لا يوجد أي حركات مسجلة لهذا المندوب.</td></tr>`;
             } else {
-                agentHistory.reverse().forEach(mov => {
-                    let colorCode = '#333';
-                    if(mov.type.includes('تحميل')) colorCode = '#f39c12';
-                    if(mov.type.includes('إرجاع')) colorCode = '#d35400';
-                    if(mov.type.includes('تسوية')) colorCode = '#3b82f6';
-                    if(mov.type.includes('توريد')) colorCode = '#00a65a';
-                    if(mov.type.includes('صرف')) colorCode = '#8e44ad';
-
-                    tbody.innerHTML += `
-                        <tr>
-                            <td style="direction:ltr;">${mov.date}</td>
-                            <td style="color:${colorCode}; font-weight:bold;">${mov.type}</td>
-                            <td style="font-size:12px; line-height:1.6; text-align:right;">${mov.details}</td>
-                            <td style="font-weight:bold;">${mov.amount.toFixed(2)}</td>
-                        </tr>
-                    `;
-                });
+                agentHistory.slice(0,300).forEach(mov => tbody.appendChild(makeAgentHistoryRow(mov)));
             }
 
             openModal('agentHistoryModal');

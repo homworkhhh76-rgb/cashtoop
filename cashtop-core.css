@@ -1862,3 +1862,10 @@ html:has(.sr-modal.show) .ct-sidebar {
 #expensesTableBody tr,
 #recipesBody tr,
 #shortagesTableBody tr { content-visibility:auto; contain-intrinsic-size:auto 44px; }
+
+
+/* R98: progress indicator for very large virtualized records. */
+.ct-records-stream-loader{position:fixed;left:50%;bottom:max(86px,calc(env(safe-area-inset-bottom,0px) + 72px));z-index:39950;transform:translate3d(-50%,10px,0);display:flex;align-items:center;gap:9px;background:rgba(15,23,42,.92);color:#fff;border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:9px 14px;box-shadow:0 12px 30px rgba(15,23,42,.25);font:800 11px 'Cairo',sans-serif;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .1s ease,transform .1s ease,visibility .1s ease;backdrop-filter:blur(6px)}
+.ct-records-stream-loader.active{opacity:1;visibility:visible;transform:translate3d(-50%,0,0)}
+.ct-records-stream-loader .ct-records-spinner{width:19px;height:19px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:ctRecordsSpin .6s linear infinite;flex:0 0 19px}
+@keyframes ctRecordsSpin{to{transform:rotate(360deg)}}

@@ -88,7 +88,7 @@
     return value;
   }
 
-  async function pipeline(statements, timeout = 22000) {
+  async function pipeline(statements, timeout = 45000) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
     try {
@@ -358,7 +358,9 @@
       }
     }
     statements.push(upsertStatement(normalized, value, deleted, now));
-    await pipeline(statements);
+    const payloadChars = typeof value?.value === 'string' ? value.value.length : (typeof value === 'string' ? value.length : 0);
+    const adaptiveTimeout = Math.min(120000, Math.max(45000, 30000 + Math.ceil(payloadChars / 1048576) * 6000));
+    await pipeline(statements, adaptiveTimeout);
     invalidatePath(normalized);
     cacheSet(normalized, deleted ? null : value);
     return value;

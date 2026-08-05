@@ -33,8 +33,8 @@
         .pos-section { background-color: white; border-radius: 6px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 15px; transition: transform 0.2s ease-in-out; }
         .right-column-wrapper { display: flex; flex-direction: column; gap: 15px; }
         .section-title { font-size: 15px; font-weight: bold; color: #444; border-bottom: 1px solid #f4f4f4; padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center;}
-        .cashier-products-head{gap:12px;align-items:flex-end}.cashier-products-title{display:flex;align-items:center;gap:7px;white-space:nowrap}.cashier-category-filter{width:min(250px,52%);position:relative}.cashier-category-filter label{position:absolute;right:11px;top:-8px;background:#fff;padding:0 5px;font-size:9px;color:#64748b;z-index:2}.cashier-category-filter select{width:100%;height:40px;border:1px solid #d9dee7;border-radius:8px;background:#fff;padding:7px 10px;font:800 11px Cairo;color:#334155;outline:none}.cashier-category-filter select:focus{border-color:#605ca8;box-shadow:0 0 0 3px rgba(96,92,168,.1)}
-        @media(max-width:620px){.cashier-products-head{align-items:center}.cashier-products-title{font-size:13px}.cashier-category-filter{width:56%}.cashier-category-filter select{height:38px;font-size:10px}}
+        .cashier-products-head{width:100%;min-width:0;overflow:visible;display:grid!important;grid-template-columns:minmax(0,1fr) minmax(145px,250px);gap:12px;align-items:end;direction:rtl}.cashier-products-title{display:flex;align-items:center;justify-self:start;gap:7px;white-space:nowrap;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis}.cashier-category-filter{width:100%!important;max-width:none!important;min-width:0!important;position:relative;justify-self:end;align-self:end;margin:0!important;transform:none!important}.cashier-category-filter label{position:absolute;right:11px;top:-8px;background:#fff;padding:0 5px;font-size:9px;color:#64748b;z-index:2}.cashier-category-filter select{display:block;width:100%!important;max-width:100%!important;height:40px;border:1px solid #d9dee7;border-radius:8px;background:#fff;padding:7px 10px;font:800 11px Cairo;color:#334155;outline:none;transform:none!important}.cashier-category-filter select:focus{border-color:#605ca8;box-shadow:0 0 0 3px rgba(96,92,168,.1)}
+        @media(max-width:620px){.cashier-products-head{grid-template-columns:minmax(0,42%) minmax(0,58%);gap:8px;align-items:center}.cashier-products-title{font-size:13px;width:100%;max-width:100%;overflow:hidden;text-overflow:ellipsis}.cashier-category-filter{width:100%!important}.cashier-category-filter select{height:38px;font-size:10px}}
         
         .btn-suspended-list { background-color: #fff9ec; color: #f39c12; border: 1px solid #f39c12; padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
         .btn-suspended-list:hover { background-color: #fef0d5; }
@@ -170,6 +170,7 @@
 
         /* الكروت والشبكة بالنص الملون النظيف */
         .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; max-height: 450px; overflow-y: auto; padding: 5px;}
+        .products-grid > .product-item-card{contain:layout paint style;content-visibility:auto;contain-intrinsic-size:150px;}
         
         .product-item-card {
             border: 1px solid #eef1f5; background-color: #fff; border-radius: 8px; padding: 12px 8px; 
@@ -177,7 +178,8 @@
             gap: 8px; cursor: pointer; transition: all 0.2s; text-align: center; position: relative;
         }
         .product-item-card:hover { border-color: #3c8dbc; box-shadow: 0 4px 8px rgba(60,141,188,0.1); transform: translateY(-2px); }
-        .product-icon-box { width: 45px; height: 45px; background-color: #f0f8ff; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #3c8dbc; font-size: 20px; }
+        .product-icon-box { width: 45px; height: 45px; background-color: #f0f8ff; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #3c8dbc; font-size: 20px; overflow:hidden; flex:0 0 45px; }
+        .product-icon-box img { width:100%;height:100%;object-fit:cover;display:block;border-radius:8px; }
         .product-item-title { font-size: 13px; font-weight: bold; color: #333; }
         .product-item-price { font-size: 12px; color: #333; font-weight: bold; }
         
@@ -319,15 +321,15 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=95">
+    <link rel="stylesheet" href="cashtop-core.css?v=98">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-    <script src="barcode-tools.js?v=95"></script>
-    <script src="cashtop-core.js?v=95"></script>
-    <script src="multi-system.js?v=95"></script>
-    <script src="turso-config.js?v=95"></script><script src="turso-rtdb.js?v=95"></script>
-    <script src="accounting-engine.js?v=95"></script>
+    <script src="barcode-tools.js?v=98"></script>
+    <script src="cashtop-core.js?v=98"></script>
+    <script src="multi-system.js?v=98"></script>
+    <script src="turso-config.js?v=98"></script><script src="turso-rtdb.js?v=98"></script>
+    <script src="accounting-engine.js?v=98"></script>
     <script src="cashtop-printer.js?v=48"></script>
-    <script src="turso-sync.js?v=95"></script>
+    <script src="turso-sync.js?v=98"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -1797,18 +1799,27 @@
 
         function renderProductsGrid() {
             const container = document.getElementById('productsGridContainer');
-            container.innerHTML = '';
+            if (!container) return;
             const searchVal = String(document.getElementById('searchProductInput')?.value || '').trim().toLowerCase();
-            // نحسب مجموعة التصنيف مرة واحدة لكل رسم بدلاً من إنشائها لكل منتج؛
-            // هذا يحافظ على سلاسة البحث والقوائم عند وجود مئات/آلاف المنتجات.
             const activeCategoryIds = selectedCashierCategoryId ? categoryProductIdSet(selectedCashierCategoryId) : null;
-            const visibleProducts = productsData.filter(prod => representativeCanSeeProduct(prod) && (!activeCategoryIds || activeCategoryIds.has(String(prod?.id))) && (!searchVal || String(prod.name || '').toLowerCase().includes(searchVal) || String(prod.barcode || '').toLowerCase().includes(searchVal) || String(prod.pieceBarcode || '').toLowerCase().includes(searchVal)));
+            const visibleProducts = [];
+            // Filtering is deliberately a cheap pass only. Stock, unit-chain and
+            // image/card work happens only for the small DOM window actually shown.
+            for (const prod of productsData) {
+                if (!representativeCanSeeProduct(prod)) continue;
+                if (activeCategoryIds && !activeCategoryIds.has(String(prod?.id))) continue;
+                if (searchVal) {
+                    const hay = `${prod?.name||''} ${prod?.barcode||''} ${prod?.pieceBarcode||''} ${prod?.unitBarcode||''}`.toLowerCase();
+                    if (!hay.includes(searchVal)) continue;
+                }
+                visibleProducts.push(prod);
+            }
             if (!visibleProducts.length) {
                 container.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:24px;color:#999;">${productsData.length ? 'لا توجد منتجات مطابقة للتصنيف أو البحث.' : 'لا توجد منتجات مسجلة، يرجى إضافة منتجات.'}</div>`;
                 return;
             }
-            const fragment = document.createDocumentFragment();
-            visibleProducts.forEach(prod => {
+
+            const createCard = prod => {
                 let availStock = 0;
                 if (prod.hasVariants && prod.variants) prod.variants.forEach(v => { availStock += getAvailableVariantStock(prod.id, v.size, v.color, v.qty); });
                 else availStock = getAvailableStock(prod.id);
@@ -1831,10 +1842,25 @@
                         stockStr = `المخزون: ${parts.join(' + ')}`;
                     }
                 }
-                card.innerHTML = `<div class="product-icon-box"><i class="fa-solid fa-box"></i></div><div class="product-item-title">${prod.name}</div>${isCompositeProduct(prod) ? '<div class="product-type-badge"><i class="fa-solid fa-cube"></i> غير متعدد</div>' : ''}<div class="product-item-price">${cashierBaseSymbol()} ${moneyDisplay(getEffectiveProductPrice(prod, 'piece'))}</div>${stockStr ? `<div class="stock-text">${stockStr}</div>` : ''}`;
-                fragment.appendChild(card);
-            });
-            container.appendChild(fragment);
+                const pendingAttr = prod.imagePendingId ? ` data-ct-pending-image="${String(prod.imagePendingId).replace(/"/g,'&quot;')}"` : '';
+                const productVisual = (prod.imageUrl || prod.imagePendingId)
+                    ? `<img src="${String(prod.imageUrl||'').replace(/"/g,'&quot;')}"${pendingAttr} alt="${String(prod.name||'منتج').replace(/"/g,'&quot;')}" loading="lazy" decoding="async" onerror="if(!this.dataset.ctPendingImage)this.parentElement.innerHTML='<i class=&quot;fa-solid fa-box&quot;></i>'">`
+                    : '<i class="fa-solid fa-box"></i>';
+                card.innerHTML = `<div class="product-icon-box">${productVisual}</div><div class="product-item-title">${prod.name}</div>${isCompositeProduct(prod) ? '<div class="product-type-badge"><i class="fa-solid fa-cube"></i> غير متعدد</div>' : ''}<div class="product-item-price">${cashierBaseSymbol()} ${moneyDisplay(getEffectiveProductPrice(prod, 'piece'))}</div>${stockStr ? `<div class="stock-text">${stockStr}</div>` : ''}`;
+                window.CashtopImages?.hydrate?.(card);
+                return card;
+            };
+
+            if (window.Cashtop?.renderVirtualGrid) {
+                window.Cashtop.renderVirtualGrid(container, visibleProducts, createCard, {
+                    minItemWidth:110, gap:10, rowHeight:158, maxDomItems:150,
+                    columns: window.innerWidth <= 992 ? 3 : 0
+                });
+            } else {
+                const fragment = document.createDocumentFragment();
+                visibleProducts.slice(0, 240).forEach(prod => fragment.appendChild(createCard(prod)));
+                container.replaceChildren(fragment);
+            }
         }
 
         let productFilterFrame = 0;
