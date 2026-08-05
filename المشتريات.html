@@ -23,7 +23,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" type="text/javascript"></script>
-    <script src="barcode-tools.js?v=98"></script>
+    <script src="barcode-tools.js?v=100"></script>
     
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
@@ -228,12 +228,12 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=98">
-    <script src="cashtop-core.js?v=98"></script>
-    <script src="multi-system.js?v=98"></script>
-    <script src="turso-config.js?v=98"></script><script src="turso-rtdb.js?v=98"></script>
-    <script src="accounting-engine.js?v=98"></script>
-    <script src="turso-sync.js?v=98"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=100">
+    <script src="cashtop-core.js?v=100"></script>
+    <script src="multi-system.js?v=100"></script>
+    <script src="turso-config.js?v=100"></script><script src="turso-rtdb.js?v=100"></script>
+    <script src="accounting-engine.js?v=100"></script>
+    <script src="turso-sync.js?v=100"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -1101,11 +1101,14 @@
             const preview = card.querySelector('.purchase-product-image-preview');
             if (preview) {
                 if (pending) {
-                    preview.innerHTML = `<img src="${imageUrl ? imageUrl.replace(/"/g,'&quot;') : ''}" data-ct-pending-image="${pending.replace(/"/g,'&quot;')}" alt="صورة المنتج">`;
+                    preview.innerHTML = `<i class="fa-solid fa-box ct-image-fallback"></i><img data-ct-product-image="1" src="${imageUrl ? imageUrl.replace(/"/g,'&quot;') : ''}" data-ct-pending-image="${pending.replace(/"/g,'&quot;')}" alt="صورة المنتج" style="display:none">`;
                     window.CashtopImages?.hydrate?.(preview);
-                } else preview.innerHTML = imageUrl
-                    ? `<img src="${imageUrl.replace(/"/g, '&quot;')}" alt="صورة المنتج" onerror="this.parentElement.innerHTML='<i class=&quot;fa-solid fa-box&quot;></i>'">`
-                    : '<i class="fa-solid fa-box"></i>';
+                } else {
+                    preview.innerHTML = imageUrl
+                        ? `<i class="fa-solid fa-box ct-image-fallback"></i><img data-ct-product-image="1" src="${imageUrl.replace(/"/g, '&quot;')}" alt="صورة المنتج" style="display:none">`
+                        : '<i class="fa-solid fa-box"></i>';
+                    window.CashtopImages?.hydrate?.(preview);
+                }
             }
         }
 
@@ -1991,6 +1994,7 @@
                 } else {
                     Object.entries(purchaseChanges).forEach(([key, value]) => localStorage.setItem(key, JSON.stringify(value)));
                 }
+                window.Cashtop?.preservePendingSyncState?.().catch(() => null);
                 productsToSaveLog.forEach(item => {
                     if (!item?.imagePendingId) return;
                     window.CashtopImages?.commit?.(item.imagePendingId, {
@@ -1998,6 +2002,7 @@
                         entityId:item.id, oldUrl:item.imageUrl || ''
                     }).catch(error => console.warn('Queue purchase image upload:', error));
                 });
+                window.dispatchEvent(new CustomEvent('cashtop:sync-now', { detail:{ reason:'save-purchase-with-images' } }));
             } catch (error) {
                 productsDB = saveRollback.products;
                 suppliersDB = saveRollback.suppliers;

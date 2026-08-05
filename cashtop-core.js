@@ -401,7 +401,8 @@
   const DURABLE_GLOBAL_KEYS = new Set([
     ...GLOBAL_KEYS,
     'ct_storage_persistence_v1',
-    'cashtop_indexeddb_notice_shown_v1'
+    'cashtop_indexeddb_notice_shown_v1',
+    'ct_image_outbox_fallback_meta_v1'
   ]);
 
   function isDurableLocalKey(key) {
@@ -501,6 +502,71 @@
       .catch(() => false);
   }
 
+  async function flushDurableLocalWrites() {
+    try { await durableWriteChain; } catch (_) {}
+    return true;
+  }
+
+  /*
+   * Critical business writes (especially invoices) must survive navigation even
+   * when localStorage is full.  IndexedDB is the durable source; localStorage is
+   * only a synchronous compatibility mirror for legacy pages.  This routine
+   * explicitly commits the selected physical datasets + metadata + sync queue
+   * before the UI reports a successful save.
+   */
+  async function commitCriticalData(keys = [], options = {}) {
+    const requested = [...new Set((Array.isArray(keys) ? keys : [keys]).map(canonicalKey).filter(isManagedKey))];
+    try { await durableReadyPromise; } catch (_) {}
+    await flushDurableLocalWrites();
+
+    const persisted = [];
+    const failed = [];
+    for (const canonical of requested) {
+      const ns = namespaceKey(canonical);
+      const metaNs = metaKey(canonical);
+      const value = rawGet(ns);
+      const metaValue = rawGet(metaNs);
+      if (value !== null) {
+        const ok = await persistDurableLocalKey(ns, value).catch(() => false);
+        (ok ? persisted : failed).push(ns);
+      }
+      if (metaValue !== null) {
+        const ok = await persistDurableLocalKey(metaNs, metaValue).catch(() => false);
+        if (!ok) failed.push(metaNs);
+      }
+    }
+
+    const queue = getSyncQueue();
+    try { await backupSyncQueue(queue); } catch (_) {}
+    const queuePairs = [
+      [syncQueueKey(), JSON.stringify(queue)],
+      [syncQueueResetMarkerKey(), String(syncQueueResetAt() || 0)],
+      [syncQueueRevisionMarkerKey(), String(rawGet(syncQueueRevisionMarkerKey()) || '')]
+    ];
+    for (const [key, value] of queuePairs) {
+      const ok = await persistDurableLocalKey(key, value).catch(() => false);
+      if (!ok) failed.push(key);
+    }
+
+    let recordVerified = true;
+    const verifyKey = options.recordKey ? canonicalKey(options.recordKey) : '';
+    const recordId = String(options.recordId ?? '');
+    if (verifyKey && recordId) {
+      const physical = namespaceKey(verifyKey);
+      let raw = await readDurableLocalKey(physical).catch(() => null);
+      if (raw == null) raw = rawGet(physical);
+      const parsed = safeJson(raw, []);
+      const rows = Array.isArray(parsed) ? parsed : (parsed && typeof parsed === 'object' ? Object.values(parsed) : []);
+      recordVerified = rows.some(row => String(recordIdentity(row) || row?.id || '') === recordId || String(row?.id || '') === recordId);
+    }
+
+    // A browser without IndexedDB may still have successfully written the hot
+    // localStorage mirror.  For critical record verification accept either copy,
+    // but never claim success when the record cannot be read from either layer.
+    const ok = recordVerified && (failed.length === 0 || requested.every(canonical => rawGet(namespaceKey(canonical)) !== null));
+    return { ok, durable: failed.length === 0, recordVerified, persisted, failed, queueLength: queue.length };
+  }
+
   function rawGet(key) {
     if (durableMemory.has(key)) return durableMemory.get(key);
     return RAW.get.call(localStorage, key);
@@ -554,6 +620,19 @@
       } catch (_) { resolve([]); }
     });
     const recordMap = new Map(records.map(record => [String(record?.key || ''), record]));
+    // If R99/R98 was closed after a local save but before the hot localStorage
+    // mirror was refreshed, the durable queue tells us which IndexedDB datasets
+    // are authoritative. Prefer those pending local copies over a newer-looking
+    // stale remote mirror so unsynced invoices cannot vanish on restart.
+    const durableQueueKey = `ct_sync_queue::${tenant}`;
+    const durableResetKey = `ct_sync_queue_reset_at::${tenant}`;
+    const durableResetAt = Math.max(0, Number(recordMap.get(durableResetKey)?.value || 0));
+    const durableGeneration = String(durableResetAt || 'legacy');
+    const durableQueueRaw = safeJson(recordMap.get(durableQueueKey)?.value, []);
+    const durablePendingKeys = new Set((Array.isArray(durableQueueRaw) ? durableQueueRaw : [])
+      .filter(item => !durableResetAt || String(item?.queueGeneration || '') === durableGeneration)
+      .map(item => canonicalKey(item?.key || ''))
+      .filter(key => DATA_KEYS.includes(key)));
     let restored = 0;
     const restoredDatasets = new Set();
 
@@ -592,7 +671,7 @@
       const currentRaw = rawGet(key);
       const currentMeta = safeJson(rawGet(`${metaPrefix}${physicalSuffix}`), {}) || {};
       const durableMeta = safeJson(recordMap.get(`${metaPrefix}${physicalSuffix}`)?.value, {}) || {};
-      const shouldRestore = currentRaw === null || currentMeta.seeded === true || Number(currentMeta.updatedAt || 0) <= 0 ||
+      const shouldRestore = durablePendingKeys.has(dataset) || currentRaw === null || currentMeta.seeded === true || Number(currentMeta.updatedAt || 0) <= 0 ||
         Number(durableMeta.updatedAt || 0) > Number(currentMeta.updatedAt || 0);
       if (!shouldRestore) continue;
       if (writeRestored(key, String(record?.value ?? ''))) {
@@ -616,7 +695,7 @@
       if (key.startsWith(metaPrefix)) {
         const currentMeta = safeJson(current, {}) || {};
         const durableMeta = safeJson(record?.value, {}) || {};
-        shouldRestore = shouldRestore || currentMeta.seeded === true || Number(currentMeta.updatedAt || 0) <= 0 ||
+        shouldRestore = shouldRestore || durablePendingKeys.has(metaDataset) || currentMeta.seeded === true || Number(currentMeta.updatedAt || 0) <= 0 ||
           Number(durableMeta.updatedAt || 0) > Number(currentMeta.updatedAt || 0);
       }
       if (!shouldRestore) continue;
@@ -6083,6 +6162,8 @@
      only the public URL is written into cashtop_products and synchronized. */
   const IMAGE_OUTBOX_DB = 'cashtop-image-outbox-v1';
   const IMAGE_OUTBOX_STORE = 'uploads';
+  const LEGACY_IMAGE_OUTBOX_FALLBACK_CACHE = 'cashtop-image-outbox-local-v1';
+  const IMAGE_OUTBOX_FALLBACK_META_KEY = 'ct_image_outbox_fallback_meta_v1'; // read-only migration marker from R99
   const pendingImageObjectUrls = new Map();
   let imageOutboxDbPromise = null;
   let imageFlushRunning = false;
@@ -6105,57 +6186,154 @@
     return imageOutboxDbPromise;
   }
 
+  function readImageFallbackMeta() {
+    const parsed = safeJson(rawGet(IMAGE_OUTBOX_FALLBACK_META_KEY), {});
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  }
+
+  function writeImageFallbackMeta(meta) {
+    try { rawSet(IMAGE_OUTBOX_FALLBACK_META_KEY, JSON.stringify(meta && typeof meta === 'object' ? meta : {})); return true; }
+    catch (_) { return false; }
+  }
+
+  function imageFallbackCacheRequest(id) {
+    return new Request(`https://cashtop.local.invalid/__cashtop_image_outbox__/${encodeURIComponent(String(id || ''))}`);
+  }
+
+  async function imageFallbackBlobPut(id, blob) {
+    if (!('caches' in window) || !(blob instanceof Blob) || !id) return false;
+    try {
+      const cache = await caches.open(LEGACY_IMAGE_OUTBOX_FALLBACK_CACHE);
+      await cache.put(imageFallbackCacheRequest(id), new Response(blob, { headers:{'Content-Type':blob.type || 'image/jpeg','Cache-Control':'no-store'} }));
+      return true;
+    } catch (_) { return false; }
+  }
+
+  async function imageFallbackBlobGet(id) {
+    if (!('caches' in window) || !id) return null;
+    try {
+      const cache = await caches.open(LEGACY_IMAGE_OUTBOX_FALLBACK_CACHE);
+      const response = await cache.match(imageFallbackCacheRequest(id));
+      return response ? await response.blob() : null;
+    } catch (_) { return null; }
+  }
+
+  async function imageFallbackDelete(id) {
+    if (!id) return false;
+    let removed = false;
+    if ('caches' in window) {
+      try { const cache = await caches.open(LEGACY_IMAGE_OUTBOX_FALLBACK_CACHE); removed = await cache.delete(imageFallbackCacheRequest(id)); } catch (_) {}
+    }
+    const meta = readImageFallbackMeta();
+    if (Object.prototype.hasOwnProperty.call(meta, String(id))) {
+      delete meta[String(id)];
+      writeImageFallbackMeta(meta);
+      removed = true;
+    }
+    return removed;
+  }
+
   async function imageOutboxPut(record) {
+    const normalized = { ...record, id:String(record?.id || '') };
+    if (!normalized.id) throw new Error('IMAGE_LOCAL_ID_MISSING');
     const db = await openImageOutboxDb();
-    if (!db) throw new Error('IMAGE_LOCAL_STORAGE_UNAVAILABLE');
-    return new Promise((resolve, reject) => {
+    if (!db) throw new Error('IMAGE_INDEXEDDB_UNAVAILABLE');
+    const saved = await new Promise(resolve => {
       try {
         const tx = db.transaction(IMAGE_OUTBOX_STORE, 'readwrite');
-        tx.objectStore(IMAGE_OUTBOX_STORE).put(record);
-        tx.oncomplete = () => resolve(record);
-        tx.onerror = () => reject(tx.error || new Error('IMAGE_LOCAL_SAVE_FAILED'));
-        tx.onabort = () => reject(tx.error || new Error('IMAGE_LOCAL_SAVE_ABORTED'));
-      } catch (error) { reject(error); }
+        tx.objectStore(IMAGE_OUTBOX_STORE).put(normalized);
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => resolve(false);
+        tx.onabort = () => resolve(false);
+      } catch (_) { resolve(false); }
     });
+    if (!saved) throw new Error('IMAGE_INDEXEDDB_SAVE_FAILED');
+    return normalized;
+  }
+
+  async function migrateLegacyImageFallbackRecord(key) {
+    const meta = readImageFallbackMeta()[key];
+    if (!meta) return null;
+    const blob = await imageFallbackBlobGet(key);
+    if (!(blob instanceof Blob)) return null;
+    const record = { ...meta, id:key, blob };
+    try { await imageOutboxPut(record); await imageFallbackDelete(key); return record; } catch (_) { return null; }
+  }
+
+  async function migrateLegacyImageFallbackToIndexedDb() {
+    const ids = Object.keys(readImageFallbackMeta());
+    if (!ids.length) {
+      try { if ('caches' in window) await caches.delete(LEGACY_IMAGE_OUTBOX_FALLBACK_CACHE); } catch (_) {}
+      return { migrated:0 };
+    }
+    let migrated = 0;
+    for (const id of ids) if (await migrateLegacyImageFallbackRecord(String(id))) migrated += 1;
+    if (migrated === ids.length) {
+      writeImageFallbackMeta({});
+      try { if ('caches' in window) await caches.delete(LEGACY_IMAGE_OUTBOX_FALLBACK_CACHE); } catch (_) {}
+    }
+    return { migrated };
   }
 
   async function imageOutboxGet(id) {
+    const key = String(id || '');
+    if (!key) return null;
     const db = await openImageOutboxDb();
-    if (!db || !id) return null;
-    return new Promise(resolve => {
-      try {
-        const tx = db.transaction(IMAGE_OUTBOX_STORE, 'readonly');
-        const req = tx.objectStore(IMAGE_OUTBOX_STORE).get(String(id));
-        req.onsuccess = () => resolve(req.result || null);
-        req.onerror = () => resolve(null);
-      } catch (_) { resolve(null); }
-    });
+    if (db) {
+      const found = await new Promise(resolve => {
+        try {
+          const tx = db.transaction(IMAGE_OUTBOX_STORE, 'readonly');
+          const req = tx.objectStore(IMAGE_OUTBOX_STORE).get(key);
+          req.onsuccess = () => resolve(req.result || null);
+          req.onerror = () => resolve(null);
+        } catch (_) { resolve(null); }
+      });
+      if (found?.blob) return found;
+    }
+    // One-time R99 migration only. New image data is never written to Cache Storage.
+    return migrateLegacyImageFallbackRecord(key);
   }
 
   async function imageOutboxList() {
     const db = await openImageOutboxDb();
-    if (!db) return [];
-    return new Promise(resolve => {
+    const rows = db ? await new Promise(resolve => {
       try {
         const tx = db.transaction(IMAGE_OUTBOX_STORE, 'readonly');
         const req = tx.objectStore(IMAGE_OUTBOX_STORE).getAll();
         req.onsuccess = () => resolve(Array.isArray(req.result) ? req.result : []);
         req.onerror = () => resolve([]);
       } catch (_) { resolve([]); }
-    });
+    }) : [];
+    // Migrate old R99 fallback records before returning the queue.
+    const legacyIds = Object.keys(readImageFallbackMeta());
+    for (const id of legacyIds) {
+      if (!rows.some(row => String(row?.id || '') === String(id))) {
+        const migrated = await migrateLegacyImageFallbackRecord(String(id));
+        if (migrated) rows.push(migrated);
+      }
+    }
+    return rows;
   }
 
   async function imageOutboxDelete(id) {
+    const key = String(id || '');
+    if (!key) return false;
+    let removed = false;
     const db = await openImageOutboxDb();
-    if (!db || !id) return false;
-    return new Promise(resolve => {
-      try {
-        const tx = db.transaction(IMAGE_OUTBOX_STORE, 'readwrite');
-        tx.objectStore(IMAGE_OUTBOX_STORE).delete(String(id));
-        tx.oncomplete = () => resolve(true);
-        tx.onerror = () => resolve(false);
-      } catch (_) { resolve(false); }
-    });
+    if (db) {
+      removed = await new Promise(resolve => {
+        try {
+          const tx = db.transaction(IMAGE_OUTBOX_STORE, 'readwrite');
+          tx.objectStore(IMAGE_OUTBOX_STORE).delete(key);
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => resolve(false);
+          tx.onabort = () => resolve(false);
+        } catch (_) { resolve(false); }
+      });
+    }
+    // Clean only legacy R99 fallback residue; no new fallback copy is created.
+    await imageFallbackDelete(key).catch(() => false);
+    return removed;
   }
 
   function pendingImagePreviewUrl(id, blob) {
@@ -6168,6 +6346,10 @@
   }
 
   async function prepareManagedImage(file, options = {}) {
+    // Ask the browser for durable/high-quota storage before storing the photo.
+    // Failure is harmless; browsers may require a user gesture and prepare() is
+    // normally called directly from the camera/gallery gesture anyway.
+    try { const persistJob = window.Cashtop?.maximizeBrowserStorage?.(); persistJob?.catch?.(() => null); } catch (_) {}
     const blob = await compressSquareImage(file, options.maxSizeKB || IMAGE_STORAGE_CONFIG.maxSizeKB);
     const id = crypto.randomUUID ? `IMGQ_${crypto.randomUUID()}` : `IMGQ_${Date.now()}_${Math.random().toString(36).slice(2,9)}`;
     const record = {
@@ -6182,6 +6364,8 @@
       attempts:0
     };
     await imageOutboxPut(record);
+    const verified = await imageOutboxGet(id);
+    if (!verified?.blob || !verified.blob.size) throw new Error('IMAGE_LOCAL_SAVE_VERIFY_FAILED');
     return { id, pendingId:id, blob, localUrl:pendingImagePreviewUrl(id, blob), sizeBytes:blob.size, sizeKB:Math.round(blob.size/102.4)/10 };
   }
 
@@ -6214,7 +6398,8 @@
   }
 
   async function uploadPreparedBlob(record) {
-    const blob = record?.blob;
+    let blob = record?.blob;
+    if (!(blob instanceof Blob)) blob = (await imageOutboxGet(record?.id))?.blob;
     if (!(blob instanceof Blob)) throw new Error('IMAGE_PENDING_BLOB_MISSING');
     const folder = safeImagePathPart(record.folder || 'products', 'products');
     const entityId = safeImagePathPart(record.entityId || record.recordId || 'item', 'item');
@@ -6224,6 +6409,8 @@
     const response = await fetch(endpoint, { method:'PUT', headers:{'AccessKey':IMAGE_STORAGE_CONFIG.accessKey,'Content-Type':'image/jpeg'}, body:blob });
     if (!response.ok) throw new Error(`IMAGE_UPLOAD_FAILED_${response.status}`);
     const url = `https://${IMAGE_STORAGE_CONFIG.pullHost}/${path.split('/').map(encodeURIComponent).join('/')}`;
+    // Business image data is not stored in Cache Storage.  The public CDN URL is
+    // saved in the dataset, while pending blobs live in IndexedDB until upload.
     return { url, path, sizeBytes:blob.size, sizeKB:Math.round(blob.size/102.4)/10 };
   }
 
@@ -6243,7 +6430,12 @@
     delete target.imagePendingId;
     target.updatedAt = new Date().toISOString();
     localStorage.setItem(datasetKey, JSON.stringify(rows));
+    // localStorage.setItem is the app's managed writer: it enqueues this dataset
+    // before any network attempt. Persist that queue immediately, then ask Turso
+    // to retry. A failed attempt therefore never loses the image URL update.
+    try { window.Cashtop?.preservePendingSyncState?.().catch?.(() => null); } catch (_) {}
     window.dispatchEvent(new CustomEvent('cashtop:image-uploaded', { detail:{ datasetKey, recordId, url:uploaded.url, pendingId:record.id } }));
+    window.dispatchEvent(new CustomEvent('cashtop:sync-now', { detail:{ reason:'image-uploaded', datasetKey, recordId } }));
     return { applied:true };
   }
 
@@ -6283,25 +6475,68 @@
     } finally { imageFlushRunning = false; }
   }
 
+  function managedImageFallback(img) {
+    if (!(img instanceof HTMLImageElement)) return;
+    img.style.display = 'none';
+    const parent = img.parentElement;
+    if (!parent) return;
+    let fallback = parent.querySelector(':scope > .ct-image-fallback');
+    if (!fallback) {
+      fallback = document.createElement('i');
+      fallback.className = 'fa-solid fa-box ct-image-fallback';
+      try { parent.insertBefore(fallback, img); } catch (_) { parent.appendChild(fallback); }
+    }
+    fallback.style.display = '';
+  }
+
+  function managedImageLoaded(img) {
+    if (!(img instanceof HTMLImageElement) || !img.naturalWidth) return;
+    const parent = img.parentElement;
+    const fallback = parent?.querySelector?.(':scope > .ct-image-fallback');
+    if (fallback) fallback.style.display = 'none';
+    img.style.display = '';
+  }
+
+  function wireManagedImageElement(img) {
+    if (!(img instanceof HTMLImageElement) || img.dataset.ctImageWired === '1') return;
+    img.dataset.ctImageWired = '1';
+    img.addEventListener('load', () => managedImageLoaded(img));
+    img.addEventListener('error', () => {
+      // A pending local blob may still be available even when the remote URL is
+      // unreachable. Try hydration once, then keep the normal product icon.
+      if (img.dataset.ctPendingImage && img.dataset.ctPendingHydrated !== img.dataset.ctPendingImage) {
+        hydratePendingImageElement(img).then(ok => { if (!ok) managedImageFallback(img); }).catch(() => managedImageFallback(img));
+      } else managedImageFallback(img);
+    });
+    if (img.complete) {
+      if (img.naturalWidth) managedImageLoaded(img); else if (!img.dataset.ctPendingImage) managedImageFallback(img);
+    }
+  }
+
   async function hydratePendingImageElement(img) {
     if (!(img instanceof HTMLImageElement)) return false;
+    wireManagedImageElement(img);
     const id = String(img.dataset.ctPendingImage || '');
     if (!id || img.dataset.ctPendingHydrated === id) return false;
     const record = await imageOutboxGet(id);
-    if (!record?.blob) return false;
+    if (!record?.blob) { managedImageFallback(img); return false; }
     const url = pendingImagePreviewUrl(id, record.blob);
-    if (!url) return false;
+    if (!url) { managedImageFallback(img); return false; }
     img.dataset.ctPendingHydrated = id;
     img.src = url;
     return true;
   }
 
   function hydratePendingImages(root = document) {
+    const selector = 'img[data-ct-pending-image],img[data-ct-product-image]';
     const items = [
-      ...(root instanceof HTMLImageElement && root.matches('[data-ct-pending-image]') ? [root] : []),
-      ...(root?.querySelectorAll?.('img[data-ct-pending-image]') || [])
+      ...(root instanceof HTMLImageElement && root.matches(selector) ? [root] : []),
+      ...(root?.querySelectorAll?.(selector) || [])
     ];
-    items.forEach(img => hydratePendingImageElement(img).catch(() => null));
+    [...new Set(items)].forEach(img => {
+      wireManagedImageElement(img);
+      if (img.dataset.ctPendingImage) hydratePendingImageElement(img).catch(() => managedImageFallback(img));
+    });
   }
 
   async function cleanupImageOutboxDrafts() {
@@ -6322,6 +6557,8 @@
     flushDeletes: flushManagedImageDeletes,
     isManagedUrl: isManagedImageUrl,
     pathFromUrl: managedImagePathFromUrl,
+    fallback: managedImageFallback,
+    wire: wireManagedImageElement,
     maxSizeKB: IMAGE_STORAGE_CONFIG.maxSizeKB
   });
   window.addEventListener('online', () => {
@@ -6329,6 +6566,7 @@
     flushPendingImageUploads().catch(() => null);
   });
   setTimeout(() => {
+    migrateLegacyImageFallbackToIndexedDb().catch(() => null);
     cleanupImageOutboxDrafts().catch(() => null);
     hydratePendingImages(document);
     flushManagedImageDeletes().catch(() => null);
@@ -6340,7 +6578,15 @@
   setInterval(() => {
     if (document.hidden || navigator.onLine === false) return;
     flushPendingImageUploads().catch(() => null);
-  }, 30000);
+  }, 12000);
+  const resumeImageOutbox = () => {
+    hydratePendingImages(document);
+    if (navigator.onLine !== false) flushPendingImageUploads().catch(() => null);
+  };
+  window.addEventListener('focus', resumeImageOutbox, { passive:true });
+  window.addEventListener('pageshow', resumeImageOutbox, { passive:true });
+  navigator.connection?.addEventListener?.('change', resumeImageOutbox);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) resumeImageOutbox(); });
   if (typeof MutationObserver === 'function') {
     const imageHydrator = new MutationObserver(mutations => mutations.forEach(mutation => mutation.addedNodes.forEach(node => {
       if (node?.nodeType === 1) hydratePendingImages(node);
@@ -6416,7 +6662,7 @@
     getNotificationSettings, getSmartNotifications, updateNotificationBadge, requestNotificationPermission, notificationBrandIcon, showTodayProfitNotification,
     archiveRecords, readArchivedRecords, compactCompletedData, trustedNowMs,
     getSyncQueue, enqueueSyncOperation, completeSyncOperation, clearSyncQueue, resetSyncQueueCompletely, preservePendingSyncState, updateSyncBadge, restoreSyncQueueBackup, migrateLegacySyncQueues,
-    setSyncProgress, restoreDurableCompanyData,
+    setSyncProgress, restoreDurableCompanyData, flushDurableLocalWrites, commitCriticalData, readDurableLocalKey,
     getSystemSettings, getProfitRate, getInventoryAccountingMethod, salePriceFromCost, applySystemBranding, recordIdentity, sortNewestFirstRecords,
     debounce, runWhenIdle, renderVirtualRows, renderVirtualGrid, runWorkerTask, queryRecords, atomicSetItems, recoverAtomicTransactions,
     captureModalDraft, restoreModalDraft, clearModalDraft, getAuditPending, getAuditPendingAsync, getAuditPendingCountAsync, completeAuditPending, completeAuditPendingAsync, getRecentAuditCache,
@@ -6459,14 +6705,19 @@
     });
     durableReadyPromise = restoreDurableCompanyData().catch(() => ({ restored: 0 }));
     window.Cashtop.localReady = durableReadyPromise;
-    durableReadyPromise
-      .then(() => restoreSyncQueueBackup().catch(() => []))
+    const syncRestoreReadyPromise = durableReadyPromise
+      .then(result => {
+        window.dispatchEvent(new CustomEvent('cashtop:local-ready', { detail: result || { restored: 0 } }));
+        return restoreSyncQueueBackup().catch(() => []);
+      })
       .then(() => migrateLegacySyncQueues().catch(() => ({ migrated: 0 })))
       .then(() => {
         updateSyncBadge();
         if (getSyncQueue().length) syncNow({ manual: false });
+        return { ready: true, queueLength: getSyncQueue().length };
       })
-      .catch(() => null);
+      .catch(() => ({ ready: true, queueLength: getSyncQueue().length }));
+    window.Cashtop.syncReady = syncRestoreReadyPromise;
     window.addEventListener('cashtop:sync-progress', event => setSyncProgress(event.detail || {}));
     window.addEventListener('cashtop:pull-start', event => setRecordsPulling(true, event.detail || {}));
     window.addEventListener('cashtop:pull-end', event => setRecordsPulling(false, event.detail || {}));

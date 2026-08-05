@@ -1034,8 +1034,9 @@ if (settings.enabled && core && settings.config?.databaseURL) {
 
 
   async function pullDatasetKeys(keys, options = {}) {
-    if (core.localReady && typeof core.localReady.then === 'function') {
-      try { await core.localReady; } catch (_) {}
+    const ready = core.syncReady || core.localReady;
+    if (ready && typeof ready.then === 'function') {
+      try { await ready; } catch (_) {}
     }
     const requested = [...new Set((Array.isArray(keys) ? keys : []).filter(key => CLOUD_DATA_KEYS.includes(key)))];
     if (!requested.length) return { hasRemote: false, count: 0, applied: 0 };
@@ -1805,8 +1806,15 @@ if (settings.enabled && core && settings.config?.databaseURL) {
 
   function syncAll(options = {}) {
     const run = async () => {
-      if (core.localReady && typeof core.localReady.then === 'function') {
-        try { await core.localReady; } catch (_) {}
+      const ready = core.syncReady || core.localReady;
+      if (ready && typeof ready.then === 'function') {
+        try { await ready; } catch (_) {}
+      }
+      // Before any network attempt, pin the current queue and changed datasets in
+      // IndexedDB. A failed request/reload therefore cannot make a saved invoice
+      // disappear or lose its pending synchronization marker.
+      if (core.getSyncQueue().length) {
+        try { await core.preservePendingSyncState?.(); } catch (_) {}
       }
       if (core.getSyncQueue().length) return reconcileAll(options);
       if (options.manual === true || options.forceCheck === true) {
@@ -1826,6 +1834,12 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   }
 
   async function checkRemoteAndPull(force = false) {
+    const ready = core.syncReady || core.localReady;
+    if (ready && typeof ready.then === 'function') {
+      try { await ready; } catch (_) {}
+    }
+    // Never pull over a local write that has not completed queue restoration.
+    if (core.getSyncQueue().length) return syncAll({ manual:false, forceCheck:false });
     if (navigator.onLine === false && force !== true) return { skipped: true, offline: true };
 
     const now = Date.now();
@@ -1915,7 +1929,10 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   function scheduleSync(delay = WRITE_DEBOUNCE_MS) {
     clearTimeout(scheduledSync);
     scheduledSync = setTimeout(() => {
-      const job = syncAll({ manual: false, forceCheck: false });
+      const job = Promise.resolve(core.syncReady || core.localReady)
+        .catch(() => null)
+        .then(() => core.getSyncQueue().length ? core.preservePendingSyncState?.().catch?.(() => null) : null)
+        .then(() => syncAll({ manual: false, forceCheck: false }));
       job.then(result => {
         if (core.getSyncQueue().length) {
           scheduleSync(result?.networkDeferred ? 8000 : 4500);

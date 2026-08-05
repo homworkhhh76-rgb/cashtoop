@@ -321,15 +321,15 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=98">
+    <link rel="stylesheet" href="cashtop-core.css?v=100">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-    <script src="barcode-tools.js?v=98"></script>
-    <script src="cashtop-core.js?v=98"></script>
-    <script src="multi-system.js?v=98"></script>
-    <script src="turso-config.js?v=98"></script><script src="turso-rtdb.js?v=98"></script>
-    <script src="accounting-engine.js?v=98"></script>
+    <script src="barcode-tools.js?v=100"></script>
+    <script src="cashtop-core.js?v=100"></script>
+    <script src="multi-system.js?v=100"></script>
+    <script src="turso-config.js?v=100"></script><script src="turso-rtdb.js?v=100"></script>
+    <script src="accounting-engine.js?v=100"></script>
     <script src="cashtop-printer.js?v=48"></script>
-    <script src="turso-sync.js?v=98"></script>
+    <script src="turso-sync.js?v=100"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -1844,7 +1844,7 @@
                 }
                 const pendingAttr = prod.imagePendingId ? ` data-ct-pending-image="${String(prod.imagePendingId).replace(/"/g,'&quot;')}"` : '';
                 const productVisual = (prod.imageUrl || prod.imagePendingId)
-                    ? `<img src="${String(prod.imageUrl||'').replace(/"/g,'&quot;')}"${pendingAttr} alt="${String(prod.name||'منتج').replace(/"/g,'&quot;')}" loading="lazy" decoding="async" onerror="if(!this.dataset.ctPendingImage)this.parentElement.innerHTML='<i class=&quot;fa-solid fa-box&quot;></i>'">`
+                    ? `<i class="fa-solid fa-box ct-image-fallback"></i><img data-ct-product-image="1" src="${String(prod.imageUrl||'').replace(/"/g,'&quot;')}"${pendingAttr} alt="${String(prod.name||'منتج').replace(/"/g,'&quot;')}" loading="lazy" decoding="async" style="display:none">`
                     : '<i class="fa-solid fa-box"></i>';
                 card.innerHTML = `<div class="product-icon-box">${productVisual}</div><div class="product-item-title">${prod.name}</div>${isCompositeProduct(prod) ? '<div class="product-type-badge"><i class="fa-solid fa-cube"></i> غير متعدد</div>' : ''}<div class="product-item-price">${cashierBaseSymbol()} ${moneyDisplay(getEffectiveProductPrice(prod, 'piece'))}</div>${stockStr ? `<div class="stock-text">${stockStr}</div>` : ''}`;
                 window.CashtopImages?.hydrate?.(card);
@@ -2499,7 +2499,7 @@
             });
         }
 
-        function saveFinalInvoice(printStatus = false, forceCreditSale = false) {
+        async function saveFinalInvoice(printStatus = false, forceCreditSale = false) {
             if (invoiceSaveInProgress) { showToast('جاري حفظ الفاتورة، انتظر لحظة.', 'warning'); return; }
             invoiceSaveInProgress = true;
             setInvoiceSaveBusy(true);
@@ -2647,6 +2647,18 @@
             if (offersChanged) invoiceChanges.cashtop_sales_offers = offersData;
             if (window.Cashtop?.atomicSetItems) window.Cashtop.atomicSetItems(invoiceChanges, { label: 'save-sales-invoice' });
             else Object.entries(invoiceChanges).forEach(([key, value]) => localStorage.setItem(key, JSON.stringify(value)));
+
+            // لا نعلن نجاح الفاتورة قبل تثبيتها في التخزين المحلي الكبير.
+            // localStorage يبقى مرآة توافق فقط؛ IndexedDB هو النسخة المتينة التي
+            // تستمر عند امتلاء المساحة أو الانتقال مباشرة إلى صفحة الفواتير.
+            if (window.Cashtop?.commitCriticalData) {
+                const localCommit = await window.Cashtop.commitCriticalData(Object.keys(invoiceChanges), {
+                    recordKey: 'cashtop_invoices', recordId: invoiceObj.id
+                });
+                if (!localCommit?.recordVerified) throw new Error('تعذر تثبيت الفاتورة في التخزين المحلي. أعد المحاولة دون إغلاق الصفحة.');
+            } else if (!readArray('cashtop_invoices').some(row => String(row?.id) === String(invoiceObj.id))) {
+                throw new Error('تعذر التحقق من حفظ الفاتورة محلياً.');
+            }
             if (invoiceObj.stockSource !== 'agent_custody') productsData = verifyPersistedStock(productsData, basketItems);
             else agentsData = readArray('cashtop_sales_agents');
             // فاتورة الموظف يجب أن تصل للمدير بسرعة؛ لا ننتظر مؤقت المزامنة العام.

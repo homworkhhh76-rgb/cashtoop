@@ -48,15 +48,24 @@ function invoiceIsInCurrentBranch(invoice) {
   return String(invoice?.branchId || 'MAIN') === String(invoiceSessionBranchId || 'MAIN');
 }
 
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
   initializeInvoiceReportFilters();
+  // اعرض المرآة المتاحة فوراً، ثم أعد القراءة بعد جاهزية IndexedDB. هذا يمنع
+  // اختفاء فاتورة محفوظة عندما يكون localStorage ممتلئاً أو أقدم من النسخة المتينة.
   refreshInvoices();
-  // لا نؤخر فتح الصفحة: نعرض كاش الفواتير فوراً، ثم نجلب مجموعة الفواتير
-  // وحدها في الخلفية حتى تظهر مبيعات الموظفين من الأجهزة الأخرى بسرعة.
+  try { await (window.Cashtop?.localReady || Promise.resolve()); } catch (_) {}
+  refreshInvoices();
+  // لا نسحب من الشبكة قبل اكتمال استعادة التخزين المحلي وطابور المزامنة؛
+  // وإلا قد تصل نسخة سحابية أقدم فوق فاتورة محلية لم يُستعد طابورها بعد.
+  try { await (window.Cashtop?.syncReady || Promise.resolve()); } catch (_) {}
   setTimeout(() => {
     window.CashtopTurso?.pullDatasetKeys?.([DB_KEY], { concurrency: 1, silentProgress: true })
       ?.catch?.(() => null);
   }, 80);
+});
+window.addEventListener('cashtop:local-ready', refreshInvoices);
+window.addEventListener('cashtop:durable-restored', event => {
+  if (!event.detail?.datasets?.length || event.detail.datasets.includes(DB_KEY)) refreshInvoices();
 });
 window.addEventListener('storage', event => {
   if (event.key && event.key.includes(DB_KEY)) refreshInvoices();
@@ -1496,7 +1505,7 @@ function resetBatchInvoiceModal(options = {}) {
   if (options.keepDraft !== true) clearBatchDraft();
 }
 
-function saveBatchInvoices() {
+async function saveBatchInvoices() {
   if (batchInvoiceSaveInProgress) return;
   if (!can('sales.create')) return notify('لا تملك صلاحية إنشاء فواتير مبيعات', 'error');
   const cards = [...document.querySelectorAll('#batchInvoicesContainer .batch-invoice-card')];
@@ -1603,6 +1612,12 @@ function saveBatchInvoices() {
     };
     if (window.Cashtop?.atomicSetItems) window.Cashtop.atomicSetItems(batchChanges, { label: 'batch-sales-invoices' });
     else Object.entries(batchChanges).forEach(([key, value]) => localStorage.setItem(key, JSON.stringify(value)));
+    if (window.Cashtop?.commitCriticalData) {
+      for (const invoice of created) {
+        const committed = await window.Cashtop.commitCriticalData(Object.keys(batchChanges), { recordKey: DB_KEY, recordId: invoice.id });
+        if (!committed?.recordVerified) throw new Error(`تعذر تثبيت الفاتورة ${invoice.id} في التخزين المحلي`);
+      }
+    }
 
     clearBatchDraft();
     allInvoices = readArray(DB_KEY);

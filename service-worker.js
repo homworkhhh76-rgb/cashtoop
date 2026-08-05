@@ -1,8 +1,9 @@
 'use strict';
 
-const CACHE_VERSION = 'v98-detailed-export-stream-loader-cache-first-v1';
+const CACHE_VERSION = 'v100-indexeddb-invoice-durable-sync-cache-first-v1';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = 'cash-top-2-remote-static-persistent-v1';
+const IMAGE_OUTBOX_LOCAL_CACHE = 'cashtop-image-outbox-local-v1'; // legacy R99 migration cache only
 
 /*
  * حزمة التطبيق المحلية كاملة. التثبيت لا ينجح إلا بعد حفظ كل ملف محلي،
@@ -317,7 +318,7 @@ self.addEventListener('activate', event => {
     const shell = await ensureLocalShell().catch(() => ({ complete: false, missing: ['unknown'] }));
     await warmRemoteStaticAssetsOnce().catch(() => null);
     if (shell?.complete === true) {
-      const keep = new Set([APP_CACHE, REMOTE_STATIC_CACHE, NOTIFICATION_META_CACHE]);
+      const keep = new Set([APP_CACHE, REMOTE_STATIC_CACHE, IMAGE_OUTBOX_LOCAL_CACHE, NOTIFICATION_META_CACHE]);
       const names = await caches.keys();
       await Promise.all(names.filter(name => !keep.has(name)).map(name => caches.delete(name)));
     }
@@ -537,7 +538,7 @@ self.addEventListener('message', event => {
   }
   if (data.type === 'TRIM_OLD_CACHES') {
     event.waitUntil((async () => {
-      const keep = new Set([APP_CACHE, REMOTE_STATIC_CACHE, NOTIFICATION_META_CACHE]);
+      const keep = new Set([APP_CACHE, REMOTE_STATIC_CACHE, IMAGE_OUTBOX_LOCAL_CACHE, NOTIFICATION_META_CACHE]);
       const names = await caches.keys();
       await Promise.all(names.filter(name => !keep.has(name)).map(name => caches.delete(name)));
     })());
