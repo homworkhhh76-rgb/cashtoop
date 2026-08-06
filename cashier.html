@@ -54,9 +54,15 @@
 
         .basket-items-list { display: flex; flex-direction: column; gap: 10px; max-height: 450px; overflow-y: auto; padding-left: 2px; }
         .basket-item { border: 1px solid #eef1f5; border-radius: 6px; padding: 10px; display: flex; flex-direction: column; gap: 8px; background-color: #fafbfc; }
-        .item-row-top { display: flex; justify-content: space-between; align-items: center; }
-        .item-name-badge { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-        .item-title { font-weight: bold; font-size: 13px; }
+        .item-row-top { display: flex; justify-content: space-between; align-items: center; gap:8px; }
+        .basket-item-main { display:flex; align-items:center; gap:8px; min-width:0; flex:1; }
+        /* R104: حاوية صورة ثابتة؛ لا spinner ولا تبديل شعار/صورة أثناء إعادة المحاولة. */
+        .basket-item-visual { width:44px; height:44px; flex:0 0 44px; border-radius:8px; overflow:hidden; background:#f0f8ff; display:flex; align-items:center; justify-content:center; color:#3c8dbc; font-size:17px; position:relative; }
+        .basket-item-visual .basket-product-image { width:100%; height:100%; object-fit:cover; display:block; border-radius:8px; margin:0; padding:0; border:0; opacity:1; }
+        .basket-item-visual .ct-image-fallback { display:flex; width:100%; height:100%; align-items:center; justify-content:center; }
+        .basket-item-visual.ct-image-loading, .basket-item-visual.ct-image-unavailable { background:#f0f8ff; }
+        .item-name-badge { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width:0; }
+        .item-title { font-weight: bold; font-size: 13px; overflow-wrap:anywhere; }
         
         .unit-select { background-color: #00c0ef; color: white; font-size: 11px; padding: 2px 6px; border-radius: 4px; border: none; outline: none; font-weight: bold; cursor: pointer; }
 
@@ -324,7 +330,7 @@
     <link rel="stylesheet" href="cashtop-core.css?v=100">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="barcode-tools.js?v=100"></script>
-    <script src="cashtop-core.js?v=100"></script>
+    <script src="cashtop-core.js?v=103"></script>
     <script src="multi-system.js?v=100"></script>
     <script src="turso-config.js?v=100"></script><script src="turso-rtdb.js?v=100"></script>
     <script src="accounting-engine.js?v=100"></script>
@@ -1261,6 +1267,7 @@
                 costPerPiece: Number(product.cost || 0), cost: Number(product.cost || 0) * factor, qty: 1,
                 selectedUnit: normalizedId, unitName: unit.name, pieceName: chain[0]?.name || 'قطعة',
                 piecesPerUnit: factor, unitChain: chain, hasSaleUnit: chain.length > 1,
+                imageUrl: String(product.imageUrl || ''), imagePendingId: String(product.imagePendingId || ''),
                 isCustom: false, isVariant: false
             });
             renderBasket();
@@ -1797,6 +1804,68 @@
             renderProductsGrid();
         }
 
+        function cashierProductCardState(prod) {
+            let availStock = 0;
+            if (prod?.hasVariants && Array.isArray(prod.variants)) {
+                prod.variants.forEach(v => { availStock += getAvailableVariantStock(prod.id, v.size, v.color, v.qty); });
+            } else if (prod) availStock = getAvailableStock(prod.id);
+
+            const isUntrackedStock = prod?.untrackedStock === true;
+            const isOutOfStock = !isUntrackedStock && availStock <= 0;
+            let stockStr = '';
+            if (!isUntrackedStock && prod) {
+                if (isOutOfStock) stockStr = isCompositeProduct(prod) ? 'المخزون نفد' : 'نفد';
+                else if (prod.hasVariants) stockStr = `المقاسات: ${availStock}`;
+                else {
+                    const chain = cashierUnitChainForProduct(prod);
+                    let remaining = Number(availStock || 0);
+                    const parts = [];
+                    [...chain].reverse().forEach((level, reverseIndex) => {
+                        const factor = Math.max(.000001, Number(level.factorToBase || 1));
+                        if (reverseIndex === chain.length - 1) {
+                            if (remaining > 0 || !parts.length) parts.push(`${quantityDisplay(remaining)} ${level.name}`);
+                        } else {
+                            const count = Math.floor((remaining + 1e-9) / factor);
+                            if (count > 0) {
+                                parts.push(`${count} ${level.name}`);
+                                remaining = roundStockQuantity(remaining - count * factor);
+                            }
+                        }
+                    });
+                    stockStr = `المخزون: ${parts.join(' + ')}`;
+                }
+            }
+            return { availStock, isUntrackedStock, isOutOfStock, stockStr };
+        }
+
+        function cashierMountProductImage(holder, prod) {
+            if (!(holder instanceof Element)) return;
+            const meta = {
+                url: String(prod?.imageUrl || ''),
+                pendingId: String(prod?.imagePendingId || ''),
+                alt: String(prod?.name || 'منتج')
+            };
+            if (window.CashtopImages?.mount) {
+                window.CashtopImages.mount(holder, meta).catch(() => holder.classList.add('ct-image-unavailable'));
+            } else if (!meta.url && !meta.pendingId) {
+                holder.innerHTML = '<i class="fa-solid fa-box ct-image-fallback"></i>';
+            }
+        }
+
+        function refreshCashierProductCards() {
+            document.querySelectorAll('.product-item-card[data-product-id]').forEach(card => {
+                const prod = productsData.find(item => String(item?.id) === String(card.dataset.productId || ''));
+                if (!prod) return;
+                const state = cashierProductCardState(prod);
+                card.classList.toggle('out-of-stock', state.isOutOfStock);
+                const stockNode = card.querySelector('[data-cashier-stock]');
+                if (stockNode) {
+                    stockNode.textContent = state.stockStr;
+                    stockNode.style.display = state.stockStr ? '' : 'none';
+                }
+            });
+        }
+
         function renderProductsGrid() {
             const container = document.getElementById('productsGridContainer');
             if (!container) return;
@@ -1820,34 +1889,17 @@
             }
 
             const createCard = prod => {
-                let availStock = 0;
-                if (prod.hasVariants && prod.variants) prod.variants.forEach(v => { availStock += getAvailableVariantStock(prod.id, v.size, v.color, v.qty); });
-                else availStock = getAvailableStock(prod.id);
-                const isUntrackedStock = prod.untrackedStock === true;
-                const isOutOfStock = !isUntrackedStock && availStock <= 0;
+                const state = cashierProductCardState(prod);
                 const card = document.createElement('div');
-                card.className = `product-item-card ${isOutOfStock ? 'out-of-stock' : ''}`;
+                card.className = `product-item-card ${state.isOutOfStock ? 'out-of-stock' : ''}`;
                 card.dataset.productId = String(prod.id);
                 card.onclick = () => runCashierStep('product card click', () => {
-                    if (isOutOfStock) return showToast('الكمية انتهت من المخزون!', 'error');
-                    if (prod.hasVariants) openVariantModal(prod.id); else addToBasket(prod.id);
+                    const current = productsData.find(item => String(item?.id) === String(prod.id)) || prod;
+                    if (cashierProductCardState(current).isOutOfStock) return showToast('الكمية انتهت من المخزون!', 'error');
+                    if (current.hasVariants) openVariantModal(current.id); else addToBasket(current.id);
                 });
-                let stockStr = '';
-                if (!isUntrackedStock) {
-                    if (isOutOfStock) stockStr = isCompositeProduct(prod) ? 'المخزون نفد' : 'نفد';
-                    else if (prod.hasVariants) stockStr = `المقاسات: ${availStock}`;
-                    else {
-                        const chain = cashierUnitChainForProduct(prod); let remaining = Number(availStock || 0); const parts = [];
-                        [...chain].reverse().forEach((level, reverseIndex) => { const factor=Math.max(.000001,Number(level.factorToBase||1)); if(reverseIndex===chain.length-1){if(remaining>0||!parts.length)parts.push(`${quantityDisplay(remaining)} ${level.name}`)} else {const count=Math.floor((remaining+1e-9)/factor);if(count>0){parts.push(`${count} ${level.name}`);remaining=roundStockQuantity(remaining-count*factor)}} });
-                        stockStr = `المخزون: ${parts.join(' + ')}`;
-                    }
-                }
-                const pendingAttr = prod.imagePendingId ? ` data-ct-pending-image="${String(prod.imagePendingId).replace(/"/g,'&quot;')}"` : '';
-                const productVisual = (prod.imageUrl || prod.imagePendingId)
-                    ? `<i class="fa-solid fa-box ct-image-fallback"></i><img data-ct-product-image="1" src="${String(prod.imageUrl||'').replace(/"/g,'&quot;')}"${pendingAttr} alt="${String(prod.name||'منتج').replace(/"/g,'&quot;')}" loading="lazy" decoding="async" style="display:none">`
-                    : '<i class="fa-solid fa-box"></i>';
-                card.innerHTML = `<div class="product-icon-box">${productVisual}</div><div class="product-item-title">${prod.name}</div>${isCompositeProduct(prod) ? '<div class="product-type-badge"><i class="fa-solid fa-cube"></i> غير متعدد</div>' : ''}<div class="product-item-price">${cashierBaseSymbol()} ${moneyDisplay(getEffectiveProductPrice(prod, 'piece'))}</div>${stockStr ? `<div class="stock-text">${stockStr}</div>` : ''}`;
-                window.CashtopImages?.hydrate?.(card);
+                card.innerHTML = `<div class="product-icon-box" data-cashier-product-image="1"></div><div class="product-item-title">${prod.name}</div>${isCompositeProduct(prod) ? '<div class="product-type-badge"><i class="fa-solid fa-cube"></i> غير متعدد</div>' : ''}<div class="product-item-price">${cashierBaseSymbol()} ${moneyDisplay(getEffectiveProductPrice(prod, 'piece'))}</div><div class="stock-text" data-cashier-stock="1" style="${state.stockStr ? '' : 'display:none'}">${state.stockStr}</div>`;
+                cashierMountProductImage(card.querySelector('[data-cashier-product-image="1"]'), prod);
                 return card;
             };
 
@@ -1935,6 +1987,8 @@
                     pieceName: product.pieceName || 'قطعة',
                     piecesPerUnit: 1, // المقاسات تباع بالقطعة عادة
                     hasSaleUnit: false,
+                    imageUrl: String(product.imageUrl || ''),
+                    imagePendingId: String(product.imagePendingId || ''),
                     isCustom: false,
                     isVariant: true,
                     variantSize: variant.size,
@@ -1964,6 +2018,7 @@
                 id: product.id, name: product.name, price: itemPrice, referencePrice: itemPrice, costPerPiece: Number(product.cost || 0), cost: product.cost, qty: incrementQty,
                 selectedUnit: baseUnit.id, unitName: chain[chain.length - 1]?.name || '', pieceName: baseUnit.name || 'قطعة',
                 piecesPerUnit: Number(chain[chain.length - 1]?.factorToBase || 1), unitChain: chain,
+                imageUrl: String(product.imageUrl || ''), imagePendingId: String(product.imagePendingId || ''),
                 hasSaleUnit: chain.length > 1, isCustom: false, isVariant: false
             });
             renderBasket();
@@ -1990,6 +2045,48 @@
             showToast('تمت إضافة الصنف للسلة بنجاح', 'success');
         }
 
+        // ==========================================
+        // R104 - صور السلة تستخدم نفس الصورة المختبرة في بطاقة المنتج
+        // ==========================================
+        function cashierBasketImageMeta(item) {
+            if (!item || item.isCustom) return { url:'', pendingId:'', alt:String(item?.name || 'منتج') };
+            const product = productsData.find(row => String(row?.id) === String(item.id));
+            return {
+                url: String(product?.imageUrl || item.imageUrl || ''),
+                pendingId: String(product?.imagePendingId || item.imagePendingId || ''),
+                alt: String(item.name || product?.name || 'منتج')
+            };
+        }
+
+        function cashierVerifiedProductImageSource(item, meta) {
+            if (!item || item.isCustom) return '';
+            const id = String(item.id || '');
+            const card = [...document.querySelectorAll('.product-item-card[data-product-id]')]
+                .find(node => String(node.dataset.productId || '') === id);
+            const source = card?.querySelector?.('img[data-ct-product-image="1"][data-ct-image-ready="1"]');
+            if (source instanceof HTMLImageElement && source.complete && source.naturalWidth > 0) {
+                const visibleSource = String(source.currentSrc || source.src || '').trim();
+                // إذا توجد صورة محلية معلقة، لا نعتبر صورة البطاقة صالحة للسلة
+                // إلا إذا كانت هي نفس pendingId التي اختبرها المحرك بالفعل.
+                if (meta.pendingId && String(source.dataset.ctResolvedPendingId || '') !== String(meta.pendingId)) return '';
+                // بعد اكتمال رفع صورة محلية يُلغى blob URL. لا ننسخه إلى عنصر
+                // جديد؛ نترك المحرك يختبر رابط CDN الجديد بدلاً منه.
+                if (!visibleSource.startsWith('blob:') || meta.pendingId) return visibleSource;
+            }
+            return String(window.CashtopImages?.getVerifiedSource?.(meta) || '');
+        }
+
+        function mountBasketProductImage(holder, item) {
+            if (!(holder instanceof Element)) return Promise.resolve(false);
+            const meta = cashierBasketImageMeta(item);
+            const preferredSource = cashierVerifiedProductImageSource(item, meta);
+            if (window.CashtopImages?.mount) {
+                return window.CashtopImages.mount(holder, { ...meta, preferredSource }, { className:'basket-product-image' });
+            }
+            if (!meta.url && !meta.pendingId) holder.innerHTML = '<i class="fa-solid fa-box ct-image-fallback"></i>';
+            return Promise.resolve(false);
+        }
+
         function renderBasket() {
             const container = document.getElementById('basketItemsContainer');
             container.innerHTML = '';
@@ -1998,7 +2095,7 @@
                 container.innerHTML = `<div style="text-align:center; color:#999; padding:20px; font-size:12px;">السلة فارغة حالياً</div>`;
                 document.getElementById('mobile-badge').innerText = '0';
                 calculateTotals();
-                renderProductsGrid(); 
+                refreshCashierProductCards();
                 return;
             }
 
@@ -2007,7 +2104,7 @@
                 if (!Number.isFinite(Number(item.referencePrice))) item.referencePrice = Number(item.price || 0);
                 item.qty = getQuantitySettings().qtyByPrice ? normalizePriceDerivedQuantity(item.qty) : normalizeQuantity(item.qty);
                 totalQty += Number(item.qty || 0);
-                
+
                 let unitSelectorHtml = '';
                 if (item.isCustom) {
                     unitSelectorHtml = `<span style="font-size:10px; color:#f39c12; background:#fff9ec; padding:2px 5px; border-radius:3px;">بدون مخزون</span>`;
@@ -2027,9 +2124,12 @@
                 itemDiv.className = 'basket-item';
                 itemDiv.innerHTML = `
                     <div class="item-row-top">
-                        <div class="item-name-badge">
-                            ${unitSelectorHtml}
-                            <span class="item-title">${item.name}</span>
+                        <div class="basket-item-main">
+                            <div class="basket-item-visual" data-basket-image-holder="1"></div>
+                            <div class="item-name-badge">
+                                ${unitSelectorHtml}
+                                <span class="item-title">${item.name}</span>
+                            </div>
                         </div>
                         <div class="item-top-actions">
                             <button type="button" class="btn-item-info" onclick="openBasketItemInfo(${index})" title="معلومات التكلفة والربح"><i class="fa-solid fa-chart-line"></i></button>
@@ -2052,10 +2152,12 @@
                     </div>
                 `;
                 container.appendChild(itemDiv);
+                const basketImageHolder = itemDiv.querySelector('[data-basket-image-holder="1"]');
+                mountBasketProductImage(basketImageHolder, item).catch(() => basketImageHolder?.classList.add('ct-image-unavailable'));
             });
             document.getElementById('mobile-badge').innerText = quantityDisplay(totalQty);
             calculateTotals();
-            renderProductsGrid(); 
+            refreshCashierProductCards();
         }
 
         function updateItemUnit(index, value) {
@@ -3271,6 +3373,24 @@
                 runCashierStep('refresh accounts', populateAccountsSelect);
             }
         }
+
+        window.addEventListener('cashtop:image-uploaded', event => {
+            const detail = event.detail || {};
+            if (detail.datasetKey !== 'cashtop_products') return;
+            const product = productsData.find(item => String(item?.id) === String(detail.recordId));
+            if (product) {
+                product.imageUrl = String(detail.url || product.imageUrl || '');
+                delete product.imagePendingId;
+                const card = [...document.querySelectorAll('.product-item-card[data-product-id]')]
+                    .find(node => String(node.dataset.productId || '') === String(detail.recordId));
+                cashierMountProductImage(card?.querySelector?.('[data-cashier-product-image="1"]'), product);
+            }
+            basketItems.forEach(item => {
+                if (String(item?.id) !== String(detail.recordId)) return;
+                item.imageUrl = String(detail.url || item.imageUrl || '');
+                delete item.imagePendingId;
+            });
+        });
 
         window.addEventListener('cashtop:remote-applied', event => refreshCashierDatasets(event.detail?.key));
         window.addEventListener('storage', event => {

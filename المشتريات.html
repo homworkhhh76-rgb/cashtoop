@@ -1101,11 +1101,11 @@
             const preview = card.querySelector('.purchase-product-image-preview');
             if (preview) {
                 if (pending) {
-                    preview.innerHTML = `<i class="fa-solid fa-box ct-image-fallback"></i><img data-ct-product-image="1" src="${imageUrl ? imageUrl.replace(/"/g,'&quot;') : ''}" data-ct-pending-image="${pending.replace(/"/g,'&quot;')}" alt="صورة المنتج" style="display:none">`;
+                    preview.innerHTML = `<img data-ct-product-image="1" ${imageUrl ? `data-ct-image-src="${imageUrl.replace(/"/g,'&quot;')}"` : ''} data-ct-pending-image="${pending.replace(/"/g,'&quot;')}" alt="صورة المنتج" style="display:none">`;
                     window.CashtopImages?.hydrate?.(preview);
                 } else {
                     preview.innerHTML = imageUrl
-                        ? `<i class="fa-solid fa-box ct-image-fallback"></i><img data-ct-product-image="1" src="${imageUrl.replace(/"/g, '&quot;')}" alt="صورة المنتج" style="display:none">`
+                        ? `<img data-ct-product-image="1" src="${imageUrl.replace(/"/g, '&quot;')}" alt="صورة المنتج" style="display:none">`
                         : '<i class="fa-solid fa-box"></i>';
                     window.CashtopImages?.hydrate?.(preview);
                 }

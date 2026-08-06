@@ -6475,56 +6475,425 @@
     } finally { imageFlushRunning = false; }
   }
 
-  function managedImageFallback(img) {
-    if (!(img instanceof HTMLImageElement)) return;
-    img.style.display = 'none';
-    const parent = img.parentElement;
-    if (!parent) return;
-    let fallback = parent.querySelector(':scope > .ct-image-fallback');
-    if (!fallback) {
-      fallback = document.createElement('i');
-      fallback.className = 'fa-solid fa-box ct-image-fallback';
-      try { parent.insertBefore(fallback, img); } catch (_) { parent.appendChild(fallback); }
-    }
-    fallback.style.display = '';
+  /* ============================================================
+   * R104 — Stable product-image renderer rebuilt from scratch.
+   *
+   * Rules:
+   * 1) Never swap a real image for the product icon just because a request
+   *    failed. The icon means "this product has no image", nothing else.
+   * 2) A picture is inserted into the DOM only after an off-DOM browser load
+   *    has proved that the exact source can be decoded.
+   * 3) Pending local pictures are tried first, then the saved CDN URL.
+   * 4) Failed CDN URLs are retried with cache-busting while the visible holder
+   *    remains visually stable (no src/error flicker).
+   * 5) Successfully tested sources are shared by Products + Cashier, so the
+   *    cashier can reuse the same image that was already proven in a card.
+   * ============================================================ */
+  const managedImageRetryDelays = Object.freeze([0, 260, 900, 1900]);
+  const managedImageVerifiedSources = new Map();
+  const managedImageResolveJobs = new Map();
+  const managedImageMountTokens = new WeakMap();
+  const managedImageMountMeta = new WeakMap();
+  const managedImageDeferredTimers = new WeakMap();
+  const managedImageFailedMounts = new Set();
+  let managedImageTokenSeq = 0;
+
+  const managedImageWait = ms => new Promise(resolve => setTimeout(resolve, Math.max(0, Number(ms || 0))));
+
+  function managedImageClean(value) {
+    return String(value || '').trim();
   }
 
-  function managedImageLoaded(img) {
-    if (!(img instanceof HTMLImageElement) || !img.naturalWidth) return;
-    const parent = img.parentElement;
-    const fallback = parent?.querySelector?.(':scope > .ct-image-fallback');
+  function managedImageRemoteKey(url) {
+    const value = managedImageClean(url);
+    return value ? `url:${value}` : '';
+  }
+
+  function managedImagePendingKey(id) {
+    const value = managedImageClean(id);
+    return value ? `pending:${value}` : '';
+  }
+
+  function managedImageOriginalUrl(img) {
+    if (!(img instanceof HTMLImageElement)) return '';
+    const stored = managedImageClean(img.dataset.ctImageOriginalSrc);
+    if (stored) return stored;
+    const declared = managedImageClean(img.dataset.ctImageSrc);
+    if (declared) {
+      img.dataset.ctImageOriginalSrc = declared;
+      return declared;
+    }
+    const attr = managedImageClean(img.getAttribute('src'));
+    if (!attr || /^(?:blob:|data:)/i.test(attr)) return '';
+    img.dataset.ctImageOriginalSrc = attr;
+    return attr;
+  }
+
+  function managedImageMetaFromElement(img) {
+    if (!(img instanceof HTMLImageElement)) return { url:'', pendingId:'', alt:'صورة المنتج' };
+    return {
+      url: managedImageOriginalUrl(img),
+      pendingId: managedImageClean(img.dataset.ctPendingImage),
+      alt: managedImageClean(img.getAttribute('alt')) || 'صورة المنتج'
+    };
+  }
+
+  function managedImageNormalizeMeta(meta = {}) {
+    return {
+      url: managedImageClean(meta.url || meta.imageUrl || meta.src),
+      pendingId: managedImageClean(meta.pendingId || meta.imagePendingId),
+      alt: managedImageClean(meta.alt || meta.name) || 'صورة المنتج',
+      preferredSource: managedImageClean(meta.preferredSource || meta.verifiedSource)
+    };
+  }
+
+  function managedImageHasIntent(meta) {
+    const normalized = managedImageNormalizeMeta(meta);
+    return Boolean(normalized.pendingId || normalized.url || normalized.preferredSource);
+  }
+
+  function managedImageFallbackNode(holder, create = false) {
+    if (!(holder instanceof Element)) return null;
+    let fallback = holder.querySelector(':scope > .ct-image-fallback');
+    if (!fallback && create) {
+      fallback = document.createElement('i');
+      fallback.className = 'fa-solid fa-box ct-image-fallback';
+      holder.appendChild(fallback);
+    }
+    return fallback;
+  }
+
+  function managedImageClearTimer(holder) {
+    const timer = managedImageDeferredTimers.get(holder);
+    if (timer) clearTimeout(timer);
+    managedImageDeferredTimers.delete(holder);
+  }
+
+  function managedImageStableBlank(holder) {
+    if (!(holder instanceof Element)) return;
+    managedImageClearTimer(holder);
+    const fallback = managedImageFallbackNode(holder, false);
     if (fallback) fallback.style.display = 'none';
-    img.style.display = '';
+    // Keep an already verified picture visible while a replacement is tested.
+    // Otherwise remove only unverified/legacy image nodes and reserve the box.
+    [...holder.querySelectorAll(':scope > img')].forEach(img => {
+      if (img.dataset.ctImageReady !== '1') img.remove();
+    });
+    holder.classList.add('ct-image-loading');
+    holder.classList.remove('ct-image-no-photo');
+  }
+
+  function managedImageShowNoPhoto(holder) {
+    if (!(holder instanceof Element)) return;
+    managedImageClearTimer(holder);
+    managedImageFailedMounts.delete(holder);
+    holder.classList.remove('ct-image-loading', 'ct-image-unavailable');
+    holder.classList.add('ct-image-no-photo');
+    [...holder.querySelectorAll(':scope > img')].forEach(img => img.remove());
+    const fallback = managedImageFallbackNode(holder, true);
+    if (fallback) fallback.style.display = '';
+  }
+
+  function managedImageKeepUnavailable(holder) {
+    if (!(holder instanceof Element)) return;
+    holder.classList.remove('ct-image-loading', 'ct-image-no-photo');
+    holder.classList.add('ct-image-unavailable');
+    const fallback = managedImageFallbackNode(holder, false);
+    if (fallback) fallback.style.display = 'none';
+    // Do not remove a previously verified image. If this is the first load the
+    // holder simply stays blank; that is intentional and prevents false fallback
+    // flashing while the retry cycle continues later.
+  }
+
+  function requestManagedImageCachePurge(url) {
+    const original = managedImageClean(url);
+    if (!original) return;
+    try {
+      navigator.serviceWorker?.controller?.postMessage?.({ type:'CASHTOP_PURGE_IMAGE_CACHE', url:original });
+    } catch (_) {}
+  }
+
+  function managedImageRetryUrl(url, attempt) {
+    const original = managedImageClean(url);
+    if (!original || attempt <= 0 || /^(?:blob:|data:)/i.test(original)) return original;
+    try {
+      const parsed = new URL(original, location.href);
+      parsed.searchParams.set('__ct_img_retry', `${Date.now()}_${attempt}`);
+      return parsed.href;
+    } catch (_) {
+      const joiner = original.includes('?') ? '&' : '?';
+      return `${original}${joiner}__ct_img_retry=${Date.now()}_${attempt}`;
+    }
+  }
+
+  function managedImageProbe(source, timeoutMs = 7000) {
+    const src = managedImageClean(source);
+    if (!src) return Promise.reject(new Error('EMPTY_IMAGE_URL'));
+    return new Promise((resolve, reject) => {
+      const probe = new Image();
+      probe.decoding = 'async';
+      probe.loading = 'eager';
+      probe.draggable = false;
+      let finished = false;
+      const finish = ok => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        probe.onload = null;
+        probe.onerror = null;
+        if (ok && probe.naturalWidth > 0 && probe.naturalHeight > 0) {
+          resolve({ source: managedImageClean(probe.currentSrc || probe.src || src), width:probe.naturalWidth, height:probe.naturalHeight });
+        } else reject(new Error('IMAGE_DECODE_FAILED'));
+      };
+      probe.onload = () => finish(true);
+      probe.onerror = () => finish(false);
+      const timer = setTimeout(() => finish(false), Math.max(1200, Number(timeoutMs || 7000)));
+      probe.src = src;
+      if (probe.complete) queueMicrotask(() => finish(probe.naturalWidth > 0));
+    });
+  }
+
+  async function managedImageVerifiedPreferredSource(source) {
+    // preferredSource is supplied only from an image that is already visible and
+    // decoded (for example the cashier product card), so it is safe to reuse.
+    return managedImageClean(source);
+  }
+
+  async function managedImageResolvePending(pendingId) {
+    const id = managedImageClean(pendingId);
+    if (!id) return '';
+    const key = managedImagePendingKey(id);
+    const cached = managedImageVerifiedSources.get(key);
+    if (cached) return cached;
+    if (managedImageResolveJobs.has(key)) return managedImageResolveJobs.get(key);
+
+    const job = (async () => {
+      const record = await imageOutboxGet(id);
+      if (!(record?.blob instanceof Blob) || !record.blob.size) return '';
+      const objectUrl = pendingImagePreviewUrl(id, record.blob);
+      if (!objectUrl) return '';
+      try {
+        const tested = await managedImageProbe(objectUrl, 4500);
+        managedImageVerifiedSources.set(key, tested.source);
+        return tested.source;
+      } catch (_) { return ''; }
+    })().finally(() => managedImageResolveJobs.delete(key));
+
+    managedImageResolveJobs.set(key, job);
+    return job;
+  }
+
+  async function managedImageResolveRemote(url) {
+    const original = managedImageClean(url);
+    if (!original) return '';
+    const key = managedImageRemoteKey(original);
+    const cached = managedImageVerifiedSources.get(key);
+    if (cached) return cached;
+    if (managedImageResolveJobs.has(key)) return managedImageResolveJobs.get(key);
+
+    const job = (async () => {
+      for (let attempt = 0; attempt < managedImageRetryDelays.length; attempt += 1) {
+        const delay = managedImageRetryDelays[attempt];
+        if (delay) await managedImageWait(delay);
+        if (attempt === 1) {
+          requestManagedImageCachePurge(original);
+          await managedImageWait(80);
+        }
+        try {
+          const candidate = managedImageRetryUrl(original, attempt);
+          await managedImageProbe(candidate, attempt === 0 ? 5500 : 7000);
+          managedImageVerifiedSources.set(key, original);
+          return original;
+        } catch (_) {}
+      }
+      return '';
+    })().finally(() => managedImageResolveJobs.delete(key));
+
+    managedImageResolveJobs.set(key, job);
+    return job;
+  }
+
+  async function managedImageResolveSource(meta = {}) {
+    const normalized = managedImageNormalizeMeta(meta);
+
+    // Highest priority: an image source already proven by the exact product card.
+    if (normalized.preferredSource) {
+      const preferred = await managedImageVerifiedPreferredSource(normalized.preferredSource);
+      if (preferred) return preferred;
+    }
+
+    // New local selection is newer than the saved CDN URL.
+    if (normalized.pendingId) {
+      const pending = await managedImageResolvePending(normalized.pendingId);
+      if (pending) return pending;
+    }
+
+    if (normalized.url) return managedImageResolveRemote(normalized.url);
+    return '';
+  }
+
+  function managedImageCreateVisibleNode(source, alt = 'صورة المنتج', className = '') {
+    const img = new Image();
+    img.alt = managedImageClean(alt) || 'صورة المنتج';
+    img.decoding = 'async';
+    img.loading = 'eager';
+    img.draggable = false;
+    img.dataset.ctProductImage = '1';
+    img.dataset.ctImageReady = '0';
+    img.dataset.ctImageWired = '1';
+    if (className) img.className = className;
+    img.style.visibility = 'hidden';
+    img.style.opacity = '0';
+    img.src = source;
+    return img;
+  }
+
+  function managedImageKnownVerifiedSource(meta = {}) {
+    const normalized = managedImageNormalizeMeta(meta);
+    if (normalized.preferredSource) return normalized.preferredSource;
+    if (normalized.pendingId) {
+      // A pending photo is the user's newest selection. Never fast-path the old
+      // remote URL while that pending photo still exists.
+      return managedImageVerifiedSources.get(managedImagePendingKey(normalized.pendingId)) || '';
+    }
+    if (normalized.url) return managedImageVerifiedSources.get(managedImageRemoteKey(normalized.url)) || '';
+    return '';
+  }
+
+  function managedImageInstallTrusted(holder, normalized, source, options, token) {
+    const img = new Image();
+    img.alt = normalized.alt || 'صورة المنتج';
+    img.decoding = 'async';
+    img.loading = 'eager';
+    img.draggable = false;
+    img.dataset.ctProductImage = '1';
+    img.dataset.ctImageReady = '1';
+    img.dataset.ctImageWired = '1';
+    if (normalized.pendingId) img.dataset.ctResolvedPendingId = normalized.pendingId;
+    if (normalized.url) img.dataset.ctResolvedImageUrl = normalized.url;
+    if (options.className) img.className = options.className;
+    img.addEventListener('error', () => {
+      if (managedImageMountTokens.get(holder) !== token || !holder.isConnected) return;
+      if (normalized.pendingId) managedImageVerifiedSources.delete(managedImagePendingKey(normalized.pendingId));
+      if (normalized.url) managedImageVerifiedSources.delete(managedImageRemoteKey(normalized.url));
+      img.remove();
+      managedImageKeepUnavailable(holder);
+      managedImageMount(holder, { ...normalized, preferredSource:'' }, { ...options, retryCycle:Math.max(1, Number(options.retryCycle || 0)) }).catch(() => null);
+    }, { once:true });
+    holder.classList.remove('ct-image-loading', 'ct-image-unavailable', 'ct-image-no-photo');
+    holder.replaceChildren(img);
+    img.src = source;
+    return img;
+  }
+
+  async function managedImageMount(holder, meta = {}, options = {}) {
+    if (!(holder instanceof Element)) return { ok:false, reason:'INVALID_HOLDER' };
+    const normalized = managedImageNormalizeMeta(meta);
+    const token = `${++managedImageTokenSeq}:${normalized.pendingId}:${normalized.url}:${normalized.preferredSource}`;
+    managedImageMountTokens.set(holder, token);
+    managedImageMountMeta.set(holder, normalized);
+    managedImageClearTimer(holder);
+
+    if (!managedImageHasIntent(normalized)) {
+      managedImageShowNoPhoto(holder);
+      return { ok:true, noImage:true };
+    }
+
+    // If this exact source was already decoded successfully, mount it immediately.
+    // This is what keeps cashier thumbnails stable when the basket re-renders.
+    const trustedSource = managedImageKnownVerifiedSource(normalized);
+    if (trustedSource) {
+      const image = managedImageInstallTrusted(holder, normalized, trustedSource, options, token);
+      managedImageFailedMounts.delete(holder);
+      return { ok:true, source:trustedSource, image, verified:true };
+    }
+
+    managedImageStableBlank(holder);
+    const source = await managedImageResolveSource(normalized).catch(() => '');
+    if (managedImageMountTokens.get(holder) !== token || !holder.isConnected) return { ok:false, stale:true };
+
+    if (!source) {
+      managedImageKeepUnavailable(holder);
+      managedImageFailedMounts.add(holder);
+      const cycle = Math.max(0, Number(options.retryCycle || 0));
+      if (cycle < 2 && navigator.onLine !== false) {
+        const timer = setTimeout(() => {
+          managedImageDeferredTimers.delete(holder);
+          if (!holder.isConnected || managedImageMountTokens.get(holder) !== token) return;
+          // Forget only the remote "verified" entry for this cycle. In-flight
+          // jobs are already cleared, so this really performs a fresh test.
+          if (normalized.url) managedImageVerifiedSources.delete(managedImageRemoteKey(normalized.url));
+          managedImageMount(holder, normalized, { ...options, retryCycle:cycle + 1 }).catch(() => null);
+        }, cycle === 0 ? 5000 : 14000);
+        managedImageDeferredTimers.set(holder, timer);
+      }
+      return { ok:false, unavailable:true };
+    }
+
+    const readyImage = managedImageCreateVisibleNode(source, normalized.alt, options.className || '');
+    if (normalized.pendingId) readyImage.dataset.ctResolvedPendingId = normalized.pendingId;
+    if (normalized.url) readyImage.dataset.ctResolvedImageUrl = normalized.url;
+    const ready = await new Promise(resolve => {
+      let finished = false;
+      const done = ok => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        readyImage.onload = null;
+        readyImage.onerror = null;
+        resolve(Boolean(ok && readyImage.naturalWidth > 0));
+      };
+      readyImage.onload = () => done(true);
+      readyImage.onerror = () => done(false);
+      const timer = setTimeout(() => done(readyImage.complete && readyImage.naturalWidth > 0), 3500);
+      if (readyImage.complete) queueMicrotask(() => done(readyImage.naturalWidth > 0));
+    });
+
+    if (managedImageMountTokens.get(holder) !== token || !holder.isConnected) return { ok:false, stale:true };
+    if (!ready) {
+      if (normalized.url) managedImageVerifiedSources.delete(managedImageRemoteKey(normalized.url));
+      managedImageKeepUnavailable(holder);
+      managedImageFailedMounts.add(holder);
+      return { ok:false, unavailable:true };
+    }
+
+    readyImage.dataset.ctImageReady = '1';
+    readyImage.style.visibility = 'visible';
+    readyImage.style.opacity = '1';
+    const fallback = managedImageFallbackNode(holder, false);
+    if (fallback) fallback.style.display = 'none';
+    holder.classList.remove('ct-image-loading', 'ct-image-unavailable', 'ct-image-no-photo');
+    holder.replaceChildren(readyImage);
+    managedImageFailedMounts.delete(holder);
+    return { ok:true, source, image:readyImage };
+  }
+
+  function managedImageFallback(imgOrHolder) {
+    const holder = imgOrHolder instanceof HTMLImageElement ? imgOrHolder.parentElement : imgOrHolder;
+    if (!(holder instanceof Element)) return;
+    const meta = imgOrHolder instanceof HTMLImageElement ? managedImageMetaFromElement(imgOrHolder) : {};
+    if (managedImageHasIntent(meta)) managedImageKeepUnavailable(holder);
+    else managedImageShowNoPhoto(holder);
   }
 
   function wireManagedImageElement(img) {
-    if (!(img instanceof HTMLImageElement) || img.dataset.ctImageWired === '1') return;
+    if (!(img instanceof HTMLImageElement)) return false;
+    if (img.dataset.ctImageWired === '1') return true;
     img.dataset.ctImageWired = '1';
-    img.addEventListener('load', () => managedImageLoaded(img));
-    img.addEventListener('error', () => {
-      // A pending local blob may still be available even when the remote URL is
-      // unreachable. Try hydration once, then keep the normal product icon.
-      if (img.dataset.ctPendingImage && img.dataset.ctPendingHydrated !== img.dataset.ctPendingImage) {
-        hydratePendingImageElement(img).then(ok => { if (!ok) managedImageFallback(img); }).catch(() => managedImageFallback(img));
-      } else managedImageFallback(img);
-    });
-    if (img.complete) {
-      if (img.naturalWidth) managedImageLoaded(img); else if (!img.dataset.ctPendingImage) managedImageFallback(img);
-    }
+    const holder = img.parentElement;
+    if (!(holder instanceof Element)) return false;
+    const meta = managedImageMetaFromElement(img);
+    // Legacy markup is converted immediately to the new stable holder renderer.
+    managedImageMount(holder, meta).catch(() => managedImageKeepUnavailable(holder));
+    return true;
   }
 
   async function hydratePendingImageElement(img) {
     if (!(img instanceof HTMLImageElement)) return false;
-    wireManagedImageElement(img);
-    const id = String(img.dataset.ctPendingImage || '');
-    if (!id || img.dataset.ctPendingHydrated === id) return false;
-    const record = await imageOutboxGet(id);
-    if (!record?.blob) { managedImageFallback(img); return false; }
-    const url = pendingImagePreviewUrl(id, record.blob);
-    if (!url) { managedImageFallback(img); return false; }
-    img.dataset.ctPendingHydrated = id;
-    img.src = url;
-    return true;
+    const holder = img.parentElement;
+    if (!(holder instanceof Element)) return false;
+    const result = await managedImageMount(holder, managedImageMetaFromElement(img));
+    return Boolean(result?.ok);
   }
 
   function hydratePendingImages(root = document) {
@@ -6533,9 +6902,20 @@
       ...(root instanceof HTMLImageElement && root.matches(selector) ? [root] : []),
       ...(root?.querySelectorAll?.(selector) || [])
     ];
-    [...new Set(items)].forEach(img => {
-      wireManagedImageElement(img);
-      if (img.dataset.ctPendingImage) hydratePendingImageElement(img).catch(() => managedImageFallback(img));
+    [...new Set(items)].forEach(img => wireManagedImageElement(img));
+  }
+
+  function managedImageGetVerifiedSource(meta = {}) {
+    return managedImageKnownVerifiedSource(meta);
+  }
+
+  function managedImageRetryFailed() {
+    [...managedImageFailedMounts].forEach(holder => {
+      if (!holder?.isConnected) { managedImageFailedMounts.delete(holder); return; }
+      const meta = managedImageMountMeta.get(holder);
+      if (!meta || !managedImageHasIntent(meta)) { managedImageFailedMounts.delete(holder); return; }
+      if (meta.url) managedImageVerifiedSources.delete(managedImageRemoteKey(meta.url));
+      managedImageMount(holder, meta, { retryCycle:1 }).catch(() => null);
     });
   }
 
@@ -6553,6 +6933,10 @@
     discard: discardPreparedImage,
     flushUploads: flushPendingImageUploads,
     hydrate: hydratePendingImages,
+    mount: managedImageMount,
+    resolve: managedImageResolveSource,
+    getVerifiedSource: managedImageGetVerifiedSource,
+    retryFailed: managedImageRetryFailed,
     remove: deleteManagedImage,
     flushDeletes: flushManagedImageDeletes,
     isManagedUrl: isManagedImageUrl,
@@ -6562,6 +6946,7 @@
     maxSizeKB: IMAGE_STORAGE_CONFIG.maxSizeKB
   });
   window.addEventListener('online', () => {
+    managedImageRetryFailed();
     flushManagedImageDeletes().catch(() => null);
     flushPendingImageUploads().catch(() => null);
   });
@@ -6581,6 +6966,7 @@
   }, 12000);
   const resumeImageOutbox = () => {
     hydratePendingImages(document);
+    managedImageRetryFailed();
     if (navigator.onLine !== false) flushPendingImageUploads().catch(() => null);
   };
   window.addEventListener('focus', resumeImageOutbox, { passive:true });

@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v100-indexeddb-invoice-durable-sync-cache-first-v1';
+const CACHE_VERSION = 'v104-stable-product-images-v1';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = 'cash-top-2-remote-static-persistent-v1';
 const IMAGE_OUTBOX_LOCAL_CACHE = 'cashtop-image-outbox-local-v1'; // legacy R99 migration cache only
@@ -354,9 +354,14 @@ async function refreshLocalCache(request, cache) {
 
 async function matchCachedLocal(request) {
   const cacheKey = canonicalLocalRequest(request);
-  // caches.match يبحث في كاش الإصدار الحالي وأي إصدار قديم احتياطي أبقيناه
-  // أثناء تحديث ناقص، وبالتالي لا تنقطع الصفحات عند تحديث التطبيق بدون شبكة.
-  let cached = await caches.match(cacheKey, { ignoreSearch: true });
+  // R103: افحص كاش الإصدار الحالي أولاً دائماً. هذا يمنع cashier.html القديم
+  // من الفوز على الملف الجديد إذا بقي كاش إصدار سابق كـ fallback مؤقت.
+  const currentCache = await caches.open(APP_CACHE);
+  let cached = await currentCache.match(cacheKey, { ignoreSearch: true });
+  if (cached) return cached;
+
+  // بعد ذلك فقط نسمح بكاش إصدار أقدم كحل احتياطي عند تحديث ناقص.
+  cached = await caches.match(cacheKey, { ignoreSearch: true });
   if (cached) return cached;
 
   if (request.mode !== 'navigate' && request.destination !== 'document') return null;
@@ -413,14 +418,56 @@ async function refreshCachedLocalInBackground(request) {
   await refreshLocalCache(request, cache);
 }
 
+function isManagedProductImageRequest(request, url) {
+  return String(url?.hostname || '').toLowerCase() === 'amanwar1.b-cdn.net' &&
+    (request?.destination === 'image' || /\.(?:png|jpe?g|webp|gif|avif)(?:$|\?)/i.test(String(url?.pathname || '') + String(url?.search || '')));
+}
+
+function canonicalManagedProductImageRequest(request) {
+  const url = new URL(request.url);
+  url.searchParams.delete('__ct_img_retry');
+  return new Request(url.href, { method:'GET', mode:request.mode, credentials:request.credentials, redirect:request.redirect });
+}
+
+async function purgeManagedProductImageCache(rawUrl) {
+  let target;
+  try { target = new URL(String(rawUrl || '')); } catch (_) { return false; }
+  if (String(target.hostname || '').toLowerCase() !== 'amanwar1.b-cdn.net') return false;
+  const cache = await caches.open(REMOTE_STATIC_CACHE);
+  const keys = await cache.keys();
+  let removed = false;
+  await Promise.all(keys.map(async key => {
+    try {
+      const url = new URL(key.url);
+      if (url.origin === target.origin && url.pathname === target.pathname) {
+        removed = (await cache.delete(key)) || removed;
+      }
+    } catch (_) {}
+  }));
+  return removed;
+}
+
 async function remoteStaticCacheFirst(request) {
   const cache = await caches.open(REMOTE_STATIC_CACHE);
-  const cached = await cache.match(request, { ignoreSearch: false }) || await caches.match(request, { ignoreSearch: false });
-  if (cached) return cached;
+  const url = new URL(request.url);
+  const managedImage = isManagedProductImageRequest(request, url);
+  const isRetry = managedImage && url.searchParams.has('__ct_img_retry');
+  const cacheKey = managedImage ? canonicalManagedProductImageRequest(request) : request;
+
+  // طلبات إعادة المحاولة تتجاوز أي نسخة قديمة/مكسورة في الكاش. إذا نجح
+  // الطلب الجديد يُحفظ تحت رابط الصورة الأصلي، فيصبح العرض التالي فوريًا وثابتًا.
+  if (!isRetry) {
+    const cached = await cache.match(cacheKey, { ignoreSearch: false }) || await caches.match(cacheKey, { ignoreSearch: false });
+    if (cached) return cached;
+  }
   try {
-    const response = await fetch(request);
-    return await putIfUsable(cache, request, response);
+    const response = await fetch(request, isRetry ? { cache:'reload' } : undefined);
+    return await putIfUsable(cache, cacheKey, response);
   } catch (_) {
+    if (isRetry) {
+      const fallback = await cache.match(cacheKey, { ignoreSearch:false }) || await caches.match(cacheKey, { ignoreSearch:false });
+      if (fallback) return fallback;
+    }
     return Response.error();
   }
 }
@@ -516,6 +563,10 @@ self.addEventListener('message', event => {
   }
   if (data.type === 'CASHTOP_NOTIFICATION_META') {
     event.waitUntil(saveNotificationMeta(data.payload || {}));
+    return;
+  }
+  if (data.type === 'CASHTOP_PURGE_IMAGE_CACHE') {
+    event.waitUntil(purgeManagedProductImageCache(data.url).catch(() => false));
     return;
   }
   if (data === 'SKIP_WAITING' || data.type === 'SKIP_WAITING') {
