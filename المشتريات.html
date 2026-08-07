@@ -74,15 +74,6 @@
         .barcode-input-wrapper { display: flex; gap: 5px; width: 100%; position: relative; }
         .btn-barcode-scan { background-color: #f1f5f9; border: 1px solid #cbd5e1; padding: 0 15px; border-radius: 6px; cursor: pointer; color: #475569; transition: 0.2s; height: 45px; display: flex; align-items: center; justify-content: center;}
         .btn-barcode-scan:hover { background-color: #e2e8f0; color:#0f172a;}
-        .purchase-product-image-picker { display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid #dbe2ea;border-radius:8px;background:#f8fafc;min-height:66px; }
-        .purchase-product-image-preview { width:45px;height:45px;border-radius:8px;background:#f0f8ff;color:#3c8dbc;display:flex;align-items:center;justify-content:center;overflow:hidden;flex:0 0 45px;font-size:20px; }
-        .purchase-product-image-preview img { width:100%;height:100%;object-fit:cover;display:block; }
-        .purchase-image-source { display:inline-flex;align-items:center;background:#e5e7eb;border:1px solid #d1d5db;border-radius:10px;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.06); }
-        .purchase-image-source button { border:0;background:transparent;color:#475569;padding:9px 12px;font-family:inherit;font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;cursor:pointer;transition:.18s; }
-        .purchase-image-source button:hover { background:#dbe1e8; }
-        .purchase-image-source .divider { height:20px;border-right:1px dotted #94a3b8; }
-        .purchase-image-status { font-size:11px;color:#64748b;font-weight:700;display:none; }
-        .purchase-image-status.active { display:inline-flex;align-items:center;gap:5px; }
 
         /* مفتاح التفعيل (Toggle Switch) */
         .switch-container { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 15px; padding: 15px; background: #fff; border: 1px dashed #cbd5e1; border-radius: 6px;}
@@ -1088,58 +1079,6 @@
             tbody.appendChild(tr);
         }
 
-        function setPurchaseCardImage(card, url = '', path = '', pendingId = '') {
-            if (!card) return;
-            const imageUrl = String(url || '');
-            const pending = String(pendingId || '');
-            const urlInput = card.querySelector('.product-image-url');
-            const pathInput = card.querySelector('.product-image-path');
-            const pendingInput = card.querySelector('.product-image-pending-id');
-            if (urlInput) urlInput.value = imageUrl;
-            if (pathInput) pathInput.value = String(path || '');
-            if (pendingInput) pendingInput.value = pending;
-            const preview = card.querySelector('.purchase-product-image-preview');
-            if (preview) {
-                if (pending) {
-                    preview.innerHTML = `<img data-ct-product-image="1" ${imageUrl ? `data-ct-image-src="${imageUrl.replace(/"/g,'&quot;')}"` : ''} data-ct-pending-image="${pending.replace(/"/g,'&quot;')}" alt="صورة المنتج" style="display:none">`;
-                    window.CashtopImages?.hydrate?.(preview);
-                } else {
-                    preview.innerHTML = imageUrl
-                        ? `<img data-ct-product-image="1" src="${imageUrl.replace(/"/g, '&quot;')}" alt="صورة المنتج" style="display:none">`
-                        : '<i class="fa-solid fa-box"></i>';
-                    window.CashtopImages?.hydrate?.(preview);
-                }
-            }
-        }
-
-        async function handlePurchaseProductImage(input) {
-            const file = input?.files?.[0];
-            if (!file) return;
-            const card = input.closest('.product-item');
-            if (!card) return;
-            const status = card.querySelector('.purchase-image-status');
-            card.dataset.imagePreparing = '1';
-            status?.classList.add('active');
-            try {
-                if (!window.CashtopImages?.prepare) throw new Error('IMAGE_STORAGE_NOT_READY');
-                const previousPending = String(card.querySelector('.product-image-pending-id')?.value || '');
-                if (previousPending) await window.CashtopImages.discard?.(previousPending).catch(() => null);
-                const prepared = await window.CashtopImages.prepare(file, { folder:'products', maxSizeKB:50 });
-                // Preserve existing remote image until the newly selected one has
-                // uploaded successfully after invoice save.
-                const currentUrl = String(card.querySelector('.product-image-url')?.value || '');
-                setPurchaseCardImage(card, currentUrl, '', prepared.pendingId);
-                showToast(`تم ضغط الصورة (${prepared.sizeKB}KB). سيتم رفعها بعد حفظ الفاتورة.`, 'success');
-            } catch (error) {
-                console.error('Purchase product image prepare:', error);
-                showToast('تعذر تجهيز صورة المنتج.', 'error');
-            } finally {
-                status?.classList.remove('active');
-                card.dataset.imagePreparing = '0';
-                input.value = '';
-            }
-        }
-
         function addNewProductRow() {
             if (!window.Cashtop?.can?.('purchases.create')) { showToast('لا تملك صلاحية إضافة منتجات لفاتورة المشتريات', 'error'); return; }
             productRowCounter++;
@@ -1159,25 +1098,6 @@
                                 ${purchaseMethodOptionsHtml}
                             </select>
                             <label>طريقة الإضافة للمخزن</label>
-                        </div>
-                    </div>
-
-                    <div class="form-row full">
-                        <div class="purchase-product-image-picker">
-                            <div class="purchase-product-image-preview"><i class="fa-solid fa-box"></i></div>
-                            <div style="display:flex;flex-direction:column;gap:7px;min-width:0;flex:1;">
-                                <div class="purchase-image-source">
-                                    <button type="button" onclick="this.closest('.purchase-product-image-picker').querySelector('.product-image-camera').click()" title="التقاط صورة بالكاميرا"><i class="fa-solid fa-camera"></i><span>كاميرا</span></button>
-                                    <span class="divider"></span>
-                                    <button type="button" onclick="this.closest('.purchase-product-image-picker').querySelector('.product-image-gallery').click()" title="اختيار صورة من المعرض"><i class="fa-solid fa-image"></i><span>المعرض</span></button>
-                                </div>
-                                <span class="purchase-image-status"><i class="fa-solid fa-circle-notch fa-spin"></i> جاري ضغط الصورة محلياً...</span>
-                            </div>
-                            <input type="hidden" class="product-image-url" value="">
-                            <input type="hidden" class="product-image-path" value="">
-                            <input type="hidden" class="product-image-pending-id" value="">
-                            <input type="file" class="product-image-camera" accept="image/*" capture="environment" hidden onchange="handlePurchaseProductImage(this)">
-                            <input type="file" class="product-image-gallery" accept="image/*" hidden onchange="handlePurchaseProductImage(this)">
                         </div>
                     </div>
 
@@ -1324,11 +1244,6 @@
 
         function removeProductRow(rowId) {
             const row = document.getElementById(rowId);
-            const currentUrl = row?.querySelector('.product-image-url')?.value || '';
-            const originalUrl = row?.dataset.originalImageUrl || '';
-            const pendingId = row?.querySelector('.product-image-pending-id')?.value || '';
-            if (pendingId) window.CashtopImages?.discard?.(pendingId).catch(() => null);
-            if (currentUrl && currentUrl !== originalUrl && window.CashtopImages?.isManagedUrl?.(currentUrl)) window.CashtopImages.remove(currentUrl).catch(() => null);
             row?.remove();
             if(document.querySelectorAll('.product-item').length === 0) addNewProductRow();
             calculateInvoiceFinance();
@@ -1352,7 +1267,7 @@
         function searchProductDb(inputEl, rowId) {
             const val = inputEl.value.trim().toLowerCase();
             const box = inputEl.nextElementSibling.nextElementSibling;
-            if (val === '') { const row=document.getElementById(rowId); box.style.display='none'; const original=row.dataset.originalImageUrl||''; const current=row.querySelector('.product-image-url')?.value||''; row.dataset.existingId=''; row.dataset.originalImageUrl=''; if (current && current === original) setPurchaseCardImage(row,'',''); return; }
+            if (val === '') { const row=document.getElementById(rowId); box.style.display='none'; row.dataset.existingId=''; return; }
 
             const exactBarcode = findPurchaseProductByBarcode(val);
             if (exactBarcode) {
@@ -1381,11 +1296,7 @@
                 box.style.display = 'block';
             } else {
                 const row = document.getElementById(rowId);
-                const original = row.dataset.originalImageUrl || '';
-                const current = row.querySelector('.product-image-url')?.value || '';
                 row.dataset.existingId = "";
-                row.dataset.originalImageUrl = '';
-                if (current && current === original) setPurchaseCardImage(row, '', '');
                 box.style.display = 'none';
             }
         }
@@ -1403,9 +1314,7 @@
             if(!row) return;
 
             row.dataset.existingId = prod.id; // ربط بالـ ID لتحديث متوسط التكلفة
-            row.dataset.originalImageUrl = prod.imageUrl || '';
             row.querySelector('.prod-name').value = prod.name;
-            setPurchaseCardImage(row, prod.imageUrl || '', '', prod.imagePendingId || '');
             
             let typeSelect = row.querySelector('.add-type-select');
             if (prod.addType === 'unit') {
@@ -1661,8 +1570,7 @@
         /* ========================================================== */
         /*   ترحيل وحفظ الفاتورة بالكامل وحساب متوسط التكلفة          */
         /* ========================================================== */
-        function savePurchaseInvoice() {
-            if ([...document.querySelectorAll('.product-item')].some(card => card.dataset.imagePreparing === '1')) { showToast('لحظة حتى يكتمل ضغط الصور محلياً.', 'warning'); return; }
+        async function savePurchaseInvoice() {
             if (!window.Cashtop?.can?.('purchases.create')) { showToast('لا تملك صلاحية إنشاء فاتورة مشتريات', 'error'); return; }
             const supplierId = document.getElementById('supplierSelect').value || PURCHASE_NO_SUPPLIER_VALUE;
             const accountId = document.getElementById('accountSelect').value || PURCHASE_NO_ACCOUNT_VALUE;
@@ -1742,8 +1650,6 @@
                     destinationStoreName,
                     expiryDate: String(card.querySelector('.expiry-date')?.value || ''),
                     batchNumber: String(card.querySelector('.batch-number')?.value || '').trim(),
-                    imageUrl: String(card.querySelector('.product-image-url')?.value || ''),
-                    imagePendingId: String(card.querySelector('.product-image-pending-id')?.value || ''),
                     inventoryLotId: crypto.randomUUID ? `LOT_${crypto.randomUUID()}` : `LOT_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
                 };
 
@@ -1876,8 +1782,6 @@
                 if (newProduct.unitPrices && typeof newProduct.unitPrices === 'object') existing.unitPrices = newProduct.unitPrices;
                 if (newProduct.unitId) existing.unitId = newProduct.unitId;
                 existing.addType = newProduct.addType || existing.addType;
-                if (newProduct.imageUrl) existing.imageUrl = newProduct.imageUrl;
-                if (newProduct.imagePendingId) existing.imagePendingId = newProduct.imagePendingId;
                 addPurchaseStockToDestination(existing, newProduct, invId);
                 productsDB[existingIndex] = existing;
             });
@@ -1925,6 +1829,8 @@
             let newInvoice = {
                 id: invId,
                 date: invDate,
+                createdAt: new Date().toISOString(),
+                savedAt: new Date().toISOString(),
                 supplierId: supplier?.id || null,
                 supplierName,
                 accountId: isMultiPayment ? PURCHASE_MULTI_PAYMENT_VALUE : (isNoAccount ? null : vault.id),
@@ -1957,8 +1863,6 @@
                 items: productsToSaveLog.map(item => ({
                     productId: item.id,
                     name: item.name,
-                    imageUrl: item.imageUrl || '',
-                    imagePendingId: item.imagePendingId || '',
                     quantityPieces: parseFloat(item.newStockPieces) || 0,
                     purchaseCostBeforeTax: parseFloat(item.newCost) || 0,
                     purchaseCost: parseFloat(item.inventoryCost ?? item.newCost) || 0,
@@ -1994,20 +1898,30 @@
                 } else {
                     Object.entries(purchaseChanges).forEach(([key, value]) => localStorage.setItem(key, JSON.stringify(value)));
                 }
+                if (window.Cashtop?.commitCriticalData) {
+                    const committed = await window.Cashtop.commitCriticalData(Object.keys(purchaseChanges), { recordKey:'cashtop_purchases', recordId:newInvoice.id });
+                    if (!committed?.recordVerified) throw new Error('تعذر تثبيت فاتورة المشتريات في التخزين المحلي الكبير.');
+                } else if (!readArray('cashtop_purchases').some(row => String(row?.id) === String(newInvoice.id))) {
+                    throw new Error('تعذر التحقق من حفظ فاتورة المشتريات محلياً.');
+                }
                 window.Cashtop?.preservePendingSyncState?.().catch(() => null);
-                productsToSaveLog.forEach(item => {
-                    if (!item?.imagePendingId) return;
-                    window.CashtopImages?.commit?.(item.imagePendingId, {
-                        folder:'products', datasetKey:'cashtop_products', recordId:item.id,
-                        entityId:item.id, oldUrl:item.imageUrl || ''
-                    }).catch(error => console.warn('Queue purchase image upload:', error));
-                });
-                window.dispatchEvent(new CustomEvent('cashtop:sync-now', { detail:{ reason:'save-purchase-with-images' } }));
+                window.dispatchEvent(new CustomEvent('cashtop:sync-now', { detail:{ reason:'save-purchase' } }));
             } catch (error) {
                 productsDB = saveRollback.products;
                 suppliersDB = saveRollback.suppliers;
                 fundsDB = saveRollback.funds;
                 purchasesDB = saveRollback.purchases;
+                const rollbackChanges = {
+                    cashtop_products: productsDB,
+                    cashtop_suppliers: suppliersDB,
+                    cashtop_funds_db: fundsDB,
+                    cashtop_purchases: purchasesDB
+                };
+                try {
+                    if (window.Cashtop?.atomicSetItems) window.Cashtop.atomicSetItems(rollbackChanges, { label:'rollback-purchase-invoice', audit:false });
+                    else Object.entries(rollbackChanges).forEach(([key, value]) => localStorage.setItem(key, JSON.stringify(value)));
+                    await window.Cashtop?.commitCriticalData?.(Object.keys(rollbackChanges));
+                } catch (_) {}
                 console.error(error);
                 showToast('تعذر حفظ فاتورة المشتريات كوحدة واحدة، ولم يتم اعتماد أي تغيير.', 'error');
                 return;
@@ -2033,7 +1947,7 @@
         /* ========================================================== */
         function renderInvoicesTable() {
             const tbody = document.getElementById('invoicesTableBody');
-            const records = Array.isArray(purchasesDB) ? purchasesDB.slice().reverse() : [];
+            const records = Array.isArray(purchasesDB) ? purchasesDB.slice().sort((a,b) => new Date(b.savedAt || b.createdAt || b.date || 0) - new Date(a.savedAt || a.createdAt || a.date || 0)) : [];
             const totals = purchasesDB.reduce((acc, inv) => {
                 acc.purchases += Number(inv?.total) || 0;
                 acc.paid += Number(inv?.paid) || 0;

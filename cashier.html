@@ -56,11 +56,8 @@
         .basket-item { border: 1px solid #eef1f5; border-radius: 6px; padding: 10px; display: flex; flex-direction: column; gap: 8px; background-color: #fafbfc; }
         .item-row-top { display: flex; justify-content: space-between; align-items: center; gap:8px; }
         .basket-item-main { display:flex; align-items:center; gap:8px; min-width:0; flex:1; }
-        /* R104: حاوية صورة ثابتة؛ لا spinner ولا تبديل شعار/صورة أثناء إعادة المحاولة. */
+        /* المنتجات والسلة تستخدم أيقونة الصندوق فقط. */
         .basket-item-visual { width:44px; height:44px; flex:0 0 44px; border-radius:8px; overflow:hidden; background:#f0f8ff; display:flex; align-items:center; justify-content:center; color:#3c8dbc; font-size:17px; position:relative; }
-        .basket-item-visual .basket-product-image { width:100%; height:100%; object-fit:cover; display:block; border-radius:8px; margin:0; padding:0; border:0; opacity:1; }
-        .basket-item-visual .ct-image-fallback { display:flex; width:100%; height:100%; align-items:center; justify-content:center; }
-        .basket-item-visual.ct-image-loading, .basket-item-visual.ct-image-unavailable { background:#f0f8ff; }
         .item-name-badge { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width:0; }
         .item-title { font-weight: bold; font-size: 13px; overflow-wrap:anywhere; }
         
@@ -1267,7 +1264,6 @@
                 costPerPiece: Number(product.cost || 0), cost: Number(product.cost || 0) * factor, qty: 1,
                 selectedUnit: normalizedId, unitName: unit.name, pieceName: chain[0]?.name || 'قطعة',
                 piecesPerUnit: factor, unitChain: chain, hasSaleUnit: chain.length > 1,
-                imageUrl: String(product.imageUrl || ''), imagePendingId: String(product.imagePendingId || ''),
                 isCustom: false, isVariant: false
             });
             renderBasket();
@@ -1838,20 +1834,6 @@
             return { availStock, isUntrackedStock, isOutOfStock, stockStr };
         }
 
-        function cashierMountProductImage(holder, prod) {
-            if (!(holder instanceof Element)) return;
-            const meta = {
-                url: String(prod?.imageUrl || ''),
-                pendingId: String(prod?.imagePendingId || ''),
-                alt: String(prod?.name || 'منتج')
-            };
-            if (window.CashtopImages?.mount) {
-                window.CashtopImages.mount(holder, meta).catch(() => holder.classList.add('ct-image-unavailable'));
-            } else if (!meta.url && !meta.pendingId) {
-                holder.innerHTML = '<i class="fa-solid fa-box ct-image-fallback"></i>';
-            }
-        }
-
         function refreshCashierProductCards() {
             document.querySelectorAll('.product-item-card[data-product-id]').forEach(card => {
                 const prod = productsData.find(item => String(item?.id) === String(card.dataset.productId || ''));
@@ -1873,7 +1855,7 @@
             const activeCategoryIds = selectedCashierCategoryId ? categoryProductIdSet(selectedCashierCategoryId) : null;
             const visibleProducts = [];
             // Filtering is deliberately a cheap pass only. Stock, unit-chain and
-            // image/card work happens only for the small DOM window actually shown.
+            // حساب حالة البطاقة يتم فقط لنافذة DOM الصغيرة الظاهرة حالياً.
             for (const prod of productsData) {
                 if (!representativeCanSeeProduct(prod)) continue;
                 if (activeCategoryIds && !activeCategoryIds.has(String(prod?.id))) continue;
@@ -1898,8 +1880,7 @@
                     if (cashierProductCardState(current).isOutOfStock) return showToast('الكمية انتهت من المخزون!', 'error');
                     if (current.hasVariants) openVariantModal(current.id); else addToBasket(current.id);
                 });
-                card.innerHTML = `<div class="product-icon-box" data-cashier-product-image="1"></div><div class="product-item-title">${prod.name}</div>${isCompositeProduct(prod) ? '<div class="product-type-badge"><i class="fa-solid fa-cube"></i> غير متعدد</div>' : ''}<div class="product-item-price">${cashierBaseSymbol()} ${moneyDisplay(getEffectiveProductPrice(prod, 'piece'))}</div><div class="stock-text" data-cashier-stock="1" style="${state.stockStr ? '' : 'display:none'}">${state.stockStr}</div>`;
-                cashierMountProductImage(card.querySelector('[data-cashier-product-image="1"]'), prod);
+                card.innerHTML = `<div class="product-icon-box"><i class="fa-solid fa-box"></i></div><div class="product-item-title">${prod.name}</div>${isCompositeProduct(prod) ? '<div class="product-type-badge"><i class="fa-solid fa-cube"></i> غير متعدد</div>' : ''}<div class="product-item-price">${cashierBaseSymbol()} ${moneyDisplay(getEffectiveProductPrice(prod, 'piece'))}</div><div class="stock-text" data-cashier-stock="1" style="${state.stockStr ? '' : 'display:none'}">${state.stockStr}</div>`;
                 return card;
             };
 
@@ -1987,8 +1968,6 @@
                     pieceName: product.pieceName || 'قطعة',
                     piecesPerUnit: 1, // المقاسات تباع بالقطعة عادة
                     hasSaleUnit: false,
-                    imageUrl: String(product.imageUrl || ''),
-                    imagePendingId: String(product.imagePendingId || ''),
                     isCustom: false,
                     isVariant: true,
                     variantSize: variant.size,
@@ -2018,7 +1997,6 @@
                 id: product.id, name: product.name, price: itemPrice, referencePrice: itemPrice, costPerPiece: Number(product.cost || 0), cost: product.cost, qty: incrementQty,
                 selectedUnit: baseUnit.id, unitName: chain[chain.length - 1]?.name || '', pieceName: baseUnit.name || 'قطعة',
                 piecesPerUnit: Number(chain[chain.length - 1]?.factorToBase || 1), unitChain: chain,
-                imageUrl: String(product.imageUrl || ''), imagePendingId: String(product.imagePendingId || ''),
                 hasSaleUnit: chain.length > 1, isCustom: false, isVariant: false
             });
             renderBasket();
@@ -2043,48 +2021,6 @@
             document.getElementById('quickProductForm').reset();
             closeModal('quickProductModal');
             showToast('تمت إضافة الصنف للسلة بنجاح', 'success');
-        }
-
-        // ==========================================
-        // R104 - صور السلة تستخدم نفس الصورة المختبرة في بطاقة المنتج
-        // ==========================================
-        function cashierBasketImageMeta(item) {
-            if (!item || item.isCustom) return { url:'', pendingId:'', alt:String(item?.name || 'منتج') };
-            const product = productsData.find(row => String(row?.id) === String(item.id));
-            return {
-                url: String(product?.imageUrl || item.imageUrl || ''),
-                pendingId: String(product?.imagePendingId || item.imagePendingId || ''),
-                alt: String(item.name || product?.name || 'منتج')
-            };
-        }
-
-        function cashierVerifiedProductImageSource(item, meta) {
-            if (!item || item.isCustom) return '';
-            const id = String(item.id || '');
-            const card = [...document.querySelectorAll('.product-item-card[data-product-id]')]
-                .find(node => String(node.dataset.productId || '') === id);
-            const source = card?.querySelector?.('img[data-ct-product-image="1"][data-ct-image-ready="1"]');
-            if (source instanceof HTMLImageElement && source.complete && source.naturalWidth > 0) {
-                const visibleSource = String(source.currentSrc || source.src || '').trim();
-                // إذا توجد صورة محلية معلقة، لا نعتبر صورة البطاقة صالحة للسلة
-                // إلا إذا كانت هي نفس pendingId التي اختبرها المحرك بالفعل.
-                if (meta.pendingId && String(source.dataset.ctResolvedPendingId || '') !== String(meta.pendingId)) return '';
-                // بعد اكتمال رفع صورة محلية يُلغى blob URL. لا ننسخه إلى عنصر
-                // جديد؛ نترك المحرك يختبر رابط CDN الجديد بدلاً منه.
-                if (!visibleSource.startsWith('blob:') || meta.pendingId) return visibleSource;
-            }
-            return String(window.CashtopImages?.getVerifiedSource?.(meta) || '');
-        }
-
-        function mountBasketProductImage(holder, item) {
-            if (!(holder instanceof Element)) return Promise.resolve(false);
-            const meta = cashierBasketImageMeta(item);
-            const preferredSource = cashierVerifiedProductImageSource(item, meta);
-            if (window.CashtopImages?.mount) {
-                return window.CashtopImages.mount(holder, { ...meta, preferredSource }, { className:'basket-product-image' });
-            }
-            if (!meta.url && !meta.pendingId) holder.innerHTML = '<i class="fa-solid fa-box ct-image-fallback"></i>';
-            return Promise.resolve(false);
         }
 
         function renderBasket() {
@@ -2125,7 +2061,7 @@
                 itemDiv.innerHTML = `
                     <div class="item-row-top">
                         <div class="basket-item-main">
-                            <div class="basket-item-visual" data-basket-image-holder="1"></div>
+                            <div class="basket-item-visual"><i class="fa-solid fa-box"></i></div>
                             <div class="item-name-badge">
                                 ${unitSelectorHtml}
                                 <span class="item-title">${item.name}</span>
@@ -2152,8 +2088,6 @@
                     </div>
                 `;
                 container.appendChild(itemDiv);
-                const basketImageHolder = itemDiv.querySelector('[data-basket-image-holder="1"]');
-                mountBasketProductImage(basketImageHolder, item).catch(() => basketImageHolder?.classList.add('ct-image-unavailable'));
             });
             document.getElementById('mobile-badge').innerText = quantityDisplay(totalQty);
             calculateTotals();
@@ -2814,6 +2748,9 @@
                     const value = snapshots[key];
                     if (value == null) localStorage.removeItem(key); else localStorage.setItem(key, value);
                 });
+                // ثبّت التراجع نفسه في IndexedDB قبل إعادة تمكين أزرار الحفظ؛
+                // حتى لا تبقى نسخة فاتورة فاشلة في التخزين المتين بعد rollback الواجهة.
+                try { await window.Cashtop?.commitCriticalData?.(snapshotKeys); } catch (_) {}
                 productsData = readArray('cashtop_products');
                 materialsData = readArray('cashtop_materials');
                 customersData = readArray('cashtop_customers');
@@ -2910,6 +2847,7 @@
                 status: status,
                 date: new Date().toISOString(),
                 createdAt: editingOriginalInvoice?.createdAt || editingOriginalInvoice?.date || new Date().toISOString(),
+                savedAt: new Date().toISOString(),
                 customer: customerName,
                 customerId: selectedCustomer?.id || editingOriginalInvoice?.customerId || null,
                 phone: customerPhone,
@@ -3373,24 +3311,6 @@
                 runCashierStep('refresh accounts', populateAccountsSelect);
             }
         }
-
-        window.addEventListener('cashtop:image-uploaded', event => {
-            const detail = event.detail || {};
-            if (detail.datasetKey !== 'cashtop_products') return;
-            const product = productsData.find(item => String(item?.id) === String(detail.recordId));
-            if (product) {
-                product.imageUrl = String(detail.url || product.imageUrl || '');
-                delete product.imagePendingId;
-                const card = [...document.querySelectorAll('.product-item-card[data-product-id]')]
-                    .find(node => String(node.dataset.productId || '') === String(detail.recordId));
-                cashierMountProductImage(card?.querySelector?.('[data-cashier-product-image="1"]'), product);
-            }
-            basketItems.forEach(item => {
-                if (String(item?.id) !== String(detail.recordId)) return;
-                item.imageUrl = String(detail.url || item.imageUrl || '');
-                delete item.imagePendingId;
-            });
-        });
 
         window.addEventListener('cashtop:remote-applied', event => refreshCashierDatasets(event.detail?.key));
         window.addEventListener('storage', event => {

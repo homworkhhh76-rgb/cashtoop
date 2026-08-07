@@ -1,9 +1,8 @@
 'use strict';
 
-const CACHE_VERSION = 'v104-stable-product-images-v1';
+const CACHE_VERSION = 'v107-cairo-sync-screen';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = 'cash-top-2-remote-static-persistent-v1';
-const IMAGE_OUTBOX_LOCAL_CACHE = 'cashtop-image-outbox-local-v1'; // legacy R99 migration cache only
 
 /*
  * حزمة التطبيق المحلية كاملة. التثبيت لا ينجح إلا بعد حفظ كل ملف محلي،
@@ -59,6 +58,7 @@ const LOCAL_ASSETS = [
   './setting.html',
   './shortages.html',
   './storage-settings.html',
+  './sync.html',
   './suppliers.html',
   './tax-settings.html',
   './units.html',
@@ -81,6 +81,7 @@ const LOCAL_ASSETS = [
 const REMOTE_STATIC_ASSETS = [
   'https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap',
   'https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap',
+  'https://cdn.tailwindcss.com',
   'https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap',
   'https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap',
   'https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap',
@@ -99,6 +100,7 @@ const REMOTE_STATIC_ASSETS = [
 const REMOTE_STATIC_HOSTS = new Set([
   'fonts.googleapis.com',
   'fonts.gstatic.com',
+  'cdn.tailwindcss.com',
   'cdnjs.cloudflare.com',
   'cdn.jsdelivr.net',
   'unpkg.com',
@@ -318,7 +320,7 @@ self.addEventListener('activate', event => {
     const shell = await ensureLocalShell().catch(() => ({ complete: false, missing: ['unknown'] }));
     await warmRemoteStaticAssetsOnce().catch(() => null);
     if (shell?.complete === true) {
-      const keep = new Set([APP_CACHE, REMOTE_STATIC_CACHE, IMAGE_OUTBOX_LOCAL_CACHE, NOTIFICATION_META_CACHE]);
+      const keep = new Set([APP_CACHE, REMOTE_STATIC_CACHE, NOTIFICATION_META_CACHE]);
       const names = await caches.keys();
       await Promise.all(names.filter(name => !keep.has(name)).map(name => caches.delete(name)));
     }
@@ -418,56 +420,14 @@ async function refreshCachedLocalInBackground(request) {
   await refreshLocalCache(request, cache);
 }
 
-function isManagedProductImageRequest(request, url) {
-  return String(url?.hostname || '').toLowerCase() === 'amanwar1.b-cdn.net' &&
-    (request?.destination === 'image' || /\.(?:png|jpe?g|webp|gif|avif)(?:$|\?)/i.test(String(url?.pathname || '') + String(url?.search || '')));
-}
-
-function canonicalManagedProductImageRequest(request) {
-  const url = new URL(request.url);
-  url.searchParams.delete('__ct_img_retry');
-  return new Request(url.href, { method:'GET', mode:request.mode, credentials:request.credentials, redirect:request.redirect });
-}
-
-async function purgeManagedProductImageCache(rawUrl) {
-  let target;
-  try { target = new URL(String(rawUrl || '')); } catch (_) { return false; }
-  if (String(target.hostname || '').toLowerCase() !== 'amanwar1.b-cdn.net') return false;
-  const cache = await caches.open(REMOTE_STATIC_CACHE);
-  const keys = await cache.keys();
-  let removed = false;
-  await Promise.all(keys.map(async key => {
-    try {
-      const url = new URL(key.url);
-      if (url.origin === target.origin && url.pathname === target.pathname) {
-        removed = (await cache.delete(key)) || removed;
-      }
-    } catch (_) {}
-  }));
-  return removed;
-}
-
 async function remoteStaticCacheFirst(request) {
   const cache = await caches.open(REMOTE_STATIC_CACHE);
-  const url = new URL(request.url);
-  const managedImage = isManagedProductImageRequest(request, url);
-  const isRetry = managedImage && url.searchParams.has('__ct_img_retry');
-  const cacheKey = managedImage ? canonicalManagedProductImageRequest(request) : request;
-
-  // طلبات إعادة المحاولة تتجاوز أي نسخة قديمة/مكسورة في الكاش. إذا نجح
-  // الطلب الجديد يُحفظ تحت رابط الصورة الأصلي، فيصبح العرض التالي فوريًا وثابتًا.
-  if (!isRetry) {
-    const cached = await cache.match(cacheKey, { ignoreSearch: false }) || await caches.match(cacheKey, { ignoreSearch: false });
-    if (cached) return cached;
-  }
+  const cached = await cache.match(request, { ignoreSearch:false }) || await caches.match(request, { ignoreSearch:false });
+  if (cached) return cached;
   try {
-    const response = await fetch(request, isRetry ? { cache:'reload' } : undefined);
-    return await putIfUsable(cache, cacheKey, response);
+    const response = await fetch(request);
+    return await putIfUsable(cache, request, response);
   } catch (_) {
-    if (isRetry) {
-      const fallback = await cache.match(cacheKey, { ignoreSearch:false }) || await caches.match(cacheKey, { ignoreSearch:false });
-      if (fallback) return fallback;
-    }
     return Response.error();
   }
 }
@@ -565,10 +525,6 @@ self.addEventListener('message', event => {
     event.waitUntil(saveNotificationMeta(data.payload || {}));
     return;
   }
-  if (data.type === 'CASHTOP_PURGE_IMAGE_CACHE') {
-    event.waitUntil(purgeManagedProductImageCache(data.url).catch(() => false));
-    return;
-  }
   if (data === 'SKIP_WAITING' || data.type === 'SKIP_WAITING') {
     event.waitUntil(self.skipWaiting());
     return;
@@ -589,7 +545,7 @@ self.addEventListener('message', event => {
   }
   if (data.type === 'TRIM_OLD_CACHES') {
     event.waitUntil((async () => {
-      const keep = new Set([APP_CACHE, REMOTE_STATIC_CACHE, IMAGE_OUTBOX_LOCAL_CACHE, NOTIFICATION_META_CACHE]);
+      const keep = new Set([APP_CACHE, REMOTE_STATIC_CACHE, NOTIFICATION_META_CACHE]);
       const names = await caches.keys();
       await Promise.all(names.filter(name => !keep.has(name)).map(name => caches.delete(name)));
     })());

@@ -656,7 +656,7 @@
     } catch (_) { return fallback; }
   }
   function invoiceTime(invoice){
-    const candidates=[invoice.date,invoice.createdAt,invoice.updatedAt,invoice.invoiceDate];
+    const candidates=[invoice.savedAt,invoice.createdAt,invoice.date,invoice.updatedAt,invoice.invoiceDate];
     for(const value of candidates){const time=new Date(value||0).getTime();if(Number.isFinite(time)&&time>0)return time;}
     const idNumber=Number(String(invoice.id||'').replace(/\D/g,''));
     return Number.isFinite(idNumber)?idNumber:0;

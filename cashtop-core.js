@@ -550,21 +550,36 @@
 
     let recordVerified = true;
     const verifyKey = options.recordKey ? canonicalKey(options.recordKey) : '';
-    const recordId = String(options.recordId ?? '');
-    if (verifyKey && recordId) {
+    const requestedRecordIds = [...new Set([
+      ...(Array.isArray(options.recordIds) ? options.recordIds : []),
+      ...(options.recordId != null && options.recordId !== '' ? [options.recordId] : [])
+    ].map(value => String(value)).filter(Boolean))];
+    const missingRecordIds = [];
+    if (verifyKey && requestedRecordIds.length) {
       const physical = namespaceKey(verifyKey);
-      let raw = await readDurableLocalKey(physical).catch(() => null);
-      if (raw == null) raw = rawGet(physical);
-      const parsed = safeJson(raw, []);
-      const rows = Array.isArray(parsed) ? parsed : (parsed && typeof parsed === 'object' ? Object.values(parsed) : []);
-      recordVerified = rows.some(row => String(recordIdentity(row) || row?.id || '') === recordId || String(row?.id || '') === recordId);
+      const durableRaw = await readDurableLocalKey(physical).catch(() => null);
+      const mirrorRaw = rawGet(physical);
+      const present = new Set();
+      // افحص النسختين بدلاً من تفضيل نسخة IndexedDB قديمة عند تعذر آخر write.
+      // النجاح مقبول إذا كان السجل المقصود قابلاً للقراءة من طبقة واحدة على الأقل،
+      // بينما غيابه من الطبقتين يمنع واجهة الفاتورة من إعلان نجاح الحفظ.
+      [durableRaw, mirrorRaw].forEach(raw => {
+        const parsed = safeJson(raw, []);
+        const rows = Array.isArray(parsed) ? parsed : (parsed && typeof parsed === 'object' ? Object.values(parsed) : []);
+        rows.forEach(row => {
+          const id = String(recordIdentity(row) || row?.id || '');
+          if (id) present.add(id);
+        });
+      });
+      requestedRecordIds.forEach(id => { if (!present.has(id)) missingRecordIds.push(id); });
+      recordVerified = missingRecordIds.length === 0;
     }
 
     // A browser without IndexedDB may still have successfully written the hot
     // localStorage mirror.  For critical record verification accept either copy,
     // but never claim success when the record cannot be read from either layer.
     const ok = recordVerified && (failed.length === 0 || requested.every(canonical => rawGet(namespaceKey(canonical)) !== null));
-    return { ok, durable: failed.length === 0, recordVerified, persisted, failed, queueLength: queue.length };
+    return { ok, durable: failed.length === 0, recordVerified, missingRecordIds, persisted, failed, queueLength: queue.length };
   }
 
   function rawGet(key) {
@@ -726,7 +741,17 @@
       observedAt = Number(snapshot.observedAt);
     }
     if (Number.isFinite(offset) && Number.isFinite(observedAt) && Date.now() - observedAt < 30 * 86400000) return Date.now() + offset;
-    return Date.now();
+    // لا نستخدم startAt لمنع الدخول: المفتاح النشط يبدأ من لحظة تفعيله في الإدارة.
+    // وإذا كانت ساعة اللابتوب مضبوطة على سنة بعيدة جداً، لا نجعلها وحدها تنهي
+    // مفتاحاً نشطاً قبل أن نحصل على توقيت خادم موثوق من أول اتصال شبكي.
+    const localNow = Date.now();
+    const plausibleMin = Date.UTC(2024, 0, 1);
+    const plausibleMax = Date.UTC(2038, 0, 1);
+    if (localNow < plausibleMin || localNow > plausibleMax) {
+      const lastCheck = Number(activeSession?.lastLicenseCheck || 0);
+      if (Number.isFinite(lastCheck) && lastCheck >= plausibleMin && lastCheck <= plausibleMax) return lastCheck;
+    }
+    return localNow;
   }
 
   function normalizeArrayValue(value, fallback = []) {
@@ -2342,14 +2367,141 @@
       .map(item => item.record);
   }
 
+  const PRODUCT_IMAGE_FIELDS = ['image','imageUrl','photo','imageStoragePath','imagePendingId','imagePath','productImage'];
+  const PRODUCT_IMAGE_HISTORY_KEYS = new Set(['cashtop_invoices', 'cashtop_purchases']);
+
+  // R106 — business datasets are reconciled record-by-record. A remote snapshot
+  // is never allowed to make existing local records disappear just because the
+  // remote array is shorter. Explicit deletions are carried as record tombstones.
+  const LOSSLESS_RECORD_DATASETS = new Set([
+    'cashtop_products','cashtop_product_categories','cashtop_materials','cashtop_material_purchases',
+    'cashtop_customers','cashtop_customer_groups','cashtop_suppliers','cashtop_supplier_movements',
+    'cashtop_invoices','cashtop_sales_reversals','cashtop_sales_returns',
+    'cashtop_purchases','cashtop_purchase_reversals','cashtop_purchase_returns',
+    'cashtop_expenses','cashtop_expense_types','cashtop_vouchers','cashtop_units','cashtop_stores',
+    'cashtop_transfer_history','cashtop_branches','cashtop_branch_transfer_history','cashtop_employees',
+    'cashtop_workers','cashtop_sales_agents','cashtop_agent_movements','cashtop_sales_offers',
+    'cashtop_manufacturing_recipes','cashtop_manufacturing_orders','cashtop_wastage','cashtop_salary_payments',
+    'cashtop_journal','cashtop_journal_reversal_archive','cashtop_financial_groups','cashtop_opening_balances'
+  ]);
+  const LOSSLESS_OBJECT_DATASETS = new Set(['cashtop_funds_db']);
+
+  function losslessRecordIdentity(record, index = 0) {
+    if (!record || typeof record !== 'object' || Array.isArray(record)) return `anon:${index}:${JSON.stringify(record)}`;
+    for (const field of ['id','_id','uuid','invoiceId','refId','refNumber','reference','number','code','key','barcode']) {
+      const value = record[field];
+      if (value !== undefined && value !== null && String(value).trim()) return `${field}:${String(value).trim()}`;
+    }
+    if (record.accountId != null && (record.sourceId != null || record.refId != null)) {
+      return `fund:${String(record.accountId)}:${String(record.sourceType || record.refType || '')}:${String(record.sourceId || record.refId || '')}:${String(record.type || '')}`;
+    }
+    if (record.accountId != null && (record.date || record.timestamp) && record.amount != null) {
+      return `fundlog:${String(record.accountId)}:${String(record.date || record.timestamp)}:${String(record.type || '')}:${String(record.amount)}`;
+    }
+    return `anon:${index}:${JSON.stringify(record)}`;
+  }
+
+  function losslessRecordFreshness(record) {
+    if (!record || typeof record !== 'object') return 0;
+    for (const field of ['updatedAt','modifiedAt','savedAt','createdAt','timestamp']) {
+      const value = record[field];
+      if (value == null || value === '') continue;
+      const numeric = Number(value);
+      if (Number.isFinite(numeric) && numeric > 100000000000) return numeric;
+      const parsed = new Date(value).getTime();
+      if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    }
+    return 0;
+  }
+
+  function mergeLosslessRecordArrays(localValue, remoteValue, tombstones = {}) {
+    const local = normalizeArrayValue(localValue, []);
+    const remote = normalizeArrayValue(remoteValue, []);
+    const merged = new Map();
+    local.forEach((record, index) => merged.set(losslessRecordIdentity(record, index), deepClone(record)));
+    remote.forEach((record, index) => {
+      const id = losslessRecordIdentity(record, index);
+      const previous = merged.get(id);
+      if (previous && previous && typeof previous === 'object' && typeof record === 'object' && !Array.isArray(previous) && !Array.isArray(record)) {
+        // Preserve fields from both devices. When records carry their own save/update
+        // timestamp, the newer record wins field conflicts; otherwise the incoming
+        // cloud record wins as before.
+        const localEpoch = losslessRecordFreshness(previous);
+        const remoteEpoch = losslessRecordFreshness(record);
+        merged.set(id, localEpoch > remoteEpoch
+          ? { ...deepClone(record), ...previous }
+          : { ...previous, ...deepClone(record) });
+      } else {
+        merged.set(id, deepClone(record));
+      }
+    });
+    Object.entries(tombstones || {}).forEach(([id, stamp]) => {
+      if (!id || !stamp) return;
+      merged.delete(id);
+    });
+    return [...merged.values()];
+  }
+
+  function mergeLosslessObjectDataset(key, localValue, remoteValue) {
+    if (key !== 'cashtop_funds_db') return remoteValue;
+    const local = localValue && typeof localValue === 'object' && !Array.isArray(localValue) ? localValue : {};
+    const remote = remoteValue && typeof remoteValue === 'object' && !Array.isArray(remoteValue) ? remoteValue : {};
+    return {
+      ...local,
+      ...remote,
+      accounts: mergeLosslessRecordArrays(local.accounts || [], remote.accounts || [], {}),
+      accountLogs: mergeLosslessRecordArrays(local.accountLogs || [], remote.accountLogs || [], {})
+    };
+  }
+
+  function mergeRecordTombstones(previous = {}, change = {}) {
+    const next = { ...(previous && typeof previous === 'object' ? previous : {}) };
+    const now = Date.now();
+    (change.deletedIds || []).forEach(id => { if (id) next[String(id)] = now; });
+    (change.touchedIds || []).forEach(id => { if (id) delete next[String(id)]; });
+    const entries = Object.entries(next).sort((a,b)=>Number(b[1]||0)-Number(a[1]||0)).slice(0, 5000);
+    return Object.fromEntries(entries);
+  }
+
+  function stripProductImageFieldsFromObject(value) {
+    if (!value || typeof value !== 'object') return value;
+    const next = { ...value };
+    PRODUCT_IMAGE_FIELDS.forEach(field => delete next[field]);
+    return next;
+  }
+
+  function stripProductImageFieldsFromRows(input) {
+    return normalizeArrayValue(input, []).map(stripProductImageFieldsFromObject);
+  }
+
+  function stripProductImageFieldsRaw(rawValue) {
+    return JSON.stringify(stripProductImageFieldsFromRows(safeJson(rawValue, [])));
+  }
+
+  function stripInvoiceItemImageFieldsFromRows(input) {
+    return normalizeArrayValue(input, []).map(record => {
+      if (!record || typeof record !== 'object') return record;
+      const next = { ...record };
+      ['items', 'products', 'invoiceItems'].forEach(field => {
+        if (Array.isArray(next[field])) next[field] = next[field].map(stripProductImageFieldsFromObject);
+      });
+      return next;
+    });
+  }
+
+  function stripInvoiceItemImageFieldsRaw(rawValue) {
+    return JSON.stringify(stripInvoiceItemImageFieldsFromRows(safeJson(rawValue, [])));
+  }
+
   function transformManagedRead(canonical, rawValue) {
     if (rawValue == null) return rawValue;
     if (canonical === 'cashtop_products') {
-      const projected = safeJson(projectProducts(safeJson(rawValue, [])), []);
+      const projected = stripProductImageFieldsFromRows(safeJson(projectProducts(safeJson(rawValue, [])), []));
       return JSON.stringify(sortNewestFirstRecords(projected));
     }
     if (BRANCH_SCOPED_ARRAY_KEYS.has(canonical)) {
-      const projected = safeJson(projectBranchArray(safeJson(rawValue, [])), []);
+      let projected = safeJson(projectBranchArray(safeJson(rawValue, [])), []);
+      if (PRODUCT_IMAGE_HISTORY_KEYS.has(canonical)) projected = stripInvoiceItemImageFieldsFromRows(projected);
       return JSON.stringify(sortNewestFirstRecords(projected));
     }
     if (BRANCH_SCOPED_OBJECT_KEYS.has(canonical)) return projectFunds(rawValue);
@@ -2359,8 +2511,11 @@
   }
 
   function transformManagedWrite(canonical, oldRaw, value) {
-    if (canonical === 'cashtop_products') return mergeProducts(safeJson(oldRaw, []), safeJson(value, []));
-    if (BRANCH_SCOPED_ARRAY_KEYS.has(canonical)) return mergeBranchArray(safeJson(oldRaw, []), safeJson(value, []));
+    if (canonical === 'cashtop_products') return stripProductImageFieldsRaw(mergeProducts(safeJson(oldRaw, []), safeJson(value, [])));
+    if (BRANCH_SCOPED_ARRAY_KEYS.has(canonical)) {
+      const merged = mergeBranchArray(safeJson(oldRaw, []), safeJson(value, []));
+      return PRODUCT_IMAGE_HISTORY_KEYS.has(canonical) ? stripInvoiceItemImageFieldsRaw(merged) : merged;
+    }
     if (BRANCH_SCOPED_OBJECT_KEYS.has(canonical)) return mergeFunds(oldRaw, value);
     return String(value);
   }
@@ -2389,6 +2544,7 @@
     rawSet(ns, stringValue);
     const previousMeta = safeJson(rawGet(metaKey(canonical)), {}) || {};
     rawSet(metaKey(canonical), JSON.stringify({
+      ...previousMeta,
       updatedAt: Date.now(),
       revision: Number(previousMeta.revision || 0) + 1,
       deviceId: getDeviceId(),
@@ -2401,6 +2557,33 @@
     return { changed: true, operationId };
   }
 
+
+  async function removeLegacyProductImagesV105() {
+    const changedKeys = [];
+    const sanitizers = new Map([
+      ['cashtop_products', stripProductImageFieldsRaw],
+      ['cashtop_invoices', stripInvoiceItemImageFieldsRaw],
+      ['cashtop_purchases', stripInvoiceItemImageFieldsRaw]
+    ]);
+    for (const [key, sanitizer] of sanitizers) {
+      const raw = getRawCompanyDataset(key);
+      if (raw == null) continue;
+      const clean = sanitizer(raw);
+      if (clean === raw) continue;
+      setRawCompanyDataset(key, clean, {
+        action: 'r105-remove-product-images',
+        bypassQuota: true,
+        audit: false
+      });
+      changedKeys.push(key);
+    }
+    if (changedKeys.length) {
+      await commitCriticalData(changedKeys).catch(() => ({ ok:false }));
+      await preservePendingSyncState().catch(() => false);
+      window.dispatchEvent(new CustomEvent('cashtop:product-images-removed', { detail:{ keys:changedKeys } }));
+    }
+    return { changedKeys };
+  }
 
 
   function ensureFinancialGroups() {
@@ -3281,13 +3464,18 @@
       entries.forEach((entry, index) => {
         rawSet(entry.ns, entry.newValue);
         const previousMeta = safeJson(entry.oldMeta, {}) || {};
+        const managedChange = describeManagedChange(entry.oldValue, entry.newValue);
         rawSet(entry.metaNs, JSON.stringify({
+          ...previousMeta,
           updatedAt: now + index,
           revision: Number(previousMeta.revision || 0) + 1,
           deviceId: getDeviceId(),
           page: FILE,
           transactionId,
-          transactionLabel: journal.label
+          transactionLabel: journal.label,
+          recordTombstones: LOSSLESS_RECORD_DATASETS.has(entry.key)
+            ? mergeRecordTombstones(previousMeta.recordTombstones, managedChange)
+            : previousMeta.recordTombstones
         }));
       });
       rawSet(txKey, JSON.stringify({ ...journal, state: 'data-written', writtenAt: Date.now() }));
@@ -3457,15 +3645,20 @@
         const error = new Error(violation); error.code = 'CASHTOP_PLAN_LIMIT'; throw error;
       }
       const genericReversalEntry = genericDeletionReversalArchiveEntry([{ key: canonical, ns, oldValue, newValue: stringValue }]);
+      const managedChange = describeManagedChange(oldValue, stringValue);
       rawSet(ns, stringValue);
       if (genericReversalEntry) rawSet(genericReversalEntry.ns, genericReversalEntry.newValue);
       const previousMeta = safeJson(rawGet(metaKey(canonical)), {}) || {};
       rawSet(metaKey(canonical), JSON.stringify({
+        ...previousMeta,
         updatedAt: Date.now(), revision: Number(previousMeta.revision || 0) + 1,
-        deviceId: getDeviceId(), page: FILE
+        deviceId: getDeviceId(), page: FILE,
+        recordTombstones: LOSSLESS_RECORD_DATASETS.has(canonical)
+          ? mergeRecordTombstones(previousMeta.recordTombstones, managedChange)
+          : previousMeta.recordTombstones
       }));
       appendAudit(canonical, oldValue, stringValue);
-      const operationId = enqueueSyncOperation(canonical, { ...describeManagedChange(oldValue, stringValue), deletedDataset: false });
+      const operationId = enqueueSyncOperation(canonical, { ...managedChange, deletedDataset: false });
       emitDataChange(canonical, oldValue, stringValue, 'local', operationId);
       if (genericReversalEntry) {
         const archiveMeta = safeJson(genericReversalEntry.oldMeta, {}) || {};
@@ -3944,6 +4137,12 @@
   function mountShell() {
     const body = document.body;
     if (!body) return;
+    // R106 login sync gate uses the full authenticated data/bootstrap runtime
+    // but intentionally has no application shell while the initial merge runs.
+    if (FILE === 'sync.html') {
+      document.documentElement.classList.add('ct-sync-gate-ready');
+      return;
+    }
     const host = document.getElementById('ctPageHost');
     const shell = document.querySelector('.ct-app-shell');
     if (!host || !shell) {
@@ -4571,7 +4770,7 @@
     updateNetworkStatus();
     updateNotificationBadge();
     displayLicenseWarning(session);
-    compactCompletedData(false).catch(console.warn);
+    // R106: never auto-archive business records during normal navigation.
     let permissionRefreshFrame = 0;
     const pendingMutationRoots = new Set();
     const observer = new MutationObserver(records => {
@@ -5324,15 +5523,56 @@
   function applyRemoteDataset(key, value, meta) {
     const canonical = canonicalKey(key);
     const ns = namespaceKey(canonical);
+    const previousRaw = rawGet(ns);
+    const previousMeta = safeJson(rawGet(metaKey(canonical)), {}) || {};
+    const incomingMeta = meta || { updatedAt: Date.now(), source: 'remote' };
+    let storageValue = typeof value === 'string' ? value : JSON.stringify(value);
+
+    // A dataset-level remote delete is too destructive for business records.
+    // Keep any existing local rows; item-level deletions are handled by tombstones.
+    if (value == null && LOSSLESS_RECORD_DATASETS.has(canonical) && normalizeArrayValue(safeJson(previousRaw, []), []).length) {
+      return false;
+    }
+    if (value == null && LOSSLESS_OBJECT_DATASETS.has(canonical) && previousRaw != null) return false;
+
+    // R106 lossless reconciliation: for record datasets, merge remote + local
+    // instead of replacing the whole array. This is the central protection
+    // against a shorter/stale device snapshot erasing products or invoices.
+    if (value != null && LOSSLESS_RECORD_DATASETS.has(canonical)) {
+      const localRows = normalizeArrayValue(safeJson(previousRaw, []), []);
+      const remoteRows = normalizeArrayValue(safeJson(storageValue, []), []);
+      const tombstones = {
+        ...(previousMeta.recordTombstones && typeof previousMeta.recordTombstones === 'object' ? previousMeta.recordTombstones : {}),
+        ...(incomingMeta.recordTombstones && typeof incomingMeta.recordTombstones === 'object' ? incomingMeta.recordTombstones : {})
+      };
+      storageValue = JSON.stringify(mergeLosslessRecordArrays(localRows, remoteRows, tombstones));
+    } else if (value != null && LOSSLESS_OBJECT_DATASETS.has(canonical)) {
+      const localObject = safeJson(previousRaw, {}) || {};
+      const remoteObject = safeJson(storageValue, {}) || {};
+      storageValue = JSON.stringify(mergeLosslessObjectDataset(canonical, localObject, remoteObject));
+    }
+
+    if (canonical === 'cashtop_products' && value != null) storageValue = stripProductImageFieldsRaw(storageValue);
+    else if (PRODUCT_IMAGE_HISTORY_KEYS.has(canonical) && value != null) storageValue = stripInvoiceItemImageFieldsRaw(storageValue);
+
+    const mergedMeta = {
+      ...previousMeta,
+      ...incomingMeta,
+      recordTombstones: {
+        ...(previousMeta.recordTombstones && typeof previousMeta.recordTombstones === 'object' ? previousMeta.recordTombstones : {}),
+        ...(incomingMeta.recordTombstones && typeof incomingMeta.recordTombstones === 'object' ? incomingMeta.recordTombstones : {})
+      }
+    };
     suppressEvents = true;
     try {
-      rawSet(ns, typeof value === 'string' ? value : JSON.stringify(value));
-      rawSet(metaKey(canonical), JSON.stringify(meta || { updatedAt: Date.now(), source: 'remote' }));
+      rawSet(ns, storageValue);
+      rawSet(metaKey(canonical), JSON.stringify(mergedMeta));
     } finally {
       suppressEvents = false;
     }
-    dispatchLogicalStorageEvents(canonical, null, typeof value === 'string' ? value : JSON.stringify(value));
-    window.dispatchEvent(new CustomEvent('cashtop:remote-applied', { detail: { key: canonical } }));
+    dispatchLogicalStorageEvents(canonical, previousRaw, storageValue);
+    window.dispatchEvent(new CustomEvent('cashtop:remote-applied', { detail: { key: canonical, lossless: LOSSLESS_RECORD_DATASETS.has(canonical) || LOSSLESS_OBJECT_DATASETS.has(canonical) } }));
+    return true;
   }
 
 
@@ -5629,12 +5869,15 @@
     const store = tx.objectStore('records');
     const companyId = companyIdFromSession();
     records.forEach((record, index) => {
-      const id = record.id || record.refId || `${normalizeDateValue(record.date)}_${index}`;
+      const cleanRecord = PRODUCT_IMAGE_HISTORY_KEYS.has(canonicalKey(dataset))
+        ? stripInvoiceItemImageFieldsFromRows([record])[0]
+        : record;
+      const id = cleanRecord?.id || cleanRecord?.refId || `${normalizeDateValue(cleanRecord?.date)}_${index}`;
       store.put({
         archiveKey: `${companyId}::${dataset}::${id}`,
         companyDataset: `${companyId}::${dataset}`,
-        companyId, dataset, id, date: normalizeDateValue(record.date || record.createdAt || record.updatedAt),
-        record, archivedAt: Date.now()
+        companyId, dataset, id, date: normalizeDateValue(cleanRecord?.date || cleanRecord?.createdAt || cleanRecord?.updatedAt),
+        record: cleanRecord, archivedAt: Date.now()
       });
     });
     await new Promise((resolve, reject) => { tx.oncomplete = resolve; tx.onerror = () => reject(tx.error); });
@@ -5654,6 +5897,45 @@
     });
     db.close();
     return rows.map(row => row.record);
+  }
+
+  async function restoreArchivedBusinessRecordsV106(options = {}) {
+    const groups = getFinancialGroups();
+    // Older archive rows did not store the financial-group id. Automatic restore
+    // is therefore safe only when the company has a single financial group.
+    // Multi-group companies keep the archive untouched rather than guessing.
+    if (groups.length > 1 && options.force !== true) return { skipped:true, reason:'multiple-financial-groups', restored:0 };
+    const marker = `ct_r106_archive_restore::${encodeURIComponent(companyIdFromSession())}::${encodeURIComponent(currentFinancialGroupId())}`;
+    if (rawGet(marker) === '1' && options.force !== true) return { skipped:true, restored:0 };
+
+    const keys = ['cashtop_invoices','cashtop_purchases'];
+    const changedKeys = [];
+    let restored = 0;
+    for (const key of keys) {
+      const archived = await readArchivedRecords(key).catch(() => []);
+      if (!archived.length) continue;
+      const currentRaw = getRawCompanyDataset(key);
+      const current = normalizeArrayValue(safeJson(currentRaw, []), []);
+      const cleanArchived = stripInvoiceItemImageFieldsFromRows(archived);
+      const tombstones = safeJson(rawGet(metaKey(key)), {})?.recordTombstones || {};
+      const merged = mergeLosslessRecordArrays(current, cleanArchived, tombstones);
+      if (merged.length <= current.length) continue;
+      const cleanRaw = JSON.stringify(sortNewestFirstRecords(merged));
+      const result = setRawCompanyDataset(key, cleanRaw, {
+        action:'r106-restore-archived-records', bypassQuota:true, audit:false
+      });
+      if (result?.changed) {
+        restored += merged.length - current.length;
+        changedKeys.push(key);
+      }
+    }
+    rawSet(marker, '1');
+    if (changedKeys.length) {
+      await commitCriticalData(changedKeys).catch(() => ({ ok:false }));
+      await preservePendingSyncState().catch(() => false);
+      window.dispatchEvent(new CustomEvent('cashtop:r106-recovery', { detail:{ restored, keys:changedKeys } }));
+    }
+    return { restored, keys:changedKeys };
   }
 
   async function compactCompletedData(force = false) {
@@ -6156,830 +6438,32 @@
   }
 
 
-  /* R97 — offline-first image outbox. Selection only compresses and stores the
-     <=50KB blob locally. Saving the business record is never blocked by image
-     network I/O. Upload happens after save (or when connectivity returns), then
-     only the public URL is written into cashtop_products and synchronized. */
-  const IMAGE_OUTBOX_DB = 'cashtop-image-outbox-v1';
-  const IMAGE_OUTBOX_STORE = 'uploads';
-  const LEGACY_IMAGE_OUTBOX_FALLBACK_CACHE = 'cashtop-image-outbox-local-v1';
-  const IMAGE_OUTBOX_FALLBACK_META_KEY = 'ct_image_outbox_fallback_meta_v1'; // read-only migration marker from R99
-  const pendingImageObjectUrls = new Map();
-  let imageOutboxDbPromise = null;
-  let imageFlushRunning = false;
-
-  function openImageOutboxDb() {
-    if (!('indexedDB' in window)) return Promise.resolve(null);
-    if (imageOutboxDbPromise) return imageOutboxDbPromise;
-    imageOutboxDbPromise = new Promise(resolve => {
-      try {
-        const request = indexedDB.open(IMAGE_OUTBOX_DB, 1);
-        request.onupgradeneeded = () => {
-          const db = request.result;
-          if (!db.objectStoreNames.contains(IMAGE_OUTBOX_STORE)) db.createObjectStore(IMAGE_OUTBOX_STORE, { keyPath:'id' });
-        };
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => resolve(null);
-        request.onblocked = () => resolve(null);
-      } catch (_) { resolve(null); }
-    });
-    return imageOutboxDbPromise;
-  }
-
-  function readImageFallbackMeta() {
-    const parsed = safeJson(rawGet(IMAGE_OUTBOX_FALLBACK_META_KEY), {});
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
-  }
-
-  function writeImageFallbackMeta(meta) {
-    try { rawSet(IMAGE_OUTBOX_FALLBACK_META_KEY, JSON.stringify(meta && typeof meta === 'object' ? meta : {})); return true; }
-    catch (_) { return false; }
-  }
-
-  function imageFallbackCacheRequest(id) {
-    return new Request(`https://cashtop.local.invalid/__cashtop_image_outbox__/${encodeURIComponent(String(id || ''))}`);
-  }
-
-  async function imageFallbackBlobPut(id, blob) {
-    if (!('caches' in window) || !(blob instanceof Blob) || !id) return false;
+  /* R105 — Product images were removed completely.
+     Keep only the small company-branding image API used by setting.html.
+     There is no product-image outbox, image hydrator, retry loop or DOM watcher. */
+  function purgeLegacyProductImageRuntimeV105() {
+    try { rawRemove('ct_image_outbox_fallback_meta_v1'); } catch (_) {}
+    try { caches?.delete?.('cashtop-image-outbox-local-v1'); } catch (_) {}
     try {
-      const cache = await caches.open(LEGACY_IMAGE_OUTBOX_FALLBACK_CACHE);
-      await cache.put(imageFallbackCacheRequest(id), new Response(blob, { headers:{'Content-Type':blob.type || 'image/jpeg','Cache-Control':'no-store'} }));
-      return true;
-    } catch (_) { return false; }
-  }
-
-  async function imageFallbackBlobGet(id) {
-    if (!('caches' in window) || !id) return null;
-    try {
-      const cache = await caches.open(LEGACY_IMAGE_OUTBOX_FALLBACK_CACHE);
-      const response = await cache.match(imageFallbackCacheRequest(id));
-      return response ? await response.blob() : null;
-    } catch (_) { return null; }
-  }
-
-  async function imageFallbackDelete(id) {
-    if (!id) return false;
-    let removed = false;
-    if ('caches' in window) {
-      try { const cache = await caches.open(LEGACY_IMAGE_OUTBOX_FALLBACK_CACHE); removed = await cache.delete(imageFallbackCacheRequest(id)); } catch (_) {}
-    }
-    const meta = readImageFallbackMeta();
-    if (Object.prototype.hasOwnProperty.call(meta, String(id))) {
-      delete meta[String(id)];
-      writeImageFallbackMeta(meta);
-      removed = true;
-    }
-    return removed;
-  }
-
-  async function imageOutboxPut(record) {
-    const normalized = { ...record, id:String(record?.id || '') };
-    if (!normalized.id) throw new Error('IMAGE_LOCAL_ID_MISSING');
-    const db = await openImageOutboxDb();
-    if (!db) throw new Error('IMAGE_INDEXEDDB_UNAVAILABLE');
-    const saved = await new Promise(resolve => {
-      try {
-        const tx = db.transaction(IMAGE_OUTBOX_STORE, 'readwrite');
-        tx.objectStore(IMAGE_OUTBOX_STORE).put(normalized);
-        tx.oncomplete = () => resolve(true);
-        tx.onerror = () => resolve(false);
-        tx.onabort = () => resolve(false);
-      } catch (_) { resolve(false); }
-    });
-    if (!saved) throw new Error('IMAGE_INDEXEDDB_SAVE_FAILED');
-    return normalized;
-  }
-
-  async function migrateLegacyImageFallbackRecord(key) {
-    const meta = readImageFallbackMeta()[key];
-    if (!meta) return null;
-    const blob = await imageFallbackBlobGet(key);
-    if (!(blob instanceof Blob)) return null;
-    const record = { ...meta, id:key, blob };
-    try { await imageOutboxPut(record); await imageFallbackDelete(key); return record; } catch (_) { return null; }
-  }
-
-  async function migrateLegacyImageFallbackToIndexedDb() {
-    const ids = Object.keys(readImageFallbackMeta());
-    if (!ids.length) {
-      try { if ('caches' in window) await caches.delete(LEGACY_IMAGE_OUTBOX_FALLBACK_CACHE); } catch (_) {}
-      return { migrated:0 };
-    }
-    let migrated = 0;
-    for (const id of ids) if (await migrateLegacyImageFallbackRecord(String(id))) migrated += 1;
-    if (migrated === ids.length) {
-      writeImageFallbackMeta({});
-      try { if ('caches' in window) await caches.delete(LEGACY_IMAGE_OUTBOX_FALLBACK_CACHE); } catch (_) {}
-    }
-    return { migrated };
-  }
-
-  async function imageOutboxGet(id) {
-    const key = String(id || '');
-    if (!key) return null;
-    const db = await openImageOutboxDb();
-    if (db) {
-      const found = await new Promise(resolve => {
-        try {
-          const tx = db.transaction(IMAGE_OUTBOX_STORE, 'readonly');
-          const req = tx.objectStore(IMAGE_OUTBOX_STORE).get(key);
-          req.onsuccess = () => resolve(req.result || null);
-          req.onerror = () => resolve(null);
-        } catch (_) { resolve(null); }
-      });
-      if (found?.blob) return found;
-    }
-    // One-time R99 migration only. New image data is never written to Cache Storage.
-    return migrateLegacyImageFallbackRecord(key);
-  }
-
-  async function imageOutboxList() {
-    const db = await openImageOutboxDb();
-    const rows = db ? await new Promise(resolve => {
-      try {
-        const tx = db.transaction(IMAGE_OUTBOX_STORE, 'readonly');
-        const req = tx.objectStore(IMAGE_OUTBOX_STORE).getAll();
-        req.onsuccess = () => resolve(Array.isArray(req.result) ? req.result : []);
-        req.onerror = () => resolve([]);
-      } catch (_) { resolve([]); }
-    }) : [];
-    // Migrate old R99 fallback records before returning the queue.
-    const legacyIds = Object.keys(readImageFallbackMeta());
-    for (const id of legacyIds) {
-      if (!rows.some(row => String(row?.id || '') === String(id))) {
-        const migrated = await migrateLegacyImageFallbackRecord(String(id));
-        if (migrated) rows.push(migrated);
-      }
-    }
-    return rows;
-  }
-
-  async function imageOutboxDelete(id) {
-    const key = String(id || '');
-    if (!key) return false;
-    let removed = false;
-    const db = await openImageOutboxDb();
-    if (db) {
-      removed = await new Promise(resolve => {
-        try {
-          const tx = db.transaction(IMAGE_OUTBOX_STORE, 'readwrite');
-          tx.objectStore(IMAGE_OUTBOX_STORE).delete(key);
-          tx.oncomplete = () => resolve(true);
-          tx.onerror = () => resolve(false);
-          tx.onabort = () => resolve(false);
-        } catch (_) { resolve(false); }
-      });
-    }
-    // Clean only legacy R99 fallback residue; no new fallback copy is created.
-    await imageFallbackDelete(key).catch(() => false);
-    return removed;
-  }
-
-  function pendingImagePreviewUrl(id, blob) {
-    const key = String(id || '');
-    if (!key || !(blob instanceof Blob)) return '';
-    if (pendingImageObjectUrls.has(key)) return pendingImageObjectUrls.get(key);
-    const url = URL.createObjectURL(blob);
-    pendingImageObjectUrls.set(key, url);
-    return url;
-  }
-
-  async function prepareManagedImage(file, options = {}) {
-    // Ask the browser for durable/high-quota storage before storing the photo.
-    // Failure is harmless; browsers may require a user gesture and prepare() is
-    // normally called directly from the camera/gallery gesture anyway.
-    try { const persistJob = window.Cashtop?.maximizeBrowserStorage?.(); persistJob?.catch?.(() => null); } catch (_) {}
-    const blob = await compressSquareImage(file, options.maxSizeKB || IMAGE_STORAGE_CONFIG.maxSizeKB);
-    const id = crypto.randomUUID ? `IMGQ_${crypto.randomUUID()}` : `IMGQ_${Date.now()}_${Math.random().toString(36).slice(2,9)}`;
-    const record = {
-      id,
-      tenant:imageTenantFolder(),
-      folder:safeImagePathPart(options.folder || 'products', 'products'),
-      entityId:safeImagePathPart(options.entityId || 'pending', 'pending'),
-      blob,
-      sizeBytes:blob.size,
-      state:'draft',
-      createdAt:Date.now(),
-      attempts:0
-    };
-    await imageOutboxPut(record);
-    const verified = await imageOutboxGet(id);
-    if (!verified?.blob || !verified.blob.size) throw new Error('IMAGE_LOCAL_SAVE_VERIFY_FAILED');
-    return { id, pendingId:id, blob, localUrl:pendingImagePreviewUrl(id, blob), sizeBytes:blob.size, sizeKB:Math.round(blob.size/102.4)/10 };
-  }
-
-  async function discardPreparedImage(id) {
-    const key = String(id || '');
-    if (!key) return false;
-    const url = pendingImageObjectUrls.get(key);
-    if (url) { try { URL.revokeObjectURL(url); } catch (_) {} pendingImageObjectUrls.delete(key); }
-    return imageOutboxDelete(key);
-  }
-
-  async function commitPreparedImage(id, target = {}) {
-    const record = await imageOutboxGet(id);
-    if (!record) return false;
-    const next = {
-      ...record,
-      state:'queued',
-      folder:safeImagePathPart(target.folder || record.folder || 'products', 'products'),
-      entityId:safeImagePathPart(target.entityId || target.recordId || record.entityId || 'item', 'item'),
-      datasetKey:String(target.datasetKey || 'cashtop_products'),
-      recordId:String(target.recordId || target.entityId || ''),
-      oldUrl:String(target.oldUrl || ''),
-      committedAt:Date.now(),
-      nextAttemptAt:0
-    };
-    await imageOutboxPut(next);
-    setTimeout(() => flushPendingImageUploads().catch(() => null), 20);
-    try { navigator.serviceWorker?.ready?.then(reg => reg.sync?.register?.('cashtop-image-outbox')).catch(() => null); } catch (_) {}
-    return true;
-  }
-
-  async function uploadPreparedBlob(record) {
-    let blob = record?.blob;
-    if (!(blob instanceof Blob)) blob = (await imageOutboxGet(record?.id))?.blob;
-    if (!(blob instanceof Blob)) throw new Error('IMAGE_PENDING_BLOB_MISSING');
-    const folder = safeImagePathPart(record.folder || 'products', 'products');
-    const entityId = safeImagePathPart(record.entityId || record.recordId || 'item', 'item');
-    const unique = `${entityId}_${Date.now()}_${Math.random().toString(36).slice(2,8)}.jpg`;
-    const path = `${IMAGE_STORAGE_CONFIG.rootFolder}/${imageTenantFolder()}/${folder}/${unique}`;
-    const endpoint = `https://storage.bunnycdn.com/${IMAGE_STORAGE_CONFIG.storageZone}/${path.split('/').map(encodeURIComponent).join('/')}`;
-    const response = await fetch(endpoint, { method:'PUT', headers:{'AccessKey':IMAGE_STORAGE_CONFIG.accessKey,'Content-Type':'image/jpeg'}, body:blob });
-    if (!response.ok) throw new Error(`IMAGE_UPLOAD_FAILED_${response.status}`);
-    const url = `https://${IMAGE_STORAGE_CONFIG.pullHost}/${path.split('/').map(encodeURIComponent).join('/')}`;
-    // Business image data is not stored in Cache Storage.  The public CDN URL is
-    // saved in the dataset, while pending blobs live in IndexedDB until upload.
-    return { url, path, sizeBytes:blob.size, sizeKB:Math.round(blob.size/102.4)/10 };
-  }
-
-  function applyUploadedImageToDataset(record, uploaded) {
-    const datasetKey = String(record.datasetKey || 'cashtop_products');
-    const recordId = String(record.recordId || '');
-    if (!datasetKey || !recordId) return { applied:false, missingTarget:true };
-    const rows = safeJson(localStorage.getItem(datasetKey), []);
-    if (!Array.isArray(rows)) return { applied:false, missingTarget:true };
-    const target = rows.find(item => String(item?.id || item?.productId || '') === recordId);
-    if (!target) return { applied:false, missingTarget:true };
-    // If the user chose another picture after this queued one, never let an old
-    // upload overwrite the newer selection.
-    if (String(target.imagePendingId || '') !== String(record.id)) return { applied:false, stale:true };
-    target.imageUrl = uploaded.url;
-    target.imageStoragePath = uploaded.path;
-    delete target.imagePendingId;
-    target.updatedAt = new Date().toISOString();
-    localStorage.setItem(datasetKey, JSON.stringify(rows));
-    // localStorage.setItem is the app's managed writer: it enqueues this dataset
-    // before any network attempt. Persist that queue immediately, then ask Turso
-    // to retry. A failed attempt therefore never loses the image URL update.
-    try { window.Cashtop?.preservePendingSyncState?.().catch?.(() => null); } catch (_) {}
-    window.dispatchEvent(new CustomEvent('cashtop:image-uploaded', { detail:{ datasetKey, recordId, url:uploaded.url, pendingId:record.id } }));
-    window.dispatchEvent(new CustomEvent('cashtop:sync-now', { detail:{ reason:'image-uploaded', datasetKey, recordId } }));
-    return { applied:true };
-  }
-
-  async function flushPendingImageUploads(options = {}) {
-    if (imageFlushRunning) return { busy:true };
-    if (navigator.onLine === false && options.force !== true) return { offline:true };
-    imageFlushRunning = true;
-    let uploadedCount = 0;
-    try {
-      const now = Date.now();
-      const rows = (await imageOutboxList())
-        .filter(row => row?.state === 'queued' && row.tenant === imageTenantFolder() && Number(row.nextAttemptAt || 0) <= now)
-        .sort((a,b)=>Number(a.committedAt||a.createdAt||0)-Number(b.committedAt||b.createdAt||0));
-      for (const record of rows.slice(0, 12)) {
-        try {
-          const uploaded = await uploadPreparedBlob(record);
-          const applied = applyUploadedImageToDataset(record, uploaded);
-          if (!applied.applied) {
-            // Product was deleted or image selection superseded while upload was
-            // in flight. Remove the now-orphaned remote file immediately.
-            await deleteManagedImage(uploaded.url).catch(() => null);
-          } else if (record.oldUrl && record.oldUrl !== uploaded.url && isManagedImageUrl(record.oldUrl)) {
-            await deleteManagedImage(record.oldUrl).catch(() => null);
-          }
-          await imageOutboxDelete(record.id);
-          const localUrl = pendingImageObjectUrls.get(record.id);
-          if (localUrl) { try { URL.revokeObjectURL(localUrl); } catch (_) {} pendingImageObjectUrls.delete(record.id); }
-          uploadedCount += 1;
-        } catch (error) {
-          const attempts = Math.min(12, Number(record.attempts || 0) + 1);
-          const delay = Math.min(15*60*1000, 2500 * (2 ** Math.min(8, attempts-1)));
-          await imageOutboxPut({ ...record, state:'queued', attempts, lastError:String(error?.message || error), nextAttemptAt:Date.now()+delay });
-          if (navigator.onLine === false) break;
-        }
-      }
-      return { uploaded:uploadedCount, remaining:(await imageOutboxList()).filter(row=>row?.state==='queued').length };
-    } finally { imageFlushRunning = false; }
-  }
-
-  /* ============================================================
-   * R104 — Stable product-image renderer rebuilt from scratch.
-   *
-   * Rules:
-   * 1) Never swap a real image for the product icon just because a request
-   *    failed. The icon means "this product has no image", nothing else.
-   * 2) A picture is inserted into the DOM only after an off-DOM browser load
-   *    has proved that the exact source can be decoded.
-   * 3) Pending local pictures are tried first, then the saved CDN URL.
-   * 4) Failed CDN URLs are retried with cache-busting while the visible holder
-   *    remains visually stable (no src/error flicker).
-   * 5) Successfully tested sources are shared by Products + Cashier, so the
-   *    cashier can reuse the same image that was already proven in a card.
-   * ============================================================ */
-  const managedImageRetryDelays = Object.freeze([0, 260, 900, 1900]);
-  const managedImageVerifiedSources = new Map();
-  const managedImageResolveJobs = new Map();
-  const managedImageMountTokens = new WeakMap();
-  const managedImageMountMeta = new WeakMap();
-  const managedImageDeferredTimers = new WeakMap();
-  const managedImageFailedMounts = new Set();
-  let managedImageTokenSeq = 0;
-
-  const managedImageWait = ms => new Promise(resolve => setTimeout(resolve, Math.max(0, Number(ms || 0))));
-
-  function managedImageClean(value) {
-    return String(value || '').trim();
-  }
-
-  function managedImageRemoteKey(url) {
-    const value = managedImageClean(url);
-    return value ? `url:${value}` : '';
-  }
-
-  function managedImagePendingKey(id) {
-    const value = managedImageClean(id);
-    return value ? `pending:${value}` : '';
-  }
-
-  function managedImageOriginalUrl(img) {
-    if (!(img instanceof HTMLImageElement)) return '';
-    const stored = managedImageClean(img.dataset.ctImageOriginalSrc);
-    if (stored) return stored;
-    const declared = managedImageClean(img.dataset.ctImageSrc);
-    if (declared) {
-      img.dataset.ctImageOriginalSrc = declared;
-      return declared;
-    }
-    const attr = managedImageClean(img.getAttribute('src'));
-    if (!attr || /^(?:blob:|data:)/i.test(attr)) return '';
-    img.dataset.ctImageOriginalSrc = attr;
-    return attr;
-  }
-
-  function managedImageMetaFromElement(img) {
-    if (!(img instanceof HTMLImageElement)) return { url:'', pendingId:'', alt:'صورة المنتج' };
-    return {
-      url: managedImageOriginalUrl(img),
-      pendingId: managedImageClean(img.dataset.ctPendingImage),
-      alt: managedImageClean(img.getAttribute('alt')) || 'صورة المنتج'
-    };
-  }
-
-  function managedImageNormalizeMeta(meta = {}) {
-    return {
-      url: managedImageClean(meta.url || meta.imageUrl || meta.src),
-      pendingId: managedImageClean(meta.pendingId || meta.imagePendingId),
-      alt: managedImageClean(meta.alt || meta.name) || 'صورة المنتج',
-      preferredSource: managedImageClean(meta.preferredSource || meta.verifiedSource)
-    };
-  }
-
-  function managedImageHasIntent(meta) {
-    const normalized = managedImageNormalizeMeta(meta);
-    return Boolean(normalized.pendingId || normalized.url || normalized.preferredSource);
-  }
-
-  function managedImageFallbackNode(holder, create = false) {
-    if (!(holder instanceof Element)) return null;
-    let fallback = holder.querySelector(':scope > .ct-image-fallback');
-    if (!fallback && create) {
-      fallback = document.createElement('i');
-      fallback.className = 'fa-solid fa-box ct-image-fallback';
-      holder.appendChild(fallback);
-    }
-    return fallback;
-  }
-
-  function managedImageClearTimer(holder) {
-    const timer = managedImageDeferredTimers.get(holder);
-    if (timer) clearTimeout(timer);
-    managedImageDeferredTimers.delete(holder);
-  }
-
-  function managedImageStableBlank(holder) {
-    if (!(holder instanceof Element)) return;
-    managedImageClearTimer(holder);
-    const fallback = managedImageFallbackNode(holder, false);
-    if (fallback) fallback.style.display = 'none';
-    // Keep an already verified picture visible while a replacement is tested.
-    // Otherwise remove only unverified/legacy image nodes and reserve the box.
-    [...holder.querySelectorAll(':scope > img')].forEach(img => {
-      if (img.dataset.ctImageReady !== '1') img.remove();
-    });
-    holder.classList.add('ct-image-loading');
-    holder.classList.remove('ct-image-no-photo');
-  }
-
-  function managedImageShowNoPhoto(holder) {
-    if (!(holder instanceof Element)) return;
-    managedImageClearTimer(holder);
-    managedImageFailedMounts.delete(holder);
-    holder.classList.remove('ct-image-loading', 'ct-image-unavailable');
-    holder.classList.add('ct-image-no-photo');
-    [...holder.querySelectorAll(':scope > img')].forEach(img => img.remove());
-    const fallback = managedImageFallbackNode(holder, true);
-    if (fallback) fallback.style.display = '';
-  }
-
-  function managedImageKeepUnavailable(holder) {
-    if (!(holder instanceof Element)) return;
-    holder.classList.remove('ct-image-loading', 'ct-image-no-photo');
-    holder.classList.add('ct-image-unavailable');
-    const fallback = managedImageFallbackNode(holder, false);
-    if (fallback) fallback.style.display = 'none';
-    // Do not remove a previously verified image. If this is the first load the
-    // holder simply stays blank; that is intentional and prevents false fallback
-    // flashing while the retry cycle continues later.
-  }
-
-  function requestManagedImageCachePurge(url) {
-    const original = managedImageClean(url);
-    if (!original) return;
-    try {
-      navigator.serviceWorker?.controller?.postMessage?.({ type:'CASHTOP_PURGE_IMAGE_CACHE', url:original });
+      if ('indexedDB' in window) indexedDB.deleteDatabase('cashtop-image-outbox-v1');
     } catch (_) {}
-  }
-
-  function managedImageRetryUrl(url, attempt) {
-    const original = managedImageClean(url);
-    if (!original || attempt <= 0 || /^(?:blob:|data:)/i.test(original)) return original;
-    try {
-      const parsed = new URL(original, location.href);
-      parsed.searchParams.set('__ct_img_retry', `${Date.now()}_${attempt}`);
-      return parsed.href;
-    } catch (_) {
-      const joiner = original.includes('?') ? '&' : '?';
-      return `${original}${joiner}__ct_img_retry=${Date.now()}_${attempt}`;
-    }
-  }
-
-  function managedImageProbe(source, timeoutMs = 7000) {
-    const src = managedImageClean(source);
-    if (!src) return Promise.reject(new Error('EMPTY_IMAGE_URL'));
-    return new Promise((resolve, reject) => {
-      const probe = new Image();
-      probe.decoding = 'async';
-      probe.loading = 'eager';
-      probe.draggable = false;
-      let finished = false;
-      const finish = ok => {
-        if (finished) return;
-        finished = true;
-        clearTimeout(timer);
-        probe.onload = null;
-        probe.onerror = null;
-        if (ok && probe.naturalWidth > 0 && probe.naturalHeight > 0) {
-          resolve({ source: managedImageClean(probe.currentSrc || probe.src || src), width:probe.naturalWidth, height:probe.naturalHeight });
-        } else reject(new Error('IMAGE_DECODE_FAILED'));
-      };
-      probe.onload = () => finish(true);
-      probe.onerror = () => finish(false);
-      const timer = setTimeout(() => finish(false), Math.max(1200, Number(timeoutMs || 7000)));
-      probe.src = src;
-      if (probe.complete) queueMicrotask(() => finish(probe.naturalWidth > 0));
-    });
-  }
-
-  async function managedImageVerifiedPreferredSource(source) {
-    // preferredSource is supplied only from an image that is already visible and
-    // decoded (for example the cashier product card), so it is safe to reuse.
-    return managedImageClean(source);
-  }
-
-  async function managedImageResolvePending(pendingId) {
-    const id = managedImageClean(pendingId);
-    if (!id) return '';
-    const key = managedImagePendingKey(id);
-    const cached = managedImageVerifiedSources.get(key);
-    if (cached) return cached;
-    if (managedImageResolveJobs.has(key)) return managedImageResolveJobs.get(key);
-
-    const job = (async () => {
-      const record = await imageOutboxGet(id);
-      if (!(record?.blob instanceof Blob) || !record.blob.size) return '';
-      const objectUrl = pendingImagePreviewUrl(id, record.blob);
-      if (!objectUrl) return '';
-      try {
-        const tested = await managedImageProbe(objectUrl, 4500);
-        managedImageVerifiedSources.set(key, tested.source);
-        return tested.source;
-      } catch (_) { return ''; }
-    })().finally(() => managedImageResolveJobs.delete(key));
-
-    managedImageResolveJobs.set(key, job);
-    return job;
-  }
-
-  async function managedImageResolveRemote(url) {
-    const original = managedImageClean(url);
-    if (!original) return '';
-    const key = managedImageRemoteKey(original);
-    const cached = managedImageVerifiedSources.get(key);
-    if (cached) return cached;
-    if (managedImageResolveJobs.has(key)) return managedImageResolveJobs.get(key);
-
-    const job = (async () => {
-      for (let attempt = 0; attempt < managedImageRetryDelays.length; attempt += 1) {
-        const delay = managedImageRetryDelays[attempt];
-        if (delay) await managedImageWait(delay);
-        if (attempt === 1) {
-          requestManagedImageCachePurge(original);
-          await managedImageWait(80);
-        }
-        try {
-          const candidate = managedImageRetryUrl(original, attempt);
-          await managedImageProbe(candidate, attempt === 0 ? 5500 : 7000);
-          managedImageVerifiedSources.set(key, original);
-          return original;
-        } catch (_) {}
-      }
-      return '';
-    })().finally(() => managedImageResolveJobs.delete(key));
-
-    managedImageResolveJobs.set(key, job);
-    return job;
-  }
-
-  async function managedImageResolveSource(meta = {}) {
-    const normalized = managedImageNormalizeMeta(meta);
-
-    // Highest priority: an image source already proven by the exact product card.
-    if (normalized.preferredSource) {
-      const preferred = await managedImageVerifiedPreferredSource(normalized.preferredSource);
-      if (preferred) return preferred;
-    }
-
-    // New local selection is newer than the saved CDN URL.
-    if (normalized.pendingId) {
-      const pending = await managedImageResolvePending(normalized.pendingId);
-      if (pending) return pending;
-    }
-
-    if (normalized.url) return managedImageResolveRemote(normalized.url);
-    return '';
-  }
-
-  function managedImageCreateVisibleNode(source, alt = 'صورة المنتج', className = '') {
-    const img = new Image();
-    img.alt = managedImageClean(alt) || 'صورة المنتج';
-    img.decoding = 'async';
-    img.loading = 'eager';
-    img.draggable = false;
-    img.dataset.ctProductImage = '1';
-    img.dataset.ctImageReady = '0';
-    img.dataset.ctImageWired = '1';
-    if (className) img.className = className;
-    img.style.visibility = 'hidden';
-    img.style.opacity = '0';
-    img.src = source;
-    return img;
-  }
-
-  function managedImageKnownVerifiedSource(meta = {}) {
-    const normalized = managedImageNormalizeMeta(meta);
-    if (normalized.preferredSource) return normalized.preferredSource;
-    if (normalized.pendingId) {
-      // A pending photo is the user's newest selection. Never fast-path the old
-      // remote URL while that pending photo still exists.
-      return managedImageVerifiedSources.get(managedImagePendingKey(normalized.pendingId)) || '';
-    }
-    if (normalized.url) return managedImageVerifiedSources.get(managedImageRemoteKey(normalized.url)) || '';
-    return '';
-  }
-
-  function managedImageInstallTrusted(holder, normalized, source, options, token) {
-    const img = new Image();
-    img.alt = normalized.alt || 'صورة المنتج';
-    img.decoding = 'async';
-    img.loading = 'eager';
-    img.draggable = false;
-    img.dataset.ctProductImage = '1';
-    img.dataset.ctImageReady = '1';
-    img.dataset.ctImageWired = '1';
-    if (normalized.pendingId) img.dataset.ctResolvedPendingId = normalized.pendingId;
-    if (normalized.url) img.dataset.ctResolvedImageUrl = normalized.url;
-    if (options.className) img.className = options.className;
-    img.addEventListener('error', () => {
-      if (managedImageMountTokens.get(holder) !== token || !holder.isConnected) return;
-      if (normalized.pendingId) managedImageVerifiedSources.delete(managedImagePendingKey(normalized.pendingId));
-      if (normalized.url) managedImageVerifiedSources.delete(managedImageRemoteKey(normalized.url));
-      img.remove();
-      managedImageKeepUnavailable(holder);
-      managedImageMount(holder, { ...normalized, preferredSource:'' }, { ...options, retryCycle:Math.max(1, Number(options.retryCycle || 0)) }).catch(() => null);
-    }, { once:true });
-    holder.classList.remove('ct-image-loading', 'ct-image-unavailable', 'ct-image-no-photo');
-    holder.replaceChildren(img);
-    img.src = source;
-    return img;
-  }
-
-  async function managedImageMount(holder, meta = {}, options = {}) {
-    if (!(holder instanceof Element)) return { ok:false, reason:'INVALID_HOLDER' };
-    const normalized = managedImageNormalizeMeta(meta);
-    const token = `${++managedImageTokenSeq}:${normalized.pendingId}:${normalized.url}:${normalized.preferredSource}`;
-    managedImageMountTokens.set(holder, token);
-    managedImageMountMeta.set(holder, normalized);
-    managedImageClearTimer(holder);
-
-    if (!managedImageHasIntent(normalized)) {
-      managedImageShowNoPhoto(holder);
-      return { ok:true, noImage:true };
-    }
-
-    // If this exact source was already decoded successfully, mount it immediately.
-    // This is what keeps cashier thumbnails stable when the basket re-renders.
-    const trustedSource = managedImageKnownVerifiedSource(normalized);
-    if (trustedSource) {
-      const image = managedImageInstallTrusted(holder, normalized, trustedSource, options, token);
-      managedImageFailedMounts.delete(holder);
-      return { ok:true, source:trustedSource, image, verified:true };
-    }
-
-    managedImageStableBlank(holder);
-    const source = await managedImageResolveSource(normalized).catch(() => '');
-    if (managedImageMountTokens.get(holder) !== token || !holder.isConnected) return { ok:false, stale:true };
-
-    if (!source) {
-      managedImageKeepUnavailable(holder);
-      managedImageFailedMounts.add(holder);
-      const cycle = Math.max(0, Number(options.retryCycle || 0));
-      if (cycle < 2 && navigator.onLine !== false) {
-        const timer = setTimeout(() => {
-          managedImageDeferredTimers.delete(holder);
-          if (!holder.isConnected || managedImageMountTokens.get(holder) !== token) return;
-          // Forget only the remote "verified" entry for this cycle. In-flight
-          // jobs are already cleared, so this really performs a fresh test.
-          if (normalized.url) managedImageVerifiedSources.delete(managedImageRemoteKey(normalized.url));
-          managedImageMount(holder, normalized, { ...options, retryCycle:cycle + 1 }).catch(() => null);
-        }, cycle === 0 ? 5000 : 14000);
-        managedImageDeferredTimers.set(holder, timer);
-      }
-      return { ok:false, unavailable:true };
-    }
-
-    const readyImage = managedImageCreateVisibleNode(source, normalized.alt, options.className || '');
-    if (normalized.pendingId) readyImage.dataset.ctResolvedPendingId = normalized.pendingId;
-    if (normalized.url) readyImage.dataset.ctResolvedImageUrl = normalized.url;
-    const ready = await new Promise(resolve => {
-      let finished = false;
-      const done = ok => {
-        if (finished) return;
-        finished = true;
-        clearTimeout(timer);
-        readyImage.onload = null;
-        readyImage.onerror = null;
-        resolve(Boolean(ok && readyImage.naturalWidth > 0));
-      };
-      readyImage.onload = () => done(true);
-      readyImage.onerror = () => done(false);
-      const timer = setTimeout(() => done(readyImage.complete && readyImage.naturalWidth > 0), 3500);
-      if (readyImage.complete) queueMicrotask(() => done(readyImage.naturalWidth > 0));
-    });
-
-    if (managedImageMountTokens.get(holder) !== token || !holder.isConnected) return { ok:false, stale:true };
-    if (!ready) {
-      if (normalized.url) managedImageVerifiedSources.delete(managedImageRemoteKey(normalized.url));
-      managedImageKeepUnavailable(holder);
-      managedImageFailedMounts.add(holder);
-      return { ok:false, unavailable:true };
-    }
-
-    readyImage.dataset.ctImageReady = '1';
-    readyImage.style.visibility = 'visible';
-    readyImage.style.opacity = '1';
-    const fallback = managedImageFallbackNode(holder, false);
-    if (fallback) fallback.style.display = 'none';
-    holder.classList.remove('ct-image-loading', 'ct-image-unavailable', 'ct-image-no-photo');
-    holder.replaceChildren(readyImage);
-    managedImageFailedMounts.delete(holder);
-    return { ok:true, source, image:readyImage };
-  }
-
-  function managedImageFallback(imgOrHolder) {
-    const holder = imgOrHolder instanceof HTMLImageElement ? imgOrHolder.parentElement : imgOrHolder;
-    if (!(holder instanceof Element)) return;
-    const meta = imgOrHolder instanceof HTMLImageElement ? managedImageMetaFromElement(imgOrHolder) : {};
-    if (managedImageHasIntent(meta)) managedImageKeepUnavailable(holder);
-    else managedImageShowNoPhoto(holder);
-  }
-
-  function wireManagedImageElement(img) {
-    if (!(img instanceof HTMLImageElement)) return false;
-    if (img.dataset.ctImageWired === '1') return true;
-    img.dataset.ctImageWired = '1';
-    const holder = img.parentElement;
-    if (!(holder instanceof Element)) return false;
-    const meta = managedImageMetaFromElement(img);
-    // Legacy markup is converted immediately to the new stable holder renderer.
-    managedImageMount(holder, meta).catch(() => managedImageKeepUnavailable(holder));
-    return true;
-  }
-
-  async function hydratePendingImageElement(img) {
-    if (!(img instanceof HTMLImageElement)) return false;
-    const holder = img.parentElement;
-    if (!(holder instanceof Element)) return false;
-    const result = await managedImageMount(holder, managedImageMetaFromElement(img));
-    return Boolean(result?.ok);
-  }
-
-  function hydratePendingImages(root = document) {
-    const selector = 'img[data-ct-pending-image],img[data-ct-product-image]';
-    const items = [
-      ...(root instanceof HTMLImageElement && root.matches(selector) ? [root] : []),
-      ...(root?.querySelectorAll?.(selector) || [])
-    ];
-    [...new Set(items)].forEach(img => wireManagedImageElement(img));
-  }
-
-  function managedImageGetVerifiedSource(meta = {}) {
-    return managedImageKnownVerifiedSource(meta);
-  }
-
-  function managedImageRetryFailed() {
-    [...managedImageFailedMounts].forEach(holder => {
-      if (!holder?.isConnected) { managedImageFailedMounts.delete(holder); return; }
-      const meta = managedImageMountMeta.get(holder);
-      if (!meta || !managedImageHasIntent(meta)) { managedImageFailedMounts.delete(holder); return; }
-      if (meta.url) managedImageVerifiedSources.delete(managedImageRemoteKey(meta.url));
-      managedImageMount(holder, meta, { retryCycle:1 }).catch(() => null);
-    });
-  }
-
-  async function cleanupImageOutboxDrafts() {
-    const cutoff = Date.now() - 24*60*60*1000;
-    const rows = await imageOutboxList();
-    await Promise.all(rows.filter(row => row?.state === 'draft' && Number(row.createdAt||0)<cutoff).map(row => discardPreparedImage(row.id)));
   }
 
   window.CashtopImages = Object.assign(window.CashtopImages || {}, {
     upload: uploadManagedImage,
     compress: compressSquareImage,
-    prepare: prepareManagedImage,
-    commit: commitPreparedImage,
-    discard: discardPreparedImage,
-    flushUploads: flushPendingImageUploads,
-    hydrate: hydratePendingImages,
-    mount: managedImageMount,
-    resolve: managedImageResolveSource,
-    getVerifiedSource: managedImageGetVerifiedSource,
-    retryFailed: managedImageRetryFailed,
     remove: deleteManagedImage,
     flushDeletes: flushManagedImageDeletes,
     isManagedUrl: isManagedImageUrl,
     pathFromUrl: managedImagePathFromUrl,
-    fallback: managedImageFallback,
-    wire: wireManagedImageElement,
     maxSizeKB: IMAGE_STORAGE_CONFIG.maxSizeKB
   });
-  window.addEventListener('online', () => {
-    managedImageRetryFailed();
-    flushManagedImageDeletes().catch(() => null);
-    flushPendingImageUploads().catch(() => null);
-  });
+  window.addEventListener('online', () => flushManagedImageDeletes().catch(() => null));
   setTimeout(() => {
-    migrateLegacyImageFallbackToIndexedDb().catch(() => null);
-    cleanupImageOutboxDrafts().catch(() => null);
-    hydratePendingImages(document);
+    purgeLegacyProductImageRuntimeV105();
     flushManagedImageDeletes().catch(() => null);
-    flushPendingImageUploads().catch(() => null);
   }, 800);
-  // Some Android WebViews do not emit a reliable `online` event after a weak
-  // connection recovers. A lightweight visible-page watchdog retries only the
-  // image outbox; it performs no upload when the queue is empty.
-  setInterval(() => {
-    if (document.hidden || navigator.onLine === false) return;
-    flushPendingImageUploads().catch(() => null);
-  }, 12000);
-  const resumeImageOutbox = () => {
-    hydratePendingImages(document);
-    managedImageRetryFailed();
-    if (navigator.onLine !== false) flushPendingImageUploads().catch(() => null);
-  };
-  window.addEventListener('focus', resumeImageOutbox, { passive:true });
-  window.addEventListener('pageshow', resumeImageOutbox, { passive:true });
-  navigator.connection?.addEventListener?.('change', resumeImageOutbox);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) resumeImageOutbox(); });
-  if (typeof MutationObserver === 'function') {
-    const imageHydrator = new MutationObserver(mutations => mutations.forEach(mutation => mutation.addedNodes.forEach(node => {
-      if (node?.nodeType === 1) hydratePendingImages(node);
-    })));
-    const startImageHydrator = () => document.body && imageHydrator.observe(document.body, { childList:true, subtree:true });
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startImageHydrator, { once:true }); else startImageHydrator();
-  }
+
 
   window.Cashtop = Object.assign(window.Cashtop || {}, {
     FILE,
@@ -7072,10 +6556,10 @@
       ensureSystemDefaults();
     }
 
-    window.addEventListener('online', () => { updateNetworkStatus(); syncNow({ manual: false }); });
-    window.addEventListener('pageshow', () => { if (getSyncQueue().length) syncNow({ manual: false }); }, { passive: true });
+    window.addEventListener('online', () => { updateNetworkStatus(); if (FILE !== 'sync.html') syncNow({ manual: false }); });
+    window.addEventListener('pageshow', () => { if (FILE !== 'sync.html' && getSyncQueue().length) syncNow({ manual: false }); }, { passive: true });
     window.addEventListener('cashtop:sync-queue-changed', updateSyncBadge);
-    window.addEventListener('cashtop:sync-queue-restored', () => { syncNow({ manual: false }); });
+    window.addEventListener('cashtop:sync-queue-restored', () => { if (FILE !== 'sync.html') syncNow({ manual: false }); });
     window.addEventListener('cashtop:data-changed', event => { if (event.detail?.key === 'cashtop_settings') applySystemBranding(); });
     window.addEventListener('offline', updateNetworkStatus);
     const flushDurableOfflineState = () => { preservePendingSyncState().catch(() => null); };
@@ -7092,14 +6576,18 @@
     durableReadyPromise = restoreDurableCompanyData().catch(() => ({ restored: 0 }));
     window.Cashtop.localReady = durableReadyPromise;
     const syncRestoreReadyPromise = durableReadyPromise
-      .then(result => {
-        window.dispatchEvent(new CustomEvent('cashtop:local-ready', { detail: result || { restored: 0 } }));
+      .then(async result => {
+        const recovery = await restoreArchivedBusinessRecordsV106().catch(error => {
+          console.warn('[CASH TOP 2] R106 archive recovery deferred:', error);
+          return { restored:0 };
+        });
+        window.dispatchEvent(new CustomEvent('cashtop:local-ready', { detail: { ...(result || { restored:0 }), archiveRestored:Number(recovery?.restored || 0) } }));
         return restoreSyncQueueBackup().catch(() => []);
       })
       .then(() => migrateLegacySyncQueues().catch(() => ({ migrated: 0 })))
       .then(() => {
         updateSyncBadge();
-        if (getSyncQueue().length) syncNow({ manual: false });
+        if (FILE !== 'sync.html' && getSyncQueue().length) syncNow({ manual: false });
         return { ready: true, queueLength: getSyncQueue().length };
       })
       .catch(() => ({ ready: true, queueLength: getSyncQueue().length }));
@@ -7200,7 +6688,9 @@
         }
       } catch (_) {}
       const ratio = result.quota > 0 ? result.usage / result.quota : 0;
-      if (options.forceCompact === true || ratio >= 0.82) {
+      // R106: storage pressure must never make invoices disappear from the live
+      // register. Archiving is now an explicit admin action only.
+      if (options.forceCompact === true && options.allowDataArchive === true) {
         try { await compactCompletedData(true); result.compacted = true; } catch (_) {}
       }
       try {
@@ -7211,7 +6701,7 @@
     };
     window.Cashtop.maximizeBrowserStorage = maximizeBrowserStorage;
     window.Cashtop.recoverStoragePressure = async () => {
-      const result = await maximizeBrowserStorage({ forceCompact:true });
+      const result = await maximizeBrowserStorage({ forceCompact:false });
       try {
         const audit = safeJson(localStorage.getItem('cashtop_audit_log'), []) || [];
         if (Array.isArray(audit) && audit.length > 80) localStorage.setItem('cashtop_audit_log', JSON.stringify(audit.slice(-80)));

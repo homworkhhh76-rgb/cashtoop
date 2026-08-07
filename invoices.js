@@ -400,7 +400,7 @@ function renderTable(data) {
   if (!tbody) return;
   const source = Array.isArray(data) ? data : [];
   const sequence = ++invoiceRenderSequence;
-  const fallbackSort = () => source.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+  const fallbackSort = () => source.slice().sort((a, b) => new Date(b.savedAt || b.createdAt || b.date || 0) - new Date(a.savedAt || a.createdAt || a.date || 0));
   const renderSorted = sorted => {
     if (sequence !== invoiceRenderSequence) return;
     const createRow = invoice => {
@@ -444,9 +444,7 @@ function renderTable(data) {
       sorted.forEach(invoice => tbody.appendChild(createRow(invoice)));
     }
   };
-  if (source.length >= 1000 && window.Cashtop?.runWorkerTask) {
-    window.Cashtop.runWorkerTask('sort-date-desc', { records: source, field: 'date' }, fallbackSort).then(renderSorted).catch(() => renderSorted(fallbackSort()));
-  } else renderSorted(fallbackSort());
+  renderSorted(fallbackSort());
 }
 
 let invoiceSearchSequence = 0;
@@ -1552,6 +1550,8 @@ async function saveBatchInvoices() {
         id,
         status: 'issued',
         date: invoiceDate,
+        createdAt: new Date(baseSeed + index).toISOString(),
+        savedAt: new Date(baseSeed + index).toISOString(),
         customer: customerInfo.name,
         customerId: customerInfo.customer?.id || null,
         phone: customerInfo.phone,
@@ -1613,9 +1613,13 @@ async function saveBatchInvoices() {
     if (window.Cashtop?.atomicSetItems) window.Cashtop.atomicSetItems(batchChanges, { label: 'batch-sales-invoices' });
     else Object.entries(batchChanges).forEach(([key, value]) => localStorage.setItem(key, JSON.stringify(value)));
     if (window.Cashtop?.commitCriticalData) {
-      for (const invoice of created) {
-        const committed = await window.Cashtop.commitCriticalData(Object.keys(batchChanges), { recordKey: DB_KEY, recordId: invoice.id });
-        if (!committed?.recordVerified) throw new Error(`تعذر تثبيت الفاتورة ${invoice.id} في التخزين المحلي`);
+      const committed = await window.Cashtop.commitCriticalData(Object.keys(batchChanges), {
+        recordKey: DB_KEY,
+        recordIds: created.map(invoice => invoice.id)
+      });
+      if (!committed?.recordVerified) {
+        const missing = (committed?.missingRecordIds || []).slice(0, 5).join('، ');
+        throw new Error(`تعذر تثبيت ${committed?.missingRecordIds?.length || 1} فاتورة في التخزين المحلي${missing ? `: ${missing}` : ''}`);
       }
     }
 
@@ -1634,6 +1638,7 @@ async function saveBatchInvoices() {
       if (value == null) localStorage.removeItem(key);
       else localStorage.setItem(key, value);
     });
+    try { await window.Cashtop?.commitCriticalData?.(snapshotKeys); } catch (_) {}
     refreshInvoices();
     saveBatchDraftNow();
     notify(error?.message || 'تعذر ترحيل الفواتير، وتم التراجع عن العملية لحماية البيانات', 'error');

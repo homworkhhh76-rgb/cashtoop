@@ -70,14 +70,6 @@
     };
   }
 
-  function resolveProductImage(productId) {
-    const products = readJson('cashtop_products', []);
-    const product = Array.isArray(products)
-      ? products.find(item => String(item.id) === String(productId))
-      : null;
-    return product?.image || product?.imageUrl || product?.photo || '';
-  }
-
   function documentStyles() {
     return `<style>
       .ct-doc-invoice{width:794px;min-height:1123px;background:#fff;color:#111;padding:42px 32px 28px;direction:rtl;font-family:Arial,Tahoma,sans-serif;font-size:12px;position:relative;box-sizing:border-box}
@@ -101,8 +93,7 @@
       .ct-doc-items{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px}
       .ct-doc-items th,.ct-doc-items td{border:1px solid #6b7280;padding:7px 5px;text-align:center;vertical-align:middle;overflow-wrap:anywhere}
       .ct-doc-items th{background:#e9f4fc;color:#1d3557;font-weight:700}
-      .ct-doc-items th:nth-child(1){width:34px}.ct-doc-items th:nth-child(2){width:auto}.ct-doc-items th:nth-child(3){width:72px}.ct-doc-items th:nth-child(4){width:72px}.ct-doc-items th:nth-child(5){width:80px}.ct-doc-items th:nth-child(6){width:92px}.ct-doc-items th:nth-child(7){width:135px}
-      .ct-doc-product-image{width:36px;height:36px;object-fit:contain;display:block;margin:auto}
+      .ct-doc-items th:nth-child(1){width:34px}.ct-doc-items th:nth-child(2){width:auto}.ct-doc-items th:nth-child(3){width:72px}.ct-doc-items th:nth-child(4){width:72px}.ct-doc-items th:nth-child(5){width:80px}.ct-doc-items th:nth-child(6){width:92px}
       .ct-doc-summary{display:grid;grid-template-columns:1fr 1fr;gap:68px;margin-top:15px;align-items:start}
       .ct-doc-summary-table{width:100%;border-collapse:collapse;font-size:11px}
       .ct-doc-summary-table td{padding:6px 8px}
@@ -150,13 +141,11 @@
       const unit = purchase
         ? (item.selectedUnitName || selectedLevel?.name || item.pieceName || 'قطعة')
         : (selectedLevel?.name || item.pieceName || 'قطعة');
-      const image = item.image || item.imageUrl || resolveProductImage(item.productId || item.id);
-      const imageCell = image ? `<img class="ct-doc-product-image" src="${esc(image)}" alt="صورة المنتج">` : '';
       return `<tr>
-        <td>${index + 1}</td><td style="text-align:right">${esc(item.name || 'صنف')}</td><td>${esc(Number(qty.toFixed(6)).toString())}</td><td>${esc(unit)}</td><td>${money(price)}</td><td>${money(qty * price)}</td><td>${imageCell}</td>
+        <td>${index + 1}</td><td style="text-align:right">${esc(item.name || 'صنف')}</td><td>${esc(Number(qty.toFixed(6)).toString())}</td><td>${esc(unit)}</td><td>${money(price)}</td><td>${money(qty * price)}</td>
       </tr>`;
-    }).join('') || '<tr><td colspan="7" style="padding:22px">لا توجد أصناف</td></tr>';
-    return `<table class="ct-doc-items"><thead><tr><th>م</th><th>اسم المادة</th><th>العدد</th><th>الوحدة</th><th>السعر</th><th>الإجمالي</th><th>صورة المنتج</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }).join('') || '<tr><td colspan="6" style="padding:22px">لا توجد أصناف</td></tr>';
+    return `<table class="ct-doc-items"><thead><tr><th>م</th><th>اسم المادة</th><th>العدد</th><th>الوحدة</th><th>السعر</th><th>الإجمالي</th></tr></thead><tbody>${rows}</tbody></table>`;
   }
 
   function summaryTable(rows) {

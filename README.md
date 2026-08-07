@@ -14,3 +14,7 @@ Key points:
 - Backups from another company key can be imported while preserving the current company's identity, plan and manager configuration.
 
 Security note: this is a static browser application. The Turso read/write token in `turso-config.js` is visible to anyone who can read the deployed JavaScript. Rotate the token after testing and do not treat it as a secret in a public deployment.
+
+
+## R106 — lossless records and offline sync gate
+See `R106-CHANGES.txt` for the record-safe merge, archive recovery, login sync progress screen, and mobile-data reconnect recovery.

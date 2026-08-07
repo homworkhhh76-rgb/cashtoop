@@ -18,6 +18,19 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   const isPathProxy = settings.backendMode === 'turso-http-rtdb' || configuredBaseUrls.some(url => /__turso_rtdb__(?:$|\?)/i.test(url));
   const TRANSPORT_KEY = `ct_sync_transport_v1::${cfg.projectId || 'default'}`;
   const CLOUD_DATA_KEYS = core.DATA_KEYS.filter(key => key !== 'cashtop_audit_log');
+  const LOSSLESS_SYNC_KEYS = new Set([
+    'cashtop_products','cashtop_product_categories','cashtop_materials','cashtop_material_purchases',
+    'cashtop_customers','cashtop_customer_groups','cashtop_suppliers','cashtop_supplier_movements',
+    'cashtop_invoices','cashtop_sales_reversals','cashtop_sales_returns',
+    'cashtop_purchases','cashtop_purchase_reversals','cashtop_purchase_returns',
+    'cashtop_expenses','cashtop_expense_types','cashtop_vouchers','cashtop_units','cashtop_stores',
+    'cashtop_transfer_history','cashtop_branches','cashtop_branch_transfer_history','cashtop_employees',
+    'cashtop_workers','cashtop_sales_agents','cashtop_agent_movements','cashtop_sales_offers',
+    'cashtop_manufacturing_recipes','cashtop_manufacturing_orders','cashtop_wastage','cashtop_salary_payments',
+    'cashtop_journal','cashtop_journal_reversal_archive','cashtop_financial_groups','cashtop_opening_balances',
+    'cashtop_funds_db'
+  ]);
+  const LOSSLESS_OBJECT_KEYS = new Set(['cashtop_funds_db']);
   const usagePolicy = settings.usagePolicy || {};
   const AUTO_REMOTE_CHECK_MS = Math.max(7000, Number(usagePolicy.remoteCheckMs || 10000));
   const NAV_REMOTE_CHECK_MS = Math.max(3000, Number(usagePolicy.navigationCheckMs || 5000));
@@ -94,6 +107,29 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     const next = { ...readUsageState(), ...(patch || {}) };
     try { rawStorage.set(usageStateKey, JSON.stringify(next)); } catch (_) {}
     return next;
+  }
+
+  function loginSyncGateKey() {
+    return `ct_login_sync_gate_v1::${encodeURIComponent(canonicalCompanyId)}`;
+  }
+
+  function markLoginFullSyncComplete(extra = {}) {
+    try {
+      const key = loginSyncGateKey();
+      let previous = {};
+      try { previous = JSON.parse(rawStorage.get(key) || '{}') || {}; } catch (_) { previous = {}; }
+      const next = {
+        ...previous,
+        loginAt: String(session.loginAt || previous.loginAt || ''),
+        completeOnline: true,
+        completedAt: Date.now(),
+        financialGroupId,
+        ...extra
+      };
+      rawStorage.set(key, JSON.stringify(next));
+      window.dispatchEvent(new CustomEvent('cashtop:full-sync-complete', { detail: next }));
+      return next;
+    } catch (_) { return null; }
   }
 
   function hasSubstantialLocalCache() {
@@ -823,7 +859,8 @@ if (settings.enabled && core && settings.config?.databaseURL) {
         updatedAt: Number(payload.updatedAt || 0),
         revision: Math.max(1, Number(payload.revision || 1)),
         deviceId: payload.deviceId || null,
-        page: payload.page || ''
+        page: payload.page || '',
+        recordTombstones: payload.recordTombstones && typeof payload.recordTombstones === 'object' ? payload.recordTombstones : {}
       };
     }
     return {
@@ -833,7 +870,8 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       updatedAt: 0,
       revision: 1,
       deviceId: null,
-      page: ''
+      page: '',
+      recordTombstones: {}
     };
   }
 
@@ -847,7 +885,8 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       updatedAt: Math.max(1, Number(meta.updatedAt || 0), Date.now()),
       revision: Math.max(1, Number(meta.revision || 0), Number(remoteRevision || 0) + 1),
       deviceId: core.rawGet('cashtop_device_id') || '',
-      page: core.FILE || ''
+      page: core.FILE || '',
+      recordTombstones: meta.recordTombstones && typeof meta.recordTombstones === 'object' ? meta.recordTombstones : {}
     };
   }
 
@@ -930,7 +969,8 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       revision: Number(payload.revision || 1),
       deviceId: payload.deviceId || '',
       source: isPathProxy ? 'turso-http-rtdb' : 'legacy-rest',
-      seeded: false
+      seeded: false,
+      recordTombstones: payload.recordTombstones && typeof payload.recordTombstones === 'object' ? payload.recordTombstones : {}
     }));
     completePendingForKey(key);
     return true;
@@ -949,13 +989,15 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     if (options.force !== true && !canApplyRemote(key, payload, options.allowEqual !== false)) return false;
     // حتى مع force لا نكتب فوق تعديل محلي ما زال ينتظر الرفع.
     if (pendingForKey(key)) return false;
-    core.applyRemoteDataset(key, payload.deleted ? null : payload.value, {
+    const applied = core.applyRemoteDataset(key, payload.deleted ? null : payload.value, {
       updatedAt: Number(payload.updatedAt || Date.now()),
       revision: Number(payload.revision || 1),
       deviceId: payload.deviceId || null,
       source: isPathProxy ? 'turso-http-rtdb' : 'legacy-rest',
-      seeded: false
+      seeded: false,
+      recordTombstones: payload.recordTombstones && typeof payload.recordTombstones === 'object' ? payload.recordTombstones : {}
     });
+    if (applied === false) return false;
     completePendingForKey(key);
     return true;
   }
@@ -1056,6 +1098,17 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     let processed = 0;
     let newestDatasetTime = 0;
     const successfullyRead = [];
+    const failedKeys = [];
+    const convergenceKeys = [];
+    const noteLosslessConvergence = (key, payload) => {
+      if (!LOSSLESS_SYNC_KEYS.has(key) || pendingForKey(key)) return;
+      const normalized = normalizeRemotePayload(payload);
+      if (normalized.deleted) return;
+      const localRaw = core.getRawCompanyDataset ? core.getRawCompanyDataset(key) : localStorage.getItem(key);
+      if (String(localRaw ?? '') === String(normalized.value ?? '')) return;
+      core.enqueueSyncOperation(key, { source: 'lossless-pull-convergence' });
+      if (!convergenceKeys.includes(key)) convergenceKeys.push(key);
+    };
 
     try {
       if (isPathProxy && window.CashtopTursoBridge?.readMany) {
@@ -1078,8 +1131,10 @@ if (settings.enabled && core && settings.config?.databaseURL) {
             const remoteTime = Number(payload.updatedAt || 0);
             const pending = Boolean(pendingForKey(key));
             const seeded = localMeta.seeded === true || localTime <= 0;
-            if ((options.force === true || seeded || (!pending && remoteTime > localTime)) &&
-                applyRemote(key, payload, { force: options.force === true })) applied += 1;
+            if (options.force === true || seeded || (!pending && remoteTime > localTime)) {
+              const didApply = applyRemote(key, payload, { force: options.force === true });
+              if (didApply) { applied += 1; noteLosslessConvergence(key, payload); }
+            }
           }
           if (showProgress) reportSyncProgress(processed, requested.length, `تحديث ${key}...`);
         }
@@ -1094,6 +1149,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
           for (const result of results) {
             processed += 1;
             if (result.error) {
+              failedKeys.push(result.key);
               console.warn('[CASH TOP 2] progressive dataset pull:', result.key, result.error);
               continue;
             }
@@ -1104,8 +1160,10 @@ if (settings.enabled && core && settings.config?.databaseURL) {
               newestDatasetTime = Math.max(newestDatasetTime, Number(payload.updatedAt || 0));
               const localMeta = localMetaFor(result.key);
               const seeded = localMeta.seeded === true || Number(localMeta.updatedAt || 0) <= 0;
-              if ((options.force === true || seeded || (!pendingForKey(result.key) && Number(payload.updatedAt || 0) > Number(localMeta.updatedAt || 0))) &&
-                  applyRemote(result.key, payload, { force: options.force === true })) applied += 1;
+              if (options.force === true || seeded || (!pendingForKey(result.key) && Number(payload.updatedAt || 0) > Number(localMeta.updatedAt || 0))) {
+                const didApply = applyRemote(result.key, payload, { force: options.force === true });
+                if (didApply) { applied += 1; noteLosslessConvergence(result.key, payload); }
+              }
             }
           }
         }
@@ -1123,8 +1181,12 @@ if (settings.enabled && core && settings.config?.databaseURL) {
         lastPriorityPullAt: Date.now(),
         lastMetaCheckAt: Date.now()
       });
-      if (requested.length >= CLOUD_DATA_KEYS.length) {
-        rawStorage.set(bootstrapKey, JSON.stringify({ at: Date.now(), remoteUpdatedAt: remoteStamp }));
+      const fullDatasetPull = requested.length >= CLOUD_DATA_KEYS.length;
+      if (fullDatasetPull && failedKeys.length === 0) {
+        rawStorage.set(bootstrapKey, JSON.stringify({ at: Date.now(), remoteUpdatedAt: remoteStamp, full: true }));
+        if (convergenceKeys.length === 0 && core.getSyncQueue().length === 0) {
+          markLoginFullSyncComplete({ remoteUpdatedAt: remoteStamp, datasetCount: requested.length });
+        }
       }
       writeState({
         initialLoaded: true,
@@ -1137,12 +1199,19 @@ if (settings.enabled && core && settings.config?.databaseURL) {
         remotePath: locationPath(location)
       });
       core.updateSyncBadge();
-      if (applied > 0) window.dispatchEvent(new CustomEvent('cashtop:sync-complete', { detail: { processed: 0, pulled: applied, uploaded: 0, progressive: true } }));
-      return { hasRemote: found > 0, count: found, applied, path: locationPath(location), progressive: true, remoteUpdatedAt: remoteStamp };
+      if (applied > 0) window.dispatchEvent(new CustomEvent('cashtop:sync-complete', { detail: { processed: 0, pulled: applied, uploaded: 0, progressive: true, failed: failedKeys.length, failedKeys: [...failedKeys] } }));
+      return {
+        hasRemote: found > 0, count: found, applied, path: locationPath(location), progressive: true, remoteUpdatedAt: remoteStamp,
+        requested: requested.length, successful: successfullyRead.length, failed: failedKeys.length, failedKeys: [...failedKeys],
+        convergenceKeys: [...convergenceKeys], convergencePending: convergenceKeys.length,
+        complete: failedKeys.length === 0 && convergenceKeys.length === 0
+      };
     } finally {
       if (showProgress) {
         reportPullEnd(requested[requested.length - 1] || '', processed, requested.length);
-        reportSyncProgress(processed, requested.length, 'اكتمل فحص البيانات المطلوبة', { active: false, done: true, success: true });
+        reportSyncProgress(processed, requested.length, failedKeys.length ? 'اكتمل الفحص مع بيانات تحتاج إعادة محاولة' : 'اكتمل فحص البيانات المطلوبة', {
+          active: false, done: true, success: failedKeys.length === 0, failed: failedKeys.length, failedKeys: [...failedKeys]
+        });
       }
     }
   }
@@ -1334,6 +1403,40 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     return core.recordIdentity ? core.recordIdentity(item) : '';
   }
 
+  function syncRecordIdentity(record, index = 0) {
+    if (!record || typeof record !== 'object' || Array.isArray(record)) return `anon:${index}:${JSON.stringify(record)}`;
+    for (const field of ['id','_id','uuid','invoiceId','refId','refNumber','reference','number','code','key','barcode']) {
+      const value = record[field];
+      if (value !== undefined && value !== null && String(value).trim()) return `${field}:${String(value).trim()}`;
+    }
+    if (record.accountId != null && (record.sourceId != null || record.refId != null)) return `fund:${String(record.accountId)}:${String(record.sourceType || record.refType || '')}:${String(record.sourceId || record.refId || '')}:${String(record.type || '')}`;
+    if (record.accountId != null && (record.date || record.timestamp) && record.amount != null) return `fundlog:${String(record.accountId)}:${String(record.date || record.timestamp)}:${String(record.type || '')}:${String(record.amount)}`;
+    return `anon:${index}:${JSON.stringify(record)}`;
+  }
+
+  function mergeArrayUnion(localValue, remoteValue) {
+    const merged = new Map();
+    (Array.isArray(remoteValue) ? remoteValue : []).forEach((item,index)=>merged.set(syncRecordIdentity(item,index), item));
+    (Array.isArray(localValue) ? localValue : []).forEach((item,index)=>{
+      const id=syncRecordIdentity(item,index);
+      const previous=merged.get(id);
+      merged.set(id, previous && typeof previous==='object' && typeof item==='object' ? { ...previous, ...item } : item);
+    });
+    return [...merged.values()];
+  }
+
+  function mergeLosslessObjectPending(key, localValue, remoteValue) {
+    if (key !== 'cashtop_funds_db') return localValue;
+    const local = localValue && typeof localValue === 'object' && !Array.isArray(localValue) ? localValue : {};
+    const remote = remoteValue && typeof remoteValue === 'object' && !Array.isArray(remoteValue) ? remoteValue : {};
+    return {
+      ...remote,
+      ...local,
+      accounts: mergeArrayUnion(local.accounts || [], remote.accounts || []),
+      accountLogs: mergeArrayUnion(local.accountLogs || [], remote.accountLogs || [])
+    };
+  }
+
   function mergeArrayByDelta(localValue, remoteValue, touchedIds = [], deletedIds = []) {
     const touched = new Set(touchedIds || []);
     const deleted = new Set(deletedIds || []);
@@ -1374,19 +1477,20 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     return true;
   }
 
-  function mergePendingPayload(localPayload, remotePayload, pending) {
-    if (pending?.forceReplace === true) return localPayload;
+  function mergePendingPayload(key, localPayload, remotePayload, pending) {
+    if (pending?.forceReplace === true && !LOSSLESS_SYNC_KEYS.has(key)) return localPayload;
     if (!remotePayload || pending?.deletedDataset === true) return localPayload;
     const localValue = payloadJsonValue(localPayload);
     const remoteValue = payloadJsonValue(remotePayload);
+    const forceLosslessMerge = pending?.forceReplace === true && LOSSLESS_SYNC_KEYS.has(key);
 
-    if (Array.isArray(localValue) && Array.isArray(remoteValue) &&
+    if (!forceLosslessMerge && Array.isArray(localValue) && Array.isArray(remoteValue) &&
         ((pending?.touchedIds?.length || 0) + (pending?.deletedIds?.length || 0) > 0)) {
       const merged = mergeArrayByDelta(localValue, remoteValue, pending.touchedIds || [], pending.deletedIds || []);
       return { ...localPayload, value: JSON.stringify(merged), deleted: false };
     }
 
-    if (localValue && remoteValue && typeof localValue === 'object' && typeof remoteValue === 'object' &&
+    if (!forceLosslessMerge && localValue && remoteValue && typeof localValue === 'object' && typeof remoteValue === 'object' &&
         !Array.isArray(localValue) && !Array.isArray(remoteValue) &&
         ((pending?.touchedFields?.length || 0) + (pending?.deletedFields?.length || 0) > 0)) {
       const merged = { ...remoteValue };
@@ -1401,6 +1505,34 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       }
       for (const field of pending.deletedFields || []) delete merged[field];
       return { ...localPayload, value: JSON.stringify(merged), deleted: false };
+    }
+
+    if (LOSSLESS_OBJECT_KEYS.has(key) && localValue && remoteValue && typeof localValue === 'object' && typeof remoteValue === 'object' && !Array.isArray(localValue) && !Array.isArray(remoteValue)) {
+      return { ...localPayload, value: JSON.stringify(mergeLosslessObjectPending(key, localValue, remoteValue)), deleted: false };
+    }
+
+    if (LOSSLESS_SYNC_KEYS.has(key) && Array.isArray(localValue) && Array.isArray(remoteValue)) {
+      const merged = new Map();
+      const identity = (record, index = 0) => {
+        if (!record || typeof record !== 'object' || Array.isArray(record)) return `anon:${index}:${JSON.stringify(record)}`;
+        for (const field of ['id','_id','uuid','invoiceId','refId','refNumber','reference','number','code','key','barcode']) {
+          const value = record[field];
+          if (value !== undefined && value !== null && String(value).trim()) return `${field}:${String(value).trim()}`;
+        }
+        return `anon:${index}:${JSON.stringify(record)}`;
+      };
+      remoteValue.forEach((record,index)=>merged.set(identity(record,index),record));
+      localValue.forEach((record,index)=>{
+        const id=identity(record,index);
+        const prev=merged.get(id);
+        merged.set(id, prev && typeof prev==='object' && typeof record==='object' ? { ...prev, ...record } : record);
+      });
+      const tombstones = {
+        ...(remotePayload.recordTombstones && typeof remotePayload.recordTombstones === 'object' ? remotePayload.recordTombstones : {}),
+        ...(localPayload.recordTombstones && typeof localPayload.recordTombstones === 'object' ? localPayload.recordTombstones : {})
+      };
+      Object.entries(tombstones).forEach(([id, stamp])=>{ if(id && stamp) merged.delete(id); });
+      return { ...localPayload, value: JSON.stringify([...merged.values()]), deleted: false, recordTombstones: tombstones };
     }
 
     return localPayload;
@@ -1450,7 +1582,8 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       revision: Number(payload.revision || 1),
       deviceId: payload.deviceId || core.rawGet('cashtop_device_id') || '',
       source: isPathProxy ? 'turso-http-rtdb' : 'legacy-rest',
-      seeded: false
+      seeded: false,
+      recordTombstones: payload.recordTombstones && typeof payload.recordTombstones === 'object' ? payload.recordTombstones : (localMetaFor(key).recordTombstones || {})
     }));
     window.dispatchEvent(new CustomEvent('cashtop:remote-applied', { detail: { key, merged: true } }));
   }
@@ -1493,7 +1626,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
             pending = core.getSyncQueue().find(item => item.key === key) || pending;
             const localPayload = makeLocalPayload(key, remote?.revision || 0);
             sourceLocalPayload = localPayload;
-            desired = mergePendingPayload(localPayload, remote, pending);
+            desired = mergePendingPayload(key, localPayload, remote, pending);
             await writeDatasetLocation(location, key, token, desired);
             const verifiedRaw = await readDatasetLocation(location, key, token);
             committed = pendingChangesPresent(verifiedRaw, desired, pending);
@@ -1651,7 +1784,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
 
           // Import/forceReplace is an intentional overwrite. Normal edits also use
           // this fast path when the one metadata probe proved the cloud unchanged.
-          if (forceReplaceBatch || pending.forceReplace === true || canFastWriteDataset(key)) {
+          if (!LOSSLESS_SYNC_KEYS.has(key) && (forceReplaceBatch || pending.forceReplace === true || canFastWriteDataset(key))) {
             const sourceLocalPayload = makeLocalPayload(key, 0);
             await writeDatasetLocation(location, key, token, sourceLocalPayload);
             if (markUploaded(key, sourceLocalPayload)) { uploaded += 1; uploadedKeys.push(key); }
@@ -1668,7 +1801,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
           if (key === 'cashtop_company_access' && remoteRaw != null) mergeAdminControlledAccess(remoteRaw);
 
           const sourceLocalPayload = makeLocalPayload(key, remote?.revision || 0);
-          const desired = mergePendingPayload(sourceLocalPayload, remote, pending);
+          const desired = mergePendingPayload(key, sourceLocalPayload, remote, pending);
           await writeDatasetLocation(location, key, token, desired);
 
           const currentRaw = core.getRawCompanyDataset ? core.getRawCompanyDataset(key) : localStorage.getItem(key);
@@ -1696,7 +1829,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       // page pull anymore.
       if ((remoteChanged && options.importSync !== true) || options.forceCheck === true || options.manualPull === true) {
         try {
-          const candidateKeys = pagePriorityDatasets();
+          const candidateKeys = CLOUD_DATA_KEYS;
           const pullKeys = options.forceCheck === true
             ? candidateKeys
             : changedPriorityKeysFromMeta(remoteMeta, candidateKeys);
@@ -1750,14 +1883,13 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       window.dispatchEvent(new CustomEvent('cashtop:sync-complete', {
         detail: { processed: uploaded, pulled, uploaded, failed: failedKeys.length, remaining, partial: failedKeys.length > 0, lowUsage: true }
       }));
-      // After a successful local upload, make one delayed revision check. This
-      // closes the small race where another device saves immediately after our
-      // metadata probe and ensures the current page converges without requiring
-      // the user to refresh. Never pull over a newly-created pending local edit.
+      // After a successful local upload, make one delayed metadata revision check.
+      // It detects changes from other devices across ALL datasets, but does not
+      // force-download every dataset after each invoice save.
       if (uploaded > 0 && remaining === 0) {
         setTimeout(() => {
           if (document.hidden || core.getSyncQueue().length) return;
-          checkRemoteAndPull(true).catch(() => null);
+          checkRemoteAndPull(false).catch(() => null);
         }, 1800);
       }
       return {
@@ -1818,9 +1950,9 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       }
       if (core.getSyncQueue().length) return reconcileAll(options);
       if (options.manual === true || options.forceCheck === true) {
-        // Manual refresh is intentionally current-page-only. Force means bypass
-        // local timestamps for these few datasets, not read the whole company.
-        return pullPriorityDatasets({ force: true, concurrency: 6, silentProgress: false });
+        // الفحص اليدوي/الإجباري يزامن كل بيانات الشركة، لا بيانات الصفحة فقط.
+        // هذا مهم للأجهزة الجديدة أو جهاز ظل مغلقاً فترة طويلة.
+        return pullAll({ force: true, concurrency: 6 });
       }
       return checkRemoteAndPull(false);
     };
@@ -1866,18 +1998,18 @@ if (settings.enabled && core && settings.config?.databaseURL) {
 
     const bootstrapped = Boolean(rawStorage.get(bootstrapKey));
     if (!bootstrapped && !hasSubstantialLocalCache()) {
-      // New laptop/device: lazy bootstrap only the current page instead of
-      // reading every dataset in the company.
-      const result = await pullPriorityDatasets({ concurrency: 6, silentProgress: true, remoteMeta: meta });
+      // جهاز جديد: اسحب كل datasets مرة واحدة حتى لا يبدأ بجزء من بيانات الشركة.
+      const result = await pullAll({ concurrency: 6, remoteMeta: meta });
       const nextUsage = readUsageState();
       writeUsageState({
         pageRemoteStamps: {
           ...(nextUsage.pageRemoteStamps || {}),
           [pageKey]: Math.max(remoteStamp, Number(result?.remoteUpdatedAt || 0))
-        }
+        },
+        lastFullPullAt: Date.now()
       });
-      rawStorage.set(bootstrapKey, JSON.stringify({ at: Date.now(), lazy: true, remoteUpdatedAt: remoteStamp }));
-      return { ...result, bootstrap: true, lazy: true };
+      rawStorage.set(bootstrapKey, JSON.stringify({ at: Date.now(), full: true, remoteUpdatedAt: remoteStamp }));
+      return { ...result, bootstrap: true, full: true };
     }
 
     if (!bootstrapped) {
@@ -1885,16 +2017,19 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     }
 
     const knownPageStamp = Number(pageRemoteStamps[pageKey] || 0);
-    if (!force && remoteStamp > 0 && knownPageStamp > 0 && remoteStamp <= knownPageStamp) {
+    const fullRefreshDue = now - Number(usage.lastFullPullAt || 0) >= FULL_REFRESH_MS;
+    if (!force && !fullRefreshDue && remoteStamp > 0 && knownPageStamp > 0 && remoteStamp <= knownPageStamp) {
       return { skipped: true, unchanged: true, remoteUpdatedAt: remoteStamp };
     }
-    if (!force && remoteStamp === 0 && knownPageStamp === 0) {
+    if (!force && !fullRefreshDue && remoteStamp === 0 && knownPageStamp === 0) {
       return { skipped: true, emptyRemote: true };
     }
 
-    const priorityKeys = pagePriorityDatasets();
-    const changedKeys = force ? priorityKeys : changedPriorityKeysFromMeta(meta, priorityKeys, readUsageState());
-    if (!force && !changedKeys.length) {
+    const syncScope = CLOUD_DATA_KEYS;
+    const changedKeys = force
+      ? CLOUD_DATA_KEYS
+      : changedPriorityKeysFromMeta(meta, syncScope, readUsageState());
+    if (!force && !fullRefreshDue && !changedKeys.length) {
       const latestUsage = readUsageState();
       writeUsageState({
         pageRemoteStamps: {
@@ -1905,18 +2040,103 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       return { skipped: true, noRelevantPageChanges: true, remoteUpdatedAt: remoteStamp, page: pageKey };
     }
 
-    const result = await pullDatasetKeys(changedKeys, {
-      force: false, concurrency: 6, silentProgress: !force, remoteMeta: meta
+    const keysToPull = fullRefreshDue && !force ? CLOUD_DATA_KEYS : changedKeys;
+    const result = await pullDatasetKeys(keysToPull, {
+      force: force === true, concurrency: 6, silentProgress: !force, remoteMeta: meta
     });
 
     const latestUsage = readUsageState();
     writeUsageState({
+      lastFullPullAt: (force || fullRefreshDue || keysToPull.length >= CLOUD_DATA_KEYS.length) ? Date.now() : Number(latestUsage.lastFullPullAt || 0),
       pageRemoteStamps: {
         ...(latestUsage.pageRemoteStamps || {}),
         [pageKey]: Math.max(remoteStamp, Number(result?.remoteUpdatedAt || 0))
       }
     });
     return { ...result, checked: true, page: pageKey };
+  }
+
+  let connectivityRecoveryRunning = false;
+  let lastConnectivityFullPullAt = 0;
+
+  let connectivityProbeRunning = null;
+  let lastConnectivityProbeAt = 0;
+
+  async function probeConnectivity(options = {}) {
+    const now = Date.now();
+    const minGap = Math.max(0, Number(options.minGap || 0));
+    if (connectivityProbeRunning) return connectivityProbeRunning;
+    if (minGap && now - lastConnectivityProbeAt < minGap) return readState().backendReachable === true;
+    lastConnectivityProbeAt = now;
+    connectivityProbeRunning = (async () => {
+      try {
+        const access = await cheapDatabaseAccess();
+        const response = await fetchWithTimeout(metaEndpoint(access.location, access.token), {
+          method: 'GET', headers: { 'Accept':'application/json' }
+        }, Math.max(1800, Number(options.timeout || 3500)));
+        if (!response.ok) throw await databaseError(response);
+        writeState({ backendReachable:true, backendReachableAt:Date.now(), backendError:'' });
+        return true;
+      } catch (_) {
+        return false;
+      } finally {
+        connectivityProbeRunning = null;
+      }
+    })();
+    return connectivityProbeRunning;
+  }
+
+  async function pullAllWithRetry(options = {}) {
+    let result = await pullAll({ force: options.force !== false, concurrency: options.concurrency || 6 });
+    let failed = Array.isArray(result?.failedKeys) ? [...result.failedKeys] : [];
+    for (let attempt = 0; failed.length && attempt < 2; attempt += 1) {
+      await new Promise(resolve => setTimeout(resolve, 450 + attempt * 650));
+      const retry = await pullDatasetKeys(failed, { force: true, concurrency: 4, silentProgress: options.silentProgress === true });
+      result = {
+        ...result,
+        applied: Number(result?.applied || 0) + Number(retry?.applied || 0),
+        failed: Number(retry?.failed || 0),
+        failedKeys: Array.isArray(retry?.failedKeys) ? [...retry.failedKeys] : [],
+        complete: Number(retry?.failed || 0) === 0
+      };
+      failed = result.failedKeys;
+    }
+    let convergenceUpload = null;
+    if (!failed.length && core.getSyncQueue().length) {
+      convergenceUpload = await syncAll({ manual: true, forceRetry: true });
+    }
+    const remaining = core.getSyncQueue().length;
+    const complete = !failed.length && remaining === 0;
+    if (complete) markLoginFullSyncComplete({ recovery: options.reason || 'full-pull', datasetCount: CLOUD_DATA_KEYS.length });
+    return { ...result, convergenceUpload, remaining, complete };
+  }
+
+  async function recoverConnectivityAndSync(reason = 'resume', options = {}) {
+    if (connectivityRecoveryRunning) return { busy: true, remaining: core.getSyncQueue().length };
+    connectivityRecoveryRunning = true;
+    try {
+      const ready = core.syncReady || core.localReady;
+      if (ready && typeof ready.then === 'function') { try { await ready; } catch (_) {} }
+      datasetRetryState.clear();
+      let uploadResult = { remaining: core.getSyncQueue().length, uploaded: 0 };
+      if (core.getSyncQueue().length) {
+        try { await core.preservePendingSyncState?.(); } catch (_) {}
+        uploadResult = await syncAll({ manual: true, forceRetry: true });
+      }
+      if (core.getSyncQueue().length || Number(uploadResult?.remaining || 0) > 0) return { ...uploadResult, deferred: true };
+
+      const now = Date.now();
+      const fullPullDue = options.forceFullPull === true || now - lastConnectivityFullPullAt > 45000;
+      if (!fullPullDue) return { ...uploadResult, recovered: true, fullPullSkipped: true };
+      const pullResult = await pullAllWithRetry({ force: true, concurrency: 6, reason });
+      const recovered = Number(pullResult?.failed || 0) === 0 && Number(pullResult?.remaining || 0) === 0 && pullResult?.complete !== false;
+      if (recovered) lastConnectivityFullPullAt = Date.now();
+      return { ...uploadResult, pull: pullResult, recovered };
+    } catch (error) {
+      return { deferred: true, networkDeferred: isTransientNetworkError(error), remaining: core.getSyncQueue().length, message: safeSyncMessage(error) };
+    } finally {
+      connectivityRecoveryRunning = false;
+    }
   }
 
   async function uploadDataset(key) {
@@ -2080,6 +2300,14 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       try { await core.localReady; } catch (_) {}
     }
 
+    // R106 safety: record datasets are never bulk-replaced, even during backup
+    // restore. Their pending import operations go through the normal read+merge
+    // reconciliation so an older/shorter backup cannot erase records already
+    // present on another device or in the cloud.
+    if (unique.some(key => LOSSLESS_SYNC_KEYS.has(key))) {
+      return syncAll({ manual: true, forceRetry: true, importSync: false });
+    }
+
     // Import is an intentional replacement. Use exact UPSERTs in batches with
     // zero pre-reads and zero verification reads. This is the cheapest safe
     // behavior for restoring a backup into the current company identity.
@@ -2160,9 +2388,12 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     uploadDataset,
     importDatasets,
     pullAll,
+    pullAllWithRetry,
     pullDatasetKeys,
     pullPriorityDatasets,
     checkRemoteAndPull,
+    probeConnectivity,
+    recoverConnectivityAndSync,
     resetSyncRuntime,
     signOut,
     getState: readState,
@@ -2191,32 +2422,52 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     if (core.getSyncQueue().length) scheduleSync(80);
     else checkRemoteAndPull(true).catch(() => null);
   });
-  window.addEventListener('cashtop:sync-queue-restored', () => scheduleSync(250));
+  window.addEventListener('cashtop:sync-queue-restored', () => { if (core.FILE !== 'sync.html') scheduleSync(250); });
   window.addEventListener('online', () => {
     datasetRetryState.clear();
-    if (core.getSyncQueue().length) scheduleSync(250);
-    else checkRemoteAndPull(false).catch(() => null);
+    recoverConnectivityAndSync('online', { forceFullPull: true }).catch(() => null);
     if (AUDIT_CLOUD_ENABLED) flushAuditTrailPending({ limit: 120 }).catch(() => null);
   });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
-    if (core.getSyncQueue().length) scheduleSync(400);
+    if (core.getSyncQueue().length) recoverConnectivityAndSync('visible').catch(() => null);
     else checkRemoteAndPull(false).catch(() => null);
   });
 
-  // Near-live cross-device check + stuck-queue watchdog. A pending local edit
-  // no longer disables remote polling forever: while a queue exists we actively
-  // re-arm the uploader; once it drains the next tick checks remote revisions.
-  const resumeSyncRuntime = () => {
+  // R106 connectivity recovery: some Android/WebView builds do not reliably fire
+  // the online event when mobile data is enabled after working offline. The
+  // watchdog therefore retries the durable queue whenever the browser reports a
+  // usable connection, and a real online/connection-change event also performs
+  // one complete company pull after uploads finish.
+  const resumeSyncRuntime = event => {
     datasetRetryState.clear();
-    if (core.getSyncQueue().length) scheduleSync(40);
+    const reason = event?.type || 'resume';
+    if (core.getSyncQueue().length) recoverConnectivityAndSync(reason).catch(() => null);
+    else if (reason === 'change') recoverConnectivityAndSync('connection-change', { forceFullPull: true }).catch(() => null);
     else checkRemoteAndPull(false).catch(() => null);
   };
   pollTimer = setInterval(() => {
     if (document.hidden) return;
-    if (core.getSyncQueue().length) { scheduleSync(40); return; }
-    checkRemoteAndPull(false).catch(() => null);
-  }, AUTO_REMOTE_CHECK_MS);
+    if (core.getSyncQueue().length) {
+      if (navigator.onLine !== false) {
+        recoverConnectivityAndSync('watchdog').catch(() => null);
+      } else {
+        // navigator.onLine can stay false on some Android devices after mobile
+        // data is enabled. Probe the real sync endpoint with a short deadline.
+        probeConnectivity({ timeout: 3200, minGap: 7000 }).then(ok => {
+          if (ok) recoverConnectivityAndSync('watchdog-probe', { forceFullPull: true }).catch(() => null);
+        }).catch(() => null);
+      }
+      return;
+    }
+    if (navigator.onLine === false) {
+      probeConnectivity({ timeout: 3200, minGap: 9000 }).then(ok => {
+        if (ok) recoverConnectivityAndSync('idle-watchdog-probe', { forceFullPull: true }).catch(() => null);
+      }).catch(() => null);
+    } else {
+      checkRemoteAndPull(false).catch(() => null);
+    }
+  }, Math.min(AUTO_REMOTE_CHECK_MS, 5000));
   window.addEventListener('focus', resumeSyncRuntime, { passive:true });
   window.addEventListener('pageshow', resumeSyncRuntime, { passive:true });
   navigator.connection?.addEventListener?.('change', resumeSyncRuntime);
@@ -2240,9 +2491,12 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   }
 
   // Cache-first startup: upload pending local edits after a debounce. With no
-  // edits, perform only a throttled metadata check; full pull happens only on a
-  // truly empty first device or manual refresh.
-  if (core.getSyncQueue().length) scheduleSync(80);
+  // edits, perform a throttled metadata check. A new device pulls all datasets,
+  // and later metadata changes converge every changed dataset across devices.
+  if (core.FILE === 'sync.html') {
+    // The login synchronization gate owns the first full upload/pull sequence so
+    // its percentage reflects one deterministic job rather than racing startup.
+  } else if (core.getSyncQueue().length) scheduleSync(80);
   else setTimeout(() => checkRemoteAndPull(false).catch(() => null), 220);
 } else if (core) {
   console.warn('[CASH TOP 2] إعداد Turso للمزامنة غير مكتمل.');

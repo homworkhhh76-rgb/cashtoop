@@ -159,8 +159,34 @@
     // احتفظ بتصحيح ساعة الجهاز لمدة 30 يوماً. هذا يمنع أجهزة اللابتوب ذات
     // الساعة/المنطقة الزمنية الخاطئة من رفض مفتاح نشط.
     if (Number.isFinite(offset) && Number.isFinite(observedAt) && Date.now() - observedAt < 30 * 86400000) return Date.now() + offset;
-    return Date.now();
+    const localNow = Date.now();
+    // ساعة جهاز بعيدة جداً لا تصبح مرجع صلاحية. عند أول GET ناجح يتم تصحيحها
+    // تلقائياً من Date header الخاص بالخادم.
+    if (localNow < Date.UTC(2024,0,1) || localNow > Date.UTC(2038,0,1)) {
+      const persisted = parse(rawGet(PERSISTENT_SESSION_KEY), {}) || {};
+      const lastTrusted = Number(persisted.lastLicenseCheck || persisted.serverClockObservedAt || 0);
+      if (lastTrusted >= Date.UTC(2024,0,1) && lastTrusted <= Date.UTC(2038,0,1)) return lastTrusted;
+      // لا نرفض مفتاحاً نشطاً بسبب ساعة جهاز تالفة. أول طلب ناجح للخادم
+      // يستبدل هذه القيمة مباشرةً بتوقيت Date header الموثوق.
+      return Date.UTC(2026,7,7,12,0,0);
+    }
+    return localNow;
   }
+  function loginSyncGateKey(session) {
+    const tenant = String(session?.tenantId || session?.companyId || session?.licenseId || session?.companyKey || 'unassigned');
+    return `ct_login_sync_gate_v1::${encodeURIComponent(tenant)}`;
+  }
+  function isLoginSyncGateComplete(session) {
+    if (!session) return false;
+    try {
+      const state = parse(rawGet(loginSyncGateKey(session)), {}) || {};
+      return state.completeOnline === true && String(state.loginAt || '') === String(session.loginAt || '');
+    } catch (_) { return false; }
+  }
+  function nextPageAfterLogin(session) {
+    return isLoginSyncGateComplete(session) ? 'لوحة التحكم.html' : 'sync.html';
+  }
+
   function writeSession(session) {
     const serialized = JSON.stringify(session || {});
     try { sessionStorage.setItem(TAB_SESSION_KEY, serialized); } catch (_) {}
@@ -797,11 +823,15 @@
         }
       }
       await loginDurableWriteChain.catch(() => false);
-      showStatus('تم تسجيل الدخول بنجاح. جاري فتح لوحة التحكم...', 'success');
-      setTimeout(() => location.replace('لوحة التحكم.html'), 80);
+      showStatus('تم تسجيل الدخول بنجاح. جاري تجهيز المزامنة...', 'success');
+      const loggedSession = readTabSession();
+      setTimeout(() => location.replace(nextPageAfterLogin(loggedSession)), 80);
     } catch (error) {
       console.error(error);
       let message = String(error.message || 'تعذر تسجيل الدخول.');
+      if (/مدة المفتاح.*(?:لم تبدأ|لم تبدا)|المفتاح.*(?:لم يبدأ|لم يبدا|لم تبدأ|لم تبدا)/i.test(message)) {
+        message = 'تم تجاهل وقت البداية القديم للمفتاح. أعد المحاولة بعد تحديث الصفحة إذا كانت هذه رسالة من نسخة مخزنة قديمة.';
+      }
       if (String(error.code || '').includes('invalid-credential')) message = 'اسم المستخدم أو كلمة المرور غير صحيحة.';
       showStatus(message, 'error');
       button.disabled = false; button.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> تسجيل الدخول للنظام';
@@ -826,7 +856,7 @@
     const existingSession = readTabSession();
     const existingEnd = existingSession?.licenseEnd ? new Date(existingSession.licenseEnd).getTime() : 0;
     if (existingSession && existingSession.status !== 'stopped' && (!existingEnd || existingEnd > trustedNowMs()) && !new URLSearchParams(location.search).get('reason')) {
-      location.replace('لوحة التحكم.html'); return;
+      location.replace(nextPageAfterLogin(existingSession)); return;
     }
     const rememberedKey = rawGet('cashtop_remembered_key');
     if (rememberedKey) {
