@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>نظام المراسلة الاحترافي</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Cairo', 'sans-serif'] },
+                    colors: {
+                        primary: '#128C7E',
+                        primaryDark: '#075E54',
+                        accent: '#25D366',
+                        sms: '#3b82f6'
+                    }
+                }
+            }
+        };
+    </script>
+
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #f0f2f5;
+        }
+
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .tab-active {
+            border-bottom: 3px solid #25D366;
+            color: #128C7E;
+            font-weight: bold;
+        }
+
+        .swal2-title,
+        .swal2-html-container,
+        .swal2-confirm,
+        .swal2-cancel {
+            font-family: 'Cairo', sans-serif !important;
+        }
+
+        .selected-image-card {
+            border: 2px solid #25D366 !important;
+            box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.12);
+        }
+    </style>
+</head>
+
+<body class="flex justify-center items-start min-h-screen">
+
+<div class="w-full max-w-md bg-white min-h-screen shadow-2xl relative flex flex-col">
+
+    <header class="bg-primary text-white p-4 sticky top-0 z-10 shadow-md">
+        <div class="flex justify-between items-center mb-3">
+            <h1 class="text-xl font-bold">
+                <i class="fa-brands fa-whatsapp ml-2"></i>
+                المرسل الاحترافي
+            </h1>
+
+            <div class="flex gap-2">
+                <label class="cursor-pointer text-sm bg-primaryDark px-2 py-1 rounded hover:bg-opacity-80 transition" title="استيراد نسخة احتياطية">
+                    <i class="fa-solid fa-file-import"></i>
+                    <input type="file" accept=".json" class="hidden" onchange="importBackup(event)">
+                </label>
+
+                <button onclick="exportBackup()" class="text-sm bg-primaryDark px-2 py-1 rounded hover:bg-opacity-80 transition" title="تصدير نسخة احتياطية">
+                    <i class="fa-solid fa-file-export"></i>
+                </button>
+
+                <button onclick="clearData()" class="text-sm bg-red-500 px-2 py-1 rounded hover:bg-red-600 transition" title="مسح">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="flex text-center text-sm font-semibold">
+            <button onclick="switchTab('contacts')" id="tab-contacts" class="flex-1 pb-2 tab-active transition">
+                جهات الاتصال
+            </button>
+
+            <button onclick="switchTab('message')" id="tab-message" class="flex-1 pb-2 text-primary-100 transition">
+                الرسالة والمرفقات
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto pb-32 hide-scrollbar w-full">
+
+        <!-- CONTACTS TAB -->
+        <div id="contacts-section" class="p-4 space-y-4">
+
+            <div class="bg-gray-50 p-4 rounded-xl border border-gray-100 shadow-sm">
+                <h2 class="text-sm font-bold text-gray-700 mb-3">
+                    <i class="fa-solid fa-user-plus ml-1"></i>
+                    إضافة رقم جديد
+                </h2>
+
+                <div class="grid grid-cols-2 gap-2 mb-2">
+                    <input type="text" id="contact-name" placeholder="الاسم (اختياري)"
+                           class="w-full p-2 border rounded-lg text-sm focus:outline-none focus:border-accent">
+
+                    <input type="tel" id="contact-phone" placeholder="الرقم (بدون 972)"
+                           class="w-full p-2 border rounded-lg text-sm focus:outline-none focus:border-accent text-left"
+                           dir="ltr">
+                </div>
+
+                <div class="flex gap-2">
+                    <input type="text" id="contact-label" placeholder="التسمية (مثال: عملاء جدد)"
+                           class="flex-1 p-2 border rounded-lg text-sm focus:outline-none focus:border-accent">
+
+                    <button onclick="addContact()"
+                            class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primaryDark transition shadow-md">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex gap-2 overflow-x-auto hide-scrollbar py-1 mb-2" id="labels-container"></div>
+
+            <div class="flex justify-between items-center mb-2 px-1">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="select-all" class="w-4 h-4 text-accent rounded" onchange="toggleSelectAll()">
+                    <span class="text-sm font-bold text-gray-700">تحديد الكل</span>
+                </label>
+
+                <span id="selected-count" class="text-xs bg-gray-200 px-2 py-1 rounded-full text-gray-600">
+                    0 محدد
+                </span>
+            </div>
+
+            <div id="contacts-list" class="space-y-2"></div>
+        </div>
+
+        <!-- MESSAGE TAB -->
+        <div id="message-section" class="p-4 space-y-4 hidden">
+
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <div class="p-3 bg-gray-50 border-b">
+                    <span class="text-sm font-bold text-gray-700">محتوى الرسالة</span>
+                </div>
+
+                <textarea id="message-text" rows="6" placeholder="اكتب رسالتك هنا..."
+                          class="w-full p-3 focus:outline-none resize-none text-gray-800"
+                          oninput="saveData()"></textarea>
+            </div>
+
+            <div class="bg-green-50 border border-green-200 rounded-xl p-3 text-xs text-green-800 leading-6">
+                <i class="fa-solid fa-copy ml-1"></i>
+                <strong>الوضع الجديد:</strong>
+                الصورة المحددة يتم تحويلها إلى <b>PNG حقيقي</b> ثم نسخها إلى حافظة الجهاز،
+                وبعد نجاح النسخ يتم فتح محادثة واتساب للرقم المحدد مباشرة.
+            </div>
+
+            <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-xs text-yellow-800 leading-6">
+                <i class="fa-solid fa-circle-exclamation ml-1"></i>
+                بعد فتح واتساب اضغط <b>لصق</b> داخل المحادثة لإدراج الصورة.
+                المتصفح لا يملك صلاحية الضغط على زر اللصق أو الإرسال داخل تطبيق واتساب تلقائياً.
+                النسخ المباشر للحافظة يحتاج عادةً أن تعمل الصفحة عبر <b>HTTPS</b>.
+            </div>
+
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+                <label class="block text-sm font-bold text-gray-700 mb-2">
+                    إرفاق صور
+                </label>
+
+                <div class="flex items-center justify-center w-full">
+                    <label for="image-upload"
+                           class="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
+                        <div class="flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-images text-xl text-gray-400"></i>
+                            <span class="text-sm text-gray-500 font-semibold">اضغط لاختيار صور</span>
+                        </div>
+
+                        <input id="image-upload"
+                               type="file"
+                               accept="image/png,image/jpeg,image/webp"
+                               multiple
+                               class="hidden"
+                               onchange="handleMultipleImagesUpload(event)">
+                    </label>
+                </div>
+
+                <div id="images-preview-container" class="grid grid-cols-2 gap-3 mt-4"></div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Bottom buttons -->
+    <div class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md p-4 bg-white border-t shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] flex gap-2 z-50">
+
+        <button onclick="startSendingQueue('whatsapp')"
+                class="flex-1 bg-accent hover:bg-green-600 text-white font-bold py-3 px-2 rounded-xl shadow-lg transition flex justify-center items-center gap-2 text-sm">
+            <i class="fa-brands fa-whatsapp text-lg"></i>
+            نسخ الصورة وفتح واتساب
+        </button>
+
+        <button onclick="startSendingQueue('sms')"
+                class="flex-1 bg-sms hover:bg-blue-600 text-white font-bold py-3 px-2 rounded-xl shadow-lg transition flex justify-center items-center gap-2 text-sm">
+            <i class="fa-solid fa-comment-sms text-lg"></i>
+            إرسال SMS
+        </button>
+    </div>
+</div>
+
+<script>
+    let appData = {
+        contacts: [],
+        message: '',
+        images: [],
+        activeImageIndex: 0
+    };
+
+    let currentLabel = 'الكل';
+    let sendQueue = [];
+    let currentSendIndex = 0;
+
+    window.onload = async () => {
+        loadData();
+        normalizeActiveImageIndex();
+        renderLabels();
+        renderContacts();
+        renderImages();
+    };
+
+    function switchTab(tab) {
+        document.getElementById('contacts-section').classList.toggle('hidden', tab !== 'contacts');
+        document.getElementById('message-section').classList.toggle('hidden', tab !== 'message');
+
+        const tabContacts = document.getElementById('tab-contacts');
+        const tabMessage = document.getElementById('tab-message');
+
+        if (tab === 'contacts') {
+            tabContacts.className = "flex-1 pb-2 tab-active transition";
+            tabMessage.className = "flex-1 pb-2 text-primary-100 transition";
+        } else {
+            tabMessage.className = "flex-1 pb-2 tab-active transition";
+            tabContacts.className = "flex-1 pb-2 text-primary-100 transition";
+        }
+    }
+
+    function loadData() {
+        const savedV4 = localStorage.getItem('pro_sender_data_v4');
+        const savedV3 = localStorage.getItem('pro_sender_data_v3');
+        const savedV2 = localStorage.getItem('pro_sender_data_v2');
+        const raw = savedV4 || savedV3 || savedV2;
+
+        if (raw) {
+            try {
+                appData = JSON.parse(raw);
+            } catch (e) {
+                appData = { contacts: [], message: '', images: [], activeImageIndex: 0 };
+            }
+        }
+
+        if (!Array.isArray(appData.contacts)) appData.contacts = [];
+        if (!Array.isArray(appData.images)) appData.images = [];
+        if (typeof appData.message !== 'string') appData.message = '';
+        if (!Number.isInteger(appData.activeImageIndex)) appData.activeImageIndex = 0;
+
+        document.getElementById('message-text').value = appData.message || '';
+    }
+
+    function saveData() {
+        const messageBox = document.getElementById('message-text');
+        if (messageBox) appData.message = messageBox.value;
+
+        normalizeActiveImageIndex();
+
+        try {
+            localStorage.setItem('pro_sender_data_v4', JSON.stringify(appData));
+        } catch (err) {
+            console.error(err);
+
+            Swal.fire({
+                icon: 'warning',
+                title: 'مساحة التخزين ممتلئة',
+                text: 'احذف بعض الصور أو استخدم صوراً أصغر حجماً.'
+            });
+        }
+
+        updateSelectedCount();
+    }
+
+    function normalizeActiveImageIndex() {
+        if (!appData.images.length) {
+            appData.activeImageIndex = 0;
+            return;
+        }
+
+        if (
+            !Number.isInteger(appData.activeImageIndex) ||
+            appData.activeImageIndex < 0 ||
+            appData.activeImageIndex >= appData.images.length
+        ) {
+            appData.activeImageIndex = 0;
+        }
+    }
+
+    function clearData() {
+        Swal.fire({
+            title: 'هل أنت متأكد؟',
+            text: 'سيتم مسح جميع البيانات!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'نعم',
+            cancelButtonText: 'إلغاء'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                appData = {
+                    contacts: [],
+                    message: '',
+                    images: [],
+                    activeImageIndex: 0
+                };
+
+                document.getElementById('message-text').value = '';
+
+                saveData();
+                renderLabels();
+                renderContacts();
+                renderImages();
+            }
+        });
+    }
+
+    function exportBackup() {
+        const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(appData));
+        const dlNode = document.createElement('a');
+
+        dlNode.setAttribute('href', dataStr);
+        dlNode.setAttribute('download', 'backup_sender.json');
+
+        document.body.appendChild(dlNode);
+        dlNode.click();
+        dlNode.remove();
+    }
+
+    function importBackup(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            try {
+                appData = JSON.parse(e.target.result);
+
+                if (!Array.isArray(appData.contacts)) appData.contacts = [];
+                if (!Array.isArray(appData.images)) appData.images = [];
+                if (typeof appData.message !== 'string') appData.message = '';
+                if (!Number.isInteger(appData.activeImageIndex)) appData.activeImageIndex = 0;
+
+                normalizeActiveImageIndex();
+
+                document.getElementById('message-text').value = appData.message || '';
+
+                saveData();
+                renderLabels();
+                renderContacts();
+                renderImages();
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'تم',
+                    text: 'تم الاستيراد',
+                    timer: 1400,
+                    showConfirmButton: false
+                });
+
+            } catch (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'خطأ',
+                    text: 'ملف النسخة الاحتياطية غير صالح.'
+                });
+            }
+        };
+
+        reader.readAsText(file);
+    }
+
+    function addContact() {
+        const name = document.getElementById('contact-name').value.trim() || 'عميل جديد';
+        const rawPhone = document.getElementById('contact-phone').value.trim();
+        const label = document.getElementById('contact-label').value.trim() || 'عام';
+
+        if (!rawPhone) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'تنبيه',
+                text: 'الرجاء إدخال رقم الهاتف'
+            });
+            return;
+        }
+
+        let phone = rawPhone.replace(/\D/g, '');
+
+        if (phone.startsWith('0')) phone = phone.substring(1);
+        if (!phone.startsWith('972')) phone = '972' + phone;
+
+        appData.contacts.push({
+            id: Date.now(),
+            name,
+            phone,
+            label,
+            selected: false
+        });
+
+        document.getElementById('contact-name').value = '';
+        document.getElementById('contact-phone').value = '';
+
+        saveData();
+        renderLabels();
+        renderContacts();
+
+        Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 1000
+        }).fire({
+            icon: 'success',
+            title: 'تمت الإضافة'
+        });
+    }
+
+    function deleteContact(id) {
+        appData.contacts = appData.contacts.filter(c => c.id !== id);
+        saveData();
+        renderLabels();
+        renderContacts();
+    }
+
+    function toggleContactSelection(id) {
+        const contact = appData.contacts.find(c => c.id === id);
+
+        if (contact) {
+            contact.selected = !contact.selected;
+            saveData();
+        }
+    }
+
+    function toggleSelectAll() {
+        const checked = document.getElementById('select-all').checked;
+
+        appData.contacts.forEach(c => {
+            if (currentLabel === 'الكل' || c.label === currentLabel) {
+                c.selected = checked;
+            }
+        });
+
+        saveData();
+        renderContacts();
+    }
+
+    function setLabelFilter(label) {
+        currentLabel = label;
+        renderLabels();
+        renderContacts();
+    }
+
+    /*
+     * الصور الجديدة يتم تحويلها إلى PNG عند الاختيار.
+     * هذا يجعل ClipboardItem ينسخ image/png حقيقية وليس مجرد نص Base64.
+     */
+    function handleMultipleImagesUpload(event) {
+        const files = Array.from(event.target.files || []).filter(f => f.type.startsWith('image/'));
+        if (!files.length) return;
+
+        Promise.all(files.map(file => convertFileToPngDataUrl(file)))
+            .then(pngImages => {
+                const wasEmpty = appData.images.length === 0;
+                appData.images.push(...pngImages);
+
+                if (wasEmpty) {
+                    appData.activeImageIndex = 0;
+                }
+
+                saveData();
+                renderImages();
+
+                Swal.mixin({
+                    toast: true,
+                    position: 'top',
+                    showConfirmButton: false,
+                    timer: 1500
+                }).fire({
+                    icon: 'success',
+                    title: 'تم تجهيز الصور للنسخ الحقيقي'
+                });
+            })
+            .catch(err => {
+                console.error(err);
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'تعذر قراءة الصورة',
+                    text: 'جرّب صورة JPG أو PNG أخرى.'
+                });
+            })
+            .finally(() => {
+                event.target.value = '';
+            });
+    }
+
+    function convertFileToPngDataUrl(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+
+            reader.onerror = reject;
+
+            reader.onload = e => {
+                const image = new Image();
+
+                image.onerror = reject;
+
+                image.onload = () => {
+                    try {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = image.naturalWidth || image.width;
+                        canvas.height = image.naturalHeight || image.height;
+
+                        const ctx = canvas.getContext('2d', { alpha: true });
+                        ctx.drawImage(image, 0, 0);
+
+                        resolve(canvas.toDataURL('image/png'));
+                    } catch (err) {
+                        reject(err);
+                    }
+                };
+
+                image.src = e.target.result;
+            };
+
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function renderImages() {
+        normalizeActiveImageIndex();
+
+        const container = document.getElementById('images-preview-container');
+
+        if (!appData.images.length) {
+            container.innerHTML = '';
+            return;
+        }
+
+        container.innerHTML = appData.images.map((img, index) => {
+            const selected = index === appData.activeImageIndex;
+
+            return `
+                <div class="relative bg-white p-2 rounded-xl border shadow-sm flex flex-col gap-2 ${selected ? 'selected-image-card' : ''}">
+                    ${selected ? `
+                        <div class="absolute top-1 left-1 z-10 bg-accent text-white rounded-full px-2 py-1 text-[10px] font-bold shadow">
+                            صورة الإرسال
+                        </div>
+                    ` : ''}
+
+                    <img src="${img}"
+                         class="w-full h-24 object-cover rounded-lg border border-gray-100"
+                         alt="صورة ${index + 1}">
+
+                    <button onclick="removeImage(${index})"
+                            class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow text-xs"
+                            title="حذف الصورة">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+
+                    <button onclick="selectImageForSending(${index})"
+                            class="w-full ${selected ? 'bg-gray-800' : 'bg-primary'} hover:opacity-90 text-white font-bold py-1.5 text-xs rounded-lg transition shadow">
+                        <i class="fa-solid fa-check ml-1"></i>
+                        ${selected ? 'محددة للإرسال' : 'تحديد للإرسال'}
+                    </button>
+
+                    <button onclick="copyImageOnly(${index})"
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-1.5 text-xs rounded-lg transition shadow">
+                        <i class="fa-solid fa-copy ml-1"></i>
+                        اختبار نسخ الصورة
+                    </button>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function selectImageForSending(index) {
+        appData.activeImageIndex = index;
+        saveData();
+        renderImages();
+
+        Swal.mixin({
+            toast: true,
+            position: 'top',
+            showConfirmButton: false,
+            timer: 1000
+        }).fire({
+            icon: 'success',
+            title: 'تم تحديد الصورة للإرسال'
+        });
+    }
+
+    function removeImage(index) {
+        appData.images.splice(index, 1);
+
+        if (appData.activeImageIndex > index) {
+            appData.activeImageIndex--;
+        }
+
+        normalizeActiveImageIndex();
+        saveData();
+        renderImages();
+    }
+
+    function dataUrlToBlob(dataUrl) {
+        const parts = dataUrl.split(',');
+        if (parts.length < 2) throw new Error('INVALID_DATA_URL');
+
+        const meta = parts[0];
+        const data = parts[1];
+        const mimeMatch = meta.match(/data:([^;]+)/i);
+        const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+        const binary = atob(data);
+        const bytes = new Uint8Array(binary.length);
+
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+
+        return new Blob([bytes], { type: mime });
+    }
+
+    /*
+     * يضمن أن البيانات التي تكتب للحافظة هي PNG حقيقية.
+     * الصور الجديدة تكون PNG أصلاً، والنسخ الاحتياطية القديمة يتم تحويلها عند الحاجة.
+     */
+    async function imageDataUrlToRealPngBlob(dataUrl) {
+        if (dataUrl.startsWith('data:image/png;base64,')) {
+            const blob = dataUrlToBlob(dataUrl);
+
+            if (blob.type === 'image/png') {
+                return blob;
+            }
+        }
+
+        return new Promise((resolve, reject) => {
+            const image = new Image();
+
+            image.onerror = reject;
+
+            image.onload = () => {
+                try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = image.naturalWidth || image.width;
+                    canvas.height = image.naturalHeight || image.height;
+
+                    const ctx = canvas.getContext('2d', { alpha: true });
+                    ctx.drawImage(image, 0, 0);
+
+                    canvas.toBlob(blob => {
+                        if (!blob) {
+                            reject(new Error('PNG_CONVERSION_FAILED'));
+                            return;
+                        }
+
+                        resolve(blob);
+                    }, 'image/png', 1);
+                } catch (err) {
+                    reject(err);
+                }
+            };
+
+            image.src = dataUrl;
+        });
+    }
+
+    function clipboardImageSupported() {
+        return !!(
+            window.isSecureContext &&
+            navigator.clipboard &&
+            navigator.clipboard.write &&
+            window.ClipboardItem
+        );
+    }
+
+    async function writePngBlobToClipboard(pngBlob) {
+        if (!clipboardImageSupported()) {
+            throw new Error('CLIPBOARD_IMAGE_NOT_SUPPORTED');
+        }
+
+        // هنا يتم وضع ملف صورة PNG حقيقي في الحافظة.
+        const clipboardItem = new ClipboardItem({
+            'image/png': pngBlob
+        });
+
+        await navigator.clipboard.write([clipboardItem]);
+    }
+
+    async function copyRealImageToClipboard(index) {
+        if (!appData.images[index]) {
+            throw new Error('IMAGE_NOT_FOUND');
+        }
+
+        const pngBlob = await imageDataUrlToRealPngBlob(appData.images[index]);
+
+        if (!pngBlob || pngBlob.type !== 'image/png') {
+            throw new Error('PNG_BLOB_FAILED');
+        }
+
+        await writePngBlobToClipboard(pngBlob);
+        return pngBlob;
+    }
+
+    async function copyImageOnly(index) {
+        try {
+            await copyRealImageToClipboard(index);
+
+            Swal.mixin({
+                toast: true,
+                position: 'top',
+                showConfirmButton: false,
+                timer: 1800
+            }).fire({
+                icon: 'success',
+                title: 'تم نسخ الصورة كـ PNG حقيقية'
+            });
+
+        } catch (err) {
+            console.error(err);
+            showClipboardError(err);
+        }
+    }
+
+    function showClipboardError(err) {
+        let message = 'تعذر نسخ الصورة إلى الحافظة.';
+
+        if (!window.isSecureContext) {
+            message = 'ميزة نسخ الصور تحتاج تشغيل الصفحة عبر HTTPS، وليس HTTP العادي.';
+        } else if (!navigator.clipboard || !navigator.clipboard.write || !window.ClipboardItem) {
+            message = 'هذا المتصفح لا يدعم نسخ الصور الحقيقي إلى الحافظة. جرّب Chrome أو Edge حديث على أندرويد.';
+        } else if (err && err.name === 'NotAllowedError') {
+            message = 'المتصفح منع الوصول للحافظة. اسمح بإذن Clipboard/الحافظة ثم جرّب مرة أخرى.';
+        }
+
+        Swal.fire({
+            icon: 'error',
+            title: 'فشل نسخ الصورة',
+            text: message,
+            confirmButtonColor: '#128C7E'
+        });
+    }
+
+    function renderLabels() {
+        const labels = ['الكل', ...new Set(appData.contacts.map(c => c.label))];
+        const container = document.getElementById('labels-container');
+
+        container.innerHTML = labels.map(label => `
+            <button onclick='setLabelFilter(${JSON.stringify(label)})'
+                    class="whitespace-nowrap px-4 py-1 rounded-full text-sm font-semibold transition ${
+                        currentLabel === label
+                            ? 'bg-primary text-white shadow'
+                            : 'bg-gray-200 text-gray-700'
+                    }">
+                ${escapeHtml(label)}
+            </button>
+        `).join('');
+    }
+
+    function renderContacts() {
+        const container = document.getElementById('contacts-list');
+
+        const filtered = appData.contacts.filter(c =>
+            currentLabel === 'الكل' || c.label === currentLabel
+        );
+
+        document.getElementById('select-all').checked =
+            filtered.length > 0 && filtered.every(c => c.selected);
+
+        container.innerHTML = filtered.map(c => `
+            <div class="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-100 shadow-sm transition hover:shadow-md">
+                <div class="flex items-center gap-3">
+                    <input type="checkbox"
+                           ${c.selected ? 'checked' : ''}
+                           onchange="toggleContactSelection(${c.id})"
+                           class="w-5 h-5 text-accent rounded border-gray-300 focus:ring-accent">
+
+                    <div>
+                        <p class="font-bold text-gray-800 text-sm">
+                            ${escapeHtml(c.name)}
+                        </p>
+
+                        <p class="text-xs text-gray-500 font-mono" dir="ltr">
+                            +${escapeHtml(c.phone)}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex flex-col items-end gap-1">
+                    <span class="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                        ${escapeHtml(c.label)}
+                    </span>
+
+                    <button onclick="deleteContact(${c.id})"
+                            class="text-red-400 hover:text-red-600 transition">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+
+        if (!filtered.length) {
+            container.innerHTML = `
+                <div class="text-center text-gray-400 py-8 text-sm">
+                    <i class="fa-solid fa-address-book text-3xl mb-2"></i>
+                    <br>
+                    لا توجد أرقام هنا
+                </div>
+            `;
+        }
+
+        updateSelectedCount();
+    }
+
+    function updateSelectedCount() {
+        const el = document.getElementById('selected-count');
+        if (!el) return;
+
+        el.innerText = `${appData.contacts.filter(c => c.selected).length} محدد`;
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+    }
+
+    function startSendingQueue(type) {
+        sendQueue = appData.contacts.filter(c => c.selected);
+
+        if (!sendQueue.length) {
+            Swal.fire({
+                icon: 'error',
+                title: 'خطأ',
+                text: 'الرجاء تحديد جهة اتصال'
+            });
+            return;
+        }
+
+        if (!appData.message && !appData.images.length) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'تنبيه',
+                text: 'الرسالة والصورة فارغتان'
+            });
+            return;
+        }
+
+        if (type === 'sms') {
+            const phones = sendQueue.map(c => '+' + c.phone).join(',');
+            const text = encodeURIComponent(appData.message);
+            const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+            const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
+
+            const url = isIOS
+                ? `sms:${phones}&body=${text}`
+                : `sms:${phones}?body=${text}`;
+
+            window.open(url, '_self');
+            return;
+        }
+
+        currentSendIndex = 0;
+        showSendingProgress();
+    }
+
+    function buildWhatsAppUrl(contact) {
+        const text = encodeURIComponent(appData.message || '');
+
+        // wa.me يفتح المحادثة للرقم نفسه مباشرة.
+        return `https://wa.me/${contact.phone}?text=${text}`;
+    }
+
+    function openWhatsappContactDirect(contact) {
+        const url = buildWhatsAppUrl(contact);
+
+        // استخدام نفس الصفحة أفضل على الهاتف لفتح واتساب مباشرة عند وجود التطبيق.
+        window.location.href = url;
+    }
+
+    async function copySelectedImageThenOpenWhatsapp(contact) {
+        if (!appData.images.length) {
+            openWhatsappContactDirect(contact);
+            return true;
+        }
+
+        normalizeActiveImageIndex();
+
+        await copyRealImageToClipboard(appData.activeImageIndex);
+
+        // لا نفتح واتساب إلا بعد نجاح النسخ الحقيقي.
+        openWhatsappContactDirect(contact);
+
+        return true;
+    }
+
+    function showSendingProgress() {
+        if (currentSendIndex >= sendQueue.length) {
+            Swal.fire({
+                icon: 'success',
+                title: 'اكتملت القائمة',
+                text: 'تم الانتهاء من جميع جهات الاتصال المحددة.'
+            });
+            return;
+        }
+
+        const contact = sendQueue[currentSendIndex];
+        const progressPercentage = Math.round((currentSendIndex / sendQueue.length) * 100);
+        const hasImage = appData.images.length > 0;
+
+        let alertHtml = `
+            <div class="mb-3 text-gray-600 leading-7">
+                الوجهة: <strong>${escapeHtml(contact.name)}</strong>
+                <br>
+                الرقم: <span dir="ltr">+${escapeHtml(contact.phone)}</span>
+            </div>
+
+            <div class="w-full bg-gray-200 rounded-full h-2.5 mb-3">
+                <div class="bg-primary h-2.5 rounded-full" style="width:${progressPercentage}%"></div>
+            </div>
+        `;
+
+        if (hasImage) {
+            alertHtml += `
+                <div class="bg-green-50 border border-green-200 p-3 rounded-lg text-green-800 text-xs font-bold leading-6">
+                    1) سيتم نسخ <b>الصورة المحددة للإرسال</b> كـ PNG حقيقية.<br>
+                    2) بعد نجاح النسخ سيتم فتح واتساب مباشرة على هذا الرقم.<br>
+                    3) داخل واتساب اضغط لصق ثم إرسال.
+                </div>
+            `;
+        } else {
+            alertHtml += `
+                <div class="bg-blue-50 border border-blue-200 p-3 rounded-lg text-blue-700 text-xs font-bold">
+                    سيتم فتح واتساب مباشرة على الرقم المحدد.
+                </div>
+            `;
+        }
+
+        Swal.fire({
+            title: `الإرسال (${currentSendIndex + 1}/${sendQueue.length})`,
+            html: alertHtml,
+            icon: 'question',
+            confirmButtonText: hasImage
+                ? '<i class="fa-solid fa-copy"></i> نسخ الصورة وفتح واتساب'
+                : '<i class="fa-brands fa-whatsapp"></i> فتح واتساب',
+            showCancelButton: true,
+            cancelButtonText: 'إيقاف',
+            confirmButtonColor: '#25D366',
+            cancelButtonColor: '#6b7280',
+            allowOutsideClick: false,
+            showLoaderOnConfirm: true,
+
+            preConfirm: async () => {
+                try {
+                    await copySelectedImageThenOpenWhatsapp(contact);
+                    return true;
+                } catch (err) {
+                    console.error(err);
+
+                    let message = 'تعذر نسخ الصورة إلى الحافظة.';
+
+                    if (!window.isSecureContext) {
+                        message = 'يجب تشغيل الصفحة عبر HTTPS حتى يسمح المتصفح بنسخ الصورة.';
+                    } else if (!navigator.clipboard || !navigator.clipboard.write || !window.ClipboardItem) {
+                        message = 'متصفحك لا يدعم نسخ الصور كصورة حقيقية. استخدم Chrome أو Edge حديث.';
+                    } else if (err && err.name === 'NotAllowedError') {
+                        message = 'تم رفض إذن الحافظة. اسمح للموقع بالوصول إلى Clipboard ثم جرّب من جديد.';
+                    }
+
+                    Swal.showValidationMessage(message);
+                    return false;
+                }
+            }
+        }).then(result => {
+            if (result.isConfirmed) {
+                currentSendIndex++;
+            }
+        });
+    }
+</script>
+
+</body>
+</html>
