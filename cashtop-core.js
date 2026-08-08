@@ -2,7 +2,7 @@
   'use strict';
 
   const FILE = decodeURIComponent((location.pathname.split('/').pop() || '').replace(/\+/g, ' '));
-  const EXCLUDED = new Set(['صفحة تسجيل الدخول.html', 'index.html', 'offline.html']);
+  const EXCLUDED = new Set(['صفحة تسجيل الدخول.html', 'الباقات.html', 'index.html', 'offline.html']);
   const IS_APP_PAGE = !EXCLUDED.has(FILE);
   const APP_NAME = 'كاش توب 2';
   let deferredInstallPrompt = null;
@@ -2177,23 +2177,11 @@
       ...oldLogs.filter(item => !sameBranch(item, branch)),
       ...incomingLogs
     ]);
-    const oldBranchAccounts = normalizeArrayValue(old.accounts || [], []).filter(item => sameBranch(item, branch));
     const incomingBranchAccounts = normalizeArrayValue(incoming.accounts || [], []).map(item => ({ ...deepClone(item), branchId: branch }));
-    const incomingIds = new Set(incomingBranchAccounts.map(account => String(account?.id)));
-    // الحساب ذو الرصيد الصفري يمكن حذفه بعد حذف/عكس العمليات المرتبطة به، حتى لو
-    // بقي له أثر تاريخي قديم. نحمي فقط صندوق النظام المقفول أو الحساب الذي ما زال
-    // يحمل رصيداً فعلياً، كي لا تعيد المزامنة صندوقاً صفرياً حذفه المستخدم عمداً.
-    const protectedMissingAccounts = oldBranchAccounts.filter(account => {
-      if (incomingIds.has(String(account?.id))) return false;
-      return account?.isDefaultCash === true || account?.locked === true || Math.abs(Number(account?.balance || 0)) > 0.0001;
-    }).map(account => {
-      const locked = account?.isDefaultCash === true || account?.locked === true;
-      return { ...deepClone(account), active:locked ? true : false, disabled:locked ? false : true, status:locked ? 'active' : 'inactive', disabledAt:locked ? '' : (account?.disabledAt || new Date().toISOString()), hasFinancialHistory:true, branchId:branch };
-    });
+    // يسمح بحذف أي صندوق مهما كان رصيده أو كونه افتراضيا، من دون عكس أو حذف حركاته.
     const accounts = [
       ...normalizeArrayValue(old.accounts || [], []).filter(item => !sameBranch(item, branch)),
-      ...incomingBranchAccounts,
-      ...protectedMissingAccounts
+      ...incomingBranchAccounts
     ].map(account => {
       const hasLog = accountLogs.some(log => String(log?.accountId) === String(account?.id) && (Math.abs(Number(log?.amount || log?.baseAmount || 0)) > 0.0000001 || log?.sourceType || log?.refType));
       return hasLog || account?.hasFinancialHistory === true ? { ...account, hasFinancialHistory: true } : account;
@@ -2204,6 +2192,11 @@
   function getCompanyAccess() {
     return fullDatasetValue('cashtop_company_access', {}) || {};
   }
+
+  const CLASSIC_LIMITS = Object.freeze({
+    products:100, contacts:50, branches:1, stores:1, employees:2,
+    invoicesDaily:50, purchasesDaily:5, vouchersDaily:10
+  });
 
   const PLUS_LIMITS = Object.freeze({
     products:200, suppliers:50, branches:2, storesPerBranch:2, employeesPerBranch:3,
@@ -2240,7 +2233,7 @@
     const session = getSession() || {};
     const access = getCompanyAccess();
     const plan = String(access.plan || session.plan || 'pro').toLowerCase();
-    return ['plus','pro','custom'].includes(plan) ? plan : 'pro';
+    return ['classic','plus','pro','custom'].includes(plan) ? plan : 'pro';
   }
 
   function currentCustomLimits() {
@@ -2273,6 +2266,24 @@
         ? `وصلت خطة ${planLabel} إلى حد ${label} (${limit}).`
         : '';
     };
+
+    if (plan === 'classic') {
+      if (canonical === 'cashtop_products') return grewPast(normalizeArrayValue(oldVal, []).length, normalizeArrayValue(newVal, []).length, CLASSIC_LIMITS.products, 'الأصناف والمنتجات', 'Classic');
+      if (canonical === 'cashtop_branches') return grewPast(normalizeArrayValue(oldVal, []).length, normalizeArrayValue(newVal, []).length, CLASSIC_LIMITS.branches, 'الفروع ونقاط البيع', 'Classic');
+      if (canonical === 'cashtop_stores') return grewPast(normalizeArrayValue(oldVal, []).length, normalizeArrayValue(newVal, []).length, CLASSIC_LIMITS.stores, 'المستودعات', 'Classic');
+      if (canonical === 'cashtop_employees') return grewPast(normalizeArrayValue(oldVal, []).length, normalizeArrayValue(newVal, []).length, CLASSIC_LIMITS.employees, 'المستخدمين والموظفين', 'Classic');
+      if (canonical === 'cashtop_invoices') return grewPast(todayInvoiceCount(oldVal), todayInvoiceCount(newVal), CLASSIC_LIMITS.invoicesDaily, 'فواتير المبيعات اليومية', 'Classic');
+      if (canonical === 'cashtop_purchases') return grewPast(todayCount(oldVal), todayCount(newVal), CLASSIC_LIMITS.purchasesDaily, 'فواتير المشتريات اليومية', 'Classic');
+      if (canonical === 'cashtop_vouchers') return grewPast(todayCount(oldVal), todayCount(newVal), CLASSIC_LIMITS.vouchersDaily, 'سندات القبض والصرف اليومية', 'Classic');
+      if (canonical === 'cashtop_customers' || canonical === 'cashtop_suppliers') {
+        const otherKey = canonical === 'cashtop_customers' ? 'cashtop_suppliers' : 'cashtop_customers';
+        const other = normalizeArrayValue(safeJson(getRawCompanyDataset(otherKey), []), []);
+        const oldCombined = normalizeArrayValue(oldVal, []).length + other.length;
+        const newCombined = normalizeArrayValue(newVal, []).length + other.length;
+        return grewPast(oldCombined, newCombined, CLASSIC_LIMITS.contacts, 'العملاء والموردين معاً', 'Classic');
+      }
+      return '';
+    }
 
     if (plan === 'plus') {
       if (canonical === 'cashtop_products') return grewPast(countBranchProducts(oldVal, branch), countBranchProducts(newVal, branch), PLUS_LIMITS.products, 'المنتجات لكل فرع', 'Plus');
@@ -2449,7 +2460,14 @@
     return {
       ...local,
       ...remote,
-      accounts: mergeLosslessRecordArrays(local.accounts || [], remote.accounts || [], {}),
+      // الحسابات السحابية هي القائمة الموثوقة: الحذف يبقى حذفا ولا يُعاد من جهاز آخر.
+      // سجلات الحركات تبقى Lossless لأنها تاريخ محاسبي مستقل عن وجود الصندوق نفسه.
+      accounts: normalizeArrayValue(remote.accounts || [], []).map(remoteAccount => {
+        const localAccount = normalizeArrayValue(local.accounts || [], []).find(row => String(row?.id) === String(remoteAccount?.id));
+        return localAccount && typeof localAccount === 'object'
+          ? { ...deepClone(localAccount), ...deepClone(remoteAccount) }
+          : deepClone(remoteAccount);
+      }),
       accountLogs: mergeLosslessRecordArrays(local.accountLogs || [], remote.accountLogs || [], {})
     };
   }
@@ -2534,6 +2552,7 @@
     const oldValue = rawGet(ns);
     const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
     if (oldValue === stringValue) return { changed: false, operationId: null };
+    assertSubscriptionWritable(canonical);
     if (options.bypassQuota !== true) {
       const violation = quotaViolation(canonical, oldValue, stringValue);
       if (violation) {
@@ -3436,6 +3455,7 @@
       const inputValue = typeof value === 'string' ? value : JSON.stringify(value);
       const newValue = transformManagedWrite(canonical, oldValue, inputValue);
       if (oldValue === newValue) return;
+      assertSubscriptionWritable(canonical);
       const violation = quotaViolation(canonical, oldValue, newValue);
       if (violation) { const error = new Error(violation); error.code = 'CASHTOP_PLAN_LIMIT'; throw error; }
       entries.push({
@@ -3621,6 +3641,37 @@
     throw error;
   }
 
+  function subscriptionExpiryTimestamp(session = getSession()) {
+    const access = getCompanyAccess() || {};
+    // بيانات الشركة المتزامنة هي المرجع الأول. session.licenseEnd مجرد fallback
+    // لأول فتح قبل وصول cashtop_company_access. هذا يسمح بتجديد الاشتراك من
+    // الأدمن وفتح الكتابة مباشرة بعد وصول access الجديد بدون تسجيل خروج/دخول.
+    const accessTime = access?.endAt ? new Date(access.endAt).getTime() : 0;
+    if (Number.isFinite(accessTime) && accessTime > 0) return accessTime;
+    const sessionTime = session?.licenseEnd ? new Date(session.licenseEnd).getTime() : 0;
+    return Number.isFinite(sessionTime) && sessionTime > 0 ? sessionTime : 0;
+  }
+
+  function isSubscriptionExpired(session = getSession()) {
+    const endAt = subscriptionExpiryTimestamp(session);
+    return Boolean(endAt && trustedNowMs(session || {}) >= endAt);
+  }
+
+  function redirectExpiredSubscription() {
+    try { sessionStorage.setItem('ct_subscription_notice', 'expired'); } catch (_) {}
+    showToast('انتهى اشتراكك. يمكنك قراءة بياناتك، ولإضافة أو تعديل أي شيء يجب تجديد الباقة.', 'warning', 4200);
+    if (FILE !== 'الباقات.html') setTimeout(() => { location.href = 'الباقات.html?expired=1'; }, 180);
+  }
+
+  function assertSubscriptionWritable(key) {
+    if (!IS_APP_PAGE || canonicalKey(key) === 'cashtop_company_access' || !isSubscriptionExpired()) return true;
+    const message = 'انتهى اشتراكك. الحساب الآن للقراءة فقط حتى تجديد الباقة.';
+    redirectExpiredSubscription();
+    const error = new Error(message);
+    error.code = 'CASHTOP_SUBSCRIPTION_EXPIRED';
+    throw error;
+  }
+
   function patchStorage() {
     if (window.__CASHTOP_STORAGE_PATCHED__) return;
     window.__CASHTOP_STORAGE_PATCHED__ = true;
@@ -3639,6 +3690,7 @@
       const oldValue = rawGet(ns);
       const stringValue = transformManagedWrite(canonical, oldValue, value);
       if (oldValue === stringValue) return;
+      assertSubscriptionWritable(canonical);
       const violation = quotaViolation(canonical, oldValue, stringValue);
       if (violation) {
         showToast(violation, 'error', 5200);
@@ -3675,6 +3727,7 @@
       assertFinancialGroupWritable(canonical);
       const ns = namespaceKey(canonical);
       const oldValue = rawGet(ns);
+      if (oldValue !== null) assertSubscriptionWritable(canonical);
       if (canonical === 'cashtop_products' || BRANCH_SCOPED_ARRAY_KEYS.has(canonical) || BRANCH_SCOPED_OBJECT_KEYS.has(canonical)) {
         this.setItem(canonical, canonical === 'cashtop_funds_db' ? JSON.stringify({accounts:[],accountLogs:[]}) : '[]');
         return;
@@ -3756,7 +3809,14 @@
       let defaultCash = funds.accounts.find(account => account?.isDefaultCash === true)
         || funds.accounts.find(account => ['صندوق الكاش', 'صندوق الكاش الرئيسي'].includes(String(account?.name || '').trim()));
       let fundsChanged = false;
-      if (!defaultCash) {
+      const manualDeleteMarker = `ct_funds_manual_delete::${encodeURIComponent(companyIdFromSession())}::${encodeURIComponent(currentFinancialGroupId())}`;
+      const fundsMeta = safeJson(rawGet(metaKey('cashtop_funds_db')), {}) || {};
+      // الصندوق الافتراضي ينشأ فقط عند تهيئة شركة/مجموعة جديدة. بعد أن تصبح
+      // البيانات حقيقية (updatedAt > 0)، غياب الصندوق يعني أن المستخدم حذفه
+      // عمداً، حتى لو جاء الحذف من جهاز آخر ولم يوجد marker محلي على هذا الجهاز.
+      const defaultCashMayBeCreated = rawGet(manualDeleteMarker) !== '1'
+        && (fundsMeta.seeded === true || Number(fundsMeta.updatedAt || 0) <= 0);
+      if (!defaultCash && defaultCashMayBeCreated) {
         defaultCash = {
           id: 1000000001, name: DEFAULT_CASH_ACCOUNT_NAME, type: 'كاش', balance: 0,
           notes: 'الصندوق الافتراضي للنظام', isDefaultCash: true, locked: true
@@ -3765,14 +3825,13 @@
         while (funds.accounts.some(account => String(account?.id) === String(defaultCash.id))) defaultCash.id += 1;
         funds.accounts.unshift(defaultCash);
         fundsChanged = true;
-      } else {
+      } else if (defaultCash) {
         if (defaultCash.name !== DEFAULT_CASH_ACCOUNT_NAME) { defaultCash.name = DEFAULT_CASH_ACCOUNT_NAME; fundsChanged = true; }
         if (defaultCash.type !== 'كاش') { defaultCash.type = 'كاش'; fundsChanged = true; }
         if (defaultCash.isDefaultCash !== true) { defaultCash.isDefaultCash = true; fundsChanged = true; }
         if (defaultCash.locked !== true) { defaultCash.locked = true; fundsChanged = true; }
       }
       if (fundsChanged) {
-        const fundsMeta = safeJson(rawGet(metaKey('cashtop_funds_db')), {}) || {};
         if (fundsMeta.seeded === true || Number(fundsMeta.updatedAt || 0) <= 0) {
           // Same rule for the default cash box: keep it as a seeded local fallback
           // until remote bootstrap finishes. The first real cash mutation will turn
@@ -3921,11 +3980,7 @@
     session.companyId = companyId;
     if (access.status && access.status !== 'active') return { ok: false, reason: 'stopped' };
     if (access.deleted === true) return { ok: false, reason: 'deleted' };
-    const accessEnd = access.endAt ? new Date(access.endAt).getTime() : 0;
-    if (accessEnd && Number.isFinite(accessEnd) && trustedNowMs(session) >= accessEnd) return { ok: false, reason: 'expired' };
     if (session.status && session.status !== 'active') return { ok: false, reason: 'stopped' };
-    const end = session.licenseEnd ? new Date(session.licenseEnd).getTime() : null;
-    if (end && Number.isFinite(end) && trustedNowMs(session) >= end) return { ok: false, reason: 'expired' };
 
     session.companyName = access.companyName || session.companyName;
     session.status = access.status || session.status || 'active';
@@ -3934,6 +3989,7 @@
     session.plan = access.plan || session.plan || 'pro';
     session.customLimits = access.customLimits || session.customLimits || null;
     session.entitlementVersion = access.authVersion || access.updatedAt || session.entitlementVersion || 0;
+    session.subscriptionExpired = isSubscriptionExpired(session);
 
     const role = String(session.role || '').toLowerCase();
     if (role === 'representative' || String(session.uid || '').startsWith('AG_')) {
@@ -4128,7 +4184,7 @@
     'العمال والاجور.html': 'العمال والأجور', 'التقارير.html': 'التقارير',
     'setting.html': 'إعدادات النظام', 'printer-settings.html': 'إعدادات الطابعة',
     'sales-offers.html': 'عروض المبيعات',
-    'notifications.html': 'الإشعارات',
+    'notifications.html': 'الإشعارات', 'support.html': 'الدعم الفني',
     'tax-settings.html': 'إعدادات الضريبة',
     'storage-settings.html': 'إدارة التخزين والأرشفة',
     'ادارة التصنيع.html': 'إدارة التصنيع', 'استيراد وتصدير ل كل قسم.html': 'النسخ الاحتياطي والاستعادة'
@@ -4164,6 +4220,58 @@
     });
   }
 
+  const CLASSIC_UPGRADE_FEATURES = Object.freeze({
+    'ادارة التصنيع.html':'manufacturing',
+    'sales-offers.html':'sales-offers',
+    'journal.html':'journal',
+    'customer-groups.html':'customer-groups',
+    'المناديب.html':'agents'
+  });
+
+  function classicUpgradeFeatureForTarget(file, section = '') {
+    if (String(file || '') === 'استيراد وتصدير ل كل قسم.html' && String(section || '').trim()) return `section-backup-${String(section).trim()}`;
+    return CLASSIC_UPGRADE_FEATURES[String(file || '')] || '';
+  }
+
+  function upgradePlansUrl(feature, file = FILE) {
+    const params = new URLSearchParams();
+    params.set('upgrade', feature || 'classic-feature');
+    if (file) params.set('from', file);
+    return `الباقات.html?${params.toString()}`;
+  }
+
+  function applyPlanUpgradeLinks(root = document) {
+    if (currentPlan() !== 'classic') return;
+    root.querySelectorAll?.('.ct-sidebar a[href], .ct-bottom-nav a[href]').forEach(link => {
+      if (link.dataset.ctUpgradeLocked === 'true') return;
+      const info = linkedPageInfo(link);
+      const feature = classicUpgradeFeatureForTarget(info.file, info.section);
+      if (!feature) return;
+      link.dataset.ctUpgradeLocked = 'true';
+      link.dataset.ctOriginalHref = link.getAttribute('href') || '';
+      link.href = upgradePlansUrl(feature, info.file);
+      link.title = 'هذه الميزة تتطلب ترقية الخطة';
+      link.setAttribute('aria-label', `${String(link.textContent || '').trim()} — تتطلب ترقية`);
+      const badge = document.createElement('span');
+      badge.className = 'ct-upgrade-badge';
+      badge.innerHTML = '<i class="fa-solid fa-arrow-up-right-dots" aria-hidden="true"></i><span>ترقية</span>';
+      badge.style.cssText = 'margin-inline-start:6px;display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:999px;background:#f3e8ff;color:#7c3aed;font-size:9px;font-weight:800;line-height:1.35;flex:0 0 auto;white-space:nowrap';
+      link.appendChild(badge);
+    });
+  }
+
+  function enforcePlanFeaturePageAccess() {
+    if (currentPlan() !== 'classic') return true;
+    const section = FILE === 'استيراد وتصدير ل كل قسم.html'
+      ? (new URLSearchParams(location.search).get('section') || '')
+      : '';
+    const feature = classicUpgradeFeatureForTarget(FILE, section);
+    if (!feature) return true;
+    showToast('هذه الميزة تتطلب ترقية خطة Classic.', 'warning', 2600);
+    setTimeout(() => location.replace(upgradePlansUrl(feature, FILE)), 80);
+    return false;
+  }
+
   function rebuildSidebarMenu() {
     const nav = document.querySelector('.ct-sidebar-nav');
     if (!nav) return;
@@ -4178,6 +4286,7 @@
       ['fa-calculator','المالية والمحاسبة', [['accounts.html','الصناديق والحسابات'],['financial-groups.html','المجموعات المالية'],['sands.html','سندات القبض والصرف'],['journal.html','دفتر الأستاذ'],['المصاريف.html','المصاريف'],backupLink('finance')]],
       ['fa-users-gear','الموارد البشرية', [['الموظفين.html','الموظفون'],['العمال والاجور.html','العمال والأجور'],backupLink('hr')]],
       ['fa-chart-line','التقارير والمتابعة', [['التقارير.html','التقارير'],['notifications.html','الإشعارات'],backupLink('reports')]],
+      ['fa-headset','الدعم الفني', [['support.html','إرسال بلاغ'],['الباقات.html','خطط الاشتراك']]],
       ['fa-gears','النظام والإعدادات', [['tax-settings.html','إعدادات الضريبة'],['storage-settings.html','التخزين والأرشفة'],['استيراد وتصدير ل كل قسم.html','النسخ الاحتياطي الشامل'],['setting.html','إعدادات النظام'],['printer-settings.html','إعدادات الطابعة'],backupLink('settings')]]
     ];
     nav.innerHTML = groups.map(([icon,title,links], index) => {
@@ -4734,9 +4843,11 @@
 
   function hydrateShell() {
     const session = getSession() || {};
+    if (!enforcePlanFeaturePageAccess()) return;
     if (!enforceCurrentPageAccess(session)) return;
     ensureBottomNavigation();
     normalizeShellLabels();
+    applyPlanUpgradeLinks();
     applyActionPermissions();
     applyPermissionVisibility();
     restrictSettingsForBasicUser(session);
@@ -4816,7 +4927,7 @@
         .ct-maintenance-btn:disabled{opacity:.6;cursor:wait}.ct-cache-refresh-btn{background:#605ca8;color:#fff}.ct-queue-reset-btn{background:#fff1f2;color:#be123c;border:1px solid #fecdd3}
         @media(max-width:620px){.ct-maintenance-actions{grid-template-columns:1fr}.ct-sync-cache-maintenance{padding:14px}}
       </style>
-      <div class="ct-maintenance-head"><strong><i class="fa-solid fa-cloud-arrow-up"></i> المزامنة وتحديث التطبيق</strong><span class="ct-maintenance-version">R93</span></div>
+      <div class="ct-maintenance-head"><strong><i class="fa-solid fa-cloud-arrow-up"></i> المزامنة وتحديث التطبيق</strong><span class="ct-maintenance-version">R109</span></div>
       <p class="ct-maintenance-description">تحديث الكاش يحفظ العمليات المعلقة في IndexedDB أولاً، ثم ينزّل ملفات الموقع الجديدة ويعيد فتح التطبيق. تصفير الطابور يحذف العمليات القديمة فقط ولا يحذف البيانات المحلية.</p>
       <div class="ct-maintenance-status"><i class="fa-solid fa-list-check"></i><span>العمليات المعلقة حالياً: <b id="ctMaintenanceQueueCount">0</b></span></div>
       <div class="ct-maintenance-actions">
@@ -4889,7 +5000,26 @@
     const limitText = value => value == null ? 'غير محدود' : String(value);
 
     let details = '';
-    if (plan === 'plus') {
+    if (plan === 'classic') {
+      details = `
+        <div class="ct-plan-grid">
+          <span>المنتجات <b>${CLASSIC_LIMITS.products}</b></span>
+          <span>العملاء + الموردون <b>${CLASSIC_LIMITS.contacts}</b></span>
+          <span>الموظفون <b>${CLASSIC_LIMITS.employees}</b></span>
+          <span>الفروع / نقاط البيع <b>${CLASSIC_LIMITS.branches}</b></span>
+          <span>المستودعات <b>${CLASSIC_LIMITS.stores}</b></span>
+          <span>فواتير البيع يومياً <b>${CLASSIC_LIMITS.invoicesDaily}</b></span>
+          <span>فواتير الشراء يومياً <b>${CLASSIC_LIMITS.purchasesDaily}</b></span>
+          <span>السندات يومياً <b>${CLASSIC_LIMITS.vouchersDaily}</b></span>
+          <span>بوابة العملاء <b><a href="الباقات.html?upgrade=customer-portal" style="color:#7c3aed;text-decoration:none"><i class="fa-solid fa-arrow-up-right-dots"></i> تتطلب ترقية</a></b></span>
+          <span>إدارة التصنيع <b><a href="الباقات.html?upgrade=manufacturing" style="color:#7c3aed;text-decoration:none;font-size:9px;background:#f3e8ff;padding:2px 6px;border-radius:999px;white-space:nowrap"><i class="fa-solid fa-arrow-up-right-dots"></i> ترقية</a></b></span>
+          <span>عروض المبيعات <b><a href="الباقات.html?upgrade=sales-offers" style="color:#7c3aed;text-decoration:none;font-size:9px;background:#f3e8ff;padding:2px 6px;border-radius:999px;white-space:nowrap"><i class="fa-solid fa-arrow-up-right-dots"></i> ترقية</a></b></span>
+          <span>دفتر الأستاذ <b><a href="الباقات.html?upgrade=journal" style="color:#7c3aed;text-decoration:none;font-size:9px;background:#f3e8ff;padding:2px 6px;border-radius:999px;white-space:nowrap"><i class="fa-solid fa-arrow-up-right-dots"></i> ترقية</a></b></span>
+          <span>مجموعات العملاء <b><a href="الباقات.html?upgrade=customer-groups" style="color:#7c3aed;text-decoration:none;font-size:9px;background:#f3e8ff;padding:2px 6px;border-radius:999px;white-space:nowrap"><i class="fa-solid fa-arrow-up-right-dots"></i> ترقية</a></b></span>
+          <span>المناديب <b><a href="الباقات.html?upgrade=agents" style="color:#7c3aed;text-decoration:none;font-size:9px;background:#f3e8ff;padding:2px 6px;border-radius:999px;white-space:nowrap"><i class="fa-solid fa-arrow-up-right-dots"></i> ترقية</a></b></span>
+          <span>نسخ/استيراد الأقسام <b><a href="الباقات.html?upgrade=section-backup" style="color:#7c3aed;text-decoration:none;font-size:9px;background:#f3e8ff;padding:2px 6px;border-radius:999px;white-space:nowrap"><i class="fa-solid fa-arrow-up-right-dots"></i> ترقية</a></b></span>
+        </div>`;
+    } else if (plan === 'plus') {
       details = `
         <div class="ct-plan-grid">
           <span>المنتجات / فرع <b>${PLUS_LIMITS.products}</b></span>
@@ -4901,6 +5031,10 @@
           <span>العملاء الجدد يومياً <b>${PLUS_LIMITS.customersDailyCompany}</b></span>
           <span>المصاريف اليومية <b>${PLUS_LIMITS.expensesDailyCompany}</b></span>
           <span>فواتير المشتريات اليومية <b>${PLUS_LIMITS.purchasesDailyCompany}</b></span>
+          <span>إدارة التصنيع <b>متاحة</b></span>
+          <span>عروض المبيعات <b>متاحة</b></span>
+          <span>دفتر الأستاذ <b>متاح</b></span>
+          <span>مجموعات العملاء والمناديب <b>متاحة</b></span>
         </div>`;
     } else if (plan === 'custom') {
       const limits = currentCustomLimits();
@@ -4916,10 +5050,10 @@
           <span>المنتجات <b>${limitText(limits.fixed.products)}</b></span>
         </div>`;
     } else {
-      details = '<div class="ct-plan-description">جميع حدود الاستخدام غير محدودة في خطة Pro.</div>';
+      details = '<div class="ct-plan-grid"><span>المنتجات والفواتير <b>غير محدودة</b></span><span>الموظفون والفروع والمخازن <b>غير محدودة</b></span><span>إدارة التصنيع <b>متاحة</b></span><span>عروض المبيعات <b>متاحة</b></span><span>دفتر الأستاذ <b>متاح</b></span><span>مجموعات العملاء والمناديب <b>متاحة</b></span><span>نسخ واستيراد الأقسام <b>متاح</b></span><span>بوابة العملاء <b>متاحة</b></span></div>';
     }
 
-    const planLabel = plan === 'plus' ? 'Plus' : plan === 'custom' ? 'مخصصة' : 'Pro';
+    const planLabel = plan === 'classic' ? 'Classic' : plan === 'plus' ? 'Plus' : plan === 'custom' ? 'مخصصة' : 'Pro';
     const panel = document.createElement('section');
     panel.id = 'ctSubscriptionPanel';
     panel.className = 'ct-subscription-panel';
@@ -4984,15 +5118,9 @@
     updateSyncBadge();
   }
 
-  function displayLicenseWarning(session) {
-    if (!session || !session.licenseEnd) return;
-    const remaining = new Date(session.licenseEnd).getTime() - Date.now();
-    const days = Math.ceil(remaining / 86400000);
-    if (days > 7 || days < 0) return;
-    const banner = document.createElement('div');
-    banner.className = 'ct-license-banner';
-    banner.textContent = 'تنبيه: راجع حالة الاشتراك من الإعدادات.';
-    document.body.appendChild(banner);
+  function displayLicenseWarning() {
+    // R110: لا يظهر تنبيه "راجع حالة الاشتراك" أثناء الاستخدام.
+    return;
   }
 
   function showToast(message, type = 'info', duration = 3200) {
@@ -5191,6 +5319,7 @@
 
   function getAllCompanyData() {
     const session = getSession() || {};
+    const companyId = String(session.tenantId || session.companyId || session.companyKey || '');
     const datasets = {};
     DATA_KEYS.forEach(key => {
       const rawValue = getRawCompanyDataset(key);
@@ -5200,13 +5329,47 @@
         valueEncoding: 'local-storage-raw-v1'
       };
     });
+
+    // R108: النسخة الكاملة تشمل كل المجموعات المالية، وليس المجموعة المفتوحة
+    // في الشاشة الحالية فقط. هذا يمنع نقص المنتجات/الفواتير عند استعادة نسخة
+    // لشركة لديها أكثر من فترة أو مجموعة مالية.
+    const financialGroupDatasets = {};
+    const groups = getFinancialGroups(companyId);
+    // لا نعتمد على سجل المجموعات وحده: نضم المجموعة القديمة دائماً وأي مجموعة
+    // موجودة فعلياً في localStorage، حتى لا تسقط بيانات فترة مالية قديمة/يتيمة
+    // من النسخة الكاملة إذا تعرّض سجل المجموعات نفسه لنقص سابق.
+    const groupIds = new Set([
+      LEGACY_FINANCIAL_GROUP_ID,
+      currentFinancialGroupId(companyId),
+      ...groups.map(group => String(group?.id || '')).filter(Boolean)
+    ]);
+    const physicalPrefix = `cashtop_data::${encodeURIComponent(companyId)}::fg::`;
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const physicalKey = localStorage.key(i) || '';
+      if (!physicalKey.startsWith(physicalPrefix)) continue;
+      const tail = physicalKey.slice(physicalPrefix.length);
+      const splitAt = tail.indexOf('::');
+      if (splitAt <= 0) continue;
+      try { groupIds.add(decodeURIComponent(tail.slice(0, splitAt))); } catch (_) { groupIds.add(tail.slice(0, splitAt)); }
+    }
+    groupIds.forEach(groupId => {
+      const groupData = {};
+      FINANCIAL_GROUP_SCOPED_KEYS.forEach(key => {
+        if (!DATA_KEYS.includes(key)) return;
+        const rawValue = rawGet(namespaceKey(key, companyId, groupId));
+        groupData[key] = { exists: rawValue !== null, value: rawValue, valueEncoding: 'local-storage-raw-v1' };
+      });
+      financialGroupDatasets[String(groupId)] = groupData;
+    });
     return {
-      format: 'cashtop-backup-v5',
+      format: 'cashtop-backup-v6',
       exportedAt: new Date().toISOString(),
-      tenantId: session.tenantId || session.companyId || session.companyKey,
-      companyId: session.tenantId || session.companyId || session.companyKey,
+      tenantId: companyId,
+      companyId,
       companyKey: session.companyKey || '',
       companyName: session.companyName,
+      activeFinancialGroupId: currentFinancialGroupId(companyId),
+      financialGroupDatasets,
       datasets
     };
   }
@@ -5276,9 +5439,12 @@
     const add = (type, value, out) => { const token = normalizeMergeToken(value); if (token) out.push(`${type}:${token}`); };
     const out = [];
     if (dataset === 'cashtop_products') {
+      // إذا وُجد id ثابت فلا ندمج المنتج مع منتج آخر لمجرد تشابه الباركود/SKU.
+      // هذا كان سبباً مباشراً في انخفاض عدد المنتجات بعد بعض عمليات الاستعادة.
+      const stableId = normalizeMergeToken(record.id);
+      if (stableId) return [`id:${stableId}`];
       add('barcode', record.barcode || record.barCode || record.productBarcode, out);
       add('sku', record.sku || record.code || record.productCode, out);
-      add('id', record.id, out);
       return [...new Set(out)];
     }
     if (dataset === 'cashtop_customers') {
@@ -5363,7 +5529,7 @@
 
   function normalizeBackupEnvelope(payload) {
     if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null;
-    const knownFormats = new Set(['cashtop-backup-v1', 'cashtop-backup-v2', 'cashtop-backup-v3', 'cashtop-backup-v4', 'cashtop-backup-v5']);
+    const knownFormats = new Set(['cashtop-backup-v1', 'cashtop-backup-v2', 'cashtop-backup-v3', 'cashtop-backup-v4', 'cashtop-backup-v5', 'cashtop-backup-v6']);
     const candidateStores = [payload.datasets, payload.data, payload.storage, payload.localStorage, payload.companyData];
     let source = candidateStores.find(value => value && typeof value === 'object' && !Array.isArray(value));
     if (!source) {
@@ -5466,6 +5632,7 @@
     Object.entries(backup.datasets).forEach(([key, entry]) => {
       if (!isManagedKey(key)) return;
       const canonical = canonicalKey(key);
+      if (backup.format === 'cashtop-backup-v6' && backup.financialGroupDatasets && FINANCIAL_GROUP_SCOPED_KEYS.has(canonical)) return;
       const exactRaw = entry && typeof entry === 'object' && entry.valueEncoding === 'local-storage-raw-v1';
       const oldRaw = getRawCompanyDataset(canonical);
 
@@ -5508,6 +5675,39 @@
       enqueueSyncOperation(canonical, { forceReplace: true });
       importedKeys.push(canonical);
     });
+
+    if (backup.format === 'cashtop-backup-v6' && backup.financialGroupDatasets && typeof backup.financialGroupDatasets === 'object') {
+      const activeGroupAtRestore = currentFinancialGroupId(currentCompany);
+      Object.entries(backup.financialGroupDatasets).forEach(([groupId, groupDatasets]) => {
+        if (!groupDatasets || typeof groupDatasets !== 'object') return;
+        Object.entries(groupDatasets).forEach(([key, entry]) => {
+          const canonical = canonicalKey(key);
+          if (!FINANCIAL_GROUP_SCOPED_KEYS.has(canonical) || !DATA_KEYS.includes(canonical)) return;
+          const exactRaw = entry && typeof entry === 'object' && entry.valueEncoding === 'local-storage-raw-v1';
+          if (exactRaw && entry.exists === false) return;
+          let storageValue = exactRaw ? String(entry.value ?? '') : JSON.stringify(entry);
+          const physicalKey = namespaceKey(canonical, currentCompany, groupId);
+          const physicalMetaKey = metaKey(canonical, currentCompany, groupId);
+          const oldRaw = rawGet(physicalKey);
+          storageValue = remapImportedStorageValue(canonical, storageValue, backup, session);
+          storageValue = mergeBackupDataset(canonical, oldRaw, storageValue);
+          if (oldRaw === storageValue) return;
+          rawSet(physicalKey, storageValue);
+          const previousMeta = safeJson(rawGet(physicalMetaKey), {}) || {};
+          rawSet(physicalMetaKey, JSON.stringify({
+            ...previousMeta, updatedAt: Date.now(), revision: Number(previousMeta.revision || 0) + 1,
+            deviceId: getDeviceId(), page: FILE, financialGroupId: groupId, source: 'backup-import-v6', seeded: false
+          }));
+          // turso-sync الحالي مربوط بالمجموعة التي فُتحت معها الصفحة. نرفع هذه
+          // المجموعة الآن، وتبقى بقية المجموعات محفوظة محلياً كاملة حتى فتحها.
+          if (String(groupId) === String(activeGroupAtRestore)) {
+            enqueueSyncOperation(canonical, { forceReplace: true });
+            importedKeys.push(canonical);
+          }
+        });
+      });
+    }
+
     showToast(crossCompanyImport
       ? 'تم نقل بيانات النسخة من الشركة الأخرى إلى الشركة الحالية مع إبقاء المفتاح والخطة وتسجيل الدخول كما هي.'
       : 'تم دمج النسخة محلياً دون تكرار السجلات، ويجري رفع التغييرات الآن.', 'success');
@@ -6510,7 +6710,7 @@
     DEFAULT_CASH_ACCOUNT_NAME,
     branchIdFromSession,
     currentPlan,
-    PLUS_LIMITS,
+    CLASSIC_LIMITS, PLUS_LIMITS,
     currentCustomLimits,
     isFundActive,
     activeFundAccounts,
@@ -6527,7 +6727,7 @@
     isBackupImportEnabled,
     syncImportedData,
     applyRemoteDataset,
-    validateSessionLocal,
+    validateSessionLocal, isSubscriptionExpired, assertSubscriptionWritable,
     getTaxSettings, getTaxRates, calculateTax,
     getNotificationSettings, getSmartNotifications, updateNotificationBadge, requestNotificationPermission, notificationBrandIcon, showTodayProfitNotification,
     archiveRecords, readArchivedRecords, compactCompletedData, trustedNowMs,

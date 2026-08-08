@@ -327,12 +327,12 @@
     <link rel="stylesheet" href="cashtop-core.css?v=100">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="barcode-tools.js?v=100"></script>
-    <script src="cashtop-core.js?v=103"></script>
+    <script src="cashtop-core.js?v=111"></script>
     <script src="multi-system.js?v=100"></script>
     <script src="turso-config.js?v=100"></script><script src="turso-rtdb.js?v=100"></script>
     <script src="accounting-engine.js?v=100"></script>
     <script src="cashtop-printer.js?v=48"></script>
-    <script src="turso-sync.js?v=100"></script>
+    <script src="turso-sync.js?v=111"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -1857,6 +1857,7 @@
             // Filtering is deliberately a cheap pass only. Stock, unit-chain and
             // حساب حالة البطاقة يتم فقط لنافذة DOM الصغيرة الظاهرة حالياً.
             for (const prod of productsData) {
+                if (prod?.hideFromCashier === true) continue;
                 if (!representativeCanSeeProduct(prod)) continue;
                 if (activeCategoryIds && !activeCategoryIds.has(String(prod?.id))) continue;
                 if (searchVal) {
@@ -3044,6 +3045,7 @@
             const normalized = normalizeBarcode(code);
             if (!normalized) return null;
             for (const product of productsData) {
+                if (product?.hideFromCashier === true) continue;
                 if (!representativeCanSeeProduct(product)) continue;
                 const chain = cashierUnitChainForProduct(product);
                 const base = chain[0];
@@ -3051,6 +3053,7 @@
                 if (pieceCodes.includes(normalized)) return { type: product.hasVariants ? 'variants' : 'chain', product, unitId: base.id };
             }
             for (const product of productsData) {
+                if (product?.hideFromCashier === true) continue;
                 if (!representativeCanSeeProduct(product)) continue;
                 if (product.hasVariants && Array.isArray(product.variants)) {
                     const variantIndex = product.variants.findIndex(variant => normalizeBarcode(variant?.barcode) === normalized);
@@ -3058,6 +3061,7 @@
                 }
             }
             for (const product of productsData) {
+                if (product?.hideFromCashier === true) continue;
                 if (!representativeCanSeeProduct(product)) continue;
                 const chain = cashierUnitChainForProduct(product);
                 for (const level of chain.slice(1)) {

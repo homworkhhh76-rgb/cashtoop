@@ -270,11 +270,11 @@
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
     <link rel="stylesheet" href="cashtop-core.css?v=100">
-    <script src="cashtop-core.js?v=100"></script>
+    <script src="cashtop-core.js?v=111"></script>
     <script src="multi-system.js?v=100"></script>
     <script src="turso-config.js?v=100"></script><script src="turso-rtdb.js?v=100"></script>
     <script src="accounting-engine.js?v=100"></script>
-    <script src="turso-sync.js?v=100"></script>
+    <script src="turso-sync.js?v=111"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -2086,6 +2086,19 @@
             return composite ? composite.available : (parseFloat(product?.stockPieces) || parseFloat(product?.stock) || 0);
         }
 
+        function toggleCashierVisibility(productId) {
+            if (window.Cashtop?.can && !window.Cashtop.can('products.edit')) return showToast('لا تملك صلاحية تعديل ظهور المنتج في الكاشير.', 'error');
+            const product = productsData.find(item => String(item?.id) === String(productId));
+            if (!product) return;
+            product.hideFromCashier = product.hideFromCashier !== true;
+            product.updatedAt = new Date().toISOString();
+            if (window.Cashtop?.atomicSetItems) window.Cashtop.atomicSetItems({ cashtop_products: productsData }, { label:'toggle-cashier-product-visibility' });
+            else localStorage.setItem('cashtop_products', JSON.stringify(productsData));
+            window.dispatchEvent(new CustomEvent('cashtop:sync-now', { detail:{ reason:'cashier-visibility', key:'cashtop_products' } }));
+            renderTable();
+            showToast(product.hideFromCashier ? 'تم إخفاء المنتج من الكاشير.' : 'تم إظهار المنتج في الكاشير.', 'success');
+        }
+
         function renderTable(data = productsData) {
             const tbody = document.getElementById('productsTableBody');
             if (!tbody) return;
@@ -2114,13 +2127,15 @@
                     : `<span title="باركود القطعة"><i class="fa-solid fa-barcode"></i> ${prod.barcode || 'لايوجد'}</span>`;
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td><div class="product-name-with-thumb"><div class="product-record-thumb"><i class="fa-solid fa-box"></i></div><div class="product-name-copy"><strong>${prod.name || 'بدون اسم'}</strong><br><small style="color:#777; display:inline-block; margin-top:3px;">${barcodeDisplay}</small>${variantBadge}</div></div></td>
+                    <td><div class="product-name-with-thumb"><div class="product-record-thumb"><i class="fa-solid fa-box"></i></div><div class="product-name-copy"><strong>${prod.name || 'بدون اسم'}</strong>${prod.hideFromCashier===true?' <span style="font-size:9px;background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;border-radius:999px;padding:2px 6px;white-space:nowrap">غير ظاهر في الكاشير</span>':''}<br><small style="color:#777; display:inline-block; margin-top:3px;">${barcodeDisplay}</small>${variantBadge}</div></div></td>
                     <td>${prod.untrackedStock === true ? '<span style="color:#94a3b8;">—</span>' : `<span class="badge-stock">${pStock <= 0 ? (compositeInfo ? 'المخزون نفد' : 'نفد المخزون') : stockStr}</span>`}</td>
                     <td><span class="badge-unit">${productUnitChainLabel(prod)}</span></td>
                     <td style="color: #444; font-weight:bold;">${moneyDisplay(pCost)} ${productBaseSymbol()}</td>
                     <td style="color: #00a65a; font-weight:bold;">${moneyDisplay(pPrice)} ${productBaseSymbol()}</td>
                     <td style="color:#777; font-size:11px;">${prod.untrackedStock === true ? '' : (compositeInfo ? 'غير متعدد • يُخصم من المكونات عند البيع' : (prod.hasVariants ? 'مقسم حسب المقاسات' : 'مخزون مباشر'))}</td>
                     <td><div class="actions-wrapper">
+                        <button class="action-btn" data-ct-permission="inventory.adjust" onclick="location.href='warehouses.html?adjust='+encodeURIComponent('${prod.id}')" title="جرد / تسوية الرصيد" style="color:#0ea5e9"><i class="fa-solid fa-scale-balanced"></i></button>
+                        <button class="action-btn" data-ct-permission="products.edit" onclick="toggleCashierVisibility('${prod.id}')" title="${prod.hideFromCashier===true?'إظهار في الكاشير':'إخفاء من الكاشير'}" style="color:#64748b"><i class="fa-solid ${prod.hideFromCashier===true?'fa-eye':'fa-eye-slash'}"></i></button>
                         <button class="action-btn btn-edit-act" onclick="editProduct('${prod.id}')" title="تعديل المنتج"><i class="fa-solid fa-pen-to-square"></i></button>
                         <button class="action-btn btn-delete-act" onclick="deleteProduct('${prod.id}')" title="حذف الكرت"><i class="fa-solid fa-trash-can"></i></button>
                     </div></td>`;

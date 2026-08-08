@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v107-cairo-sync-screen';
+const CACHE_VERSION = 'v111-support-admin-stop-key-fast-cache';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = 'cash-top-2-remote-static-persistent-v1';
 
@@ -58,6 +58,8 @@ const LOCAL_ASSETS = [
   './setting.html',
   './shortages.html',
   './storage-settings.html',
+  './support.html',
+  './support.js',
   './sync.html',
   './suppliers.html',
   './tax-settings.html',
@@ -72,6 +74,7 @@ const LOCAL_ASSETS = [
   './المناديب.html',
   './الموظفين.html',
   './صفحة تسجيل الدخول.html',
+  './الباقات.html',
   './لوحة التحكم.html',
   './مرجع المشتريات.html',
   './مرجع المبيعات.html'
@@ -211,7 +214,7 @@ async function installCompleteLocalShell() {
 
   // لا نفشل تثبيت عامل الخدمة كله بسبب ملف واحد تعذر تنزيله لحظياً. إذا كان
   // هناك إصدار أقدم مكتمل فسيبقى كاحتياط، والملف الناقص يُملأ عند أول فرصة.
-  const critical = ['./index.html', './صفحة تسجيل الدخول.html', './لوحة التحكم.html', './cashtop-core.js', './cashtop-core.css', './turso-config.js', './turso-rtdb.js', './turso-sync.js'];
+  const critical = ['./index.html', './صفحة تسجيل الدخول.html', './الباقات.html', './لوحة التحكم.html', './cashtop-core.js', './cashtop-core.css', './turso-config.js', './turso-rtdb.js', './turso-sync.js'];
   const missingCritical = critical.filter(asset => !stored.has(new URL(asset, self.registration.scope).pathname));
   return { stored: stored.size, total: LOCAL_ASSETS.length, complete: stored.size === LOCAL_ASSETS.length, missingCritical };
 }

@@ -173,11 +173,11 @@
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
     <link rel="stylesheet" href="cashtop-core.css?v=100">
-    <script src="cashtop-core.js?v=100"></script>
+    <script src="cashtop-core.js?v=111"></script>
     <script src="multi-system.js?v=100"></script>
     <script src="turso-config.js?v=100"></script><script src="turso-rtdb.js?v=100"></script>
     <script src="accounting-engine.js?v=100"></script>
-    <script src="turso-sync.js?v=100"></script>
+    <script src="turso-sync.js?v=111"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -590,6 +590,7 @@
         let transferCart = [];
         let transferHistoryData = [];
         let branchesData = [];
+        let stockAdjustQueryHandled = false;
 
         function loadData() {
             productsData = JSON.parse(localStorage.getItem('cashtop_products')) || [];
@@ -602,6 +603,14 @@
             updateDropdowns();
             renderTable();
             calculateStats();
+            if (!stockAdjustQueryHandled) {
+                stockAdjustQueryHandled = true;
+                const requestedProductId = new URLSearchParams(location.search).get('adjust');
+                if (requestedProductId) {
+                    try { history.replaceState({}, '', location.pathname + location.hash); } catch (_) {}
+                    setTimeout(() => openEditModal(requestedProductId), 0);
+                }
+            }
         }
 
         // --- دوال مساعدة لجمع الكميات ---
@@ -1085,22 +1094,44 @@
             openModal('editModal');
         }
 
-        function saveStockAdjustment(e) {
+        async function saveStockAdjustment(e) {
             e.preventDefault();
             const pId = document.getElementById('editProductId').value;
+            const rollbackProducts = JSON.parse(JSON.stringify(productsData));
             const prod = productsData.find(p => p.id === pId);
-            
-            prod.stockPieces = parseFloat(document.getElementById('editQty_shop').value) || 0;
-            
+            if (!prod) return showToast('تعذر العثور على الصنف المطلوب للجرد.', 'error');
+
+            prod.stockPieces = Math.max(0, parseFloat(document.getElementById('editQty_shop').value) || 0);
+            prod.storeStocks = prod.storeStocks && typeof prod.storeStocks === 'object' ? prod.storeStocks : {};
             storesData.forEach(store => {
-                let newQty = parseFloat(document.getElementById(`editQty_${store.id}`).value) || 0;
+                const newQty = Math.max(0, parseFloat(document.getElementById(`editQty_${store.id}`).value) || 0);
                 prod.storeStocks[store.id] = newQty;
             });
+            prod.updatedAt = new Date().toISOString();
+            prod.lastStocktakeAt = prod.updatedAt;
 
-            localStorage.setItem('cashtop_products', JSON.stringify(productsData));
-            showToast('تمت مطابقة وتسوية الجرد بنجاح!', 'success');
-            closeModal('editModal');
-            loadData();
+            try {
+                if (window.Cashtop?.atomicSetItems) window.Cashtop.atomicSetItems({ cashtop_products: productsData }, { label: 'inventory-stocktake' });
+                else localStorage.setItem('cashtop_products', JSON.stringify(productsData));
+                if (window.Cashtop?.commitCriticalData) {
+                    const committed = await window.Cashtop.commitCriticalData(['cashtop_products'], { recordKey:'cashtop_products', recordId:pId });
+                    if (committed && committed.recordVerified === false) throw new Error('STOCKTAKE_NOT_VERIFIED');
+                }
+                window.Cashtop?.preservePendingSyncState?.().catch(() => null);
+                window.dispatchEvent(new CustomEvent('cashtop:sync-now', { detail:{ reason:'inventory-stocktake', key:'cashtop_products' } }));
+                showToast('تمت مطابقة وتسوية الجرد بنجاح، وسيتم مزامنة الرصيد الجديد.', 'success');
+                closeModal('editModal');
+                loadData();
+            } catch (error) {
+                console.error(error);
+                productsData = rollbackProducts;
+                try {
+                    if (window.Cashtop?.atomicSetItems) window.Cashtop.atomicSetItems({ cashtop_products: productsData }, { label:'rollback-inventory-stocktake', audit:false });
+                    else localStorage.setItem('cashtop_products', JSON.stringify(productsData));
+                } catch (_) {}
+                showToast('تعذر تثبيت تسوية الجرد، وتمت إعادة الرصيد السابق.', 'error');
+                loadData();
+            }
         }
 
         // --- الحذف (Delete) ---

@@ -1741,9 +1741,8 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       const pendingKeys = [...new Set(core.getSyncQueue().map(item => item.key).filter(key => CLOUD_DATA_KEYS.includes(key)))];
       if (!pendingKeys.length) return { processed: 0, pulled: 0, uploaded: 0, failed: 0, remaining: 0 };
 
-      // One metadata probe for the whole batch. If nothing changed remotely since
-      // our last successful pull/upload, all local datasets can be written without
-      // a read-before-write and without a verification read.
+      // فحص metadata واحد يحدد إن كانت هناك مجموعات أخرى تغيّرت على السحابة.
+      // أما كل dataset عليه تعديل محلي فسيُقرأ بنفسه قبل الكتابة دائماً أدناه.
       const usageBefore = readUsageState();
       let remoteMeta = {};
       try { remoteMeta = await readMetaLocation(location, token, { fresh: true }); } catch (_) { remoteMeta = {}; }
@@ -1752,23 +1751,10 @@ if (settings.enabled && core && settings.config?.databaseURL) {
         Number(usageBefore.lastRemoteUpdatedAt || 0),
         Number(readState().lastRemoteUpdatedAt || 0)
       );
-      const forceReplaceBatch = options.importSync === true;
       const remoteChanged = remoteStampBefore > 0 && knownRemoteStamp > 0 && remoteStampBefore > knownRemoteStamp;
-      const remoteDatasetStamps = normalizeDatasetStamps(remoteMeta);
-      const observedDatasetStamps = usageBefore.datasetRemoteStamps && typeof usageBefore.datasetRemoteStamps === 'object'
-        ? usageBefore.datasetRemoteStamps : {};
-      const hasDatasetStampSchema = Number(remoteMeta?.datasetStampSchema || 0) === 1 && Number(usageBefore.datasetStampSchemaSeen || 0) === 1;
-      const canFastWriteDataset = key => {
-        if (!isPathProxy) return false;
-        // لا يكفي أن يكون ختم الشركة العام معروفاً: قد تكون الصفحة قد سحبت
-        // المنتجات مثلاً ولم تسحب الفواتير. نقارن ختم dataset نفسه حتى لا
-        // تمسح فاتورة موظف أو جهاز آخر عند الرفع السريع.
-        if (!hasDatasetStampSchema) return false;
-        return Number(remoteDatasetStamps[key] || 0) <= Number(observedDatasetStamps[key] || 0);
-      };
 
       let pendingProgress = 0;
-      reportSyncProgress(0, pendingKeys.length, forceReplaceBatch ? 'جاري رفع النسخة الاحتياطية...' : 'جاري رفع التعديلات المجمعة...');
+      reportSyncProgress(0, pendingKeys.length, options.importSync === true ? 'جاري رفع النسخة الاحتياطية...' : 'جاري رفع التعديلات المجمعة...');
 
       for (const key of pendingKeys) {
         if (!canRetryDatasetNow(key, manual)) {
@@ -1782,20 +1768,9 @@ if (settings.enabled && core && settings.config?.databaseURL) {
           const pending = pendingForKey(key);
           if (!pending) continue;
 
-          // Import/forceReplace is an intentional overwrite. Normal edits also use
-          // this fast path when the one metadata probe proved the cloud unchanged.
-          if (!LOSSLESS_SYNC_KEYS.has(key) && (forceReplaceBatch || pending.forceReplace === true || canFastWriteDataset(key))) {
-            const sourceLocalPayload = makeLocalPayload(key, 0);
-            await writeDatasetLocation(location, key, token, sourceLocalPayload);
-            if (markUploaded(key, sourceLocalPayload)) { uploaded += 1; uploadedKeys.push(key); }
-            clearDatasetFailure(key);
-            continue;
-          }
-
-          // A different device changed the company since our last known stamp.
-          // Only the pending dataset is read and merged; there is no post-write
-          // verification read. This is the expensive path and happens only on a
-          // real cross-device conflict window.
+          // R108: كل dataset عليه تعديل محلي يقرأ نسخته السحابية أولاً ثم يدمجها
+          // قبل الكتابة. هذه القراءة تخص المجموعات المتغيرة فقط، وليست سحباً كاملاً،
+          // وتمنع جهازاً كان Offline من الكتابة فوق تعديلات المدير/الموظف أو جهاز آخر.
           const remoteRaw = await readDatasetLocation(location, key, token, { fresh: true });
           const remote = remoteRaw == null ? null : normalizeRemotePayload(remoteRaw);
           if (key === 'cashtop_company_access' && remoteRaw != null) mergeAdminControlledAccess(remoteRaw);
@@ -1830,9 +1805,10 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       if ((remoteChanged && options.importSync !== true) || options.forceCheck === true || options.manualPull === true) {
         try {
           const candidateKeys = CLOUD_DATA_KEYS;
-          const pullKeys = options.forceCheck === true
+          const pullKeys = (options.forceCheck === true
             ? candidateKeys
-            : changedPriorityKeysFromMeta(remoteMeta, candidateKeys);
+            : changedPriorityKeysFromMeta(remoteMeta, candidateKeys))
+            .filter(key => !uploadedKeys.includes(key));
           if (pullKeys.length) {
             const pullResult = await pullDatasetKeys(pullKeys, { force: false, concurrency: 4, silentProgress: options.manual !== true, remoteMeta });
             pulled = Number(pullResult?.applied || 0);
@@ -2300,60 +2276,10 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       try { await core.localReady; } catch (_) {}
     }
 
-    // R106 safety: record datasets are never bulk-replaced, even during backup
-    // restore. Their pending import operations go through the normal read+merge
-    // reconciliation so an older/shorter backup cannot erase records already
-    // present on another device or in the cloud.
-    if (unique.some(key => LOSSLESS_SYNC_KEYS.has(key))) {
-      return syncAll({ manual: true, forceRetry: true, importSync: false });
-    }
-
-    // Import is an intentional replacement. Use exact UPSERTs in batches with
-    // zero pre-reads and zero verification reads. This is the cheapest safe
-    // behavior for restoring a backup into the current company identity.
-    if (isPathProxy && window.CashtopTursoBridge?.writeMany) {
-      const access = await cheapDatabaseAccess();
-      const location = access.location;
-      const token = access.token;
-      let uploaded = 0;
-      const chunkSize = 24;
-      for (let i = 0; i < unique.length; i += chunkSize) {
-        const chunk = unique.slice(i, i + chunkSize);
-        const items = chunk.map(key => {
-          const payload = makeLocalPayload(key, 0);
-          return {
-            key,
-            payload,
-            path: directBridgePath(location, `datasets/${sanitizeSegment(remoteDatasetKey(key))}`),
-            value: payload,
-            deleted: false,
-            updatedAt: Number(payload.updatedAt || Date.now())
-          };
-        });
-        await window.CashtopTursoBridge.writeMany(items);
-        for (const item of items) {
-          if (markUploaded(item.key, item.payload)) uploaded += 1;
-        }
-        reportSyncProgress(Math.min(i + chunk.length, unique.length), unique.length, 'رفع النسخة إلى Turso بدون إعادة قراءة البيانات...');
-      }
-      const importStamp = Date.now();
-      const importDatasetStamps = Object.fromEntries(unique.map(key => [remoteStampKey(key), Math.max(importStamp, Number(localMetaFor(key)?.updatedAt || 0))]));
-      const metaWritten = await writeMetaLocation(location, token, companyMeta(location, {
-        datasetStampSchema: 1,
-        datasetStamps: importDatasetStamps,
-        changedKeys: unique.slice(0, 32),
-        importAt: Date.now(),
-        lastSyncedBy: core.rawGet('cashtop_device_id') || ''
-      })).catch(() => null);
-      if (metaWritten) markObservedDatasetStamps(unique, metaWritten, { adoptSchema: true });
-      const stamp = Number(metaWritten?.updatedAt || Date.now());
-      writeUsageState({ lastRemoteUpdatedAt: stamp, lastMetaCheckAt: Date.now(), lastUploadAt: Date.now() });
-      writeState({ lastRemoteUpdatedAt: stamp, lastSuccessAt: Date.now(), initialLoaded: true });
-      reportSyncProgress(unique.length, unique.length, 'اكتملت مزامنة النسخة الاحتياطية', { active: false, done: true, success: true });
-      return { uploaded, processed: uploaded, remaining: core.getSyncQueue().length, importSync: true, lowUsage: true };
-    }
-
-    return syncAll({ manual: false, forceRetry: true, importSync: true });
+    // R108: الاستعادة تستخدم نفس مسار المصالحة الآمن: قراءة المجموعة المتغيرة
+    // من السحابة ثم دمج النسخة المستوردة معها ثم كتابة النتيجة. لا توجد UPSERT
+    // عمياء، لذلك نسخة قديمة أو أقصر لا تمسح سجلات جهاز آخر.
+    return syncAll({ manual: true, forceRetry: true, importSync: false, readBeforeWrite: true });
   }
 
   function resetSyncRuntime() {
