@@ -180,16 +180,18 @@
     
         .expense-currency-wrap{display:none}.expense-currency-wrap.active{display:flex}.expense-currency-wrap small{display:block;font-size:11px;color:#64748b;margin-top:4px}
     #deleteExpenseTypeModal{z-index:30600!important}
+
+        .expense-chart-tree{background:#fff;border:1px solid #e2e8f0;border-radius:10px;margin:12px 0;overflow:hidden}.expense-chart-tree-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px;background:#f8fafc;border-bottom:1px solid #e2e8f0}.expense-chart-tree-head strong{font-size:12px;color:#334155}.expense-chart-tree-head a{font-size:10px;font-weight:800;color:#605ca8;text-decoration:none}.expense-tree-body{padding:8px 10px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.expense-tree-main{border:1px solid #e5e7eb;border-radius:9px;padding:8px;background:#fff}.expense-tree-main>button{width:100%;border:0;background:transparent;text-align:right;font:900 10px Cairo;color:#1e293b;cursor:pointer;padding:2px}.expense-tree-code{font:800 8px monospace;color:#605ca8;background:#f3f1f8;padding:2px 5px;border-radius:5px;margin-inline-start:5px}.expense-tree-child{display:flex;align-items:center;gap:5px;margin-top:5px;padding-right:10px;color:#64748b;font-size:9px}.expense-tree-link{color:#0f9f6e;font-size:8px}.expense-chart-auto-note{display:block;color:#0f766e!important;font-size:9px!important;font-weight:800;margin-top:4px}.type-chart-preview{padding:9px 11px;border-radius:8px;background:#ecfdf5;border:1px solid #a7f3d0;color:#047857;font-size:10px;font-weight:800}.type-chart-preview i{margin-left:5px}@media(max-width:900px){.expense-tree-body{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){.expense-tree-body{grid-template-columns:1fr}}
 </style>
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=100">
-    <script src="cashtop-core.js?v=111"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=112">
+    <script src="cashtop-core.js?v=114"></script>
     <script src="multi-system.js?v=100"></script>
     <script src="turso-config.js?v=100"></script><script src="turso-rtdb.js?v=100"></script>
-    <script src="accounting-engine.js?v=100"></script>
-    <script src="turso-sync.js?v=111"></script>
+    <script src="accounting-engine.js?v=114"></script>
+    <script src="turso-sync.js?v=114"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -331,6 +333,11 @@
             </div>
         </div>
 
+        <div class="expense-chart-tree" id="expenseChartTreePanel">
+            <div class="expense-chart-tree-head"><strong><i class="fa-solid fa-sitemap"></i> شجرة المصاريف المرتبطة بشجرة الحسابات</strong><a href="chart-accounts.html?category=expense"><i class="fa-solid fa-arrow-up-right-from-square"></i> فتح شجرة الحسابات</a></div>
+            <div class="expense-tree-body" id="expenseTreeBody"></div>
+        </div>
+
         <div class="table-container">
             <div class="table-header-wrapper">
                 <div class="table-title">سجل المصاريف والمدفوعات العامة</div>
@@ -401,6 +408,13 @@
                         <label>طريقة الدفع</label>
                     </div>
                 </div>
+                <div class="form-row full-width">
+                    <div class="form-group">
+                        <select class="form-control" id="expChartAccountSelect" data-ct-site-dropdown="true" data-ct-icon="fa-sitemap"></select>
+                        <label>حساب المصروف في شجرة الحسابات</label>
+                        <small class="expense-chart-auto-note" id="expChartAccountHint">مرتبط تلقائياً بتصنيف المصروف ويمكن تغييره للحالات الخاصة.</small>
+                    </div>
+                </div>
 
                 <div class="form-row">
                     <div class="form-group">
@@ -449,6 +463,12 @@
                     <div class="form-group">
                         <input type="text" class="form-control" id="typeName" placeholder="مثال: مواصلات شراء أو مواصلات للمحل..." required autocomplete="off">
                         <label>اسم التصنيف</label>
+                    </div>
+                </div>
+
+                <div class="form-row full-width">
+                    <div class="form-group">
+                        <div class="type-chart-preview" id="typeChartPreview"><i class="fa-solid fa-link"></i> سيتم إنشاء/ربط حساب مصروف تلقائياً في شجرة الحسابات.</div>
                     </div>
                 </div>
 
@@ -549,6 +569,7 @@
                     { id: 'et_3', name: 'مرتبات وأجور', notes: '', parentId: '' }
                 ];
                 normalizeExpenseTypes();
+                linkExpenseTypesToChart();
                 if (!storedExpenseTypesRaw) setTimeout(() => persistExpenseTypes('seed-expense-types'), 0);
                 
                 const localFunds = localStorage.getItem('cashtop_funds_db') || localStorage.getItem('cashtop_funds_db_v4');
@@ -558,10 +579,26 @@
             initLayout();
         };
 
+        function populateExpenseChartAccounts(selectedId = '') {
+            const select = document.getElementById('expChartAccountSelect');
+            if (!select) return;
+            const chart = window.CashtopChart;
+            if (!chart) { select.innerHTML = '<option value="">مصروفات تشغيلية عامة</option>'; return; }
+            const accounts = chart.getAccounts({ includeInactive:false })
+                .filter(account => account.postable !== false && account.category === 'expense')
+                .sort((a,b) => String(a.code).localeCompare(String(b.code), undefined, { numeric:true }));
+            const fallback = chart.getByRole('GENERAL_EXPENSE')?.id || '';
+            select.innerHTML = accounts.map(account => `<option value="${String(account.id).replace(/"/g,'&quot;')}">${account.code} — ${String(account.name).replace(/</g,'&lt;')}</option>`).join('');
+            const wanted = selectedId || fallback;
+            if (wanted && accounts.some(account => String(account.id) === String(wanted))) select.value = String(wanted);
+        }
+
         function initLayout() {
             populateTypesSelect();
             populateExpenseCurrencySelect();
             populateAccountsSelect();
+            populateExpenseChartAccounts();
+            renderExpenseTree();
             renderTable();
         }
 
@@ -597,8 +634,73 @@
         function normalizeExpenseTypes() {
             expenseTypesDB = (Array.isArray(expenseTypesDB) ? expenseTypesDB : []).map(type => ({
                 ...type,
-                parentId: type?.parentId ? String(type.parentId) : ''
+                parentId: type?.parentId ? String(type.parentId) : '',
+                chartAccountId: type?.chartAccountId ? String(type.chartAccountId) : ''
             }));
+        }
+
+        function expenseChartRoleByName(name = '') {
+            const text = String(name).toLowerCase();
+            if (/راتب|رواتب|مرتب|أجور/.test(text)) return 'WAGES_EXPENSE';
+            if (/إيجار/.test(text)) return 'RENT_EXPENSE';
+            if (/كهرب|مياه|اتصال|إنترنت|انترنت/.test(text)) return 'UTILITIES_EXPENSE';
+            if (/تسويق|دعاية|إعلان/.test(text)) return 'MARKETING_EXPENSE';
+            if (/نقل|مواصل|شحن/.test(text)) return 'TRANSPORT_EXPENSE';
+            if (/هالك|فاقد/.test(text)) return 'WASTAGE_EXPENSE';
+            if (/تشغيل/.test(text)) return 'GENERAL_EXPENSE';
+            return '';
+        }
+
+        function linkExpenseTypeToChart(type, allowCreate = true) {
+            const chart = window.CashtopChart; if (!chart || !type) return '';
+            const existing = type.chartAccountId ? chart.getAccount(type.chartAccountId) : null;
+            if (existing) { if (existing.name !== type.name && existing.system !== true && !window.Cashtop?.isSubscriptionExpired?.() && !window.Cashtop?.isFinancialGroupReadOnly?.()) { try { chart.updateAccount(existing.id, { name:type.name }); } catch (_) {} } return existing.id; }
+            const role = !type.parentId ? expenseChartRoleByName(type.name) : '';
+            const roleAcc = role ? chart.getByRole(role) : null;
+            if (roleAcc) { type.chartAccountId = roleAcc.id; return roleAcc.id; }
+            const byName = chart.getAccounts({ includeInactive:true }).find(a => a.category === 'expense' && String(a.name).trim().toLowerCase() === String(type.name).trim().toLowerCase());
+            if (byName) { type.chartAccountId = byName.id; return byName.id; }
+            if (!allowCreate || window.Cashtop?.isSubscriptionExpired?.() || window.Cashtop?.isFinancialGroupReadOnly?.()) return '';
+            const parentType = type.parentId ? expenseTypeById(type.parentId) : null;
+            const parentAccountId = parentType?.chartAccountId || chart.getByRole('OPEX_GROUP')?.id || chart.getByRole('EXPENSES')?.id;
+            if (!parentAccountId) return '';
+            try {
+                const account = chart.addAccount({ code:chart.nextChildCode(parentAccountId), name:type.name, parentId:parentAccountId, category:'expense', nature:'debit', postable:true, notes:`مرتبط بتصنيف المصروف ${type.id}` });
+                type.chartAccountId = account.id; return account.id;
+            } catch (error) { console.warn('expense chart link', error); return ''; }
+        }
+
+        function linkExpenseTypesToChart() {
+            normalizeExpenseTypes(); let changed = false;
+            expenseMainTypes().forEach(type => { const before=type.chartAccountId||''; linkExpenseTypeToChart(type,true); if(before!==type.chartAccountId)changed=true; });
+            expenseTypesDB.filter(type=>type.parentId).forEach(type => { const before=type.chartAccountId||''; linkExpenseTypeToChart(type,true); if(before!==type.chartAccountId)changed=true; });
+            if (changed && !window.Cashtop?.isSubscriptionExpired?.() && !window.Cashtop?.isFinancialGroupReadOnly?.()) {
+                if (window.Cashtop?.atomicSetItems) window.Cashtop.atomicSetItems({ cashtop_expense_types:expenseTypesDB }, { label:'link-expense-types-chart' });
+                else localStorage.setItem('cashtop_expense_types', JSON.stringify(expenseTypesDB));
+            }
+        }
+
+        function renderExpenseTree() {
+            const host = document.getElementById('expenseTreeBody'); if (!host) return;
+            const chart = window.CashtopChart;
+            host.innerHTML = expenseMainTypes().map(main => {
+                const account = chart?.getAccount(main.chartAccountId); const children = expenseSubtypes(main.id);
+                return `<div class="expense-tree-main"><button type="button" onclick="document.getElementById('filterTypeSelect').value='${main.id}';handleFilterTypeChange()"><i class="fa-solid fa-folder" style="color:#605ca8"></i> ${String(main.name).replace(/</g,'&lt;')} ${account?`<span class="expense-tree-code">${account.code}</span>`:''}</button>${children.map(child=>{const ca=chart?.getAccount(child.chartAccountId);return `<div class="expense-tree-child"><i class="fa-solid fa-turn-up fa-rotate-90"></i><span>${String(child.name).replace(/</g,'&lt;')}</span>${ca?`<span class="expense-tree-code">${ca.code}</span><i class="fa-solid fa-link expense-tree-link"></i>`:''}</div>`}).join('')}</div>`;
+            }).join('') || '<div style="color:#94a3b8;font-size:10px;padding:10px">لا توجد تصنيفات. أضف تصنيفاً وسيتم ربطه محاسبياً تلقائياً.</div>';
+        }
+
+        function selectedExpenseTypeChartAccount() {
+            const sub = expenseTypeById(document.getElementById('expSubtypeSelect')?.value);
+            const main = expenseTypeById(document.getElementById('expTypeSelect')?.value);
+            return sub?.chartAccountId || main?.chartAccountId || '';
+        }
+
+        function syncExpenseChartAccountFromType() {
+            const linked = selectedExpenseTypeChartAccount();
+            populateExpenseChartAccounts(linked);
+            const account = window.CashtopChart?.getAccount(linked);
+            const hint = document.getElementById('expChartAccountHint');
+            if (hint) hint.innerHTML = account ? `<i class="fa-solid fa-link"></i> مرتبط تلقائياً بـ ${account.code} — ${account.name}` : 'لم يتم ربط التصنيف بعد؛ سيتم استخدام المصروفات التشغيلية العامة.';
         }
 
         function reloadExpenseTypesFromStorage() {
@@ -606,7 +708,9 @@
                 const fresh = JSON.parse(localStorage.getItem('cashtop_expense_types') || '[]');
                 expenseTypesDB = Array.isArray(fresh) ? fresh : [];
                 normalizeExpenseTypes();
+                linkExpenseTypesToChart();
                 populateTypesSelect();
+                renderExpenseTree();
                 renderTable();
             } catch (error) { console.error('expense types reload', error); }
         }
@@ -695,7 +799,10 @@
             subtypeRow.classList.toggle('active', visible);
             subtypeSelect.required = visible;
             if (!visible) subtypeSelect.value = '';
+            syncExpenseChartAccountFromType();
         }
+
+        document.getElementById('expSubtypeSelect')?.addEventListener('change', syncExpenseChartAccountFromType);
 
         function handleFilterTypeChange(shouldRender = true) {
             const typeSelect = document.getElementById('filterTypeSelect');
@@ -848,8 +955,19 @@
             document.getElementById('typeParentSelect').value = parentId || '';
             document.getElementById('typeName').value = '';
             document.getElementById('typeNotes').value = '';
+            updateTypeChartPreview();
             openModal('typeModal');
         }
+
+        function updateTypeChartPreview() {
+            const parentId = document.getElementById('typeParentSelect')?.value || '';
+            const parentType = expenseTypeById(parentId);
+            const chart = window.CashtopChart;
+            const parentAcc = chart?.getAccount(parentType?.chartAccountId) || chart?.getByRole('OPEX_GROUP');
+            const box = document.getElementById('typeChartPreview');
+            if (box) box.innerHTML = `<i class="fa-solid fa-link"></i> سيُنشأ الحساب داخل: ${parentAcc ? `${parentAcc.code} — ${parentAcc.name}` : 'المصروفات التشغيلية'}`;
+        }
+        document.getElementById('typeParentSelect')?.addEventListener('change', updateTypeChartPreview);
 
         function saveExpenseType(e) {
             e.preventDefault();
@@ -872,15 +990,12 @@
                 return;
             }
 
-            expenseTypesDB.push({
-                id: 'et_' + Date.now(),
-                name,
-                notes,
-                parentId
-            });
-
+            const newType = { id:'et_' + Date.now(), name, notes, parentId, chartAccountId:'' };
+            expenseTypesDB.push(newType);
+            linkExpenseTypeToChart(newType, true);
             persistExpenseTypes('save-expense-type');
             populateTypesSelect();
+            renderExpenseTree();
             closeModal('typeModal');
             showToast(parentId ? 'تمت إضافة المصروف الفرعي وربطه بالتصنيف الأساسي.' : 'تمت إضافة تصنيف المصروفات الأساسي.', 'success');
         }
@@ -901,6 +1016,7 @@
             const children = target.parentId ? [] : expenseSubtypes(target.id);
             const removedIds = new Set([String(target.id), ...children.map(item => String(item.id))]);
             const names = new Map([target, ...children].map(item => [String(item.id), String(item.name || '')]));
+            const linkedChartIds = [target, ...children].map(item => item.chartAccountId).filter(Boolean);
             let touchedExpenses = false;
             expensesDB = (Array.isArray(expensesDB) ? expensesDB : []).map(expense => {
                 const typeMatch = removedIds.has(String(expense?.typeId || ''));
@@ -918,9 +1034,11 @@
                 };
             });
             expenseTypesDB = expenseTypesDB.filter(type => !removedIds.has(String(type.id)));
+            linkedChartIds.reverse().forEach(accountId => { try { const acc=window.CashtopChart?.getAccount(accountId); if(acc && !acc.system) window.CashtopChart.deleteAccount(accountId); } catch (_) {} });
             persistExpenseTypes('delete-expense-type', touchedExpenses);
             closeModal('deleteExpenseTypeModal');
             populateTypesSelect();
+            renderExpenseTree();
             renderTable();
             showToast(children.length ? 'تم حذف التصنيف الأساسي وفروعه من القوائم.' : 'تم حذف نوع المصروف بنجاح.', 'success');
         }
@@ -950,6 +1068,7 @@
             populateExpenseCurrencySelect(expenseCurrencyConfig().baseCurrencyId);
             populateAccountsSelect();
             document.getElementById('expAccountSelect').value = '';
+            syncExpenseChartAccountFromType();
             document.getElementById('expDate').value = new Date().toISOString().split('T')[0];
             document.getElementById('expNotes').value = '';
             document.getElementById('expModalTitle').innerHTML = '<i class="fa-solid fa-money-bill-trend-up"></i> تسجيل مستند مصروف جديد';
@@ -974,6 +1093,7 @@
             document.getElementById('expAmount').value = expenseNativeAmount(exp);
             expenseMultiPayments = Array.isArray(exp.payments) ? exp.payments.map(item=>({...item})) : [];
             document.getElementById('expAccountSelect').value = expenseMultiPayments.length ? EXPENSE_MULTI_PAYMENT_VALUE : (exp.accountId || '');
+            populateExpenseChartAccounts(exp.chartAccountId || '');
             document.getElementById('expDate').value = exp.date ? exp.date.split('T')[0] : new Date().toISOString().split('T')[0];
             document.getElementById('expNotes').value = exp.notes || exp.note || '';
             document.getElementById('expModalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square"></i> تعديل مستند مصروف';
@@ -1013,7 +1133,7 @@
 
         function saveExpense(e) {
             e.preventDefault();
-            const editId=document.getElementById('editExpId').value,name=document.getElementById('expName').value.trim(),typeId=document.getElementById('expTypeSelect').value,subtypeId=document.getElementById('expSubtypeSelect')?.value||'',cfg=expenseCurrencyConfig(),currencyId=cfg.enabled?expenseCurrencyId():cfg.baseCurrencyId,amountNative=parseFloat(document.getElementById('expAmount').value),amount=window.CashtopMulti?.toBase?.(amountNative,currencyId)??amountNative,accountId=document.getElementById('expAccountSelect').value,date=document.getElementById('expDate').value,notes=document.getElementById('expNotes').value.trim();
+            const editId=document.getElementById('editExpId').value,name=document.getElementById('expName').value.trim(),typeId=document.getElementById('expTypeSelect').value,subtypeId=document.getElementById('expSubtypeSelect')?.value||'',cfg=expenseCurrencyConfig(),currencyId=cfg.enabled?expenseCurrencyId():cfg.baseCurrencyId,amountNative=parseFloat(document.getElementById('expAmount').value),amount=window.CashtopMulti?.toBase?.(amountNative,currencyId)??amountNative,accountId=document.getElementById('expAccountSelect').value,chartAccountId=(selectedExpenseTypeChartAccount()||document.getElementById('expChartAccountSelect')?.value||''),date=document.getElementById('expDate').value,notes=document.getElementById('expNotes').value.trim();
             if(!name||!typeId||isNaN(amountNative)||amountNative<=0||!accountId){showToast('الرجاء تعبئة جميع الحقول بشكل صحيح','error');return;}
             const availableSubtypes=expenseSubtypes(typeId);
             if(availableSubtypes.length&&!subtypeId){showToast('اختر المصروف الفرعي التابع لنوع المصروف الأساسي.','warning');return;}
@@ -1028,7 +1148,7 @@
                 const isMulti=accountId===EXPENSE_MULTI_PAYMENT_VALUE;
                 const target=editId?expensesDB.find(x=>x.id===editId):{};
                 if(!editId&&!target.createdAt)target.createdAt=new Date().toISOString();
-                Object.assign(target,{id:expenseId,name,typeId,subtypeId:subtypeId||'',amount,amountNative,currencyId,accountId:isMulti?EXPENSE_MULTI_PAYMENT_VALUE:payments[0].accountId,accountName:isMulti?'دفع متعدد':payments[0].accountName,paymentMethod:isMulti?'دفع متعدد':payments[0].accountName,payments:isMulti?payments.map(item=>({...item})):[],accountAmountNative:isMulti?null:Number(payments[0].accountAmount||0),accountCurrencyId:isMulti?null:payments[0].accountCurrencyId,date,notes});
+                Object.assign(target,{id:expenseId,name,typeId,subtypeId:subtypeId||'',typeName:expenseTypeById(typeId)?.name||'',subtypeName:expenseTypeById(subtypeId)?.name||'',chartAccountId:chartAccountId||'',amount,amountNative,currencyId,accountId:isMulti?EXPENSE_MULTI_PAYMENT_VALUE:payments[0].accountId,accountName:isMulti?'دفع متعدد':payments[0].accountName,paymentMethod:isMulti?'دفع متعدد':payments[0].accountName,payments:isMulti?payments.map(item=>({...item})):[],accountAmountNative:isMulti?null:Number(payments[0].accountAmount||0),accountCurrencyId:isMulti?null:payments[0].accountCurrencyId,date,notes});
                 if(!editId)expensesDB.push(target);
                 if(window.Cashtop?.atomicSetItems)window.Cashtop.atomicSetItems({cashtop_expenses:expensesDB,cashtop_funds_db_v4:fundsDB,cashtop_funds_db:fundsDB},{label:'save-expense'});else{localStorage.setItem('cashtop_expenses',JSON.stringify(expensesDB));localStorage.setItem('cashtop_funds_db_v4',JSON.stringify(fundsDB));localStorage.setItem('cashtop_funds_db',JSON.stringify(fundsDB));}
                 expenseMultiPayments=[];closeModal('expenseModal');initLayout();showToast(editId?'تم تحديث المصروف والقيود بنجاح':'تم تسجيل المصروف وخصمه من طريقة الدفع','success');

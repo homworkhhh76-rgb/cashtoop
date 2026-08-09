@@ -448,6 +448,10 @@
     <script>
         // Tab Switching Logic
         function switchTab(tab) {
+            if (tab === 'register') {
+                window.location.href = 'الباقات.html';
+                return;
+            }
             document.getElementById('tab-login').className = tab === 'login' 
                 ? 'flex-1 py-2.5 text-sm font-bold rounded-lg transition-all bg-white shadow-sm' 
                 : 'flex-1 py-2.5 text-sm font-bold rounded-lg transition-all text-gray-500 hover:text-gray-800';
@@ -620,7 +624,7 @@
 
     <script src="turso-config.js"></script>
     <script src="turso-rtdb.js"></script>
-    <script src="login.js?v=111"></script>
+    <script src="login.js?v=112"></script>
 
 </body>
 </html>

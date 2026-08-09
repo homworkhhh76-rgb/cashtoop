@@ -166,12 +166,13 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=100">
-    <script src="cashtop-core.js?v=111"></script>
-    <script src="multi-system.js?v=100"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=114">
+    <script src="cashtop-core.js?v=114"></script>
+    <script src="world-currencies.js?v=114"></script>
+    <script src="multi-system.js?v=114"></script>
     <script src="turso-config.js?v=100"></script><script src="turso-rtdb.js?v=100"></script>
-    <script src="accounting-engine.js?v=100"></script>
-    <script src="turso-sync.js?v=111"></script>
+    <script src="accounting-engine.js?v=114"></script>
+    <script src="turso-sync.js?v=114"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -378,10 +379,22 @@
                     <label id="accBalanceLabel">الرصيد الافتتاحي</label>
                     <input type="number" step="0.01" id="accBalance" class="form-control" placeholder="0.00" required>
                 </div>
-                <div class="form-group" id="accCurrencyGroup" style="display:none;">
+                <div class="form-group" id="accCurrencyGroup">
                     <label>عملة الصندوق / الحساب</label>
                     <select id="accCurrency" class="form-control"></select>
+                    <small style="color:#64748b;display:block;margin-top:6px;">اختر أي عملة عالمية بالاسم أو الرمز أو الدولة. تظهر الأعلام بصيغة SVG.</small>
                 </div>
+                <div class="form-group" id="accCurrencyRateGroup" style="display:none;">
+                    <label id="accCurrencyRateLabel">سعر صرف العملة</label>
+                    <input type="number" step="0.000001" min="0.000001" id="accCurrencyRate" class="form-control" placeholder="مثال: قيمة 100 من العملة الأساسية بهذه العملة">
+                    <small style="color:#64748b;">يُطلب فقط عند استخدام عملة جديدة لأول مرة، وبعدها تُحفظ في إعدادات العملات.</small>
+                </div>
+                <div class="form-group" id="accOpeningCounterpartGroup">
+                    <label>مصدر الرصيد الافتتاحي / الحساب المقابل</label>
+                    <select id="accOpeningCounterpart" class="form-control"></select>
+                    <small style="color:#64748b;">مثال: إذا كان البنك أو الصندوق ممولاً من المالك اختر «رأس المال». سيتم إنشاء قيد مدين للصندوق ودائن لرأس المال تلقائياً.</small>
+                </div>
+                <div id="accOpeningPreview" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:12px;font-weight:700;color:#475569;line-height:1.8;"></div>
                 <div class="form-group">
                     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
                         <input type="checkbox" id="accDropdownDefault" style="width:17px;height:17px;accent-color:#16a34a;">
@@ -595,17 +608,80 @@
         function accountCurrency(account) { const cfg=getCurrencyConfig(); return window.CashtopMulti?.getCurrency?.(account?.currencyId || cfg.baseCurrencyId) || cfg.base; }
         function accountMoney(amount, account) { const cur=accountCurrency(account); return `${Number(amount || 0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:3})} ${cur.symbol || cur.code || ''}`; }
         function accountBalanceBase(account) { return window.CashtopMulti?.toBase?.(Number(account?.balance || 0), account?.currencyId) ?? Number(account?.balance || 0); }
+        function currentWorldCurrency(code) {
+            return window.CashtopWorldCurrencies?.get?.(code) || null;
+        }
+        function configuredCurrency(code) {
+            return window.CashtopWorldCurrencies?.configured?.(code) || null;
+        }
+        function updateAccountCurrencyUi() {
+            const cfg = getCurrencyConfig();
+            const select = document.getElementById('accCurrency');
+            const rateGroup = document.getElementById('accCurrencyRateGroup');
+            const rateInput = document.getElementById('accCurrencyRate');
+            const rateLabel = document.getElementById('accCurrencyRateLabel');
+            const code = String(select?.value || cfg.baseCurrencyId || 'ILS').toUpperCase();
+            const meta = currentWorldCurrency(code) || accountCurrency({currencyId:code});
+            const known = configuredCurrency(code);
+            const needsRate = code !== String(cfg.baseCurrencyId || 'ILS').toUpperCase() && !known;
+            if (rateGroup) rateGroup.style.display = needsRate ? 'block' : 'none';
+            if (rateInput) rateInput.required = needsRate;
+            if (rateLabel) rateLabel.textContent = `سعر صرف ${meta?.name || code} — قيمة 100 ${cfg.base?.code || cfg.baseCurrencyId || ''}`;
+            const label = document.getElementById('accBalanceLabel');
+            if (label) label.textContent = `الرصيد الافتتاحي (${meta?.symbol || code})`;
+            updateFundOpeningPreview();
+        }
         function populateAccountCurrencySelect(selectedId = '') {
             const cfg = getCurrencyConfig();
             const group = document.getElementById('accCurrencyGroup');
             const select = document.getElementById('accCurrency');
             if (!select || !group) return;
-            group.style.display = cfg.enabled ? 'block' : 'none';
-            select.innerHTML = cfg.currencies.map(cur => `<option value="${String(cur.id)}">${String(cur.name)} (${String(cur.symbol || cur.code)})</option>`).join('');
-            select.value = selectedId && cfg.currencies.some(cur => String(cur.id) === String(selectedId)) ? selectedId : cfg.baseCurrencyId;
-            const label = document.getElementById('accBalanceLabel');
-            if (label) label.textContent = `الرصيد الافتتاحي (${accountCurrency({currencyId:select.value}).symbol || accountCurrency({currencyId:select.value}).code})`;
-            select.onchange = () => { if (label) label.textContent = `الرصيد الافتتاحي (${accountCurrency({currencyId:select.value}).symbol || accountCurrency({currencyId:select.value}).code})`; };
+            group.style.display = 'block';
+            const code = String(selectedId || cfg.baseCurrencyId || 'ILS').toUpperCase();
+            const meta = currentWorldCurrency(code);
+            select.innerHTML = `<option value="${code}">${meta?.name || code} (${meta?.symbol || code})</option>`;
+            select.value = code;
+            const picker = window.CashtopWorldCurrencies?.mountPicker?.(select, { value:code, fallbackCode:cfg.baseCurrencyId || 'ILS' });
+            picker?.set?.(code, false);
+            select.onchange = updateAccountCurrencyUi;
+            updateAccountCurrencyUi();
+        }
+        function populateFundOpeningCounterpart(selectedId = '') {
+            const select = document.getElementById('accOpeningCounterpart');
+            if (!select || !window.CashtopChart) return;
+            try { window.CashtopChart.ensure?.(); } catch (_) {}
+            const currentFundChart = document.getElementById('editAccountId')?.value ? window.CashtopChart.getFundAccount?.(document.getElementById('editAccountId').value) : null;
+            const accounts = (window.CashtopChart.getAccounts?.() || []).filter(a => a.active !== false && a.postable !== false && String(a.id) !== String(currentFundChart?.id || ''));
+            select.innerHTML = accounts.map(a => `<option value="${String(a.id)}">${String(a.code)} — ${String(a.name)}</option>`).join('');
+            const capital = window.CashtopChart.getByRole?.('CAPITAL');
+            const preferred = selectedId || capital?.id || accounts[0]?.id || '';
+            if (preferred && [...select.options].some(o => String(o.value) === String(preferred))) select.value = preferred;
+            updateFundOpeningPreview();
+        }
+        function setCurrencyPickerDisabled(disabled) {
+            const select = document.getElementById('accCurrency');
+            if (!select) return;
+            select.disabled = !!disabled;
+            const wrap = select.__ctWorldPicker?.wrap;
+            if (wrap) { wrap.style.pointerEvents = disabled ? 'none' : ''; wrap.style.opacity = disabled ? '.58' : ''; }
+        }
+        function updateFundOpeningPreview() {
+            const box = document.getElementById('accOpeningPreview');
+            if (!box) return;
+            const edit = !!document.getElementById('editAccountId')?.value;
+            const group = document.getElementById('accOpeningCounterpartGroup');
+            if (group) group.style.display = edit ? 'none' : 'block';
+            box.style.display = edit ? 'none' : 'block';
+            if (edit) return;
+            const amount = Math.abs(Number(document.getElementById('accBalance')?.value || 0));
+            const name = document.getElementById('accName')?.value?.trim() || 'الصندوق / الحساب الجديد';
+            const cpId = document.getElementById('accOpeningCounterpart')?.value || '';
+            const cp = window.CashtopChart?.getAccount?.(cpId);
+            const code = document.getElementById('accCurrency')?.value || getCurrencyConfig().baseCurrencyId;
+            const meta = currentWorldCurrency(code) || {symbol:code};
+            box.innerHTML = amount > 0
+                ? `<i class="fa-solid fa-link"></i> القيد التلقائي عند الحفظ: <b>مدين: ${name}</b> ← ${amount.toLocaleString('en-US')} ${meta.symbol || code} &nbsp; | &nbsp; <b>دائن: ${cp?.name || 'الحساب المقابل'}</b>.`
+                : '<i class="fa-solid fa-circle-info"></i> إذا أدخلت رصيداً افتتاحياً سينشئ النظام قيداً محاسبياً متوازناً تلقائياً، ولن يكون الرصيد رقماً منفصلاً عن شجرة الحسابات.';
         }
 
         window.onload = function() {
@@ -619,7 +695,7 @@
             }
             normalizeAccountCurrencies();
             dedupeAccountLogs(false);
-            localStorage.setItem('cashtop_funds_db', JSON.stringify(cashtop_funds_db));
+            if (!window.Cashtop?.isSubscriptionExpired?.() && !window.Cashtop?.isFinancialGroupReadOnly?.()) localStorage.setItem('cashtop_funds_db', JSON.stringify(cashtop_funds_db));
             initLayout();
         };
 
@@ -850,6 +926,9 @@
             }
         }
 
+        ['accBalance','accName'].forEach(id => document.getElementById(id)?.addEventListener('input', updateFundOpeningPreview));
+        document.getElementById('accOpeningCounterpart')?.addEventListener('change', updateFundOpeningPreview);
+
         /* ========================================================== */
         /*   إضافة وتعديل حساب (بمنطق سليم يمنع التكرار)              */
         /* ========================================================== */
@@ -861,7 +940,10 @@
             document.getElementById('accBalance').disabled = false;
             document.getElementById('accDropdownDefault').checked = false;
             populateAccountCurrencySelect(getCurrencyConfig().baseCurrencyId);
-            document.getElementById('accCurrency').disabled = false;
+            setCurrencyPickerDisabled(false);
+            document.getElementById('accCurrencyRate').value = '';
+            populateFundOpeningCounterpart();
+            updateFundOpeningPreview();
             toggleOtherType();
             document.getElementById('accountModalTitle').innerHTML = '<i class="fa-solid fa-wallet"></i> إضافة صندوق مالي جديد';
             openModal('accountModal');
@@ -894,7 +976,9 @@
                 document.getElementById('accBalance').value = acc.balance;
                 document.getElementById('accBalance').disabled = true; // منع التلاعب بالرصيد أثناء التعديل
                 populateAccountCurrencySelect(acc.currencyId || getCurrencyConfig().baseCurrencyId);
-                document.getElementById('accCurrency').disabled = Math.abs(Number(acc.balance || 0)) > 0;
+                setCurrencyPickerDisabled(Math.abs(Number(acc.balance || 0)) > 0);
+                populateFundOpeningCounterpart();
+                updateFundOpeningPreview();
                 document.getElementById('accNotes').value = acc.notes || '';
                 document.getElementById('accDropdownDefault').checked = acc.isDropdownDefault === true;
                 
@@ -941,23 +1025,68 @@
                 if (acc) {
                     acc.name = usernameToSave;
                     acc.type = finalType;
-                    if (!document.getElementById('accCurrency').disabled) acc.currencyId = document.getElementById('accCurrency').value || getCurrencyConfig().baseCurrencyId;
+                    if (!document.getElementById('accCurrency').disabled) {
+                        const selectedCurrency = document.getElementById('accCurrency').value || getCurrencyConfig().baseCurrencyId;
+                        const rate = Number(document.getElementById('accCurrencyRate').value || 0);
+                        window.CashtopWorldCurrencies?.ensureConfigured?.(selectedCurrency, rate);
+                        acc.currencyId = selectedCurrency;
+                    }
                     acc.notes = notes;
                     if (makeDropdownDefault) cashtop_funds_db.accounts.forEach(item => { item.isDropdownDefault = String(item.id) === String(acc.id); });
                     else acc.isDropdownDefault = false;
                     showToast('تم تعديل بيانات الحساب بنجاح.', 'success');
                 }
             } else {
-                const balance = parseFloat(document.getElementById('accBalance').value) || 0;
+                const balance = Math.abs(parseFloat(document.getElementById('accBalance').value) || 0);
                 const newId = Date.now();
-                const currencyId = getCurrencyConfig().enabled ? (document.getElementById('accCurrency').value || getCurrencyConfig().baseCurrencyId) : getCurrencyConfig().baseCurrencyId;
+                const currencyId = document.getElementById('accCurrency').value || getCurrencyConfig().baseCurrencyId;
+                const rate = Number(document.getElementById('accCurrencyRate').value || 0);
+                try { window.CashtopWorldCurrencies?.ensureConfigured?.(currencyId, rate); }
+                catch (err) { showToast(err?.message || 'أدخل سعر صرف صحيح للعملة.', 'error'); return; }
                 if (makeDropdownDefault) cashtop_funds_db.accounts.forEach(item => { item.isDropdownDefault = false; });
-                cashtop_funds_db.accounts.push({ id: newId, name: usernameToSave, type: finalType, balance: balance, currencyId, notes: notes, isDropdownDefault: makeDropdownDefault });
-                if (Math.abs(balance) > 0.0000001) cashtop_funds_db.accountLogs.push({ id:`OPEN_ACC_${newId}`, sourceType:'accountOpening', sourceId:String(newId), accountId: newId, date: new Date().toLocaleString('en-GB'), type: "إيداع", amount: balance, baseAmount: window.CashtopMulti?.toBase?.(balance, currencyId) ?? balance, currencyId, notes: "رصيد افتتاحي عند الإنشاء" });
-                showToast('تم إنشاء الصندوق وحفظه بنجاح!', 'success');
+                // يبدأ الحساب بصفر ثم يُثبت الرصيد بقيد مزدوج؛ بهذه الطريقة يبقى الصندوق وشجرة الحسابات متطابقين.
+                cashtop_funds_db.accounts.push({ id: newId, name: usernameToSave, type: finalType, balance: 0, currencyId, notes: notes, isDropdownDefault: makeDropdownDefault, active:true });
+                localStorage.setItem('cashtop_funds_db_v4', JSON.stringify(cashtop_funds_db));
+                try {
+                    window.CashtopChart?.ensure?.();
+                    const fundAccount = window.CashtopChart?.getFundAccount?.(newId, usernameToSave);
+                    if (!fundAccount?.id) throw new Error('تعذر ربط الصندوق بشجرة الحسابات.');
+                    if (balance > 0.0000001) {
+                        const baseAmount = window.CashtopMulti?.toBase?.(balance, currencyId) ?? balance;
+                        const counterpartId = document.getElementById('accOpeningCounterpart').value || window.CashtopChart?.getByRole?.('CAPITAL')?.id;
+                        window.CashtopChart?.postTransaction?.({
+                            amount:baseAmount,
+                            debitAccountId:fundAccount.id,
+                            creditAccountId:counterpartId,
+                            date:new Date().toISOString().slice(0,10),
+                            description:`إثبات الرصيد الافتتاحي لـ ${usernameToSave}`,
+                            reference:`FUND-OPEN-${newId}`,
+                            sourceType:'fund-opening', sourceId:String(newId)
+                        });
+                    }
+                    const fresh = JSON.parse(localStorage.getItem('cashtop_funds_db') || localStorage.getItem('cashtop_funds_db_v4') || '{}');
+                    if (fresh && Array.isArray(fresh.accounts)) cashtop_funds_db = fresh;
+                    showToast('تم إنشاء الصندوق وربطه بشجرة الحسابات والقيد المحاسبي بنجاح.', 'success');
+                } catch (err) {
+                    cashtop_funds_db.accounts = cashtop_funds_db.accounts.filter(item => String(item.id) !== String(newId));
+                    localStorage.setItem('cashtop_funds_db_v4', JSON.stringify(cashtop_funds_db));
+                    showToast(err?.message || 'تعذر إنشاء القيد المحاسبي.', 'error');
+                    return;
+                }
             }
 
             localStorage.setItem('cashtop_funds_db_v4', JSON.stringify(cashtop_funds_db));
+            if (isEditMode && editingAccount) {
+                try {
+                    window.CashtopChart?.ensure?.();
+                    const linked = window.CashtopChart?.getFundAccount?.(editingAccount.id, usernameToSave);
+                    if (linked?.id && linked.externalRef?.type === 'fund') {
+                        window.CashtopChart?.updateAccount?.(linked.id, { ...linked, name:usernameToSave, currencyId:editingAccount.currencyId || getCurrencyConfig().baseCurrencyId, entityKind:finalType });
+                        const fresh = JSON.parse(localStorage.getItem('cashtop_funds_db') || localStorage.getItem('cashtop_funds_db_v4') || '{}');
+                        if (fresh && Array.isArray(fresh.accounts)) cashtop_funds_db = fresh;
+                    }
+                } catch (err) { console.warn('[CASH TOP] تعذر تحديث اسم الحساب المرتبط بالشجرة', err); }
+            }
             closeModal('accountModal');
             initLayout();
         }
@@ -992,6 +1121,7 @@
                 localStorage.setItem(`ct_funds_manual_delete::${encodeURIComponent(companyId)}::${encodeURIComponent(groupId)}`, '1');
             } catch (_) {}
             localStorage.setItem('cashtop_funds_db_v4', JSON.stringify(cashtop_funds_db));
+            try { window.CashtopChart?.ensure?.(); window.CashtopChart?.rebuildJournal?.(); } catch (_) {}
             initLayout();
             closeModal('deleteModal');
             showToast('تم حذف الصندوق فقط. لم يتم عكس أو حذف أي حركة مالية تاريخية.', 'success');
@@ -1025,17 +1155,27 @@
             const toCurrencyId = toAcc.currencyId || getCurrencyConfig().baseCurrencyId;
             const baseAmount = window.CashtopMulti?.toBase?.(amount, fromCurrencyId) ?? amount;
             const creditedAmount = window.CashtopMulti?.fromBase?.(baseAmount, toCurrencyId) ?? amount;
-            fromAcc.balance -= amount;
-            toAcc.balance += creditedAmount;
-
-            cashtop_funds_db.accountLogs.push({ accountId: fromId, date: logDate, type: "سحب", amount, baseAmount, currencyId: fromCurrencyId, exchangeToCurrencyId: toCurrencyId, notes: `تحويل صادر إلى حساب [${toAcc.name}] | ${notes}` });
-            cashtop_funds_db.accountLogs.push({ accountId: toId, date: logDate, type: "إيداع", amount: creditedAmount, baseAmount, currencyId: toCurrencyId, exchangeFromCurrencyId: fromCurrencyId, notes: `تحويل وارد من حساب [${fromAcc.name}] | ${notes}` });
-
-            localStorage.setItem('cashtop_funds_db_v4', JSON.stringify(cashtop_funds_db));
+            try {
+                window.CashtopChart?.ensure?.();
+                const fromChart = window.CashtopChart?.getFundAccount?.(fromId, fromAcc.name);
+                const toChart = window.CashtopChart?.getFundAccount?.(toId, toAcc.name);
+                if (!fromChart?.id || !toChart?.id) throw new Error('تعذر ربط أحد الصندوقين بشجرة الحسابات.');
+                window.CashtopChart?.postTransaction?.({
+                    amount:baseAmount,
+                    debitAccountId:toChart.id,
+                    creditAccountId:fromChart.id,
+                    date:new Date().toISOString().slice(0,10),
+                    description:`تحويل من ${fromAcc.name} إلى ${toAcc.name}${notes ? ` — ${notes}` : ''}`,
+                    reference:`FUND-TRANSFER-${Date.now()}`,
+                    sourceType:'fund-transfer'
+                });
+                const fresh = JSON.parse(localStorage.getItem('cashtop_funds_db') || localStorage.getItem('cashtop_funds_db_v4') || '{}');
+                if (fresh && Array.isArray(fresh.accounts)) cashtop_funds_db = fresh;
+            } catch (err) { showToast(err?.message || 'تعذر ترحيل التحويل محاسبياً.', 'error'); return; }
             document.getElementById('transferForm').reset();
             closeModal('transferModal');
             initLayout();
-            showToast(`تم التحويل: ${accountMoney(amount, fromAcc)} ← ${accountMoney(creditedAmount, toAcc)} وتم ترحيل فرق العملة حسب سعر الصرف.`, 'success');
+            showToast(`تم التحويل محاسبياً: ${accountMoney(amount, fromAcc)} ← ${accountMoney(creditedAmount, toAcc)} بقيد مباشر بين الحسابين.`, 'success');
         }
 
         /* ========================================================== */

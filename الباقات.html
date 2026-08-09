@@ -136,53 +136,10 @@
         </div>
     </div>
 
-    <!-- Cards Grid (Forced 3 columns everywhere) -->
+    <!-- Cards Grid (Plus + Pro) -->
     <div class="w-full max-w-5xl">
-        <div class="grid grid-cols-3 gap-1 sm:gap-6 items-stretch w-full mx-auto">
+        <div class="grid grid-cols-2 gap-2 sm:gap-6 items-stretch w-full mx-auto">
             
-            <!-- Plan 1: Classic (Free) -->
-            <div class="card-container bg-white border border-gray-100 flex flex-col relative" onclick="flipCard(this)">
-                <!-- Header -->
-                <div class="text-center font-bold title-text text-gray-800">
-                    باقة كلاسيك
-                </div>
-                <p class="text-center text-gray-500 font-semibold text-[0.5rem] sm:text-xs leading-relaxed px-1 mb-1">للمتاجر الصغيرة والاستخدام الأساسي لاكتشاف مميزات النظام.</p>
-                
-                <!-- Black Box -->
-                <div class="black-box font-bold">
-                    <span>100 صنف</span>
-                    <i class="fa-solid fa-cube text-gray-400"></i>
-                </div>
-                
-                <!-- Price -->
-                <div class="text-center mb-4 sm:mb-6">
-                    <div class="price-text font-black text-gray-900">0</div>
-                    <div class="currency-text text-gray-500 font-bold">شيكل</div>
-                </div>
-                
-                <!-- Features -->
-                <ul class="feature-list flex flex-col flex-1 text-right font-semibold text-gray-700">
-                    <li class="flex items-start gap-1 sm:gap-2 feature-item"><i class="fa-solid fa-square-check feature-icon text-gray-800 mt-0.5 sm:mt-1"></i><span>50 فاتورة مبيعات / يوم</span></li>
-                    <li class="flex items-start gap-1 sm:gap-2 feature-item"><i class="fa-solid fa-square-check feature-icon text-gray-800 mt-0.5 sm:mt-1"></i><span>5 فواتير مشتريات / يوم</span></li>
-                    <li class="flex items-start gap-1 sm:gap-2 feature-item"><i class="fa-solid fa-square-check feature-icon text-gray-800 mt-0.5 sm:mt-1"></i><span>10 سندات قبض وصرف / يوم</span></li>
-                    <li class="flex items-start gap-1 sm:gap-2 feature-item"><i class="fa-solid fa-arrows-rotate feature-icon text-gray-800 mt-0.5 sm:mt-1"></i><span>مزامنة يومية مجانية للبيانات</span></li>
-                    <li class="flex items-start gap-1 sm:gap-2 feature-item"><i class="fa-solid fa-box feature-icon text-gray-800 mt-0.5 sm:mt-1"></i><span>100 منتج كحد أقصى</span></li>
-                    <li class="flex items-start gap-1 sm:gap-2 feature-item"><i class="fa-solid fa-users feature-icon text-gray-800 mt-0.5 sm:mt-1"></i><span>2 موظفين</span></li>
-                    <li class="flex items-start gap-1 sm:gap-2 feature-item"><i class="fa-solid fa-address-book feature-icon text-gray-800 mt-0.5 sm:mt-1"></i><span>50 جهة للعملاء والموردين</span></li>
-                    <li class="flex items-start gap-1 sm:gap-2 feature-item"><i class="fa-solid fa-store feature-icon text-gray-800 mt-0.5 sm:mt-1"></i><span>فرع / POS واحد</span></li>
-                    <li class="flex items-start gap-1 sm:gap-2 feature-item"><i class="fa-solid fa-warehouse feature-icon text-gray-800 mt-0.5 sm:mt-1"></i><span>مستودع رئيسي واحد</span></li>
-                    <li class="flex items-start gap-1 sm:gap-2 feature-item text-purple-700"><i class="fa-solid fa-arrow-up-right-dots feature-icon text-purple-600 mt-0.5 sm:mt-1"></i><span>بوابة العملاء <strong class="whitespace-nowrap">تتطلب ترقية</strong></span></li>
-                    <li class="flex items-start gap-1 sm:gap-2 feature-item text-purple-700"><i class="fa-solid fa-arrow-up-right-dots feature-icon text-purple-600 mt-0.5 sm:mt-1"></i><span>التصنيع وعروض المبيعات</span></li>
-                    <li class="flex items-start gap-1 sm:gap-2 feature-item text-purple-700"><i class="fa-solid fa-arrow-up-right-dots feature-icon text-purple-600 mt-0.5 sm:mt-1"></i><span>دفتر الأستاذ والمجموعات والمناديب</span></li>
-                    <li class="flex items-start gap-1 sm:gap-2 feature-item text-purple-700"><i class="fa-solid fa-arrow-up-right-dots feature-icon text-purple-600 mt-0.5 sm:mt-1"></i><span>نسخ/استيراد الأقسام</span></li>
-                </ul>
-                
-                <!-- Button as Link -->
-                <a href="صفحة تسجيل الدخول.html?tab=register" onclick="event.stopPropagation();" class="block w-full text-center bg-gray-800 text-white font-bold btn-pill hover:bg-gray-900 transition-colors mt-auto shadow-md">
-                    ابدأ مجاناً
-                </a>
-            </div>
-
             <!-- Plan 2: Plus -->
             <div class="card-container bg-white border-2 border-pink-400 shadow-lg flex flex-col relative" onclick="flipCard(this)">
                 <!-- Header -->
@@ -212,7 +169,7 @@
                     <li class="flex items-start gap-1 sm:gap-2 feature-item"><i class="fa-solid fa-square-check feature-icon text-pink-500 mt-0.5 sm:mt-1"></i><span>فرعان + مستودعان لكل فرع</span></li>
                     <li class="flex items-start gap-1 sm:gap-2 feature-item"><i class="fa-solid fa-square-check feature-icon text-pink-500 mt-0.5 sm:mt-1"></i><span>3 موظفين لكل فرع</span></li>
                     <li class="flex items-start gap-1 sm:gap-2 feature-item"><i class="fa-solid fa-square-check feature-icon text-pink-500 mt-0.5 sm:mt-1"></i><span>20 مصروف / يوم</span></li>
-                    <li class="flex items-start gap-1 sm:gap-2 feature-item"><i class="fa-solid fa-square-check feature-icon text-pink-500 mt-0.5 sm:mt-1"></i><span>التصنيع والعروض ودفتر الأستاذ</span></li>
+                    <li class="flex items-start gap-1 sm:gap-2 feature-item"><i class="fa-solid fa-square-check feature-icon text-pink-500 mt-0.5 sm:mt-1"></i><span>التصنيع والعروض ودفتر الأستاذ وشجرة الحسابات</span></li>
                     <li class="flex items-start gap-1 sm:gap-2 feature-item"><i class="fa-solid fa-square-check feature-icon text-pink-500 mt-0.5 sm:mt-1"></i><span>المجموعات والمناديب ونسخ الأقسام</span></li>
                     <li class="flex items-start gap-1 sm:gap-2 feature-item text-gray-400"><i class="fa-solid fa-square-xmark feature-icon text-gray-300 mt-0.5 sm:mt-1"></i><span class="line-through">بوابة العملاء</span></li>
                 </ul>
@@ -254,7 +211,7 @@
                     <li class="flex items-start gap-1 sm:gap-2 feature-item"><i class="fa-solid fa-infinity feature-icon text-purple-400 mt-0.5 sm:mt-1"></i><span>مستخدمون وفروع ومستودعات بلا حدود</span></li>
                     <li class="flex items-start gap-1 sm:gap-2 feature-item"><i class="fa-solid fa-square-check feature-icon text-purple-400 mt-0.5 sm:mt-1"></i><span>المشتريات والسندات والمصاريف بلا حدود الخطة</span></li>
                     <li class="flex items-start gap-1 sm:gap-2 feature-item"><i class="fa-solid fa-square-check feature-icon text-purple-400 mt-0.5 sm:mt-1"></i><span>التصنيع وعروض المبيعات</span></li>
-                    <li class="flex items-start gap-1 sm:gap-2 feature-item"><i class="fa-solid fa-square-check feature-icon text-purple-400 mt-0.5 sm:mt-1"></i><span>دفتر الأستاذ ومجموعات العملاء والمناديب</span></li>
+                    <li class="flex items-start gap-1 sm:gap-2 feature-item"><i class="fa-solid fa-square-check feature-icon text-purple-400 mt-0.5 sm:mt-1"></i><span>دفتر الأستاذ وشجرة الحسابات ومجموعات العملاء والمناديب</span></li>
                     <li class="flex items-start gap-1 sm:gap-2 feature-item"><i class="fa-solid fa-square-check feature-icon text-purple-400 mt-0.5 sm:mt-1"></i><span>نسخ واستيراد الأقسام</span></li>
                     <li class="flex items-start gap-1 sm:gap-2 feature-item"><i class="fa-solid fa-square-check feature-icon text-purple-400 mt-0.5 sm:mt-1"></i><span class="text-white font-bold">بوابة العملاء</span></li>
                     <li class="flex items-start gap-1 sm:gap-2 feature-item"><i class="fa-solid fa-headset feature-icon text-purple-400 mt-0.5 sm:mt-1"></i><span>جميع أدوات النظام المتقدمة</span></li>

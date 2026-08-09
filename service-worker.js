@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v111-support-admin-stop-key-fast-cache';
+const CACHE_VERSION = 'v114-accounting-summary-classic-lock';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = 'cash-top-2-remote-static-persistent-v1';
 
@@ -20,6 +20,7 @@ const LOCAL_ASSETS = [
   './branches.html',
   './cashier.html',
   './categories.html',
+  './chart-accounts.html',
   './cashtop-core.css',
   './cashtop-core.js',
   './turso-config.js',
@@ -65,6 +66,7 @@ const LOCAL_ASSETS = [
   './tax-settings.html',
   './units.html',
   './warehouses.html',
+  './world-currencies.js',
   './ادارة التصنيع.html',
   './استيراد وتصدير ل كل قسم.html',
   './التقارير.html',

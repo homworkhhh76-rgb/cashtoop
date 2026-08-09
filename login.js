@@ -1054,37 +1054,7 @@
 
   async function handleRegister(event) {
     event?.preventDefault?.();
-    const button = document.getElementById('registerButton');
-    const password = document.getElementById('regPassword')?.value || '';
-    const confirmPassword = document.getElementById('regConfirmPassword')?.value || '';
-    if (confirmPassword && password !== confirmPassword) return showStatus('كلمتا المرور غير متطابقتين.', 'warning');
-    const form = {
-      companyName:document.getElementById('regCompanyName')?.value,
-      phone:document.getElementById('regPhone')?.value,
-      email:document.getElementById('regEmail')?.value,
-      address:document.getElementById('regAddress')?.value,
-      currencyText:document.getElementById('selected-currency-text')?.textContent || 'شيكل (ILS)',
-      logoFile:document.getElementById('logo-upload')?.files?.[0] || null,
-      companyKey:document.getElementById('generated-key')?.value,
-      username:document.getElementById('regUsername')?.value,
-      password
-    };
-    if (button) { button.disabled=true; button.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i><span>جاري إنشاء الحساب...</span>'; }
-    showStatus('جاري إنشاء حساب الشركة وتجهيز المزامنة...', 'info');
-    try {
-      const created = await createClassicRegistration(form);
-      const keyField = document.getElementById('generated-key'); if (keyField) keyField.value = created.key;
-      const loginKey = document.getElementById('companyKey'); if (loginKey) loginKey.value = created.key;
-      const loginUser = document.getElementById('username'); if (loginUser) loginUser.value = created.username;
-      const loginPass = document.getElementById('password'); if (loginPass) loginPass.value = created.password;
-      showStatus('تم إنشاء الحساب بنجاح. جاري فتح النظام...', 'success');
-      await databaseLogin(created.key,created.username,created.password,true);
-      await loginDurableWriteChain.catch(()=>false);
-      setTimeout(()=>location.replace(nextPageAfterLogin(readTabSession())),120);
-    } catch (error) {
-      console.error(error); showStatus(error?.message || 'تعذر إنشاء الحساب.', 'error');
-      if (button) { button.disabled=false; button.innerHTML='<span>إنشاء الحساب مجاناً</span><i class="fa-solid fa-rocket"></i>'; }
-    }
+    window.location.href = 'الباقات.html';
   }
 
   async function handleLogin(event) {

@@ -53,7 +53,7 @@
     'cashtop_company_access',
     'cashtop_workers', 'cashtop_sales_agents', 'cashtop_agent_movements',
     'cashtop_settings', 'cashtop_db', 'cashtop_printer_settings', 'cashtop_barcode_settings', 'cashtop_invoice_design',
-    'cashtop_sms_template', 'cashtop_invoice_message_template', 'cashtop_journal', 'cashtop_journal_reversal_archive', 'cashtop_audit_log',
+    'cashtop_sms_template', 'cashtop_invoice_message_template', 'cashtop_chart_accounts', 'cashtop_manual_journal_entries', 'cashtop_chart_opening_balances', 'cashtop_chart_transactions', 'cashtop_journal', 'cashtop_journal_reversal_archive', 'cashtop_audit_log',
     'cashtop_sales_offers', 'cashtop_tax_settings', 'cashtop_notification_settings',
     'cashtop_financial_groups', 'cashtop_opening_balances',
 'cashtop_manufacturing_recipes', 'cashtop_manufacturing_orders',
@@ -77,7 +77,7 @@
     'cashtop_expenses', 'cashtop_funds_db', 'cashtop_vouchers',
     'cashtop_transfer_history', 'cashtop_branch_transfer_history',
     'cashtop_workers', 'cashtop_sales_agents', 'cashtop_agent_movements',
-    'cashtop_journal', 'cashtop_journal_reversal_archive', 'cashtop_audit_log', 'cashtop_material_purchases',
+    'cashtop_journal', 'cashtop_manual_journal_entries', 'cashtop_chart_opening_balances', 'cashtop_chart_transactions', 'cashtop_journal_reversal_archive', 'cashtop_audit_log', 'cashtop_material_purchases',
     'cashtop_manufacturing_orders', 'cashtop_wastage', 'cashtop_archive_index',
     'cashtop_salary_payments', OPENING_BALANCES_KEY
   ]);
@@ -85,7 +85,7 @@
     'cashtop_invoices', 'cashtop_sales_reversals', 'cashtop_sales_returns', 'cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_purchase_returns',
     'cashtop_expenses', 'cashtop_vouchers', 'cashtop_supplier_movements',
     'cashtop_transfer_history', 'cashtop_branch_transfer_history',
-    'cashtop_journal', 'cashtop_journal_reversal_archive', 'cashtop_audit_log', 'cashtop_material_purchases',
+    'cashtop_journal', 'cashtop_manual_journal_entries', 'cashtop_chart_opening_balances', 'cashtop_chart_transactions', 'cashtop_journal_reversal_archive', 'cashtop_audit_log', 'cashtop_material_purchases',
     'cashtop_agent_movements', 'cashtop_manufacturing_orders', 'cashtop_wastage',
     'cashtop_salary_payments', 'cashtop_archive_index'
   ]);
@@ -103,7 +103,7 @@
       ['shortages.view', 'عرض نواقص المخزون'], ['barcode.view', 'فتح مولد الباركود'],
       ['customers.view', 'عرض العملاء'], ['customerGroups.view', 'عرض مجموعات العملاء'],
       ['suppliers.view', 'عرض الموردين'], ['agents.view', 'عرض المناديب'],
-      ['accounts.view', 'عرض الحسابات والصناديق'], ['journal.view', 'عرض دفتر الأستاذ'],
+      ['accounts.view', 'عرض الحسابات والصناديق'], ['chartAccounts.view', 'عرض شجرة الحسابات'], ['journal.view', 'عرض دفتر الأستاذ'],
       ['vouchers.view', 'عرض سندات القبض والصرف'], ['expenses.view', 'عرض المصاريف'],
       ['reports.view', 'عرض التقارير'], ['financialGroups.view', 'عرض المجموعات المالية'], ['employees.view', 'عرض الموظفين'], ['workers.view', 'عرض العمال والأجور'],
       ['manufacturing.view', 'عرض إدارة التصنيع'], ['offers.view', 'عرض عروض المبيعات'], ['notifications.view', 'عرض الإشعارات'], ['settings.system', 'فتح إعدادات النظام'],
@@ -143,6 +143,8 @@
     ]},
     { id: 'finance', title: 'الصلاحيات المالية والمحاسبية', permissions: [
       ['accounts.manage', 'إضافة وتعديل وحذف الصناديق والحسابات'],
+      ['chartAccounts.manage', 'إضافة وتعديل وأرشفة حسابات شجرة الحسابات'], ['chartAccounts.export', 'تصدير شجرة الحسابات وميزان المراجعة'],
+      ['journal.manual', 'إضافة وتعديل وحذف القيود اليومية اليدوية'],
       ['finance.transactions', 'إضافة التحويلات والحركات المالية'],
       ['finance.deleteTransactions', 'حذف وعكس الحركات المالية'], ['finance.export', 'تصدير الحسابات والحركات'],
       ['expenses.manage', 'إضافة وتعديل وحذف المصاريف وأنواعها'], ['expenses.export', 'تصدير المصاريف'],
@@ -175,7 +177,7 @@
     'warehouses.html': 'warehouses.view', 'branches.html': ['branches.view', 'inventory.transfer'], 'units.html': 'units.view',
     'shortages.html': 'shortages.view', 'barcode-generator.html': 'barcode.view', 'customers.html': 'customers.view',
     'customer-groups.html': 'customerGroups.view', 'suppliers.html': 'suppliers.view', 'المناديب.html': 'agents.view',
-    'accounts.html': 'accounts.view', 'journal.html': 'journal.view', 'financial-groups.html': 'financialGroups.view', 'sands.html': 'vouchers.view',
+    'accounts.html': 'accounts.view', 'chart-accounts.html': 'chartAccounts.view', 'journal.html': 'journal.view', 'financial-groups.html': 'financialGroups.view', 'sands.html': 'vouchers.view',
     'المصاريف.html': 'expenses.view', 'التقارير.html': 'reports.view', 'الموظفين.html': 'employees.view',
     'العمال والاجور.html': 'workers.view', 'ادارة التصنيع.html': 'manufacturing.view', 'sales-offers.html': 'offers.view', 'notifications.html': 'notifications.view', 'setting.html': 'settings.system', 'printer-settings.html': 'settings.printer',
     'tax-settings.html': 'settings.tax', 'storage-settings.html': 'settings.storage',
@@ -344,7 +346,7 @@
     products: ['products.view', 'materials.view', 'warehouses.view', 'branches.view', 'units.view', 'shortages.view', 'barcode.view', 'products.create', 'products.edit', 'products.delete', 'products.export', 'materials.manage', 'materials.export', 'inventory.adjust', 'inventory.transfer', 'inventory.importExport', 'warehouses.manage', 'branches.manage', 'units.manage', 'shortages.supply', 'barcode.manage'],
     customers: ['customers.view', 'customerGroups.view', 'sales.invoices.view', 'customers.create', 'customers.edit', 'customers.delete', 'customers.balance', 'customers.export', 'customerGroups.manage'],
     suppliers: ['suppliers.view', 'purchases.view', 'purchaseReturns.view', 'purchases.create', 'purchases.edit', 'purchases.delete', 'purchases.export', 'purchases.discount', 'purchaseReturns.create', 'purchaseReturns.edit', 'purchaseReturns.delete', 'purchaseReturns.export', 'suppliers.create', 'suppliers.edit', 'suppliers.delete', 'suppliers.balance', 'suppliers.export'],
-    funds: ['accounts.view', 'journal.view', 'vouchers.view', 'expenses.view', 'accounts.manage', 'finance.transactions', 'finance.deleteTransactions', 'finance.export', 'expenses.manage', 'expenses.export', 'vouchers.manage', 'vouchers.export', 'journal.manage', 'journal.export'],
+    funds: ['accounts.view', 'chartAccounts.view', 'journal.view', 'vouchers.view', 'expenses.view', 'accounts.manage', 'chartAccounts.manage', 'chartAccounts.export', 'journal.manual', 'finance.transactions', 'finance.deleteTransactions', 'finance.export', 'expenses.manage', 'expenses.export', 'vouchers.manage', 'vouchers.export', 'journal.manage', 'journal.export'],
     reports: ['reports.view', 'reports.export', 'reports.send'],
     settings: ['employees.view', 'workers.view', 'agents.view', 'manufacturing.view', 'offers.view', 'notifications.view', 'settings.system', 'settings.printer', 'settings.tax', 'settings.storage', 'backup.manage', 'employees.manage', 'employees.export', 'permissions.manage', 'workers.manage', 'workers.payments', 'workers.export', 'agents.manage', 'agents.stock', 'agents.settle', 'agents.payments', 'agents.export', 'manufacturing.manage', 'settings.edit', 'settings.sms', 'printer.edit', 'tax.edit', 'storage.manage', 'offers.manage', 'notifications.manage', 'sync.run', 'backup.exportImport', 'app.install']
   };
@@ -2393,7 +2395,7 @@
     'cashtop_transfer_history','cashtop_branches','cashtop_branch_transfer_history','cashtop_employees',
     'cashtop_workers','cashtop_sales_agents','cashtop_agent_movements','cashtop_sales_offers',
     'cashtop_manufacturing_recipes','cashtop_manufacturing_orders','cashtop_wastage','cashtop_salary_payments',
-    'cashtop_journal','cashtop_journal_reversal_archive','cashtop_financial_groups','cashtop_opening_balances'
+    'cashtop_chart_accounts','cashtop_manual_journal_entries','cashtop_chart_opening_balances','cashtop_chart_transactions','cashtop_journal','cashtop_journal_reversal_archive','cashtop_financial_groups','cashtop_opening_balances'
   ]);
   const LOSSLESS_OBJECT_DATASETS = new Set(['cashtop_funds_db']);
 
@@ -4176,7 +4178,7 @@
     'products.html': 'المنتجات والمخزون', 'categories.html': 'إدارة التصنيفات', 'materials.html': 'الأصناف الخام', 'invoices.html': 'فواتير المبيعات',
     'المشتريات.html': 'فواتير المشتريات', 'مرجع المبيعات.html': 'مرتجع المبيعات', 'مرجع المشتريات.html': 'مرتجع المشتريات',
     'customers.html': 'العملاء', 'customer-groups.html': 'مجموعات العملاء',
-    'suppliers.html': 'الموردون', 'accounts.html': 'الحسابات والصناديق', 'financial-groups.html': 'المجموعات المالية',
+    'suppliers.html': 'الموردون', 'accounts.html': 'الحسابات والصناديق', 'chart-accounts.html': 'شجرة الحسابات', 'financial-groups.html': 'المجموعات المالية',
     'sands.html': 'سندات القبض والصرف', 'journal.html': 'دفتر الأستاذ العام', 'المصاريف.html': 'المصاريف',
     'warehouses.html': 'المخازن', 'branches.html': 'الفروع', 'units.html': 'الوحدات',
     'shortages.html': 'نواقص المخزون', 'barcode-generator.html': 'مولد الباركود',
@@ -4224,6 +4226,7 @@
     'ادارة التصنيع.html':'manufacturing',
     'sales-offers.html':'sales-offers',
     'journal.html':'journal',
+    'chart-accounts.html':'chart-accounts',
     'customer-groups.html':'customer-groups',
     'المناديب.html':'agents'
   });
@@ -4283,7 +4286,7 @@
       ['fa-boxes-stacked','المخزون والفروع', [['products.html','المنتجات'],['categories.html','التصنيفات'],['materials.html','الأصناف'],['warehouses.html','المخازن'],['branches.html','الفروع'],['units.html','الوحدات'],['shortages.html','النواقص'],['barcode-generator.html','الباركود'],backupLink('inventory')]],
       ['fa-industry','التصنيع', [['ادارة التصنيع.html','إدارة التصنيع'],backupLink('manufacturing')]],
       ['fa-handshake','العملاء والعلاقات', [['customers.html','العملاء'],['customer-groups.html','مجموعات العملاء'],['المناديب.html','المناديب'],backupLink('relationships')]],
-      ['fa-calculator','المالية والمحاسبة', [['accounts.html','الصناديق والحسابات'],['financial-groups.html','المجموعات المالية'],['sands.html','سندات القبض والصرف'],['journal.html','دفتر الأستاذ'],['المصاريف.html','المصاريف'],backupLink('finance')]],
+      ['fa-calculator','المالية والمحاسبة', [['accounts.html','الصناديق والحسابات'],['chart-accounts.html','شجرة الحسابات'],['financial-groups.html','المجموعات المالية'],['sands.html','سندات القبض والصرف'],['journal.html','دفتر الأستاذ'],['المصاريف.html','المصاريف'],backupLink('finance')]],
       ['fa-users-gear','الموارد البشرية', [['الموظفين.html','الموظفون'],['العمال والاجور.html','العمال والأجور'],backupLink('hr')]],
       ['fa-chart-line','التقارير والمتابعة', [['التقارير.html','التقارير'],['notifications.html','الإشعارات'],backupLink('reports')]],
       ['fa-headset','الدعم الفني', [['support.html','إرسال بلاغ'],['الباقات.html','خطط الاشتراك']]],
@@ -4927,7 +4930,7 @@
         .ct-maintenance-btn:disabled{opacity:.6;cursor:wait}.ct-cache-refresh-btn{background:#605ca8;color:#fff}.ct-queue-reset-btn{background:#fff1f2;color:#be123c;border:1px solid #fecdd3}
         @media(max-width:620px){.ct-maintenance-actions{grid-template-columns:1fr}.ct-sync-cache-maintenance{padding:14px}}
       </style>
-      <div class="ct-maintenance-head"><strong><i class="fa-solid fa-cloud-arrow-up"></i> المزامنة وتحديث التطبيق</strong><span class="ct-maintenance-version">R109</span></div>
+      <div class="ct-maintenance-head"><strong><i class="fa-solid fa-cloud-arrow-up"></i> المزامنة وتحديث التطبيق</strong><span class="ct-maintenance-version">R114</span></div>
       <p class="ct-maintenance-description">تحديث الكاش يحفظ العمليات المعلقة في IndexedDB أولاً، ثم ينزّل ملفات الموقع الجديدة ويعيد فتح التطبيق. تصفير الطابور يحذف العمليات القديمة فقط ولا يحذف البيانات المحلية.</p>
       <div class="ct-maintenance-status"><i class="fa-solid fa-list-check"></i><span>العمليات المعلقة حالياً: <b id="ctMaintenanceQueueCount">0</b></span></div>
       <div class="ct-maintenance-actions">
@@ -5015,6 +5018,7 @@
           <span>إدارة التصنيع <b><a href="الباقات.html?upgrade=manufacturing" style="color:#7c3aed;text-decoration:none;font-size:9px;background:#f3e8ff;padding:2px 6px;border-radius:999px;white-space:nowrap"><i class="fa-solid fa-arrow-up-right-dots"></i> ترقية</a></b></span>
           <span>عروض المبيعات <b><a href="الباقات.html?upgrade=sales-offers" style="color:#7c3aed;text-decoration:none;font-size:9px;background:#f3e8ff;padding:2px 6px;border-radius:999px;white-space:nowrap"><i class="fa-solid fa-arrow-up-right-dots"></i> ترقية</a></b></span>
           <span>دفتر الأستاذ <b><a href="الباقات.html?upgrade=journal" style="color:#7c3aed;text-decoration:none;font-size:9px;background:#f3e8ff;padding:2px 6px;border-radius:999px;white-space:nowrap"><i class="fa-solid fa-arrow-up-right-dots"></i> ترقية</a></b></span>
+          <span>شجرة الحسابات <b><a href="الباقات.html?upgrade=chart-accounts" style="color:#7c3aed;text-decoration:none;font-size:9px;background:#f3e8ff;padding:2px 6px;border-radius:999px;white-space:nowrap"><i class="fa-solid fa-arrow-up-right-dots"></i> ترقية</a></b></span>
           <span>مجموعات العملاء <b><a href="الباقات.html?upgrade=customer-groups" style="color:#7c3aed;text-decoration:none;font-size:9px;background:#f3e8ff;padding:2px 6px;border-radius:999px;white-space:nowrap"><i class="fa-solid fa-arrow-up-right-dots"></i> ترقية</a></b></span>
           <span>المناديب <b><a href="الباقات.html?upgrade=agents" style="color:#7c3aed;text-decoration:none;font-size:9px;background:#f3e8ff;padding:2px 6px;border-radius:999px;white-space:nowrap"><i class="fa-solid fa-arrow-up-right-dots"></i> ترقية</a></b></span>
           <span>نسخ/استيراد الأقسام <b><a href="الباقات.html?upgrade=section-backup" style="color:#7c3aed;text-decoration:none;font-size:9px;background:#f3e8ff;padding:2px 6px;border-radius:999px;white-space:nowrap"><i class="fa-solid fa-arrow-up-right-dots"></i> ترقية</a></b></span>
