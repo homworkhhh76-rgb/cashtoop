@@ -6943,7 +6943,7 @@
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
       (async () => {
         try {
-          const registration = await navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });
+          const registration = await navigator.serviceWorker.getRegistration('./') || await navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });
           // لا نعيد تنزيل صفحات التطبيق تلقائياً بعد تثبيتها. التحديث يتم فقط
           // عند وصول Service Worker جديد بشكل طبيعي أو عند طلب تحديث الكاش يدوياً.
           const ready = await navigator.serviceWorker.ready;

@@ -19,6 +19,7 @@
 
 </style>
 <script src="cashtop-download-fix.js"></script>
+  <script src="offline-cache.js" defer></script>
 </head>
 <body><div id="portalLoader" class="portal-loader"><div class="portal-spinner"></div><div id="portalLoaderText" class="portal-loader-text">جاري تحميل البيانات...</div></div>
 <div id="login-wrapper"><div class="login-box"><img id="companyLogoLogin" class="company-logo" src="cashtop-logo.png" alt="شعار الشركة" onerror="this.src='cashtop-logo.png'"><div class="company-badge"><i class="fa-solid fa-building"></i><span id="companyNameLogin">بوابة العملاء</span></div><div class="login-title">سجل حساب العميل</div><div class="login-subtitle">أدخل مفتاح العميل الرقمي الموجود في سجلك لدى الشركة.</div><div class="input-group"><i class="fas fa-key"></i><input type="text" id="customerKeyInput" class="login-input" placeholder="مفتاح العميل" inputmode="numeric" autocomplete="one-time-code"></div><button class="login-btn" id="loginBtn" onclick="handleLogin()">دخول</button><div class="error-msg" id="loginError"><i class="fas fa-exclamation-circle"></i> مفتاح العميل غير صحيح.</div></div></div>
