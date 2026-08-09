@@ -111,6 +111,7 @@
             .floating-icon { font-size: 1.75rem; }
         }
     </style>
+  <script src="offline-cache.js" defer></script>
 </head>
 <body class="antialiased text-gray-800 min-h-screen flex flex-col items-center py-8 px-1 sm:px-4 relative overflow-x-hidden">
     <div id="expiredNotice" class="hidden w-full max-w-3xl mb-5 px-4 py-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 font-bold text-sm text-center shadow-sm">
@@ -291,7 +292,7 @@
     </script>
 <script>
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-  navigator.serviceWorker.register('service-worker.js', {updateViaCache:'none'}).catch(()=>{});
+  navigator.serviceWorker.getRegistration('./').then(r => r || navigator.serviceWorker.register('service-worker.js', {updateViaCache:'none'})).catch(()=>{});
 }
 </script>
 </body>
