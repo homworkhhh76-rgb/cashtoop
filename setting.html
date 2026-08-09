@@ -147,14 +147,13 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=112">
-    <script src="cashtop-core.js?v=112"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=100">
+    <script src="cashtop-core.js?v=108"></script>
     <script src="multi-system.js?v=100"></script>
     <script src="turso-config.js?v=100"></script><script src="turso-rtdb.js?v=100"></script>
-    <script src="accounting-engine.js?v=112"></script>
-    <script src="turso-sync.js?v=112"></script>
+    <script src="accounting-engine.js?v=100"></script>
+    <script src="turso-sync.js?v=108"></script>
 <script src="cashtop-download-fix.js"></script>
-  <script src="offline-cache.js" defer></script>
 </head>
 <body>
 <div class="ct-sidebar-overlay" id="ctSidebarOverlay" data-ct-action="close-sidebar"></div>
@@ -299,14 +298,13 @@
                     </div>
 
 
-                    <div class="form-group" id="customerPortalSettingsGroup" style="grid-column:1/-1;">
+                    <div class="form-group" style="grid-column:1/-1;">
                         <div style="display:flex;gap:8px;align-items:center;">
                             <input type="text" class="form-control" id="sysCustomerPortalUrl" readonly placeholder="سيظهر رابط بوابة العملاء هنا" style="direction:ltr;text-align:left;">
-                            <button type="button" class="btn-logo-url" id="copyCustomerPortalBtn" title="نسخ الرابط" onclick="copyCustomerPortalUrl()"><i class="fa-solid fa-copy"></i></button>
-                            <a id="customerPortalUpgradeBtn" href="الباقات.html?upgrade=customer-portal" title="ترقية الخطة" style="display:none;align-items:center;gap:6px;text-decoration:none;background:linear-gradient(135deg,#7c3aed,#ec4899);color:#fff;padding:10px 13px;border-radius:10px;font-weight:800;white-space:nowrap"><i class="fa-solid fa-arrow-up-right-dots"></i><span>ترقية</span></a>
+                            <button type="button" class="btn-logo-url" title="نسخ الرابط" onclick="copyCustomerPortalUrl()"><i class="fa-solid fa-copy"></i></button>
                         </div>
                         <label for="sysCustomerPortalUrl">رابط صفحة العملاء المستقلة</label>
-                        <small id="customerPortalHint" style="color:#718096;display:block;margin-top:5px">الرابط خاص بهذه الشركة وينتهي بمفتاح الشركة. لا يحتوي على قوائم أو روابط إلى لوحة الإدارة.</small>
+                        <small style="color:#718096;display:block;margin-top:5px">الرابط خاص بهذه الشركة وينتهي بمفتاح الشركة. لا يحتوي على قوائم أو روابط إلى لوحة الإدارة.</small>
                     </div>
                     <div class="form-group">
                         <input type="tel" class="form-control" id="sysCompanyPhone" placeholder="05xxxxxxxx">
@@ -877,31 +875,11 @@
             const base = customerPortalPublicBase(settings);
             return companyKey ? `${base}/customer-portal.html#/${encodeURIComponent(companyKey)}` : `${base}/customer-portal.html`;
         }
-        function isClassicPlanActive() {
-            return String(window.Cashtop?.currentPlan?.() || '').toLowerCase() === 'classic';
-        }
         function updateCustomerPortalUrl(settings = {}) {
             const input = document.getElementById('sysCustomerPortalUrl');
-            const copyBtn = document.getElementById('copyCustomerPortalBtn');
-            const upgradeBtn = document.getElementById('customerPortalUpgradeBtn');
-            const hint = document.getElementById('customerPortalHint');
-            const classic = isClassicPlanActive();
-            if (input) {
-                input.value = classic ? 'بوابة العملاء تتطلب ترقية الخطة' : buildCustomerPortalUrl(settings);
-                input.style.opacity = classic ? '.65' : '1';
-            }
-            if (copyBtn) { copyBtn.disabled = classic; copyBtn.style.opacity = classic ? '.45' : '1'; copyBtn.style.cursor = classic ? 'not-allowed' : 'pointer'; }
-            if (upgradeBtn) upgradeBtn.style.display = classic ? 'inline-flex' : 'none';
-            if (hint) hint.innerHTML = classic
-                ? '<i class="fa-solid fa-lock"></i> غير متاحة في خطة كلاسيك. اضغط <b>ترقية</b> لفتح بوابة العملاء.'
-                : 'الرابط خاص بهذه الشركة وينتهي بمفتاح الشركة. لا يحتوي على قوائم أو روابط إلى لوحة الإدارة.';
+            if (input) input.value = buildCustomerPortalUrl(settings);
         }
         async function copyCustomerPortalUrl() {
-            if (isClassicPlanActive()) {
-                showToast('بوابة العملاء تتطلب ترقية الخطة.', 'warning');
-                setTimeout(() => { location.href = 'الباقات.html?upgrade=customer-portal'; }, 350);
-                return;
-            }
             const url = document.getElementById('sysCustomerPortalUrl')?.value || buildCustomerPortalUrl();
             try { await navigator.clipboard.writeText(url); showToast('تم نسخ رابط بوابة العملاء.', 'success'); }
             catch (_) { prompt('انسخ رابط بوابة العملاء:', url); }

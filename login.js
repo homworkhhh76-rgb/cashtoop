@@ -320,7 +320,8 @@
     const now = trustedNowMs();
     /* المفاتيح في لوحة الإدارة تبدأ لحظة إنشائها ولا يوجد جدولة لبدء مستقبلي.
        لذلك status=active هو المرجع، ولا نرفض الدخول بسبب ساعة لابتوب متأخرة. */
-    return { ok: true, start, end, now, expired: Boolean(end && Number.isFinite(end) && now >= end) };
+    if (end && Number.isFinite(end) && now >= end) return { ok: false, message: 'انتهت مدة مفتاح الشركة.' };
+    return { ok: true, start, end, now };
   }
 
   function saveRemembered(key) {
@@ -483,7 +484,7 @@
       branchName: account.branchName || '', companyKey, tenantId, companyId: tenantId,
       companyName: license.companyName || context.access?.companyName || 'الشركة',
       licenseId: license.id || license.licenseId || tenantId, licenseStart: license.startAt || '', licenseEnd: license.endAt || '',
-      plan: license.plan || context.access?.plan || 'pro', customLimits: context.access?.customLimits || license.customLimits || null, status: license.status || 'active', subscriptionExpired: Boolean(license.endAt && trustedNowMs() >= new Date(license.endAt).getTime()), loginAt: new Date().toISOString(), lastLicenseCheck: trustedNowMs(),
+      plan: license.plan || context.access?.plan || 'pro', customLimits: context.access?.customLimits || license.customLimits || null, status: license.status || 'active', loginAt: new Date().toISOString(), lastLicenseCheck: trustedNowMs(),
       serverClockOffsetMs: Number((observedServerClock || parse(rawGet(SERVER_CLOCK_KEY), {}))?.offsetMs || 0),
       serverClockObservedAt: Number((observedServerClock || parse(rawGet(SERVER_CLOCK_KEY), {}))?.observedAt || 0)
     };
@@ -536,29 +537,6 @@
   }
 
 
-  async function requestJson(url, options = {}, timeout = 22000) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeout);
-    try {
-      const targetUrl = transportUrl(url);
-      let sendOptions = { ...options, signal:controller.signal, cache:'no-store' };
-      if (isPathProxy && sendOptions.headers) {
-        const headers = new Headers(sendOptions.headers);
-        ['cache-control','pragma','if-match'].forEach(name => headers.delete(name));
-        sendOptions = { ...sendOptions, headers };
-      }
-      const startedAt = Date.now();
-      const response = await fetch(targetUrl, sendOptions);
-      observeServerClock(response, startedAt, Date.now());
-      if (!response.ok) {
-        const payload = await response.json().catch(() => null);
-        throw new Error(String(payload?.error?.message || payload?.error || `تعذر حفظ البيانات (${response.status}).`));
-      }
-      if (response.status === 204) return null;
-      return await response.json().catch(() => null);
-    } finally { clearTimeout(timer); }
-  }
-
   function adminKeySegment(companyKey) { return sanitizeSegment(normalizeKey(companyKey)); }
 
   function normalizeAdminIndexEntry(entry) {
@@ -585,7 +563,7 @@
     }
     const match = Object.entries(companies || {}).find(([id, company]) => {
       if (!company || typeof company !== 'object') return false;
-      return normalizeKey(company.key || company.companyKey) === companyKey && company.deleted !== true && String(company.status || 'active').toLowerCase() === 'active';
+      return normalizeKey(company.key || company.companyKey) === companyKey && company.deleted !== true && company.status !== 'deleted';
     });
     if (!match) return null;
     const [id, company] = match;
@@ -816,247 +794,6 @@
   }
 
 
-  function registrationCurrencyPreset(value) {
-    const text = String(value || 'شيكل (ILS)');
-    if (/SAR|ريال/.test(text)) return { currency:'ريال سعودي', id:'SAR', name:'ريال سعودي', code:'SAR', symbol:'ر.س' };
-    if (/AED|درهم/.test(text)) return { currency:'درهم إماراتي', id:'AED', name:'درهم إماراتي', code:'AED', symbol:'د.إ' };
-    if (/EGP|جنيه/.test(text)) return { currency:'جنيه مصري', id:'EGP', name:'جنيه مصري', code:'EGP', symbol:'ج.م' };
-    if (/JOD|دينار/.test(text)) return { currency:'دينار أردني', id:'JOD', name:'دينار أردني', code:'JOD', symbol:'د.أ' };
-    return { currency:'شيكل', id:'ILS', name:'شيكل', code:'ILS', symbol:'₪' };
-  }
-
-  function registrationPayload(value, now, deviceId = 'self-register') {
-    return { value:JSON.stringify(value), valueEncoding:'local-storage-json-v1', deleted:false, updatedAt:now, revision:1, deviceId, page:'صفحة تسجيل الدخول.html' };
-  }
-
-  const REGISTRATION_IMAGE_STORAGE = Object.freeze({
-    storageZone:'amanwar1',
-    pullHost:'amanwar1.b-cdn.net',
-    accessKey:'bd094c93-3387-44e5-8ee02b4ff7c3-f22d-4060',
-    rootFolder:'cashtop-images',
-    maxSizeKB:50,
-    maxDimension:500
-  });
-
-  function registrationSafePath(value, fallback='item') {
-    const cleaned = String(value || '').trim().replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '');
-    return (cleaned || fallback).slice(0, 80);
-  }
-
-  function registrationCanvasBlob(canvas, quality) {
-    return new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('تعذر تجهيز صورة الشعار.')), 'image/jpeg', quality));
-  }
-
-  async function compressRegistrationImage(file) {
-    if (!(file instanceof Blob)) throw new Error('ملف الشعار غير صالح.');
-    const source = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onerror = () => reject(reader.error || new Error('تعذر قراءة الشعار.'));
-      reader.onload = () => {
-        const image = new Image();
-        image.onload = () => resolve(image);
-        image.onerror = () => reject(new Error('تعذر فك صورة الشعار.'));
-        image.src = reader.result;
-      };
-      reader.readAsDataURL(file);
-    });
-    const width = Number(source.naturalWidth || source.width || 0);
-    const height = Number(source.naturalHeight || source.height || 0);
-    if (!width || !height) throw new Error('أبعاد الشعار غير صالحة.');
-    const side = Math.min(width, height);
-    const sx = Math.max(0, (width - side) / 2);
-    const sy = Math.max(0, (height - side) / 2);
-    const limitBytes = REGISTRATION_IMAGE_STORAGE.maxSizeKB * 1024;
-    let target = Math.min(side, REGISTRATION_IMAGE_STORAGE.maxDimension);
-    let best = null;
-    while (target >= 64) {
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.max(1, Math.round(target));
-      canvas.height = canvas.width;
-      const ctx = canvas.getContext('2d', { alpha:false });
-      if (!ctx) throw new Error('تعذر تجهيز الشعار على هذا الجهاز.');
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0,0,canvas.width,canvas.height);
-      ctx.drawImage(source,sx,sy,side,side,0,0,canvas.width,canvas.height);
-      for (let quality = 0.88; quality >= 0.16; quality -= 0.08) {
-        const blob = await registrationCanvasBlob(canvas, Math.max(0.16, quality));
-        if (!best || blob.size < best.size) best = blob;
-        if (blob.size <= limitBytes) return blob;
-      }
-      target = Math.floor(target * 0.78);
-    }
-    if (best && best.size <= limitBytes) return best;
-    throw new Error('حجم الشعار كبير جداً بعد الضغط.');
-  }
-
-  async function uploadRegistrationLogo(file, tenantId) {
-    if (!file) return '';
-    const blob = await compressRegistrationImage(file);
-    const tenant = registrationSafePath(tenantId, 'company');
-    const unique = `company_logo_${Date.now()}_${Math.random().toString(36).slice(2,8)}.jpg`;
-    const path = `${REGISTRATION_IMAGE_STORAGE.rootFolder}/${tenant}/branding/${unique}`;
-    const endpoint = `https://storage.bunnycdn.com/${REGISTRATION_IMAGE_STORAGE.storageZone}/${path.split('/').map(encodeURIComponent).join('/')}`;
-    const response = await fetch(endpoint, {
-      method:'PUT',
-      headers:{ 'AccessKey':REGISTRATION_IMAGE_STORAGE.accessKey, 'Content-Type':'image/jpeg' },
-      body:blob,
-      cache:'no-store'
-    });
-    if (!response.ok) throw new Error(`تعذر رفع الشعار إلى قاعدة الصور (${response.status}).`);
-    return `https://${REGISTRATION_IMAGE_STORAGE.pullHost}/${path.split('/').map(encodeURIComponent).join('/')}`;
-  }
-
-  function registrationDefaultUnits(updatedAt) {
-    return [
-      { id:'DEF_KG_G', unitName:'كيلو', pieceName:'جم', piecesCount:1000, name:'كيلو', seededBy:'R110', updatedAt },
-      { id:'DEF_L_MLM', unitName:'لتر', pieceName:'ملم', piecesCount:1000, name:'لتر', seededBy:'R110', updatedAt },
-      { id:'DEF_CARTON_PC', unitName:'كرتونة', pieceName:'قطعة', piecesCount:24, name:'كرتونة', seededBy:'R110', updatedAt }
-    ];
-  }
-
-  async function registerCompanyInAdmin({ base, adminRoot, company, key, tenantId }) {
-    const keySegment = adminKeySegment(key);
-    const updatedAt = Date.now();
-    // cashTopAdmin محفوظ كوثيقة ذرية واحدة في Turso. الكتابة داخل
-    // /companies/{id} وحدها لا تظهر عندما تكون الوثيقة الجذرية موجودة.
-    // لذلك نستخدم JSON Merge PATCH على الجذر، تماماً كما لو تم إنشاء المفتاح من لوحة الأدمن.
-    await requestJson(`${base}/${adminRoot}.json`, {
-      method:'PATCH',
-      headers:{'Content-Type':'application/json','Cache-Control':'no-cache, no-store'},
-      body:JSON.stringify({
-        companies:{ [sanitizeSegment(tenantId)]:company },
-        keyIndex:{ [keySegment]:{ tenantId, companyId:tenantId, key, updatedAt, source:'self-registration' } },
-        retiredKeys:{ [keySegment]:null },
-        updatedAt
-      })
-    }, 20000);
-
-    // لا ندخل للنظام قبل إثبات أن المفتاح أصبح مرئياً فعلياً لطبقة الدخول/الأدمن.
-    let last = null;
-    for (let attempt=0; attempt<4; attempt += 1) {
-      if (attempt) await new Promise(resolve => setTimeout(resolve, 180 * attempt));
-      const [indexRow, companyRow] = await Promise.all([
-        fetchJson(`${base}/${adminRoot}/keyIndex/${keySegment}.json`, 9000).catch(() => null),
-        fetchJson(`${base}/${adminRoot}/companies/${sanitizeSegment(tenantId)}.json`, 9000).catch(() => null)
-      ]);
-      last = { indexRow, companyRow };
-      const indexedTenant = String(indexRow?.tenantId || indexRow?.companyId || '');
-      const companyTenant = String(companyRow?.tenantId || companyRow?.companyId || '');
-      if (indexedTenant === String(tenantId) &&
-          companyTenant === String(tenantId) &&
-          normalizeKey(companyRow?.key || companyRow?.companyKey) === normalizeKey(key) &&
-          String(companyRow?.plan || '').toLowerCase() === 'classic') {
-        return true;
-      }
-    }
-    console.warn('[CASH TOP REGISTER] admin verification failed', last);
-    throw new Error('تعذر تثبيت مفتاح الشركة في قاعدة الإدارة. لم يتم فتح النظام؛ أعد المحاولة.');
-  }
-
-  function randomCompanyKey() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let body = '';
-    if (crypto.getRandomValues) {
-      const bytes = new Uint8Array(9); crypto.getRandomValues(bytes);
-      bytes.forEach(byte => { body += chars[byte % chars.length]; });
-    } else {
-      for (let i=0;i<9;i++) body += chars[Math.floor(Math.random()*chars.length)];
-    }
-    return `CT-${body}`;
-  }
-
-  async function ensureRegistrationKey(candidate) {
-    const settings = window.CASHTOP_TURSO || {};
-    const base = String(settings.config?.databaseURL || '').replace(/\/+$/,'');
-    const adminRoot = String(settings.adminRootPath || 'cashTopExchange/cashTopAdmin').replace(/^\/+|\/+$/g,'');
-    if (!base) throw new Error('قاعدة البيانات غير مهيأة لإنشاء حساب جديد.');
-    for (let attempt=0; attempt<8; attempt++) {
-      const key = normalizeKey(attempt === 0 ? candidate : randomCompanyKey());
-      if (!key) continue;
-      const exists = await fetchJson(`${base}/${adminRoot}/keyIndex/${adminKeySegment(key)}.json`, 8000).catch(() => null);
-      if (!exists) return key;
-    }
-    throw new Error('تعذر إنشاء مفتاح شركة فريد. حاول مرة أخرى.');
-  }
-
-  async function createClassicRegistration(form) {
-    await loginDurableGlobalsReady;
-    const settings = window.CASHTOP_TURSO || {};
-    const base = String(settings.config?.databaseURL || '').replace(/\/+$/,'');
-    const companyRoot = String(settings.rootPath || 'cashTopExchange/cashTopPOS').replace(/^\/+|\/+$/g,'');
-    const adminRoot = String(settings.adminRootPath || 'cashTopExchange/cashTopAdmin').replace(/^\/+|\/+$/g,'');
-    if (!base) throw new Error('يتطلب إنشاء الحساب اتصالاً بقاعدة البيانات.');
-
-    const requestedKey = normalizeKey(form.companyKey || '');
-    const username = String(form.username || '').trim();
-    const password = String(form.password || '');
-    if (!requestedKey || !username || !password) throw new Error('المطلوب فقط: مفتاح الشركة واسم المستخدم وكلمة المرور.');
-    if (password.length < 4) throw new Error('كلمة المرور قصيرة جداً.');
-    const key = await ensureRegistrationKey(requestedKey);
-    const companyName = String(form.companyName || '').trim() || `شركة ${key.slice(-6)}`;
-    const phone = String(form.phone || '').trim();
-    const email = String(form.email || '').trim();
-    const address = String(form.address || '').trim();
-    const now = Date.now();
-    const startedAt = new Date(now).toISOString();
-    const endAt = new Date(now + 7 * 86400000).toISOString();
-    const tenantId = sanitizeSegment(`TENANT_${now}_${crypto.randomUUID ? crypto.randomUUID().slice(0,8) : Math.random().toString(36).slice(2,10)}`);
-    const currency = registrationCurrencyPreset(form.currencyText);
-    const logo = form.logoFile ? await uploadRegistrationLogo(form.logoFile, tenantId) : '';
-    const authVersion = now;
-    const company = {
-      tenantId, companyId:tenantId, companyName, key, managerUsername:username, managerPassword:password,
-      plan:'classic', customLimits:{daily:{invoices:null,customers:null,expenses:null,suppliers:null},fixed:{employees:null,warehouses:null,branches:null,products:null}}, status:'active', backupImportEnabled:false,
-      durationUnit:'day', durationQuantity:7, startAt:startedAt, endAt, authVersion,
-      createdAt:startedAt, updatedAt:startedAt, selfRegistered:true
-    };
-    const access = {
-      tenantId, companyId:tenantId, companyKey:key, companyName, status:'active', plan:'classic', customLimits:{daily:{invoices:null,customers:null,expenses:null,suppliers:null},fixed:{employees:null,warehouses:null,branches:null,products:null}},
-      startAt:startedAt, endAt, durationUnit:'day', durationQuantity:7, backupImportEnabled:false,
-      authVersion, updatedAt:now,
-      manager:{ id:`ADMIN_${tenantId}`, username, password, displayName:'مدير الشركة', role:'admin', active:true, permissions:{}, authVersion }
-    };
-    const appSettings = {
-      companyName, phone, email, address, currency:currency.currency, logo, logoStorage:'image-service',
-      baseCurrencyId:currency.id, multiCurrencyEnabled:false,
-      currencies:[{id:currency.id,name:currency.name,code:currency.code,symbol:currency.symbol,ratePer100Base:100,isBase:true}],
-      createdFromRegistration:true, updatedAt:startedAt
-    };
-    const branches = [{ id:'BR-01', name:'الفرع الرئيسي', address, manager:'', managerUsername:'', managerPassword:'', managerActive:false, status:'نشط', allowTransfer:false, isMain:true, isDefault:true, locked:true, createdAt:startedAt }];
-    const units = registrationDefaultUnits(startedAt);
-    const datasets = { cashtop_company_access:access, cashtop_settings:appSettings, cashtop_branches:branches, cashtop_units:units };
-    const stamps = {};
-    for (const [dataset,value] of Object.entries(datasets)) {
-      const stamp = Date.now(); stamps[dataset] = stamp;
-      await requestJson(`${base}/${companyRoot}/${sanitizeSegment(tenantId)}/datasets/${sanitizeSegment(dataset)}.json`, {
-        method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(registrationPayload(value,stamp))
-      }, 20000);
-    }
-    await requestJson(`${base}/${companyRoot}/${sanitizeSegment(tenantId)}/meta.json`, {
-      method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
-        tenantId, companyId:tenantId, companyKey:key, companyName, schema:19, datasetStampSchema:1,
-        datasetStamps:stamps, changedKeys:Object.keys(datasets), updatedAt:Date.now(), managedBy:'self-registration'
-      })
-    }, 20000);
-    await registerCompanyInAdmin({ base, adminRoot, company, key, tenantId });
-
-    setTenantBinding(key,tenantId);
-    rawSet(namespaceKey(tenantId,'cashtop_company_access'),JSON.stringify(access));
-    rawSet(metaKey(tenantId,'cashtop_company_access'),JSON.stringify({updatedAt:now,revision:1,source:'self-registration',seeded:false}));
-    rawSet(namespaceKey(tenantId,'cashtop_settings'),JSON.stringify(appSettings));
-    rawSet(metaKey(tenantId,'cashtop_settings'),JSON.stringify({updatedAt:now+1,revision:1,source:'self-registration',seeded:false}));
-    rawSet(namespaceKey(tenantId,'cashtop_branches'),JSON.stringify(branches));
-    rawSet(metaKey(tenantId,'cashtop_branches'),JSON.stringify({updatedAt:now+2,revision:1,source:'self-registration',seeded:false}));
-    rawSet(namespaceKey(tenantId,'cashtop_units'),JSON.stringify(units));
-    rawSet(metaKey(tenantId,'cashtop_units'),JSON.stringify({updatedAt:now+3,revision:1,source:'self-registration',seeded:false}));
-    return { key, username, password, tenantId };
-  }
-
-  async function handleRegister(event) {
-    event?.preventDefault?.();
-    window.location.href = 'الباقات.html';
-  }
-
   async function handleLogin(event) {
     event.preventDefault();
     await loginDurableGlobalsReady;
@@ -1104,7 +841,7 @@
   function displayReason() {
     const reason = new URLSearchParams(location.search).get('reason');
     const messages = {
-      expired: 'انتهى الاشتراك. يمكنك تسجيل الدخول وقراءة بياناتك، بينما تتطلب الإضافة والتعديل تجديد الباقة.', stopped: 'تم إيقاف مفتاح الشركة، وتم تسجيل خروجك تلقائياً.',
+      expired: 'انتهت مدة مفتاح الشركة، وتم تسجيل خروجك تلقائياً.', stopped: 'تم إيقاف مفتاح الشركة، وتم تسجيل خروجك تلقائياً.',
       deleted: 'تم حذف مفتاح الشركة أو لم يعد متاحاً.', 'user-disabled': 'تم تعطيل حساب المستخدم أو الفرع.',
       'auth-required': 'انتهت جلسة تسجيل الدخول. سجل الدخول مرة أخرى.', 'device-limit': 'تم الوصول إلى الحد الأقصى للأجهزة المسموح بها لهذا المفتاح.',
       'permission-denied': 'لا يملك هذا الحساب صلاحية لفتح أي قسم. راجع مدير النظام.',
@@ -1115,11 +852,10 @@
 
   cleanupLegacyDemo();
   window.handleLogin = handleLogin;
-  window.handleRegister = handleRegister;
-  window.generateRegistrationKey = randomCompanyKey;
   window.addEventListener('DOMContentLoaded', () => {
     const existingSession = readTabSession();
-    if (existingSession && existingSession.status !== 'stopped' && !new URLSearchParams(location.search).get('reason')) {
+    const existingEnd = existingSession?.licenseEnd ? new Date(existingSession.licenseEnd).getTime() : 0;
+    if (existingSession && existingSession.status !== 'stopped' && (!existingEnd || existingEnd > trustedNowMs()) && !new URLSearchParams(location.search).get('reason')) {
       location.replace(nextPageAfterLogin(existingSession)); return;
     }
     const rememberedKey = rawGet('cashtop_remembered_key');
@@ -1137,7 +873,7 @@
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     (async () => {
       try {
-        const registration = await navigator.serviceWorker.getRegistration('./') || await navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });
+        const registration = await navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });
         // لا نفرض فحص الشبكة عند كل فتح لصفحة الدخول؛ عامل الخدمة والكاش الحاليان يكفيان.
         const worker = registration.active || registration.waiting || registration.installing;
         worker?.postMessage?.({ type: 'VERIFY_CACHE' });

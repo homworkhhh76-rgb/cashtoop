@@ -219,14 +219,13 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=112">
-    <script src="cashtop-core.js?v=112"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=100">
+    <script src="cashtop-core.js?v=108"></script>
     <script src="multi-system.js?v=100"></script>
     <script src="turso-config.js?v=100"></script><script src="turso-rtdb.js?v=100"></script>
-    <script src="accounting-engine.js?v=112"></script>
-    <script src="turso-sync.js?v=112"></script>
+    <script src="accounting-engine.js?v=100"></script>
+    <script src="turso-sync.js?v=108"></script>
 <script src="cashtop-download-fix.js"></script>
-  <script src="offline-cache.js" defer></script>
 </head>
 <body>
 <div class="ct-sidebar-overlay" id="ctSidebarOverlay" data-ct-action="close-sidebar"></div>
@@ -387,12 +386,6 @@
                             <label>تاريخ الشراء</label>
                         </div>
                     </div>
-                    <div class="form-row full">
-                        <div class="form-group">
-                            <textarea class="form-control" id="purchaseNotes" rows="2" placeholder="ملاحظات الفاتورة (اختياري)"></textarea>
-                            <label>ملاحظات الفاتورة</label>
-                        </div>
-                    </div>
                     <div class="form-row purchase-currency-wrap" id="purchaseCurrencyWrap">
                         <div class="form-group purchase-currency-field">
                             <select class="form-control" id="purchaseCurrencySelect" data-ct-site-dropdown="true" data-ct-icon="fa-coins" onchange="handlePurchaseCurrencyChange()"></select>
@@ -440,8 +433,7 @@
                             <span>المتبقي يُسجل ديناً للمورد</span>
                             <span id="finalDebt" style="color:#dd4b39;">0.00 ₪</span>
                         </div>
-                        <button type="button" class="btn-save-invoice" id="savePurchaseInvoiceBtn" data-ct-permission="purchases.create" onclick="savePurchaseInvoice()"><i class="fa-solid fa-floppy-disk"></i> <span>حفظ الفاتورة والقيود</span></button>
-                        <button type="button" id="cancelPurchaseEditBtn" class="btn-add-another-product" style="display:none;margin-top:10px;background:#64748b" onclick="cancelPurchaseInvoiceEdit()"><i class="fa-solid fa-xmark"></i> إلغاء تعديل الفاتورة</button>
+                        <button type="button" class="btn-save-invoice" data-ct-permission="purchases.create" onclick="savePurchaseInvoice()"><i class="fa-solid fa-floppy-disk"></i> حفظ الفاتورة والقيود</button>
                     </div>
                 </div>
             </div>
@@ -591,8 +583,6 @@
         let purchaseScannerRequestId = 0;
         let purchaseMultiPayments = [];
         let lastPurchasePayableBase = 0;
-        let editingPurchaseInvoiceId = null;
-        let editingPurchaseOriginal = null;
         const PURCHASE_MULTI_PAYMENT_VALUE = window.CashtopMulti?.MULTI_PAYMENT_VALUE || '__MULTI_PAYMENT__';
         const PURCHASE_NO_SUPPLIER_VALUE = '__NO_SUPPLIER__';
         const PURCHASE_NO_ACCOUNT_VALUE = '__NO_ACCOUNT__';
@@ -1623,7 +1613,7 @@
                 }
                 const insufficient = purchaseMultiPayments.find(payment => {
                     const account = fundsDB.accounts.find(a => String(a.id) === String(payment.accountId));
-                    return !account || Number(payment.accountAmount || 0) > (Number(account.balance || 0) + editingRefundForAccount(account.id)) + 1e-9;
+                    return !account || Number(payment.accountAmount || 0) > Number(account.balance || 0) + 1e-9;
                 });
                 if (insufficient) {
                     const account = fundsDB.accounts.find(a => String(a.id) === String(insufficient.accountId));
@@ -1634,7 +1624,7 @@
             } else {
                 paymentSettlement = window.CashtopMulti?.settleToAccount?.(paidNative, currencyId, vault)
                     || { accountAmount: paidNative, accountCurrencyId: vault.currencyId || currencyId, baseAmount: paidAmount };
-                if (Number(paymentSettlement.accountAmount || 0) > (Number(vault.balance || 0) + editingRefundForAccount(vault.id))) {
+                if (Number(paymentSettlement.accountAmount || 0) > Number(vault.balance || 0)) {
                     showToast(`الرصيد في صندوق [${vault.name}] غير كافٍ لسداد هذا المبلغ بعد تحويل العملة!`, "error");
                     return;
                 }
@@ -1771,18 +1761,6 @@
             const inventoryCostFactor = invoiceTotal > 0 ? Math.max(0, payableInvoiceTotal / invoiceTotal) : 1;
             productsToSaveLog.forEach(item => { item.inventoryCost = Math.max(0, Number(item.newCost || 0)) * inventoryCostFactor; });
 
-            // عند تعديل فاتورة موجودة: نعكس النسخة القديمة أولاً داخل نفس المعاملة ثم نعيد تطبيق النسخة الجديدة.
-            // يبقى نفس رقم الفاتورة ونفس تاريخها، بينما تُسجل حركات عكس مستقلة للتدقيق.
-            if (editingPurchaseOriginal && String(editingPurchaseInvoiceId) === String(invId)) {
-                const currentIndex = purchasesDB.findIndex(row => String(row.id) === String(editingPurchaseInvoiceId));
-                if (currentIndex > -1) {
-                    reversePurchaseInvoiceState(purchasesDB[currentIndex], { reason:'تعديل فاتورة المشتريات' });
-                    purchasesDB.splice(currentIndex, 1);
-                }
-                supplier = isNoSupplier ? null : suppliersDB.find(s => String(s.id) === String(supplierId));
-                vault = (isMultiPayment || isNoAccount) ? null : fundsDB.accounts.find(a => String(a.id) === String(accountId));
-            }
-
             // 1. تحديث المنتجات في المخزن المختار مع معادلة متوسط التكلفة (WAC)
             productsToSaveLog.forEach(newProduct => {
                 if (newProduct.isNew) {
@@ -1859,11 +1837,9 @@
             // 4. أرشفة الفاتورة نفسها
             let newInvoice = {
                 id: invId,
-                date: editingPurchaseOriginal?.date || invDate,
-                createdAt: editingPurchaseOriginal?.createdAt || new Date().toISOString(),
+                date: invDate,
+                createdAt: new Date().toISOString(),
                 savedAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                editedAt: editingPurchaseOriginal ? new Date().toISOString() : '',
                 supplierId: supplier?.id || null,
                 supplierName,
                 accountId: isMultiPayment ? PURCHASE_MULTI_PAYMENT_VALUE : (isNoAccount ? null : vault.id),
@@ -1918,7 +1894,7 @@
                     inventoryLotId: item.inventoryLotId || '',
                     variants: Array.isArray(item.variants) ? item.variants.map(v => ({ size: v.size, color: v.color, barcode: v.barcode || '', qty: parseFloat(v.qty)||0 })) : []
                 })),
-                notes: String(document.getElementById('purchaseNotes')?.value || '').trim()
+                notes: ""
             };
             purchasesDB.push(newInvoice);
             const purchaseChanges = {
@@ -1962,8 +1938,7 @@
                 return;
             }
 
-            showToast(editingPurchaseOriginal ? "تم تعديل فاتورة المشتريات كاملة مع عكس النسخة القديمة وإعادة ترحيلها بنفس التاريخ." : "تم إدخال كل منتج إلى المخزن المحدد وترحيل الفاتورة بنجاح!", "success");
-            resetPurchaseEditMode();
+            showToast("تم إدخال كل منتج إلى المخزن المحدد وترحيل الفاتورة بنجاح!", "success");
             
             // تهيئة واجهة جديدة
             document.getElementById('invIdBox').value = `INV-${Date.now().toString().slice(-5)}`;
@@ -1972,7 +1947,6 @@
             purchaseMultiPayments = [];
             setPurchasePaidMultiState(false);
             if (document.getElementById('purchaseDiscount')) document.getElementById('purchaseDiscount').value = 0;
-            if (document.getElementById('purchaseNotes')) document.getElementById('purchaseNotes').value = '';
             document.getElementById('productsContainer').innerHTML = '';
             productRowCounter = 0;
             addNewProductRow();
@@ -2005,7 +1979,7 @@
                     <td>
                         <div class="actions-wrapper">
                             <button class="action-btn" data-ct-permission="purchases.view" title="عرض وإدارة أصناف الفاتورة" onclick="openPurchaseItemsModal('${inv.id}')"><i class="fa-solid fa-list-check"></i></button>
-                            <button class="action-btn btn-edit-act" title="تعديل الفاتورة كاملة" onclick="startEditPurchaseInvoice('${inv.id}')"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button class="action-btn btn-edit-act" title="تعديل الملاحظات" onclick="openEditModal('${inv.id}')"><i class="fa-solid fa-pen-to-square"></i></button>
                             <button class="action-btn btn-image-act" data-ct-permission="purchases.export" title="تنزيل صورة الفاتورة" onclick="downloadPurchaseInvoiceImage('${inv.id}')"><i class="fa-solid fa-image"></i></button>
                             <button class="action-btn btn-delete-act" data-ct-permission="purchases.delete" title="حذف الفاتورة (وعكس القيود)" onclick="openDeleteModal('${inv.id}')"><i class="fa-solid fa-trash-can"></i></button>
                         </div>
@@ -2066,15 +2040,14 @@
             window.Cashtop?.applyPermissionVisibility?.(document.getElementById('purchaseItemsModal'));
         }
 
-        function reversePurchaseItemStock(inv, item, options = {}) {
-            const permissive = options.permissive !== false;
+        function reversePurchaseItemStock(inv, item) {
             const productIndex = productsDB.findIndex(product => String(product.id) === String(item.productId));
-            // حذف الفاتورة يجب ألا يتعطل إذا كان المنتج نفسه حُذف لاحقاً.
-            if (productIndex === -1) return { skipped:true, reason:'product-missing' };
+            if (productIndex === -1) throw new Error(`تعذر العثور على المنتج [${item.name || item.productId}].`);
             const product = productsDB[productIndex];
             const warehouseId = String(item.warehouseId || 'shop');
-            const reverseQuantity = Math.max(0, Number(item.quantityPieces ?? item.purchaseQuantity ?? 0));
+            const reverseQuantity = Math.max(0, Number(item.quantityPieces || 0));
             const totalBefore = getProductTotalStock(product);
+            if (totalBefore + 0.001 < reverseQuantity) throw new Error(`لا يمكن حذف [${item.name}] لأن الكمية الحالية أقل من كمية الشراء المراد عكسها.`);
 
             if (Array.isArray(item.variants) && item.variants.length && Array.isArray(product.variants)) {
                 item.variants.forEach(oldVariant => {
@@ -2082,35 +2055,46 @@
                         (oldVariant.barcode && String(current?.barcode || '') === String(oldVariant.barcode)) ||
                         (String(current?.size || '') === String(oldVariant.size || '') && String(current?.color || '') === String(oldVariant.color || ''))
                     );
-                    if (!variant) return;
+                    if (!variant) throw new Error(`تعذر العثور على متغير الصنف [${item.name}].`);
                     const quantity = Math.max(0, Number(oldVariant.qty || 0));
                     variant.storeStocks = variant.storeStocks && typeof variant.storeStocks === 'object' ? variant.storeStocks : {};
-                    if (warehouseId === 'shop') variant.qty = Number(variant.qty || 0) - quantity;
-                    else variant.storeStocks[warehouseId] = Number(variant.storeStocks[warehouseId] || 0) - quantity;
+                    const available = warehouseId === 'shop' ? Number(variant.qty || 0) : Number(variant.storeStocks[warehouseId] || 0);
+                    if (available + 0.001 < quantity) throw new Error(`لا يمكن حذف [${item.name}] لأن جزءاً من كميته تم بيعه أو إهلاكه.`);
+                    if (warehouseId === 'shop') variant.qty = Math.max(0, available - quantity);
+                    else variant.storeStocks[warehouseId] = Math.max(0, available - quantity);
                 });
             }
 
-            product.storeStocks = product.storeStocks && typeof product.storeStocks === 'object' ? product.storeStocks : {};
-            if (warehouseId === 'shop') product.stockPieces = Number(product.stockPieces || 0) - reverseQuantity;
-            else product.storeStocks[warehouseId] = Number(product.storeStocks[warehouseId] || 0) - reverseQuantity;
+            if (warehouseId === 'shop') {
+                const available = Number(product.stockPieces || 0);
+                if (available + 0.001 < reverseQuantity) throw new Error(`لا يمكن حذف [${item.name}] لأن المخزون الحالي لا يكفي لعكسه.`);
+                product.stockPieces = Math.max(0, available - reverseQuantity);
+            } else {
+                product.storeStocks = product.storeStocks && typeof product.storeStocks === 'object' ? product.storeStocks : {};
+                const available = Number(product.storeStocks[warehouseId] || 0);
+                if (available + 0.001 < reverseQuantity) throw new Error(`لا يمكن حذف [${item.name}] لأن مخزون المستودع الحالي لا يكفي لعكسه.`);
+                product.storeStocks[warehouseId] = Math.max(0, available - reverseQuantity);
+            }
 
             if (Array.isArray(product.inventoryLots)) {
-                // دفعة هذه الفاتورة تُزال بالكامل حتى لو استُهلك جزء منها؛ الرصيد العام أعلاه
-                // قد يصبح سالباً وهذا مقصود لأنه يمثل الأثر الحقيقي لإلغاء شراء سابق.
-                product.inventoryLots = product.inventoryLots.filter(lot => !(
+                const lotIndex = product.inventoryLots.findIndex(lot =>
                     (item.inventoryLotId && String(lot?.id) === String(item.inventoryLotId)) ||
                     (String(lot?.sourceType || '') === 'purchaseInvoice' && String(lot?.sourceId || '') === String(inv.id) && String(lot?.warehouseId || 'shop') === warehouseId)
-                ));
+                );
+                if (lotIndex > -1) {
+                    const lot = product.inventoryLots[lotIndex];
+                    const remaining = Math.max(0, Number(lot.remainingPieces ?? lot.quantityPieces ?? 0));
+                    if (remaining + 0.001 < reverseQuantity) throw new Error(`لا يمكن حذف [${item.name}] لأن جزءاً من الدفعة تم بيعه أو إهلاكه.`);
+                    lot.remainingPieces = Math.max(0, remaining - reverseQuantity);
+                    if (lot.remainingPieces <= 0.000001) product.inventoryLots.splice(lotIndex, 1);
+                }
             }
 
             const totalAfter = totalBefore - reverseQuantity;
             const currentCost = Math.max(0, Number(product.cost || 0));
-            const purchaseCost = Math.max(0, Number(item.purchaseCost || item.purchaseCostBeforeTax || 0));
-            product.cost = totalAfter > 0
-                ? Math.max(0, ((totalBefore * currentCost) - (reverseQuantity * purchaseCost)) / totalAfter)
-                : 0;
+            const purchaseCost = Math.max(0, Number(item.purchaseCost || 0));
+            product.cost = totalAfter > 0 ? Math.max(0, ((totalBefore * currentCost) - (reverseQuantity * purchaseCost)) / totalAfter) : 0;
             productsDB[productIndex] = product;
-            return { skipped:false, permissive };
         }
 
         function refundPurchasePaidAmount(inv, refundBase, itemName) {
@@ -2130,10 +2114,9 @@
                     const oldNative = Math.max(0, Number(payment.accountAmount || payment.accountAmountNative || 0));
                     const nativeRefund = oldNative * ratio;
                     const account = fundsDB.accounts.find(row => String(row.id) === String(payment.accountId));
-                    if (account) account.balance = Number(account.balance || 0) + nativeRefund;
-                    // حتى لو حُذف الصندوق لاحقاً، يبقى قيد العكس المالي محفوظاً
-                    // على accountId التاريخي من دون إعادة إنشاء الصندوق.
-                    fundsDB.accountLogs.push({ id:`LOG_PUR_ITEM_REV_${inv.id}_${index}_${Date.now()}`, sourceType:'purchaseItemReversal', sourceId:inv.id, accountId:account?.id ?? payment.accountId, accountMissing:!account, date, type:'إيداع', amount:nativeRefund, baseAmount:targetBase, currencyId:payment.accountCurrencyId || account?.currencyId || purchaseCurrencyConfig().baseCurrencyId, notes:`عكس مبلغ صنف [${itemName}] من فاتورة مشتريات [${inv.id}]${account?'':' — الصندوق محذوف؛ قيد تاريخي فقط'}` });
+                    if (!account) throw new Error(`الصندوق المرتبط بالدفع [${payment.accountName || payment.accountId}] غير موجود.`);
+                    account.balance = Number(account.balance || 0) + nativeRefund;
+                    fundsDB.accountLogs.push({ id:`LOG_PUR_ITEM_REV_${inv.id}_${index}_${Date.now()}`, sourceType:'purchaseItemReversal', sourceId:inv.id, accountId:account.id, date, type:'إيداع', amount:nativeRefund, baseAmount:targetBase, currencyId:payment.accountCurrencyId || account.currencyId, notes:`عكس مبلغ صنف [${itemName}] من فاتورة مشتريات [${inv.id}]` });
                     payment.baseAmount = Math.max(0, oldBase - targetBase);
                     if (payment.accountAmount != null) payment.accountAmount = Math.max(0, oldNative - nativeRefund);
                     if (payment.accountAmountNative != null) payment.accountAmountNative = Math.max(0, oldNative - nativeRefund);
@@ -2146,12 +2129,13 @@
                 // فقط، ولا ننشئ أي حركة على الصناديق لأنها لم تُمس عند الشراء أصلاً.
             } else {
                 const account = fundsDB.accounts.find(row => String(row.id) === String(inv.accountId));
+                if (!account) throw new Error('الصندوق المرتبط بالفاتورة غير موجود.');
                 const oldPaid = Math.max(0, Number(inv.paid || 0));
                 const ratio = oldPaid > 0 ? Math.min(1, refundBase / oldPaid) : 0;
-                const oldNative = Number.isFinite(Number(inv.accountAmountNative)) ? Math.max(0, Number(inv.accountAmountNative)) : (window.CashtopMulti?.accountAmountFromBase?.(oldPaid, inv.accountCurrencyId || account?.currencyId) ?? oldPaid);
+                const oldNative = Number.isFinite(Number(inv.accountAmountNative)) ? Math.max(0, Number(inv.accountAmountNative)) : (window.CashtopMulti?.accountAmountFromBase?.(oldPaid, inv.accountCurrencyId || account.currencyId) ?? oldPaid);
                 const nativeRefund = oldNative * ratio;
-                if (account) account.balance = Number(account.balance || 0) + nativeRefund;
-                fundsDB.accountLogs.push({ id:`LOG_PUR_ITEM_REV_${inv.id}_${Date.now()}`, sourceType:'purchaseItemReversal', sourceId:inv.id, accountId:account?.id ?? inv.accountId, accountMissing:!account, date, type:'إيداع', amount:nativeRefund, baseAmount:refundBase, currencyId:inv.accountCurrencyId || account?.currencyId || purchaseCurrencyConfig().baseCurrencyId, notes:`عكس مبلغ صنف [${itemName}] من فاتورة مشتريات [${inv.id}]${account?'':' — الصندوق محذوف؛ قيد تاريخي فقط'}` });
+                account.balance = Number(account.balance || 0) + nativeRefund;
+                fundsDB.accountLogs.push({ id:`LOG_PUR_ITEM_REV_${inv.id}_${Date.now()}`, sourceType:'purchaseItemReversal', sourceId:inv.id, accountId:account.id, date, type:'إيداع', amount:nativeRefund, baseAmount:refundBase, currencyId:inv.accountCurrencyId || account.currencyId, notes:`عكس مبلغ صنف [${itemName}] من فاتورة مشتريات [${inv.id}]` });
                 inv.accountAmountNative = Math.max(0, oldNative - nativeRefund);
             }
             const oldPaid = Math.max(0, Number(inv.paid || 0));
@@ -2232,180 +2216,25 @@
             }
         }
 
-        function refundWholePurchaseInvoice(inv, reasonLabel = 'حذف فاتورة المشتريات') {
-            if (Number(inv?.paid || 0) <= 0) return;
-            const paymentRows = Array.isArray(inv.payments) && inv.payments.length ? inv.payments : null;
-            if (paymentRows) {
-                paymentRows.forEach((payment, paymentIndex) => {
-                    const account = fundsDB.accounts.find(a => String(a.id) === String(payment.accountId));
-                    const currencyId = payment.accountCurrencyId || account?.currencyId || purchaseCurrencyConfig().baseCurrencyId;
-                    const nativeAmount = Number(payment.accountAmount || payment.accountAmountNative || 0);
-                    if (account) account.balance = Number(account.balance || 0) + nativeAmount;
-                    fundsDB.accountLogs.push({
-                        id:`LOG_PUR_REV_${inv.id}_${paymentIndex}_${Date.now()}_${Math.random().toString(36).slice(2,5)}`,
-                        sourceType:'purchaseInvoiceReversal', sourceId:inv.id, accountId:account?.id ?? payment.accountId, accountMissing:!account,
-                        date:new Date().toISOString().slice(0,10), type:'إيداع', amount:nativeAmount,
-                        baseAmount:Number(payment.baseAmount || 0), currencyId,
-                        notes:`${reasonLabel}: عكس دفعة فاتورة مشتريات [${inv.id}]${account?'':' — الصندوق محذوف؛ قيد تاريخي فقط'}`
-                    });
-                });
-                return;
-            }
-            if (inv.withoutAccount === true || !inv.accountId) return;
-            const account = fundsDB.accounts.find(a => String(a.id) === String(inv.accountId));
-            const currencyId = inv.accountCurrencyId || account?.currencyId || purchaseCurrencyConfig().baseCurrencyId;
-            const nativeAmount = Number.isFinite(Number(inv.accountAmountNative))
-                ? Number(inv.accountAmountNative)
-                : (window.CashtopMulti?.accountAmountFromBase?.(Number(inv.paid || 0), currencyId) ?? Number(inv.paid || 0));
-            if (account) account.balance = Number(account.balance || 0) + nativeAmount;
-            fundsDB.accountLogs.push({
-                id:`LOG_PUR_REV_${inv.id}_${Date.now()}_${Math.random().toString(36).slice(2,5)}`,
-                sourceType:'purchaseInvoiceReversal', sourceId:inv.id, accountId:account?.id ?? inv.accountId, accountMissing:!account,
-                date:new Date().toISOString().slice(0,10), type:'إيداع', amount:nativeAmount,
-                baseAmount:Number(inv.paid || 0), currencyId,
-                notes:`${reasonLabel}: عكس دفعة فاتورة مشتريات [${inv.id}]${account?'':' — الصندوق محذوف؛ قيد تاريخي فقط'}`
-            });
+        function openEditModal(invId) {
+            let inv = purchasesDB.find(x => x.id === invId);
+            if(!inv) return;
+            document.getElementById('editInvoiceId').value = inv.id;
+            document.getElementById('editNotesInput').value = inv.notes || '';
+            openModal('editModal');
         }
 
-        function reversePurchaseInvoiceState(inv, options = {}) {
-            if (!inv) return;
-            (Array.isArray(inv.items) ? inv.items : []).forEach(item => reversePurchaseItemStock(inv, item, { permissive:true }));
-            if (Number(inv.debt || 0) > 0) reduceSupplierPurchaseDebt(inv, Number(inv.debt || 0), `${options.reason || 'عكس'} فاتورة المشتريات [${inv.id}]`);
-            refundWholePurchaseInvoice(inv, options.reason || 'عكس فاتورة المشتريات');
-        }
-
-        function editingRefundForAccount(accountId) {
-            if (!editingPurchaseOriginal || !accountId) return 0;
-            const inv = editingPurchaseOriginal;
-            if (Array.isArray(inv.payments) && inv.payments.length) {
-                return inv.payments.filter(row => String(row.accountId) === String(accountId))
-                    .reduce((sum,row)=>sum + Number(row.accountAmount || row.accountAmountNative || 0), 0);
-            }
-            return String(inv.accountId || '') === String(accountId) ? Number(inv.accountAmountNative || inv.paidNative || inv.paid || 0) : 0;
-        }
-
-        function resetPurchaseEditMode() {
-            editingPurchaseInvoiceId = null;
-            editingPurchaseOriginal = null;
-            const date = document.getElementById('invDateBox'); if (date) date.readOnly = false;
-            const cancel = document.getElementById('cancelPurchaseEditBtn'); if (cancel) cancel.style.display = 'none';
-            const btn = document.getElementById('savePurchaseInvoiceBtn');
-            if (btn) btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> <span>حفظ الفاتورة والقيود</span>';
-        }
-
-        function cancelPurchaseInvoiceEdit() {
-            resetPurchaseEditMode();
-            purchaseMultiPayments = [];
-            setPurchasePaidMultiState(false);
-            document.getElementById('productsContainer').innerHTML = '';
-            productRowCounter = 0;
-            addNewProductRow();
-            document.getElementById('invIdBox').value = `INV-${Date.now().toString().slice(-5)}`;
-            document.getElementById('invDateBox').value = new Date().toISOString().slice(0,10);
-            document.getElementById('moneyPaid').value = 0;
-            document.getElementById('purchaseDiscount').value = 0;
-            if (document.getElementById('purchaseNotes')) document.getElementById('purchaseNotes').value = '';
-            if (document.getElementById('hidePurchaseItemsFromCashier')) document.getElementById('hidePurchaseItemsFromCashier').checked = false;
-            populateSelects();
-            calculateInvoiceFinance();
-            showToast('تم إلغاء وضع تعديل الفاتورة.', 'success');
-        }
-
-        function fillPurchaseRowFromInvoiceItem(item) {
-            addNewProductRow();
-            const row = document.getElementById(`prod_row_${productRowCounter}`);
-            if (!row) return;
-            const product = productsDB.find(p => String(p.id) === String(item.productId));
-            if (product) selectExistingProduct(product, row.id);
-            else {
-                row.dataset.existingId = '';
-                row.querySelector('.prod-name').value = item.name || '';
-            }
-            const destination = row.querySelector('.destination-store-select');
-            if (destination && [...destination.options].some(o => String(o.value) === String(item.warehouseId || 'shop'))) destination.value = String(item.warehouseId || 'shop');
-            row.querySelector('.expiry-date').value = item.expiryDate || '';
-            row.querySelector('.batch-number').value = item.batchNumber || '';
-
-            if ((item.addType || 'piece') === 'unit') {
-                const typeSelect = row.querySelector('.add-type-select');
-                let desired = product?.unitId ? `unit:${product.unitId}` : 'unit:__product__';
-                if (![...typeSelect.options].some(o => o.value === desired)) typeSelect.insertAdjacentHTML('beforeend', '<option value="unit:__product__">وحدة</option>');
-                typeSelect.value = desired;
-                toggleProductSections(typeSelect);
-                if (!product && Array.isArray(item.unitChain) && item.unitChain.length) renderPurchaseUnitLevels(row, item.unitChain, item.selectedUnitId || item.selectedPurchaseUnitId);
-                const level = row.querySelector('.purchase-unit-level');
-                const selectedId = item.selectedUnitId || item.selectedPurchaseUnitId;
-                if (level && selectedId && [...level.options].some(o => String(o.value) === String(selectedId))) { level.value = String(selectedId); changePurchaseUnitLevel(level, false); }
-                row.querySelector('.unit-qty').value = Number(item.purchaseQuantity ?? 0) || '';
-                row.querySelector('.unit-buy').value = Number(item.purchaseUnitCost ?? 0) || '';
-            } else {
-                const typeSelect = row.querySelector('.add-type-select'); typeSelect.value = 'piece'; toggleProductSections(typeSelect);
-                row.querySelector('.piece-buy').value = Number(item.purchaseCostBeforeTax ?? item.purchaseUnitCost ?? item.purchaseCost ?? 0) || '';
-                if (Array.isArray(item.variants) && item.variants.length) {
-                    const toggle = row.querySelector('.var-toggle-checkbox'); toggle.checked = true; toggleVariantsSwitch(toggle);
-                    const tbody = row.querySelector('.variants-table tbody'); tbody.innerHTML = '';
-                    item.variants.forEach(v => {
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `<td><input type="text" class="v-size" value="${escapePurchaseHtml(v.size || '')}"></td><td><input type="text" class="v-color" value="${escapePurchaseHtml(v.color || '')}"></td><td><div class="barcode-input-wrapper"><input type="text" class="v-barcode" value="${escapePurchaseHtml(v.barcode || '')}"></div></td><td><input type="number" step="any" class="v-qty calc-trigger-var" value="${Number(v.qty || 0)}" oninput="calculateInvoiceFinance()"></td><td><button type="button" class="btn-remove-var" onclick="this.closest('tr').remove(); calculateInvoiceFinance();"><i class="fa-solid fa-trash-can"></i></button></td>`;
-                        tbody.appendChild(tr);
-                    });
-                } else row.querySelector('.piece-qty').value = Number(item.quantityPieces ?? item.purchaseQuantity ?? 0) || '';
+        function saveEditInvoice(e) {
+            e.preventDefault();
+            let id = document.getElementById('editInvoiceId').value;
+            let inv = purchasesDB.find(x => x.id === id);
+            if(inv) {
+                inv.notes = document.getElementById('editNotesInput').value.trim();
+                localStorage.setItem('cashtop_purchases', JSON.stringify(purchasesDB));
+                showToast("تم تحديث ملاحظات الفاتورة بنجاح", "success");
+                closeModal('editModal');
             }
         }
-
-        function startEditPurchaseInvoice(invId) {
-            if (!window.Cashtop?.can?.('purchases.create')) { showToast('لا تملك صلاحية تعديل فواتير المشتريات.', 'error'); return; }
-            if (window.Cashtop?.isFinancialGroupReadOnly?.()) { showToast('المجموعة المغلقة مؤرشفة ولا يمكن تعديل فواتيرها.', 'error'); return; }
-            const inv = purchasesDB.find(row => String(row.id) === String(invId));
-            if (!inv) return showToast('تعذر العثور على الفاتورة.', 'error');
-            editingPurchaseInvoiceId = String(inv.id);
-            editingPurchaseOriginal = JSON.parse(JSON.stringify(inv));
-            rebuildPurchaseOptions();
-            populatePurchaseCurrencySelect(inv.currencyId || purchaseCurrencyConfig().baseCurrencyId);
-            populateSelects();
-            document.getElementById('invIdBox').value = inv.id;
-            document.getElementById('invDateBox').value = inv.date || new Date().toISOString().slice(0,10);
-            document.getElementById('invDateBox').readOnly = true;
-            const supplierSelect = document.getElementById('supplierSelect');
-            supplierSelect.value = inv.withoutSupplier ? PURCHASE_NO_SUPPLIER_VALUE : String(inv.supplierId || PURCHASE_NO_SUPPLIER_VALUE);
-            if (![...supplierSelect.options].some(o => String(o.value) === String(supplierSelect.value))) supplierSelect.value = PURCHASE_NO_SUPPLIER_VALUE;
-            const currencySelect = document.getElementById('purchaseCurrencySelect');
-            if (currencySelect && inv.currencyId && [...currencySelect.options].some(o => String(o.value) === String(inv.currencyId))) currencySelect.value = String(inv.currencyId);
-            const taxSelect = document.getElementById('purchaseTaxSelect');
-            const taxValue = inv.taxSelection || (inv.taxId ? `tax:${inv.taxId}` : 'none');
-            if (taxSelect && [...taxSelect.options].some(o => String(o.value) === String(taxValue))) taxSelect.value = taxValue;
-            purchaseMultiPayments = Array.isArray(inv.payments) ? inv.payments.map(row=>({...row})) : [];
-            const accountSelect = document.getElementById('accountSelect');
-            const fundsAccounts = Array.isArray(fundsDB?.accounts) ? fundsDB.accounts : [];
-            const allSplitAccountsExist = purchaseMultiPayments.length > 0 && purchaseMultiPayments.every(payment =>
-                fundsAccounts.some(account => String(account?.id) === String(payment?.accountId))
-            );
-            if (allSplitAccountsExist) accountSelect.value = PURCHASE_MULTI_PAYMENT_VALUE;
-            else if (inv.withoutAccount || !inv.accountId || ![...accountSelect.options].some(o => String(o.value) === String(inv.accountId))) {
-                // قد يكون صندوق الفاتورة القديمة حُذف يدوياً. هذا لا يمنع تعديل
-                // الفاتورة؛ نحمل قيمتها مع "بدون صندوق" ويمكن اختيار صندوق جديد.
-                purchaseMultiPayments = [];
-                accountSelect.value = PURCHASE_NO_ACCOUNT_VALUE;
-            } else accountSelect.value = String(inv.accountId);
-            setPurchasePaidMultiState(allSplitAccountsExist);
-            document.getElementById('moneyPaid').value = Number(inv.paidNative ?? inv.paid ?? 0) || 0;
-            document.getElementById('purchaseDiscount').value = Number(inv.discount || 0) || 0;
-            if (document.getElementById('purchaseNotes')) document.getElementById('purchaseNotes').value = inv.notes || '';
-            if (document.getElementById('hidePurchaseItemsFromCashier')) document.getElementById('hidePurchaseItemsFromCashier').checked = inv.hideItemsFromCashier === true;
-            document.getElementById('productsContainer').innerHTML = '';
-            productRowCounter = 0;
-            (Array.isArray(inv.items) ? inv.items : []).forEach(fillPurchaseRowFromInvoiceItem);
-            if (!document.querySelector('.product-item')) addNewProductRow();
-            const cancel = document.getElementById('cancelPurchaseEditBtn'); if (cancel) cancel.style.display = '';
-            const btn = document.getElementById('savePurchaseInvoiceBtn'); if (btn) btn.innerHTML = '<i class="fa-solid fa-rotate"></i> <span>حفظ تعديل الفاتورة وعكس القديم</span>';
-            calculateInvoiceFinance();
-            window.scrollTo({top:0, behavior:'smooth'});
-            showToast('تم تحميل الفاتورة كاملة للتعديل. تاريخها ورقمها سيبقيان كما هما.', 'success');
-        }
-
-        function openEditModal(invId) { startEditPurchaseInvoice(invId); }
-
-        function saveEditInvoice(e) { e?.preventDefault?.(); }
 
         function openDeleteModal(invId) {
             document.getElementById('deleteInvoiceId').value = invId;
@@ -2415,38 +2244,181 @@
 
         function confirmDeleteInvoice() {
             if (window.Cashtop?.isFinancialGroupReadOnly?.()) { showToast('المجموعة المغلقة مؤرشفة ولا يمكن حذف فواتيرها.', 'error'); return; }
-            const invId = document.getElementById('deleteInvoiceId').value;
-            const invIndex = purchasesDB.findIndex(row => String(row.id) === String(invId));
-            if (invIndex === -1) return;
-            const inv = purchasesDB[invIndex];
+            let invId = document.getElementById('deleteInvoiceId').value;
+            let invIndex = purchasesDB.findIndex(x => x.id === invId);
+            if(invIndex === -1) return;
+            
+            let inv = purchasesDB[invIndex];
             let purchaseReversals = [];
             try { purchaseReversals = JSON.parse(localStorage.getItem('cashtop_purchase_reversals') || '[]'); } catch (_) { purchaseReversals = []; }
             if (!Array.isArray(purchaseReversals)) purchaseReversals = [];
             const rollback = {
-                products:JSON.parse(JSON.stringify(productsDB)), suppliers:JSON.parse(JSON.stringify(suppliersDB)),
-                funds:JSON.parse(JSON.stringify(fundsDB)), purchases:JSON.parse(JSON.stringify(purchasesDB)),
-                reversals:JSON.parse(JSON.stringify(purchaseReversals))
+                products: JSON.parse(JSON.stringify(productsDB)),
+                suppliers: JSON.parse(JSON.stringify(suppliersDB)),
+                funds: JSON.parse(JSON.stringify(fundsDB)),
+                purchases: JSON.parse(JSON.stringify(purchasesDB)),
+                reversals: JSON.parse(JSON.stringify(purchaseReversals))
             };
+
             try {
-                reversePurchaseInvoiceState(inv, { reason:'حذف فاتورة المشتريات' });
-                purchaseReversals.push({
-                    id:`PUR_REV_${inv.id}_${Date.now()}`, purchaseId:inv.id, reversedAt:new Date().toISOString(),
-                    reason:'حذف فاتورة المشتريات بدون شروط مخزنية', originalInvoice:JSON.parse(JSON.stringify(inv))
+            // 1. عكس المخزون ومتوسط التكلفة من المخزن الذي استلم البضاعة
+            if (Array.isArray(inv.items) && inv.items.length) {
+                inv.items.forEach(item => {
+                    const productIndex = productsDB.findIndex(product => String(product.id) === String(item.productId));
+                    if (productIndex === -1) throw new Error(`تعذر العثور على المنتج [${item.name || item.productId}] لعكس الفاتورة.`);
+                    const product = productsDB[productIndex];
+                    const warehouseId = String(item.warehouseId || 'shop');
+                    const reverseQuantity = Math.max(0, Number(item.quantityPieces || 0));
+                    const totalBefore = getProductTotalStock(product);
+                    const totalAfter = totalBefore - reverseQuantity;
+                    if (totalAfter < -0.001) {
+                        showToast(`لا يمكن عكس مخزون [${item.name}] لأن إجمالي الكمية الحالية أقل من كمية الفاتورة.`, 'error');
+                        throw new Error('PURCHASE_STOCK_CONFLICT');
+                    }
+
+                    if (Array.isArray(item.variants) && item.variants.length && Array.isArray(product.variants)) {
+                        item.variants.forEach(oldVariant => {
+                            const variant = product.variants.find(current =>
+                                (oldVariant.barcode && String(current?.barcode || '') === String(oldVariant.barcode)) ||
+                                (String(current?.size || '') === String(oldVariant.size || '') && String(current?.color || '') === String(oldVariant.color || ''))
+                            );
+                            if (!variant) throw new Error('PURCHASE_VARIANT_NOT_FOUND');
+                            const quantity = Math.max(0, Number(oldVariant.qty || 0));
+                            if (warehouseId === 'shop') {
+                                const available = Number(variant.qty || 0);
+                                if (available + 0.001 < quantity) throw new Error('PURCHASE_STOCK_CONFLICT');
+                                variant.qty = Math.max(0, available - quantity);
+                            } else {
+                                variant.storeStocks = variant.storeStocks && typeof variant.storeStocks === 'object' ? variant.storeStocks : {};
+                                const available = Number(variant.storeStocks[warehouseId] || 0);
+                                if (available + 0.001 < quantity) throw new Error('PURCHASE_STOCK_CONFLICT');
+                                variant.storeStocks[warehouseId] = Math.max(0, available - quantity);
+                            }
+                        });
+                        if (warehouseId === 'shop') {
+                            const available = Number(product.stockPieces || 0);
+                            if (available + 0.001 < reverseQuantity) throw new Error('PURCHASE_STOCK_CONFLICT');
+                            product.stockPieces = Math.max(0, available - reverseQuantity);
+                        } else if (product.storeStocks && Object.prototype.hasOwnProperty.call(product.storeStocks, warehouseId)) {
+                            product.storeStocks[warehouseId] = Math.max(0, Number(product.storeStocks[warehouseId] || 0) - reverseQuantity);
+                        }
+                    } else if (warehouseId === 'shop') {
+                        const available = Number(product.stockPieces || 0);
+                        if (available + 0.001 < reverseQuantity) throw new Error('PURCHASE_STOCK_CONFLICT');
+                        product.stockPieces = Math.max(0, available - reverseQuantity);
+                    } else {
+                        product.storeStocks = product.storeStocks && typeof product.storeStocks === 'object' ? product.storeStocks : {};
+                        const available = Number(product.storeStocks[warehouseId] || 0);
+                        if (available + 0.001 < reverseQuantity) throw new Error('PURCHASE_STOCK_CONFLICT');
+                        product.storeStocks[warehouseId] = Math.max(0, available - reverseQuantity);
+                    }
+
+                    if (Array.isArray(product.inventoryLots)) {
+                        const lotIndex = product.inventoryLots.findIndex(lot =>
+                            (item.inventoryLotId && String(lot?.id) === String(item.inventoryLotId)) ||
+                            (String(lot?.sourceType || '') === 'purchaseInvoice' && String(lot?.sourceId || '') === String(inv.id) && String(lot?.warehouseId || 'shop') === warehouseId)
+                        );
+                        if (lotIndex > -1) {
+                            const lot = product.inventoryLots[lotIndex];
+                            const remaining = Math.max(0, Number(lot.remainingPieces ?? lot.quantityPieces ?? 0));
+                            if (remaining + 0.001 < reverseQuantity) {
+                                showToast(`لا يمكن حذف الفاتورة لأن جزءاً من دفعة [${item.name}] تم بيعه أو إهلاكه.`, 'error');
+                                throw new Error('PURCHASE_STOCK_CONFLICT');
+                            }
+                            lot.remainingPieces = Math.max(0, remaining - reverseQuantity);
+                            if (lot.remainingPieces <= 0.000001) product.inventoryLots.splice(lotIndex, 1);
+                        }
+                    }
+
+                    const currentCost = Math.max(0, Number(product.cost || 0));
+                    const purchaseCost = Math.max(0, Number(item.purchaseCost || 0));
+                    if (totalAfter > 0) {
+                        product.cost = Math.max(0, ((totalBefore * currentCost) - (reverseQuantity * purchaseCost)) / totalAfter);
+                    } else {
+                        product.cost = 0;
+                    }
+                    productsDB[productIndex] = product;
                 });
-                purchasesDB.splice(invIndex,1);
-                const changes = {
-                    cashtop_products:productsDB, cashtop_suppliers:suppliersDB, cashtop_funds_db:fundsDB,
-                    cashtop_purchases:purchasesDB, cashtop_purchase_reversals:purchaseReversals
-                };
-                if (window.Cashtop?.atomicSetItems) window.Cashtop.atomicSetItems(changes,{label:'delete-purchase-invoice-unconditional'});
-                else Object.entries(changes).forEach(([key,value])=>localStorage.setItem(key,JSON.stringify(value)));
-                closeModal('deleteModal');
-                renderInvoicesTable();
-                showToast('تم حذف فاتورة المشتريات وعكس المخزون والدين والمدفوع. لم يعد استخدام جزء من المنتجات يمنع الحذف.', 'success');
+            }
+
+            // 2. عكس المديونية على المورد بقيد مستقل مع إبقاء حركة الشراء الأصلية للتدقيق
+            if(inv.debt > 0) {
+                reduceSupplierPurchaseDebt(inv, Number(inv.debt || 0), `عكس دين فاتورة المشتريات [${inv.id}] بعد حذفها`);
+            }
+
+            // 3. إرجاع المال المسحوب للصندوق/الصناديق بقيد عكسي مستقل؛ لا نحذف حركة السحب الأصلية.
+            if(inv.paid > 0) {
+                const paymentRows = Array.isArray(inv.payments) && inv.payments.length ? inv.payments : null;
+                if (paymentRows) {
+                    paymentRows.forEach((payment, paymentIndex) => {
+                        const vault = fundsDB.accounts.find(a => String(a.id) === String(payment.accountId));
+                        if (!vault) return;
+                        const reversalCurrencyId = payment.accountCurrencyId || vault.currencyId || (window.CashtopMulti?.getCurrencyConfig?.().baseCurrencyId || 'base');
+                        const reversalNative = Number(payment.accountAmount || payment.accountAmountNative || 0);
+                        vault.balance = Number(vault.balance || 0) + reversalNative;
+                        fundsDB.accountLogs.push({
+                            id: `LOG_PUR_REV_${inv.id}_${paymentIndex}_${Date.now()}`, sourceType: 'purchaseInvoiceReversal', sourceId: inv.id,
+                            accountId: vault.id, date: new Date().toISOString().split('T')[0], type: "إيداع", amount: reversalNative,
+                            baseAmount: Number(payment.baseAmount || 0), currencyId: reversalCurrencyId,
+                            notes: `عكس قيد دفع متعدد: استرداد نقدية إثر إلغاء فاتورة مشتريات [${inv.id}]`
+                        });
+                    });
+                } else {
+                    let vault = fundsDB.accounts.find(a => String(a.id) === String(inv.accountId));
+                    if(vault) {
+                        const reversalCurrencyId = inv.accountCurrencyId || vault.currencyId || (window.CashtopMulti?.getCurrencyConfig?.().baseCurrencyId || 'base');
+                        const reversalNative = Number.isFinite(Number(inv.accountAmountNative))
+                            ? Number(inv.accountAmountNative)
+                            : (window.CashtopMulti?.accountAmountFromBase?.(Number(inv.paid || 0), reversalCurrencyId) ?? window.CashtopMulti?.fromBase?.(Number(inv.paid || 0), reversalCurrencyId) ?? Number(inv.paid || 0));
+                        vault.balance = Number(vault.balance || 0) + reversalNative;
+                        fundsDB.accountLogs.push({
+                            id: `LOG_PUR_REV_${inv.id}_${Date.now()}`, sourceType: 'purchaseInvoiceReversal', sourceId: inv.id,
+                            accountId: vault.id, date: new Date().toISOString().split('T')[0], type: "إيداع", amount: reversalNative,
+                            baseAmount: Number(inv.paid || 0), currencyId: reversalCurrencyId,
+                            notes: `عكس قيد: استرداد نقدية إثر إلغاء فاتورة مشتريات [${inv.id}]`
+                        });
+                    }
+                }
+            }
+
+            const reversalRecord = {
+                id: `PUR_REV_${inv.id}_${Date.now()}`,
+                purchaseId: inv.id,
+                reversedAt: new Date().toISOString(),
+                reason: 'حذف فاتورة المشتريات',
+                originalInvoice: JSON.parse(JSON.stringify(inv))
+            };
+            purchaseReversals.push(reversalRecord);
+            purchasesDB.splice(invIndex, 1);
+            const reversalChanges = {
+                cashtop_products: productsDB,
+                cashtop_suppliers: suppliersDB,
+                cashtop_funds_db: fundsDB,
+                cashtop_purchases: purchasesDB,
+                cashtop_purchase_reversals: purchaseReversals
+            };
+            if (window.Cashtop?.atomicSetItems) {
+                window.Cashtop.atomicSetItems(reversalChanges, { label: 'delete-purchase-invoice' });
+            } else {
+                Object.entries(reversalChanges).forEach(([key, value]) => localStorage.setItem(key, JSON.stringify(value)));
+            }
+            
+            showToast("تم إلغاء الفاتورة وعكس القيود المالية والمخزنية.", "success");
+            closeModal('deleteModal');
+            renderInvoicesTable();
             } catch (error) {
-                productsDB=rollback.products; suppliersDB=rollback.suppliers; fundsDB=rollback.funds; purchasesDB=rollback.purchases; purchaseReversals=rollback.reversals;
-                console.error(error);
-                showToast(error?.message || 'تعذر حذف الفاتورة وعكسها.', 'error');
+                productsDB = rollback.products;
+                suppliersDB = rollback.suppliers;
+                fundsDB = rollback.funds;
+                purchasesDB = rollback.purchases;
+                purchaseReversals = rollback.reversals;
+                localStorage.setItem('cashtop_products', JSON.stringify(productsDB));
+                localStorage.setItem('cashtop_suppliers', JSON.stringify(suppliersDB));
+                localStorage.setItem('cashtop_funds_db', JSON.stringify(fundsDB));
+                localStorage.setItem('cashtop_purchases', JSON.stringify(purchasesDB));
+                localStorage.setItem('cashtop_purchase_reversals', JSON.stringify(purchaseReversals));
+                if (error.message !== 'PURCHASE_STOCK_CONFLICT') console.error(error);
+                showToast('تعذر حذف الفاتورة، وتمت إعادة جميع بيانات المخزون والمورد والصندوق كما كانت.', 'error');
             }
         }
 

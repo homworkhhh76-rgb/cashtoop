@@ -27,7 +27,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     'cashtop_transfer_history','cashtop_branches','cashtop_branch_transfer_history','cashtop_employees',
     'cashtop_workers','cashtop_sales_agents','cashtop_agent_movements','cashtop_sales_offers',
     'cashtop_manufacturing_recipes','cashtop_manufacturing_orders','cashtop_wastage','cashtop_salary_payments',
-    'cashtop_chart_accounts','cashtop_manual_journal_entries','cashtop_chart_opening_balances','cashtop_chart_transactions','cashtop_journal','cashtop_journal_reversal_archive','cashtop_financial_groups','cashtop_opening_balances',
+    'cashtop_journal','cashtop_journal_reversal_archive','cashtop_financial_groups','cashtop_opening_balances',
     'cashtop_funds_db'
   ]);
   const LOSSLESS_OBJECT_KEYS = new Set(['cashtop_funds_db']);
@@ -596,10 +596,9 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       'suppliers.html': ['cashtop_suppliers', 'cashtop_supplier_movements', 'cashtop_purchases'],
       'المشتريات.html': ['cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_products', 'cashtop_suppliers', 'cashtop_funds_db', 'cashtop_stores', 'cashtop_tax_settings', 'cashtop_settings'],
       'مرجع المشتريات.html': ['cashtop_purchase_returns', 'cashtop_purchases', 'cashtop_products', 'cashtop_suppliers'],
-      'المصاريف.html': ['cashtop_expenses', 'cashtop_expense_types', 'cashtop_funds_db', 'cashtop_chart_accounts', 'cashtop_chart_transactions', 'cashtop_journal'],
-      'accounts.html': ['cashtop_funds_db', 'cashtop_vouchers', 'cashtop_transfer_history', 'cashtop_chart_accounts', 'cashtop_chart_transactions', 'cashtop_journal', 'cashtop_settings'],
-      'chart-accounts.html': ['cashtop_chart_accounts', 'cashtop_manual_journal_entries', 'cashtop_chart_opening_balances', 'cashtop_chart_transactions', 'cashtop_opening_balances', 'cashtop_journal', 'cashtop_funds_db', 'cashtop_invoices', 'cashtop_sales_reversals', 'cashtop_sales_returns', 'cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_purchase_returns', 'cashtop_expenses', 'cashtop_vouchers', 'cashtop_material_purchases', 'cashtop_salary_payments', 'cashtop_workers'],
-      'journal.html': ['cashtop_journal', 'cashtop_chart_accounts', 'cashtop_chart_transactions', 'cashtop_funds_db', 'cashtop_invoices', 'cashtop_purchases', 'cashtop_expenses', 'cashtop_vouchers', 'cashtop_sales_returns', 'cashtop_purchase_returns', 'cashtop_material_purchases', 'cashtop_salary_payments', 'cashtop_suppliers', 'cashtop_workers', 'cashtop_sales_agents', 'cashtop_agent_movements', 'cashtop_purchase_reversals'],
+      'المصاريف.html': ['cashtop_expenses', 'cashtop_expense_types', 'cashtop_funds_db'],
+      'accounts.html': ['cashtop_funds_db', 'cashtop_vouchers', 'cashtop_transfer_history'],
+      'journal.html': ['cashtop_journal', 'cashtop_funds_db', 'cashtop_invoices', 'cashtop_purchases', 'cashtop_expenses', 'cashtop_vouchers', 'cashtop_sales_returns', 'cashtop_purchase_returns', 'cashtop_material_purchases', 'cashtop_salary_payments', 'cashtop_suppliers', 'cashtop_workers', 'cashtop_sales_agents', 'cashtop_agent_movements', 'cashtop_purchase_reversals'],
       'branches.html': ['cashtop_branches', 'cashtop_stores', 'cashtop_employees', 'cashtop_products'],
       'warehouses.html': ['cashtop_stores', 'cashtop_products', 'cashtop_transfer_history'],
       'units.html': ['cashtop_units', 'cashtop_products'],

@@ -1,631 +1,251 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+
+<html dir="rtl" lang="ar">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تسجيل الدخول | كاش توب</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-    <!-- FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Flag Icons (SVG) -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icons/7.2.3/css/flag-icons.min.css" />
-    <style>
-        :root {
-            /* درجة اللون المستخرجة */
-            --brand: #61529d; 
-            --brand-hover: #4e417e;
-            --brand-light: #f3f1f8;
-            --brand-border: #e0dceb;
+    <meta name="screen-orientation" content="portrait">
+    <meta name="x5-orientation" content="portrait">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>تسجيل الدخول - كاش توب 2</title>
+<!-- استيراد خط القاهرة للواجهات -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- استيراد مكتبة Font Awesome للأيقونات الاحترافية -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+<style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Cairo', sans-serif;
         }
 
-        body { 
-            font-family: 'Cairo', sans-serif; 
-            background-color: var(--brand-light);
-            background-image: radial-gradient(var(--brand-border) 1px, transparent 1px);
-            background-size: 20px 20px;
+        body {
+            background-color: #f4f6f9;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overflow: hidden;
         }
 
-        /* Tabs Animation */
-        .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.4s ease-out forwards; }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        /* حاوية صندوق تسجيل الدخول */
+        .login-container {
+            background: #ffffff;
+            width: 100%;
+            max-width: 420px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            border-top: 4px solid #605ca8; /* اللون البنفسجي المعتمد لكاش توب */
+            padding: 30px 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
         }
 
-        /* ================= Form Inputs (Standard Top Label) ================= */
-        .form-group {
-            margin-bottom: 0.5rem;
+        /* ترويسة الشعار والاسم */
+        .login-header {
+            text-align: center;
+            margin-bottom: 10px;
         }
-        .form-label {
-            display: block;
-            font-size: 0.75rem;
+
+        .login-header h1 {
+            font-size: 24px;
             font-weight: 700;
-            color: #64748b;
-            margin-bottom: 0.35rem;
-            transition: color 0.3s;
+            color: #222;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
-        .form-group:focus-within .form-label {
-            color: var(--brand);
+
+        .login-header h1 i {
+            color: #605ca8;
         }
+
+        .login-header p {
+            font-size: 13px;
+            color: #777;
+            margin-top: 5px;
+            font-weight: 600;
+        }
+
+        /* نظام الحقول المحمية بالأيقونات والأطر المتقاطعة */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        .form-group label {
+            position: absolute;
+            top: -10px;
+            right: 12px;
+            background-color: #fff;
+            padding: 0 6px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #666;
+            z-index: 2;
+        }
+
         .input-wrapper {
             position: relative;
             width: 100%;
         }
-        .form-input {
-            width: 100%;
-            height: 2.85rem;
-            background-color: transparent;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 0.75rem;
-            outline: none;
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: #1e293b;
-            padding: 0 0.75rem 0 2.5rem; 
-            font-family: 'Cairo', sans-serif;
-            transition: border-color 0.3s;
-        }
-        .form-input:focus {
-            border-color: var(--brand);
-        }
-        .form-input::placeholder {
-            color: #cbd5e1;
-            font-weight: 600;
-        }
-        .input-icon {
+
+        .input-wrapper i {
             position: absolute;
-            left: 0.75rem;
+            right: 12px;
             top: 50%;
             transform: translateY(-50%);
-            color: #94a3b8;
-            pointer-events: none;
-            transition: color 0.3s;
-            font-size: 1rem;
-        }
-        .form-group:focus-within .input-icon {
-            color: var(--brand);
+            color: #999;
+            font-size: 14px;
+            z-index: 3;
         }
 
-        /* ================= Custom Select ================= */
-        .custom-select-box {
-            height: 2.85rem;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 0.75rem;
-            padding: 0 0.75rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            cursor: pointer;
-            transition: border-color 0.3s;
-            background-color: transparent;
-        }
-        .custom-select-box:hover {
-            border-color: var(--brand);
-        }
-        .custom-options {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(10px);
-            border: 1px solid #e2e8f0;
-            border-radius: 0.75rem;
-            margin-top: 0.25rem;
-            box-shadow: 0 10px 25px -5px rgba(97, 82, 157, 0.15);
-            z-index: 50;
-            display: none;
-            max-height: 250px;
-            overflow-y: auto;
-        }
-        .custom-options.open {
-            display: block;
-            animation: fadeIn 0.2s ease-out;
-        }
-        .custom-option {
-            padding: 0.75rem 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .custom-option:hover {
-            background-color: var(--brand-light);
-        }
-
-        /* ================= File Upload ================= */
-        .file-upload-box {
-            height: 3.5rem;
-            border: 1.5px dashed #cbd5e1;
-            border-radius: 0.75rem;
-            display: flex;
-            align-items: center;
-            padding: 0 0.75rem;
-            cursor: pointer;
-            transition: all 0.3s;
+        .form-control {
+            width: 100%;
+            padding: 11px 38px 11px 12px;
+            font-size: 13px;
+            border: 1px solid #d2d6de;
+            border-radius: 4px;
+            outline: none;
+            background-color: #fff;
             position: relative;
+            z-index: 1;
+            transition: border-color 0.2s;
         }
-        .file-upload-box:hover {
-            border-color: var(--brand);
-            background-color: var(--brand-light);
+
+        .form-control:focus {
+            border-color: #605ca8;
         }
-        
-        /* Multi-step animations */
-        .step-container { display: none; animation: fadeIn 0.4s ease-out forwards; }
-        .step-container.active { display: block; }
-        
-        /* انيميشن دوران أيقونة التحديث */
-        @keyframes spin-once {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+
+        /* خيارات التذكر وحفظ الجلسة */
+        .login-options {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
         }
-        .spin-anim {
-            animation: spin-once 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+
+        .checkbox-label input {
+            accent-color: #605ca8;
+            width: 15px;
+            height: 15px;
+        }
+
+        /* زر الدخول الرئيسي */
+        .btn-login {
+            background-color: #605ca8;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            transition: background 0.2s;
+            box-shadow: 0 2px 4px rgba(96, 92, 168, 0.2);
+        }
+
+        .btn-login:hover {
+            background-color: #4b4885;
+        }
+
+        /* إشعار الأمان في الأسفل للعمل دون إنترنت */
+        .offline-shield {
+            font-size: 11px;
+            color: #00a65a;
+            text-align: center;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            background-color: #e6f7f0;
+            padding: 6px;
+            border-radius: 4px;
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 25px 20px;
+                box-shadow: none;
+                border: 1px solid #e2e8f0;
+            }
         }
     </style>
-  <script src="offline-cache.js" defer></script>
+<link href="manifest.webmanifest" rel="manifest"/><link href="icon-512.png" rel="icon"/><meta content="#605ca8" name="theme-color"/><script src="cashtop-download-fix.js"></script>
+<script id="ct-offline-first-bootstrap-v85">(function(){if(!('serviceWorker'in navigator)||!(location.protocol==='https:'||location.hostname==='localhost'))return;navigator.serviceWorker.register('service-worker.js',{scope:'./',updateViaCache:'none'}).then(function(){return navigator.serviceWorker.ready}).then(function(r){r.active&&r.active.postMessage({type:'VERIFY_CACHE'});}).catch(function(){});})();</script>
 </head>
-<body class="antialiased min-h-screen flex items-center justify-center p-4">
+<body>
+<div class="login-container">
+<!-- الترويسة -->
+<div class="login-header">
+<h1><i class="fa-solid fa-vault"></i> CASH TOP 2</h1>
+<p>نظام إدارة المبيعات والمخازن الذكي</p>
+</div>
+<!-- نموذج تسجيل الدخول -->
+<form id="loginForm" onsubmit="handleLogin(event)">
+<!-- 1. مفتاح الشركة -->
+<div class="form-group" style="margin-bottom: 18px;">
+<label>مفتاح الشركة (Company Key)</label>
+<div class="input-wrapper">
+<i class="fa-solid fa-key"></i>
+<input class="form-control" id="companyKey" placeholder="أدخل مفتاح المنشأة المخصص..." required="" type="text"/>
+</div>
+</div>
+<!-- 2. اسم المستخدم -->
+<div class="form-group" style="margin-bottom: 18px;">
+<label>اسم المستخدم (Username)</label>
+<div class="input-wrapper">
+<i class="fa-solid fa-user"></i>
+<input autocomplete="username" class="form-control" id="username" placeholder="أدخل اسم المستخدم هنا..." required="" type="text"/>
+</div>
+</div>
+<!-- 3. كلمة المرور -->
+<div class="form-group" style="margin-bottom: 15px;">
+<label>كلمة المرور (Password)</label>
+<div class="input-wrapper">
+<i class="fa-solid fa-lock"></i>
+<input autocomplete="current-password" class="form-control" id="password" placeholder="••••••••" required="" type="password"/>
+</div>
+</div>
+<!-- زر الإجراء -->
+<button class="btn-login" type="submit">
+<i class="fa-solid fa-right-to-bracket"></i> تسجيل الدخول للنظام
+            </button>
+</form>
+<!-- كبسولة الأمان للوضع المحلي (Offline-First) -->
+<div class="offline-shield">
+<i class="fa-solid fa-shield-halved"></i>
+<span>تخزين مفتاح الشركة محلياً وتسريع فتح الصفحات من الكاش</span>
+</div>
 
-    <!-- البطاقة الرئيسية -->
-    <div class="w-full max-w-2xl bg-white rounded-[2rem] overflow-visible relative border border-[#e0dceb]">
-        
-        <!-- الهيدر بالألوان المخصصة -->
-        <div class="h-32 relative flex items-center justify-center z-20 rounded-t-[2rem]" style="background-color: var(--brand); overflow:visible;">
-            <div class="absolute inset-0 opacity-20 mix-blend-overlay pointer-events-none overflow-hidden rounded-t-[2rem]" style="background-image: url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
-            
-            <!-- Logo -->
-            <div class="absolute -bottom-12 w-24 h-24 bg-white rounded-2xl shadow-lg p-2 border-4 border-white flex items-center justify-center overflow-hidden z-50">
-                <img src="cashtop-logo.png" alt="كاش توب" class="w-full h-full object-contain rounded-xl relative z-50" onerror="this.src='https://ui-avatars.com/api/?name=CT&background=61529d&color=fff&size=100'">
-            </div>
-        </div>
+</div>
 
-        <div class="pt-16 px-6 sm:px-10 pb-8 relative z-10">
-            <!-- App Title -->
-            <div class="text-center mb-8">
-                <h1 class="text-2xl font-black text-gray-900 tracking-tight">كاش توب <span style="color: var(--brand);">2</span></h1>
-                <p class="text-sm font-semibold text-gray-500 mt-1">نظام إدارة المبيعات والمخازن الذكي</p>
-            </div>
-
-            <!-- Tabs -->
-            <div class="flex rounded-xl p-1 mb-6" style="background-color: var(--brand-light); border: 1px solid var(--brand-border);">
-                <button onclick="switchTab('login')" id="tab-login" class="flex-1 py-2.5 text-sm font-bold rounded-lg transition-all bg-white shadow-sm" style="color: var(--brand);">
-                    تسجيل الدخول
-                </button>
-                <button onclick="switchTab('register')" id="tab-register" class="flex-1 py-2.5 text-sm font-bold rounded-lg transition-all text-gray-500 hover:text-gray-800">
-                    حساب جديد
-                </button>
-            </div>
-
-            <div id="loginStatus" style="display:none;margin:0 0 14px;padding:10px 12px;border-radius:10px;font-size:12px;font-weight:700;line-height:1.7"></div>
-
-            <!-- ===================== LOGIN FORM ===================== -->
-            <div id="form-login" class="tab-content active">
-                <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
-                    
-                    <div class="form-group">
-                        <label class="form-label">مفتاح الشركة (Company Key)</label>
-                        <div class="input-wrapper">
-                            <input type="text" id="companyKey" class="form-input" placeholder="أدخل مفتاح المنشأة المخصص..." dir="ltr" autocomplete="organization">
-                            <i class="fa-solid fa-key input-icon"></i>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">اسم المستخدم (Username)</label>
-                        <div class="input-wrapper">
-                            <input type="text" id="username" class="form-input" placeholder="أدخل اسم المستخدم هنا..." dir="ltr" autocomplete="username">
-                            <i class="fa-solid fa-user input-icon"></i>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">كلمة المرور (Password)</label>
-                        <div class="input-wrapper">
-                            <input type="password" id="password" class="form-input" placeholder="••••••••" dir="ltr" autocomplete="current-password">
-                            <i class="fa-solid fa-lock input-icon"></i>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="btn-login w-full text-white font-bold py-3.5 rounded-xl transition-all transform hover:-translate-y-1 mt-6 flex justify-center items-center gap-2" style="background-color: var(--brand);">
-                        <span>تسجيل الدخول للنظام</span>
-                        <i class="fa-solid fa-arrow-right-to-bracket rtl:-scale-x-100"></i>
-                    </button>
-
-                    <label class="flex items-center justify-center gap-2 mt-6 cursor-pointer py-3 rounded-xl transition-colors" style="background-color: var(--brand-light); color: var(--brand);">
-                        <input type="checkbox" id="rememberKey" class="w-4 h-4 rounded" style="accent-color: var(--brand);" checked>
-                        <span class="text-xs font-bold">تخزين مفتاح الشركة محلياً لتسريع الدخول</span>
-                        <i class="fa-solid fa-shield-halved opacity-80"></i>
-                    </label>
-                </form>
-            </div>
-
-            <!-- ===================== REGISTER FORM (MULTI-STEP) ===================== -->
-            <div id="form-register" class="tab-content">
-                
-                <!-- Progress Bar -->
-                <div class="mb-8 relative z-0 px-2 sm:px-4">
-                    <div class="flex items-center justify-between relative">
-                        <div class="absolute left-4 right-4 top-1/2 transform -translate-y-1/2 h-1 bg-gray-200 -z-10 rounded-full"></div>
-                        <div class="absolute right-4 top-1/2 transform -translate-y-1/2 h-1 -z-10 rounded-full transition-all duration-500" id="progress-line" style="width: 0%; background-color: var(--brand);"></div>
-                        
-                        <!-- Step 1 Dot -->
-                        <div class="flex flex-col items-center gap-2 relative z-10 w-8">
-                            <div class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold transition-all duration-300 border-4 border-white" id="dot-1" style="background-color: var(--brand);">1</div>
-                            <span class="text-[0.65rem] sm:text-xs font-bold whitespace-nowrap absolute -bottom-6" id="text-1" style="color: var(--brand);">النشاط التجاري</span>
-                        </div>
-                        
-                        <!-- Step 2 Dot -->
-                        <div class="flex flex-col items-center gap-2 relative z-10 w-8">
-                            <div class="w-8 h-8 rounded-full flex items-center justify-center bg-gray-200 text-gray-500 font-bold transition-all duration-300 border-4 border-white" id="dot-2">2</div>
-                            <span class="text-[0.65rem] sm:text-xs font-bold text-gray-400 whitespace-nowrap absolute -bottom-6" id="text-2">الإعدادات</span>
-                        </div>
-                        
-                        <!-- Step 3 Dot -->
-                        <div class="flex flex-col items-center gap-2 relative z-10 w-8">
-                            <div class="w-8 h-8 rounded-full flex items-center justify-center bg-gray-200 text-gray-500 font-bold transition-all duration-300 border-4 border-white" id="dot-3">3</div>
-                            <span class="text-[0.65rem] sm:text-xs font-bold text-gray-400 whitespace-nowrap absolute -bottom-6" id="text-3">بيانات الدخول</span>
-                        </div>
-                    </div>
-                </div>
-
-                <form id="registerForm" onsubmit="handleRegister(event)" class="mt-12">
-                    
-                    <!-- STEP 1: Business Info -->
-                    <div id="step-1" class="step-container active space-y-2">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            
-                            <div class="form-group sm:col-span-1">
-                                <label class="form-label">اسم النشاط التجاري</label>
-                                <div class="input-wrapper">
-                                    <input type="text" id="regCompanyName" class="form-input" placeholder="مثال: سوبرماركت السعادة (اختياري)">
-                                    <i class="fa-solid fa-store input-icon"></i>
-                                </div>
-                            </div>
-                            
-                            <div class="form-group sm:col-span-1">
-                                <label class="form-label">رقم الجوال</label>
-                                <div class="input-wrapper">
-                                    <input type="tel" id="regPhone" class="form-input text-left" placeholder="059 123 4567 (اختياري)" dir="ltr">
-                                    <i class="fa-solid fa-phone input-icon"></i>
-                                </div>
-                            </div>
-
-                            <div class="form-group sm:col-span-1">
-                                <label class="form-label">البريد الإلكتروني</label>
-                                <div class="input-wrapper">
-                                    <input type="email" id="regEmail" class="form-input text-left" placeholder="example@email.com" dir="ltr">
-                                    <i class="fa-regular fa-envelope input-icon"></i>
-                                </div>
-                            </div>
-
-                            <div class="form-group sm:col-span-1">
-                                <label class="form-label">العنوان</label>
-                                <div class="input-wrapper">
-                                    <input type="text" id="regAddress" class="form-input" placeholder="المدينة، الشارع...">
-                                    <i class="fa-solid fa-location-dot input-icon"></i>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="pt-4 flex justify-end">
-                            <button type="button" onclick="goToStep(2)" class="text-white font-bold py-3 px-8 rounded-xl transition-all transform hover:-translate-x-1 flex items-center gap-2" style="background-color: var(--brand);">
-                                <span>التالي</span>
-                                <i class="fa-solid fa-arrow-left"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- STEP 2: Customization (Currency & Logo) -->
-                    <div id="step-2" class="step-container space-y-4">
-                        
-                        <div class="form-group sm:col-span-2 group custom-select-wrapper" id="currency-select-wrapper">
-                            <label class="form-label transition-colors" id="currency-legend">العملة الافتراضية</label>
-                            <div class="relative w-full">
-                                <div class="custom-select-box" onclick="toggleCurrencyDropdown()">
-                                    <div class="flex items-center gap-3" id="selected-currency">
-                                        <div class="w-5 h-5 rounded-full overflow-hidden flex-shrink-0 border border-gray-200 shadow-sm relative">
-                                            <span class="fi fi-ps absolute inset-0 bg-cover bg-center"></span>
-                                        </div>
-                                        <span id="selected-currency-text" class="font-bold text-sm text-gray-800">شيكل (ILS)</span>
-                                    </div>
-                                    <i class="fa-solid fa-chevron-down text-gray-400 text-xs transition-transform" id="currency-arrow"></i>
-                                </div>
-                                
-                                <div class="custom-options" id="currency-options">
-                                    <div class="custom-option" onclick="selectCurrency('fi-ps', 'شيكل (ILS)')"><div class="w-5 h-5 rounded-full overflow-hidden flex-shrink-0 border border-gray-200 shadow-sm relative"><span class="fi fi-ps absolute inset-0 bg-cover bg-center"></span></div><span class="font-bold text-sm">شيكل (ILS)</span></div>
-                                    <div class="custom-option" onclick="selectCurrency('fi-sa', 'ريال سعودي (SAR)')"><div class="w-5 h-5 rounded-full overflow-hidden flex-shrink-0 border border-gray-200 shadow-sm relative"><span class="fi fi-sa absolute inset-0 bg-cover bg-center"></span></div><span class="font-bold text-sm">ريال سعودي (SAR)</span></div>
-                                    <div class="custom-option" onclick="selectCurrency('fi-ae', 'درهم إماراتي (AED)')"><div class="w-5 h-5 rounded-full overflow-hidden flex-shrink-0 border border-gray-200 shadow-sm relative"><span class="fi fi-ae absolute inset-0 bg-cover bg-center"></span></div><span class="font-bold text-sm">درهم إماراتي (AED)</span></div>
-                                    <div class="custom-option" onclick="selectCurrency('fi-eg', 'جنيه مصري (EGP)')"><div class="w-5 h-5 rounded-full overflow-hidden flex-shrink-0 border border-gray-200 shadow-sm relative"><span class="fi fi-eg absolute inset-0 bg-cover bg-center"></span></div><span class="font-bold text-sm">جنيه مصري (EGP)</span></div>
-                                    <div class="custom-option" onclick="selectCurrency('fi-jo', 'دينار أردني (JOD)')"><div class="w-5 h-5 rounded-full overflow-hidden flex-shrink-0 border border-gray-200 shadow-sm relative"><span class="fi fi-jo absolute inset-0 bg-cover bg-center"></span></div><span class="font-bold text-sm">دينار أردني (JOD)</span></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-group sm:col-span-2 group">
-                            <label class="form-label transition-colors">شعار النشاط التجاري (اختياري)</label>
-                            <div class="file-upload-box relative overflow-hidden">
-                                <input type="file" id="logo-upload" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" accept="image/*" onchange="previewImage(this)">
-                                <div class="flex items-center justify-start gap-3 w-full transition-transform" id="upload-content">
-                                    <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors" style="background-color: var(--brand-light); color: var(--brand);">
-                                        <i class="fa-solid fa-cloud-arrow-up text-sm"></i>
-                                    </div>
-                                    <div class="text-right flex flex-col justify-center">
-                                        <span class="block text-xs font-bold text-gray-800">اضغط لرفع الشعار</span>
-                                    </div>
-                                </div>
-                                <img id="image-preview" src="#" alt="Preview" class="hidden absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 h-10 w-10 object-contain bg-white rounded border border-gray-100 z-40 pointer-events-none shadow-sm">
-                            </div>
-                        </div>
-
-                        <div class="pt-4 flex justify-between">
-                            <button type="button" onclick="goToStep(1)" class="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold py-3 px-6 rounded-xl transition-all flex items-center gap-2 transform hover:translate-x-1">
-                                <i class="fa-solid fa-arrow-right"></i>
-                                <span>السابق</span>
-                            </button>
-                            <button type="button" onclick="goToStep(3)" class="text-white font-bold py-3 px-8 rounded-xl transition-all transform hover:-translate-x-1 flex items-center gap-2" style="background-color: var(--brand);">
-                                <span>التالي</span>
-                                <i class="fa-solid fa-arrow-left"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- STEP 3: Login Info -->
-                    <div id="step-3" class="step-container space-y-4">
-                        
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-10">
-                            
-                            <div class="form-group sm:col-span-2">
-                                <label class="form-label" style="color: var(--brand);">مفتاح الشركة (تم توليده تلقائياً)</label>
-                                <div class="input-wrapper">
-                                    <input type="text" id="generated-key" class="form-input font-mono font-bold tracking-widest text-left pr-4" readonly required dir="ltr" style="padding-left: 5.5rem; color: var(--brand); background-color: var(--brand-light);">
-                                    
-                                    <div class="absolute left-1 top-1/2 transform -translate-y-1/2 flex items-center gap-1 z-10">
-                                        <button type="button" onclick="copyKey()" id="copy-btn" class="text-gray-500 hover:bg-white hover:shadow-sm transition-all p-1.5 rounded-lg" title="نسخ المفتاح">
-                                            <i class="fa-regular fa-copy"></i>
-                                        </button>
-                                        <div class="w-px h-5 bg-gray-300"></div>
-                                        <button type="button" onclick="generateKey()" class="transition-all p-1.5 rounded-lg hover:bg-white hover:shadow-sm" style="color: var(--brand);" title="تحديث المفتاح">
-                                            <i id="refresh-icon" class="fa-solid fa-arrows-rotate"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="form-group sm:col-span-2">
-                                <label class="form-label">اسم المستخدم للمدير</label>
-                                <div class="input-wrapper">
-                                    <input type="text" id="regUsername" class="form-input text-left" placeholder="admin" dir="ltr" autocomplete="username" required>
-                                    <i class="fa-solid fa-user-tie input-icon"></i>
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label class="form-label">كلمة المرور</label>
-                                <div class="input-wrapper">
-                                    <input type="password" id="regPassword" class="form-input text-left" placeholder="••••••••" dir="ltr" autocomplete="new-password" required>
-                                    <i class="fa-solid fa-lock input-icon"></i>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label">تأكيد كلمة المرور</label>
-                                <div class="input-wrapper">
-                                    <input type="password" id="regConfirmPassword" class="form-input text-left" placeholder="اختياري" dir="ltr" autocomplete="new-password">
-                                    <i class="fa-solid fa-check-double input-icon"></i>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="pt-4 flex justify-between gap-4">
-                            <button type="button" onclick="goToStep(2)" class="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold py-3.5 px-6 rounded-xl transition-all transform hover:translate-x-1 flex items-center justify-center">
-                                <i class="fa-solid fa-arrow-right"></i>
-                            </button>
-                            <button type="submit" id="registerButton" class="flex-1 text-white font-bold py-3.5 rounded-xl transition-all transform hover:-translate-y-1 flex justify-center items-center gap-2" style="background-color: var(--brand);">
-                                <span>إنشاء الحساب مجاناً</span>
-                                <i class="fa-solid fa-rocket rtl:-scale-x-100"></i>
-                            </button>
-                        </div>
-                    </div>
-                </form>
-            </div>
-
-        </div>
-        <div class="text-center pb-5 -mt-3"><a href="الباقات.html" class="text-xs font-bold" style="color:var(--brand)"><i class="fa-solid fa-gem"></i> عرض خطط الاشتراك</a></div>
-    </div>
-
-    <!-- Toast Notification -->
-    <div id="toast" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-2xl text-xs font-bold transition-all duration-300 opacity-0 pointer-events-none z-50 flex items-center gap-2.5">
-        <i class="fa-solid fa-circle-check text-green-400 text-sm"></i>
-        <span id="toast-msg">تم نسخ المفتاح بنجاح</span>
-    </div>
-
-    <script>
-        // Tab Switching Logic
-        function switchTab(tab) {
-            if (tab === 'register') {
-                window.location.href = 'الباقات.html';
-                return;
-            }
-            document.getElementById('tab-login').className = tab === 'login' 
-                ? 'flex-1 py-2.5 text-sm font-bold rounded-lg transition-all bg-white shadow-sm' 
-                : 'flex-1 py-2.5 text-sm font-bold rounded-lg transition-all text-gray-500 hover:text-gray-800';
-            
-            document.getElementById('tab-register').className = tab === 'register' 
-                ? 'flex-1 py-2.5 text-sm font-bold rounded-lg transition-all bg-white shadow-sm' 
-                : 'flex-1 py-2.5 text-sm font-bold rounded-lg transition-all text-gray-500 hover:text-gray-800';
-
-            if(tab === 'login'){
-                document.getElementById('tab-login').style.color = 'var(--brand)';
-                document.getElementById('tab-register').style.color = '';
-            } else {
-                document.getElementById('tab-register').style.color = 'var(--brand)';
-                document.getElementById('tab-login').style.color = '';
-            }
-
-            document.getElementById('form-login').classList.remove('active');
-            document.getElementById('form-register').classList.remove('active');
-            document.getElementById('form-' + tab).classList.add('active');
-            
-            if(tab === 'register') goToStep(1);
-        }
-
-        // Multi-Step Wizard Logic
-        function goToStep(step) {
-            for(let i=1; i<=3; i++) {
-                document.getElementById('step-'+i).classList.remove('active');
-            }
-            document.getElementById('step-'+step).classList.add('active');
-            
-            const progressLine = document.getElementById('progress-line');
-            if(step === 1) progressLine.style.width = '0%';
-            else if(step === 2) progressLine.style.width = '50%';
-            else if(step === 3) progressLine.style.width = '100%';
-            
-            for(let i=1; i<=3; i++) {
-                const dot = document.getElementById('dot-'+i);
-                const text = document.getElementById('text-'+i);
-                
-                if (i < step) {
-                    dot.className = "w-8 h-8 rounded-full flex items-center justify-center text-white font-bold transition-all duration-300 border-4 border-white";
-                    dot.style.backgroundColor = 'var(--brand)';
-                    text.className = "text-[0.65rem] sm:text-xs font-bold whitespace-nowrap absolute -bottom-6";
-                    text.style.color = 'var(--brand)';
-                    dot.innerHTML = '<i class="fa-solid fa-check"></i>';
-                } else if (i === step) {
-                    dot.className = "w-8 h-8 rounded-full flex items-center justify-center text-white font-bold transition-all duration-300 border-4 border-white shadow-md";
-                    dot.style.backgroundColor = 'var(--brand)';
-                    text.className = "text-[0.65rem] sm:text-xs font-bold whitespace-nowrap absolute -bottom-6";
-                    text.style.color = 'var(--brand)';
-                    dot.innerHTML = i;
-                } else {
-                    dot.className = "w-8 h-8 rounded-full flex items-center justify-center bg-gray-200 text-gray-500 font-bold transition-all duration-300 border-4 border-white";
-                    dot.style.backgroundColor = '';
-                    text.className = "text-[0.65rem] sm:text-xs font-bold text-gray-400 whitespace-nowrap absolute -bottom-6";
-                    text.style.color = '';
-                    dot.innerHTML = i;
-                }
-            }
-        }
-
-        // Custom Currency Dropdown
-        function toggleCurrencyDropdown() {
-            const options = document.getElementById('currency-options');
-            const arrow = document.getElementById('currency-arrow');
-            const legend = document.getElementById('currency-legend');
-            options.classList.toggle('open');
-            if(options.classList.contains('open')){
-                arrow.style.transform = 'rotate(180deg)';
-                if(legend) legend.style.color = 'var(--brand)';
-            } else {
-                arrow.style.transform = 'rotate(0deg)';
-                if(legend) legend.style.color = '';
-            }
-        }
-
-        function selectCurrency(flagClass, text) {
-            const selectedDiv = document.getElementById('selected-currency');
-            selectedDiv.innerHTML = `
-                <div class="w-5 h-5 rounded-full overflow-hidden flex-shrink-0 border border-gray-200 shadow-sm relative">
-                    <span class="fi ${flagClass} absolute inset-0 bg-cover bg-center"></span>
-                </div>
-                <span id="selected-currency-text" class="font-bold text-sm text-gray-800">${text}</span>
-            `;
-            
-            const options = document.getElementById('currency-options');
-            const arrow = document.getElementById('currency-arrow');
-            const legend = document.getElementById('currency-legend');
-            options.classList.remove('open');
-            if(arrow) arrow.style.transform = 'rotate(0deg)';
-            if(legend) legend.style.color = '';
-        }
-
-        document.addEventListener('click', function(event) {
-            const wrapper = document.getElementById('currency-select-wrapper');
-            const options = document.getElementById('currency-options');
-            const arrow = document.getElementById('currency-arrow');
-            const legend = document.getElementById('currency-legend');
-            
-            if (wrapper && !wrapper.contains(event.target)) {
-                options.classList.remove('open');
-                if(arrow) arrow.style.transform = 'rotate(0deg)';
-                if(legend) legend.style.color = '';
-            }
-        });
-
-        // Generate Random Company Key (12 Characters)
-        function generateKey() {
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let randomStr = '';
-            for (let i = 0; i < 9; i++) {
-                randomStr += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            
-            const keyInput = document.getElementById('generated-key');
-            keyInput.value = 'CT-' + randomStr;
-
-            const refreshIcon = document.getElementById('refresh-icon');
-            refreshIcon.classList.remove('spin-anim');
-            void refreshIcon.offsetWidth; 
-            refreshIcon.classList.add('spin-anim');
-            
-            keyInput.parentElement.style.borderColor = 'var(--brand)';
-            setTimeout(() => {
-                keyInput.parentElement.style.borderColor = '#e2e8f0';
-            }, 300);
-        }
-        window.addEventListener('load', () => {
-            generateKey();
-            const params = new URLSearchParams(location.search);
-            if (params.get('tab') === 'register') switchTab('register');
-        });
-
-        // Copy Key and show Toast
-        function copyKey() {
-            const keyInput = document.getElementById('generated-key');
-            navigator.clipboard.writeText(keyInput.value).then(() => {
-                const copyBtn = document.getElementById('copy-btn');
-                copyBtn.innerHTML = '<i class="fa-solid fa-check text-green-500"></i>';
-                setTimeout(() => {
-                    copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i>';
-                }, 2000);
-
-                const toast = document.getElementById('toast');
-                toast.classList.remove('opacity-0', 'pointer-events-none');
-                toast.classList.add('opacity-100');
-                setTimeout(() => {
-                    toast.classList.remove('opacity-100');
-                    toast.classList.add('opacity-0', 'pointer-events-none');
-                }, 2500);
-            });
-        }
-
-        // Image Preview Logic
-        function previewImage(input) {
-            const preview = document.getElementById('image-preview');
-            const content = document.getElementById('upload-content');
-            
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    preview.src = e.target.result;
-                    preview.classList.remove('hidden');
-                    content.classList.add('opacity-0');
-                }
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-    </script>
-
-    <script src="turso-config.js"></script>
-    <script src="turso-rtdb.js"></script>
-    <script src="login.js?v=112"></script>
-
-</body>
+<script src="turso-config.js?v=106"></script><script src="turso-rtdb.js?v=106"></script><script src="login.js?v=106"></script></body>
 </html>
