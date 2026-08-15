@@ -1399,8 +1399,8 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     return value;
   }
 
-  function stableRecordId(item, index = 0) {
-    return core.recordIdentity ? core.recordIdentity(item, index) : '';
+  function stableRecordId(item) {
+    return core.recordIdentity ? core.recordIdentity(item) : '';
   }
 
   function syncRecordIdentity(record, index = 0) {
@@ -1440,12 +1440,11 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   function mergeArrayByDelta(localValue, remoteValue, touchedIds = [], deletedIds = []) {
     const touched = new Set(touchedIds || []);
     const deleted = new Set(deletedIds || []);
-    const localMap = new Map(localValue.map((item, index) => [stableRecordId(item, index), item]).filter(([id]) => id));
+    const localMap = new Map(localValue.map(item => [stableRecordId(item), item]).filter(([id]) => id));
     const merged = [];
     const seen = new Set();
-    for (let remoteIndex = 0; remoteIndex < remoteValue.length; remoteIndex += 1) {
-      const remoteItem = remoteValue[remoteIndex];
-      const id = stableRecordId(remoteItem, remoteIndex);
+    for (const remoteItem of remoteValue) {
+      const id = stableRecordId(remoteItem);
       if (id && deleted.has(id)) continue;
       if (id && touched.has(id) && localMap.has(id)) {
         merged.push(localMap.get(id));
@@ -1455,23 +1454,22 @@ if (settings.enabled && core && settings.config?.databaseURL) {
         if (id) seen.add(id);
       }
     }
-    for (let localIndex = 0; localIndex < localValue.length; localIndex += 1) {
-      const localItem = localValue[localIndex];
-      const id = stableRecordId(localItem, localIndex);
+    for (const localItem of localValue) {
+      const id = stableRecordId(localItem);
       if (!id) {
         if (!merged.some(item => JSON.stringify(item) === JSON.stringify(localItem))) merged.push(localItem);
         continue;
       }
       if (deleted.has(id) || seen.has(id)) continue;
-      if (touched.has(id) || !remoteValue.some((item, index) => stableRecordId(item, index) === id)) merged.push(localItem);
+      if (touched.has(id) || !remoteValue.some(item => stableRecordId(item) === id)) merged.push(localItem);
       seen.add(id);
     }
     return merged;
   }
 
   function arrayDeltaPresent(remoteValue, desiredValue, touchedIds = [], deletedIds = []) {
-    const remoteMap = new Map(remoteValue.map((item, index) => [stableRecordId(item, index), item]).filter(([id]) => id));
-    const desiredMap = new Map(desiredValue.map((item, index) => [stableRecordId(item, index), item]).filter(([id]) => id));
+    const remoteMap = new Map(remoteValue.map(item => [stableRecordId(item), item]).filter(([id]) => id));
+    const desiredMap = new Map(desiredValue.map(item => [stableRecordId(item), item]).filter(([id]) => id));
     for (const id of touchedIds || []) {
       if (!remoteMap.has(id) || JSON.stringify(remoteMap.get(id)) !== JSON.stringify(desiredMap.get(id))) return false;
     }
@@ -1780,18 +1778,6 @@ if (settings.enabled && core && settings.config?.databaseURL) {
           const sourceLocalPayload = makeLocalPayload(key, remote?.revision || 0);
           const desired = mergePendingPayload(key, sourceLocalPayload, remote, pending);
           await writeDatasetLocation(location, key, token, desired);
-
-          // R115: الحذف لا يخرج من الطابور بمجرد HTTP 200. نعيد قراءة المجموعة
-          // فقط إذا كانت العملية تحتوي حذفاً، ونتأكد أن السجل/الحقل اختفى فعلياً.
-          // هذا يضيف قراءة واحدة لعمليات الحذف فقط ولا يزيد استهلاك الحفظ العادي.
-          const nestedHasDeletes = Object.values(pending?.nestedArrayChanges || {}).some(delta => (delta?.deletedIds || []).length > 0);
-          const deletionMutation = pending?.deletedDataset === true || (pending?.deletedIds || []).length > 0 || (pending?.deletedFields || []).length > 0 || nestedHasDeletes;
-          if (deletionMutation) {
-            const verifiedRaw = await readDatasetLocation(location, key, token, { fresh:true });
-            if (!pendingChangesPresent(verifiedRaw, desired, pending)) {
-              throw new Error(`لم يتم تثبيت حذف ${key} في قاعدة البيانات بعد، وستبقى العملية معلقة لإعادة المحاولة.`);
-            }
-          }
 
           const currentRaw = core.getRawCompanyDataset ? core.getRawCompanyDataset(key) : localStorage.getItem(key);
           const currentMeta = localMetaFor(key);

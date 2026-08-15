@@ -320,59 +320,20 @@
         .ct-currency-compact.active { display:block; }
         .ct-currency-compact select { min-height:38px; font-weight:700; border-color:#d9e2ec; background:#fff; }
         .ct-currency-hint { display:block; margin-top:4px; font-size:11px; color:#6b7280; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    
-        /* R110: معلومات الصنف/الربح والحذف مثبتة يسار سطر المنتج. */
-        .basket-item .item-row-top{position:relative!important;padding-left:66px!important;min-height:30px}
-        .basket-item .item-top-actions{position:absolute!important;left:2px!important;top:50%!important;transform:translateY(-50%)!important;display:flex!important;align-items:center!important;gap:3px!important;z-index:3}
-        @media(min-width:993px){.basket-item .item-row-top{padding-left:54px!important}.basket-item .item-top-actions{left:0!important}.basket-item .btn-item-info,.basket-item .btn-delete-item{width:23px!important;height:23px!important}}
-</style>
+    </style>
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=110">
+    <link rel="stylesheet" href="cashtop-core.css?v=100">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="barcode-tools.js?v=100"></script>
-    <script src="cashtop-core.js?v=110"></script>
+    <script src="cashtop-core.js?v=108"></script>
     <script src="multi-system.js?v=100"></script>
     <script src="turso-config.js?v=100"></script><script src="turso-rtdb.js?v=100"></script>
     <script src="accounting-engine.js?v=100"></script>
     <script src="cashtop-printer.js?v=48"></script>
     <script src="turso-sync.js?v=108"></script>
 <script src="cashtop-download-fix.js"></script>
-
-<link rel="stylesheet" href="ghazal-theme.css?v=9">
-
-<style id="ct-v9-cashier-cart-layout">
-/* R114: price + info + delete stay together at the far left of every cart row. */
-.basket-item .item-row-top{padding-left:0!important;min-height:30px!important}
-.basket-item .item-top-actions{position:static!important;left:auto!important;top:auto!important;transform:none!important;display:flex!important;align-items:center!important;gap:2px!important;z-index:auto!important;justify-self:start!important;flex:0 0 auto!important}
-.basket-item .item-row-controls{display:grid!important;grid-template-columns:auto minmax(150px,1fr) auto!important;align-items:center!important;gap:8px!important;direction:rtl!important}
-.basket-item .quantity-control{justify-self:start!important}
-.basket-item .price-total-wrap{justify-self:start!important;display:flex!important;align-items:center!important;gap:7px!important;min-width:0!important}
-.basket-item .editable-price-control{width:72px!important;max-width:72px!important;min-width:72px!important;height:32px!important;padding:0 5px!important;border-radius:5px!important;box-sizing:border-box!important}
-.basket-item .editable-price-control input{height:30px!important;padding:0!important;font-size:12px!important;line-height:30px!important}
-.basket-item .currency-black{font-size:10px!important}
-.basket-item .btn-item-info,.basket-item .btn-delete-item{width:28px!important;height:28px!important;min-width:28px!important;padding:0!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;font-size:14px!important}
-.basket-item .btn-delete-item{color:#dc2626!important}
-.basket-item .btn-item-info{color:#0f172a!important}
-@media (min-width:993px){
-  .basket-item{padding:7px 9px!important;gap:5px!important}
-  .basket-item .item-row-controls{grid-template-columns:auto minmax(135px,1fr) auto!important;gap:5px!important}
-  .basket-item .editable-price-control{width:64px!important;max-width:64px!important;min-width:64px!important;height:30px!important}
-  .basket-item .editable-price-control input{height:28px!important;line-height:28px!important;font-size:11px!important}
-  .basket-item .btn-item-info,.basket-item .btn-delete-item{width:24px!important;height:24px!important;min-width:24px!important;font-size:13px!important}
-  .basket-item .item-line-total{font-size:10px!important}
-  .basket-item .item-line-total strong{font-size:11px!important}
-}
-@media (max-width:640px){
-  .basket-item .item-row-controls{grid-template-columns:auto minmax(105px,1fr) auto!important;gap:4px!important}
-  .basket-item .price-total-wrap{gap:4px!important}
-  .basket-item .item-line-total{font-size:9px!important}
-  .basket-item .item-line-total strong{font-size:10px!important}
-  .basket-item .editable-price-control{width:60px!important;max-width:60px!important;min-width:60px!important;height:30px!important}
-  .basket-item .btn-item-info,.basket-item .btn-delete-item{width:25px!important;height:25px!important;min-width:25px!important}
-}
-</style>
 </head>
 <body>
 <div class="ct-sidebar-overlay" id="ctSidebarOverlay" data-ct-action="close-sidebar"></div>
@@ -831,7 +792,7 @@
         let agentsData = readArray('cashtop_sales_agents');
         let currentCashierRepresentative = null;
         let selectedCommissionAgentId = '';
-        let cashierTaxMode = 'none';
+        let cashierTaxMode = 'default';
         let cashierTaxName = '';
         let cashierTaxRate = 0;
         let cashierShippingCost = 0;
@@ -2107,6 +2068,10 @@
                                 <span class="item-title">${item.name}</span>
                             </div>
                         </div>
+                        <div class="item-top-actions">
+                            <button type="button" class="btn-item-info" onclick="openBasketItemInfo(${index})" title="معلومات التكلفة والربح"><i class="fa-solid fa-chart-line"></i></button>
+                            <button class="btn-delete-item" onclick="removeBasketItem(${index})" title="حذف الصنف"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>
                     </div>
                     <div class="item-row-controls">
                         <div class="quantity-control">
@@ -2120,10 +2085,6 @@
                                 <input type="number" step="0.001" value="${(getQuantitySettings().qtyByPrice ? Number(item.price || 0) * Number(item.qty || 0) : Number(item.price || 0)).toFixed(3).replace(/\.?0+$/, '')}" onchange="changePriceDirect(${index}, this.value)" title="${getQuantitySettings().qtyByPrice ? 'أدخل المبلغ المطلوب لتتغير الكمية تلقائياً' : 'سعر الوحدة'}">
                                 <span class="currency-black">${cashierBaseSymbol()}</span>
                             </div>
-                        </div>
-                        <div class="item-top-actions">
-                            <button type="button" class="btn-item-info" onclick="openBasketItemInfo(${index})" title="معلومات التكلفة والربح"><i class="fa-solid fa-chart-line"></i></button>
-                            <button class="btn-delete-item" onclick="removeBasketItem(${index})" title="حذف الصنف"><i class="fa-solid fa-trash-can"></i></button>
                         </div>
                     </div>
                 `;
@@ -2293,7 +2254,7 @@
             isPaidManuallyEdited = false;
             cashierMultiPayments = [];
             setCashierPaidMultiState(false);
-            cashierTaxMode = 'none';
+            cashierTaxMode = 'default';
             cashierTaxName = '';
             cashierTaxRate = 0;
             cashierShippingCost = 0;
@@ -2586,10 +2547,9 @@
             if (!window.Cashtop?.can?.(requiredPermission)) { showToast('لا تملك الصلاحية اللازمة لحفظ هذه الفاتورة', 'error'); return; }
             if (printStatus && !window.Cashtop?.can?.('sales.print')) { showToast('سيتم الحفظ دون طباعة لأن صلاحية الطباعة غير متاحة', 'warning'); printStatus = false; }
             if(basketItems.length === 0) { showToast('السلة فارغة!', 'error'); return; }
-            const previewTotals = calculateTotals(true);
+            const previewTotals = calculateTotals(false);
             const typedCustomerName = String(document.getElementById('customerNameInput')?.value || '').trim();
-            const previewDebt = Math.abs(Number(previewTotals.debt || 0)) < 0.01 ? 0 : Math.max(0, Number(previewTotals.debt || 0));
-            if ((forceCreditSale || previewDebt > 0) && !typedCustomerName) {
+            if ((forceCreditSale || Number(previewTotals.debt || 0) > 0) && !typedCustomerName) {
                 showToast('يجب إدخال اسم العميل لأن الفاتورة ستسجل كدين.', 'error'); return;
             }
             if (forceCreditSale && !window.Cashtop?.can?.('sales.credit')) { showToast('لا تملك صلاحية تسجيل بيع آجل أو دين', 'error'); return; }
@@ -2615,7 +2575,7 @@
             } else if (invoiceObj.paid > 0 && !fundsDB.accounts.some(acc => String(acc.id) === String(invoiceObj.accountId))) {
                 showToast('اختر صندوقاً للتحصيل قبل الحفظ.', 'error'); return;
             }
-            if (Number(invoiceObj.debt || 0) >= 0.01 && !window.Cashtop?.can?.('sales.credit')) { showToast('لا تملك صلاحية تسجيل بيع آجل أو دين', 'error'); return; }
+            if (invoiceObj.debt > 0 && !window.Cashtop?.can?.('sales.credit')) { showToast('لا تملك صلاحية تسجيل بيع آجل أو دين', 'error'); return; }
             if (Number(invoiceObj.discount || 0) > 0 && !window.Cashtop?.can?.('sales.discount')) { showToast('لا تملك صلاحية تطبيق الخصم', 'error'); return; }
             let offersChanged = false;
             (editingOriginalInvoice?.offerIds || []).forEach(offerId => {
@@ -2632,7 +2592,7 @@
             }
             
             // تسجيل الدين بقيمته الخاصة بهذه الفاتورة على العميل.
-            if(Number(invoiceObj.debt || 0) >= 0.01 && invoiceObj.customer !== 'عميل نقدي') {
+            if(invoiceObj.debt > 0 && invoiceObj.customer !== 'عميل نقدي') {
                 let debtCustomer = selectedCustomer || customersData.find(c => String(c.id) === String(invoiceObj.customerId)) || customersData.find(c => c.name === invoiceObj.customer);
                 if (!debtCustomer) {
                     debtCustomer = { id: `C_${Date.now()}`, name: invoiceObj.customer, phone: invoiceObj.phone, portalKey: String(Math.floor(100000 + Math.random() * 900000)), group: 'retail', balance: 0, createdAt: new Date().toISOString() };
@@ -2761,7 +2721,7 @@
             isPaidManuallyEdited = false;
             cashierMultiPayments = [];
             setCashierPaidMultiState(false);
-            cashierTaxMode = 'none';
+            cashierTaxMode = 'default';
             cashierTaxName = '';
             cashierTaxRate = 0;
             cashierShippingCost = 0;
@@ -2857,15 +2817,13 @@
         }
 
         function buildInvoiceData(status, options = {}) {
-            const typedCustomerName = document.getElementById('customerNameInput').value.trim();
+            const customerName = document.getElementById('customerNameInput').value.trim() || 'عميل نقدي';
             const customerPhone = document.getElementById('customerPhoneInput').value.trim();
             const totals = calculateTotals(false);
             const total = totals.total;
             const forceCreditSale = options.forceCreditSale === true;
             const paid = forceCreditSale ? 0 : totals.paid;
-            const rawDebt = forceCreditSale ? total : totals.debt;
-            const debt = Math.abs(Number(rawDebt || 0)) < 0.01 ? 0 : Math.max(0, Number(rawDebt || 0));
-            const customerName = typedCustomerName || (debt <= 0 && !forceCreditSale ? 'عميل نقدي' : '');
+            const debt = forceCreditSale ? total : totals.debt;
             const account = getSelectedAccount();
             const isMultiPayment = !forceCreditSale && document.getElementById('accountSelectBox')?.value === CASHIER_MULTI_PAYMENT_VALUE && cashierMultiPayments.length > 0;
             const currency = window.CashtopMulti?.getCurrency?.(totals.currencyId) || getCashierCurrencyConfig().base;
@@ -2892,7 +2850,7 @@
                 createdAt: editingOriginalInvoice?.createdAt || editingOriginalInvoice?.date || new Date().toISOString(),
                 savedAt: new Date().toISOString(),
                 customer: customerName,
-                customerId: customerName === 'عميل نقدي' ? null : (selectedCustomer?.id || editingOriginalInvoice?.customerId || null),
+                customerId: selectedCustomer?.id || editingOriginalInvoice?.customerId || null,
                 phone: customerPhone,
                 accountId: forceCreditSale ? null : (isMultiPayment ? CASHIER_MULTI_PAYMENT_VALUE : (account?.id || 1)),
                 accountName: forceCreditSale ? 'بيع آجل' : (isMultiPayment ? 'دفع متعدد' : (account?.name || 'صندوق الكاش الرئيسي')),
@@ -3052,7 +3010,7 @@
                 document.getElementById('customerNameInput').value = inv.customer === 'عميل نقدي' ? '' : inv.customer;
                 document.getElementById('customerPhoneInput').value = inv.phone || '';
                 document.getElementById('invoiceNotesInput').value = inv.notes || '';
-                cashierTaxMode = inv.taxMode || (inv.taxId ? `tax:${inv.taxId}` : 'none');
+                cashierTaxMode = inv.taxMode || (inv.taxId ? `tax:${inv.taxId}` : 'default');
                 cashierTaxName = inv.taxName || '';
                 cashierTaxRate = Number(inv.taxRate || 0);
                 cashierShippingCost = Number(inv.shippingCost || 0);
@@ -3386,8 +3344,6 @@
 </div>
 
 <script type="application/json" id="ctEmbeddedShellMarker">{"embedded":true,"page":"cashier.html"}</script>
-
-<script src="ghazal-theme.js?v=9"></script>
 </body>
 
 </html>
