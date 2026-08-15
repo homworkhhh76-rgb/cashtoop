@@ -1340,13 +1340,11 @@
     return normalized;
   }
 
-  function recordIdentity(item) {
-    if (!item || typeof item !== 'object' || Array.isArray(item)) return '';
-    for (const field of ['id', '_id', 'uuid', 'code', 'key', 'barcode']) {
-      const value = item[field];
-      if (value !== undefined && value !== null && String(value).trim()) return `${field}:${String(value).trim()}`;
-    }
-    return '';
+  function recordIdentity(item, index = 0) {
+    // R115: نفس هوية السجل تُستخدم في الكشف عن الحذف والدمج السحابي.
+    // النسخ السابقة لم تعتبر invoiceId/refNumber/number وغيرها هوية، فكان حذف
+    // بعض العملاء/الفواتير يظهر محلياً ثم تعيد المزامنة السجل من السحابة.
+    return losslessRecordIdentity(item, index);
   }
 
   function describeManagedChange(oldValue, newValue) {
@@ -1354,8 +1352,8 @@
     const after = safeJson(newValue, null);
     const detail = { touchedIds: [], deletedIds: [], touchedFields: [], deletedFields: [], nestedArrayChanges: {} };
     if (Array.isArray(before) && Array.isArray(after)) {
-      const beforeMap = new Map(before.map(item => [recordIdentity(item), item]).filter(([id]) => id));
-      const afterMap = new Map(after.map(item => [recordIdentity(item), item]).filter(([id]) => id));
+      const beforeMap = new Map(before.map((item, index) => [recordIdentity(item, index), item]).filter(([id]) => id));
+      const afterMap = new Map(after.map((item, index) => [recordIdentity(item, index), item]).filter(([id]) => id));
       if (beforeMap.size || afterMap.size) {
         for (const [id, item] of afterMap) {
           if (!beforeMap.has(id) || JSON.stringify(beforeMap.get(id)) !== JSON.stringify(item)) detail.touchedIds.push(id);
@@ -1372,8 +1370,8 @@
         if (!Object.prototype.hasOwnProperty.call(before, key) || JSON.stringify(before[key]) !== JSON.stringify(after[key])) {
           detail.touchedFields.push(key);
           if (Array.isArray(before[key]) && Array.isArray(after[key])) {
-            const beforeMap = new Map(before[key].map(item => [recordIdentity(item), item]).filter(([id]) => id));
-            const afterMap = new Map(after[key].map(item => [recordIdentity(item), item]).filter(([id]) => id));
+            const beforeMap = new Map(before[key].map((item, index) => [recordIdentity(item, index), item]).filter(([id]) => id));
+            const afterMap = new Map(after[key].map((item, index) => [recordIdentity(item, index), item]).filter(([id]) => id));
             if (beforeMap.size || afterMap.size) {
               const touchedIds = [];
               const deletedIds = [];
@@ -2543,16 +2541,20 @@
     }
     rawSet(ns, stringValue);
     const previousMeta = safeJson(rawGet(metaKey(canonical)), {}) || {};
+    const managedChange = describeManagedChange(oldValue, stringValue);
     rawSet(metaKey(canonical), JSON.stringify({
       ...previousMeta,
       updatedAt: Date.now(),
       revision: Number(previousMeta.revision || 0) + 1,
       deviceId: getDeviceId(),
       page: FILE,
-      fullDatasetWrite: true
+      fullDatasetWrite: true,
+      recordTombstones: LOSSLESS_RECORD_DATASETS.has(canonical)
+        ? mergeRecordTombstones(previousMeta.recordTombstones, managedChange)
+        : previousMeta.recordTombstones
     }));
     if (options.audit !== false) appendAudit(canonical, oldValue, stringValue, options.action);
-    const operationId = options.enqueue === false ? null : enqueueSyncOperation(canonical);
+    const operationId = options.enqueue === false ? null : enqueueSyncOperation(canonical, { ...managedChange, deletedDataset:false, forceReplace: options.forceReplace === true });
     emitDataChange(canonical, oldValue, stringValue, 'local-full', operationId);
     return { changed: true, operationId };
   }
@@ -3620,13 +3622,18 @@
           if (!entry?.ns || !entry?.key) return;
           rawSet(entry.ns, entry.newValue);
           const previousMeta = safeJson(entry.oldMeta, {}) || {};
+          const recoveredChange = describeManagedChange(entry.oldValue, entry.newValue);
           rawSet(entry.metaNs || metaKey(entry.key), JSON.stringify({
+            ...previousMeta,
             updatedAt: Date.now() + index,
             revision: Number(previousMeta.revision || 0) + 1,
             deviceId: getDeviceId(), page: FILE,
-            transactionId: tx.id || '', recovered: true
+            transactionId: tx.id || '', recovered: true,
+            recordTombstones: LOSSLESS_RECORD_DATASETS.has(entry.key)
+              ? mergeRecordTombstones(previousMeta.recordTombstones, recoveredChange)
+              : previousMeta.recordTombstones
           }));
-          enqueueSyncOperation(entry.key);
+          enqueueSyncOperation(entry.key, { ...recoveredChange, deletedDataset:false });
         });
       } catch (error) {
         console.error('[CASH TOP 2] atomic transaction recovery:', error);
@@ -3641,7 +3648,7 @@
        still use their legacy render functions. */
     const style = document.createElement('style');
     style.id = 'ctPerformanceGuards';
-    style.textContent = '[hidden]{display:none!important}tbody tr{content-visibility:auto;contain-intrinsic-size:auto 44px}.product-item-card,.category-card{content-visibility:auto;contain-intrinsic-size:auto 150px;contain:layout paint style}.ct-lazy-table-sentinel,.ct-virtual-spacer,.ct-virtual-window-sentinel{content-visibility:visible!important;contain:none!important}html{scroll-behavior:auto}body{overscroll-behavior-y:contain}.ct-sidebar,.ct-topbar,.ct-bottom-nav,.modal-box,.modal-content,.ct-select-popover{transform:translate3d(0,0,0);backface-visibility:hidden;will-change:transform,opacity;contain:layout style}button,a,input,select,textarea{touch-action:manipulation}@media(prefers-reduced-motion:no-preference){.modal-box,.modal-content,.ct-select-popover,.product-item-card,.category-card{transition-property:transform,opacity,box-shadow,border-color!important;transition-duration:100ms!important}}';
+    style.textContent = '[hidden]{display:none!important}tbody tr{content-visibility:auto;contain-intrinsic-size:auto 44px}.product-item-card,.category-card{content-visibility:auto;contain-intrinsic-size:auto 150px;contain:layout paint style}.ct-lazy-table-sentinel,.ct-virtual-spacer,.ct-virtual-window-sentinel{content-visibility:visible!important;contain:none!important}html{scroll-behavior:auto}body{overscroll-behavior-y:contain}.ct-sidebar,.ct-topbar,.ct-bottom-nav,.modal-box,.modal-content,.ct-select-popover{transform:translate3d(0,0,0);backface-visibility:hidden;contain:layout style}.modal-overlay.active .modal-box,.modal-overlay.active .modal-content,.ct-select-popover{will-change:transform,opacity}button,a,input,select,textarea{touch-action:manipulation}@media(prefers-reduced-motion:no-preference){.modal-box,.modal-content,.ct-select-popover,.product-item-card,.category-card{transition-property:transform,opacity,box-shadow,border-color!important;transition-duration:100ms!important}}';
     document.head.appendChild(style);
 
     // Normalize legacy field captions without rewriting every page template. The
@@ -4786,6 +4793,85 @@
     });
   }
 
+  const FUND_SELECT_IDS_R115 = new Set([
+    'accountSelect','accountSelectBox','debtVaultSelect','eSalaryAccountSelect','expAccountSelect',
+    'materialAccount','payRepVaultSelect','payVaultSelect','paymentAccount','wVaultSelect',
+    'transferFromSelect','transferToSelect'
+  ]);
+
+  function currentFundSnapshotR115() {
+    const db = safeJson(localStorage.getItem('cashtop_funds_db') || localStorage.getItem('cashtop_funds_db_v4') || '{}', {}) || {};
+    const accounts = activeFundAccounts(Array.isArray(db.accounts) ? db.accounts : []);
+    return { ...db, accounts: sortFundAccountsForDropdown(accounts) };
+  }
+
+  function repairFundSelectElementR115(select) {
+    if (!select || select.tagName !== 'SELECT' || !FUND_SELECT_IDS_R115.has(String(select.id || ''))) return false;
+    const snapshot = currentFundSnapshotR115();
+    const accounts = snapshot.accounts || [];
+    const allDb = safeJson(localStorage.getItem('cashtop_funds_db') || localStorage.getItem('cashtop_funds_db_v4') || '{}', {}) || {};
+    const allAccountIds = new Set(normalizeArrayValue(allDb.accounts || [], []).map(a => String(a?.id ?? '')).filter(Boolean));
+    const activeIds = new Set(accounts.map(a => String(a?.id ?? '')).filter(Boolean));
+    const previous = String(select.value || '');
+    [...select.options].forEach(option => {
+      const value = String(option.value || '');
+      if (allAccountIds.has(value) && !activeIds.has(value)) option.remove();
+    });
+    accounts.forEach(account => {
+      const id = String(account.id ?? '');
+      if (!id || [...select.options].some(option => String(option.value) === id)) return;
+      const option = document.createElement('option');
+      option.value = id;
+      option.textContent = String(account.name || 'صندوق مالي');
+      option.dataset.ctFundRepair = '1';
+      select.appendChild(option);
+    });
+    if (previous && [...select.options].some(option => String(option.value) === previous)) select.value = previous;
+    else if (!String(select.value || '') && accounts.length) {
+      const preferred = getDefaultFundAccount(accounts);
+      if (preferred && [...select.options].some(option => String(option.value) === String(preferred.id))) select.value = String(preferred.id);
+    }
+    try { window.CashtopMulti?.refreshEnhancedSelect?.(select); } catch (_) {}
+    return true;
+  }
+
+  function repairFundDropdownsR115(scope = document) {
+    if (!scope) return 0;
+    const nodes = [];
+    if (scope.matches?.('select') && FUND_SELECT_IDS_R115.has(String(scope.id || ''))) nodes.push(scope);
+    scope.querySelectorAll?.('select').forEach(select => { if (FUND_SELECT_IDS_R115.has(String(select.id || ''))) nodes.push(select); });
+    return [...new Set(nodes)].reduce((count, select) => count + (repairFundSelectElementR115(select) ? 1 : 0), 0);
+  }
+
+  function deletionRepairMarkerR115() {
+    return `ct_delete_sync_repair_r115::${encodeURIComponent(companyIdFromSession())}::${encodeURIComponent(currentFinancialGroupId())}`;
+  }
+
+  function repairDeletionSyncQueueR115() {
+    const markerKey = deletionRepairMarkerR115();
+    if (rawGet(markerKey) === '1') return { queued:0, skipped:true };
+    let queued = 0;
+    LOSSLESS_RECORD_DATASETS.forEach(key => {
+      if (!DATA_KEYS.includes(key)) return;
+      const meta = safeJson(rawGet(metaKey(key)), {}) || {};
+      const tombstones = meta.recordTombstones && typeof meta.recordTombstones === 'object' ? meta.recordTombstones : {};
+      const deletedIds = Object.keys(tombstones).filter(Boolean);
+      if (!deletedIds.length) return;
+      enqueueSyncOperation(key, { deletedIds, deletedDataset:false });
+      queued += 1;
+    });
+    // الحسابات/الصناديق مجموعة object وبداخلها accounts/accountLogs. إعادة رفع
+    // دمجية واحدة في R115 تصلح أي صندوق أضيف/حُذف محلياً قبل هذا الإصدار.
+    const fundsRaw = rawGet(namespaceKey('cashtop_funds_db'));
+    const fundsMeta = safeJson(rawGet(metaKey('cashtop_funds_db')), {}) || {};
+    if (fundsRaw != null && fundsMeta.seeded !== true) {
+      enqueueSyncOperation('cashtop_funds_db', { forceReplace:true, deletedDataset:false });
+      queued += 1;
+    }
+    rawSet(markerKey, '1');
+    return { queued, skipped:false };
+  }
+
   function getSystemSettings() {
     return safeJson(localStorage.getItem('cashtop_settings'), {}) || {};
   }
@@ -5234,7 +5320,7 @@
         return;
       }
       const script = document.createElement('script');
-      script.src = 'turso-sync.js?v=78';
+      script.src = 'turso-sync.js?v=115';
       script.async = true;
       script.dataset.ctSyncRuntime = 'classic';
       script.onload = () => resolve(Boolean(window.CashtopTurso?.syncAll));
@@ -6722,7 +6808,7 @@
     archiveRecords, readArchivedRecords, compactCompletedData, trustedNowMs,
     getSyncQueue, enqueueSyncOperation, completeSyncOperation, clearSyncQueue, resetSyncQueueCompletely, preservePendingSyncState, updateSyncBadge, restoreSyncQueueBackup, migrateLegacySyncQueues,
     setSyncProgress, restoreDurableCompanyData, flushDurableLocalWrites, commitCriticalData, readDurableLocalKey,
-    getSystemSettings, getProfitRate, getInventoryAccountingMethod, salePriceFromCost, applySystemBranding, cacheBrandLogo, cachedBrandLogo, recordIdentity, sortNewestFirstRecords,
+    getSystemSettings, getProfitRate, getInventoryAccountingMethod, salePriceFromCost, applySystemBranding, cacheBrandLogo, cachedBrandLogo, recordIdentity, sortNewestFirstRecords, repairFundDropdownsR115,
     debounce, runWhenIdle, renderVirtualRows, renderVirtualGrid, runWorkerTask, queryRecords, atomicSetItems, recoverAtomicTransactions,
     captureModalDraft, restoreModalDraft, clearModalDraft, getAuditPending, getAuditPendingAsync, getAuditPendingCountAsync, completeAuditPending, completeAuditPendingAsync, getRecentAuditCache,
   });
@@ -6749,7 +6835,15 @@
     window.addEventListener('pageshow', () => { if (FILE !== 'sync.html' && getSyncQueue().length) syncNow({ manual: false }); }, { passive: true });
     window.addEventListener('cashtop:sync-queue-changed', updateSyncBadge);
     window.addEventListener('cashtop:sync-queue-restored', () => { if (FILE !== 'sync.html') syncNow({ manual: false }); });
-    window.addEventListener('cashtop:data-changed', event => { if (event.detail?.key === 'cashtop_settings') applySystemBranding(); });
+    window.addEventListener('cashtop:data-changed', event => {
+      if (event.detail?.key === 'cashtop_settings') applySystemBranding();
+      if (event.detail?.key === 'cashtop_funds_db') requestAnimationFrame(() => repairFundDropdownsR115(document));
+    });
+    window.addEventListener('cashtop:funds-changed', () => requestAnimationFrame(() => repairFundDropdownsR115(document)));
+    window.addEventListener('cashtop:remote-applied', event => { if (event.detail?.key === 'cashtop_funds_db') requestAnimationFrame(() => repairFundDropdownsR115(document)); });
+    window.addEventListener('cashtop:local-ready', () => requestAnimationFrame(() => repairFundDropdownsR115(document)));
+    document.addEventListener('pointerdown', event => { if (event.target?.tagName === 'SELECT' && FUND_SELECT_IDS_R115.has(String(event.target.id || ''))) repairFundSelectElementR115(event.target); }, true);
+    document.addEventListener('focusin', event => { if (event.target?.tagName === 'SELECT' && FUND_SELECT_IDS_R115.has(String(event.target.id || ''))) repairFundSelectElementR115(event.target); }, true);
     window.addEventListener('offline', updateNetworkStatus);
     const flushDurableOfflineState = () => { preservePendingSyncState().catch(() => null); };
     // ثبّت طابور المزامنة والبيانات المتغيرة في IndexedDB قبل تجميد/إغلاق الصفحة.
@@ -6775,6 +6869,8 @@
       })
       .then(() => migrateLegacySyncQueues().catch(() => ({ migrated: 0 })))
       .then(() => {
+        repairDeletionSyncQueueR115();
+        repairFundDropdownsR115(document);
         updateSyncBadge();
         if (FILE !== 'sync.html' && getSyncQueue().length) syncNow({ manual: false });
         return { ready: true, queueLength: getSyncQueue().length };

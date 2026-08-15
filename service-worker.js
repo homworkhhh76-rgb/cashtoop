@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v114-purchase-composer';
+const CACHE_VERSION = 'v115-delete-sync-funds-highrefresh';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = 'cash-top-2-remote-static-persistent-v1';
 

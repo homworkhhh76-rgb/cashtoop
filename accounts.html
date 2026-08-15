@@ -942,6 +942,7 @@
                     acc.type = finalType;
                     if (!document.getElementById('accCurrency').disabled) acc.currencyId = document.getElementById('accCurrency').value || getCurrencyConfig().baseCurrencyId;
                     acc.notes = notes;
+                    acc.updatedAt = new Date().toISOString();
                     if (makeDropdownDefault) cashtop_funds_db.accounts.forEach(item => { item.isDropdownDefault = String(item.id) === String(acc.id); });
                     else acc.isDropdownDefault = false;
                     showToast('تم تعديل بيانات الحساب بنجاح.', 'success');
@@ -951,12 +952,14 @@
                 const newId = Date.now();
                 const currencyId = getCurrencyConfig().enabled ? (document.getElementById('accCurrency').value || getCurrencyConfig().baseCurrencyId) : getCurrencyConfig().baseCurrencyId;
                 if (makeDropdownDefault) cashtop_funds_db.accounts.forEach(item => { item.isDropdownDefault = false; });
-                cashtop_funds_db.accounts.push({ id: newId, name: usernameToSave, type: finalType, balance: balance, currencyId, notes: notes, isDropdownDefault: makeDropdownDefault });
+                cashtop_funds_db.accounts.push({ id: newId, name: usernameToSave, type: finalType, balance: balance, currencyId, notes: notes, isDropdownDefault: makeDropdownDefault, active:true, disabled:false, status:'active', updatedAt:new Date().toISOString() });
                 if (Math.abs(balance) > 0.0000001) cashtop_funds_db.accountLogs.push({ id:`OPEN_ACC_${newId}`, sourceType:'accountOpening', sourceId:String(newId), accountId: newId, date: new Date().toLocaleString('en-GB'), type: "إيداع", amount: balance, baseAmount: window.CashtopMulti?.toBase?.(balance, currencyId) ?? balance, currencyId, notes: "رصيد افتتاحي عند الإنشاء" });
                 showToast('تم إنشاء الصندوق وحفظه بنجاح!', 'success');
             }
 
             localStorage.setItem('cashtop_funds_db_v4', JSON.stringify(cashtop_funds_db));
+            window.Cashtop?.repairFundDropdownsR115?.(document);
+            window.dispatchEvent(new CustomEvent('cashtop:sync-now', { detail:{ reason:'fund-account-save' } }));
             closeModal('accountModal');
             initLayout();
         }
@@ -995,12 +998,15 @@
             }
             target.deleted = true;
             target.deletedAt = new Date().toISOString();
+            target.updatedAt = target.deletedAt;
             target.active = false;
             target.disabled = true;
             target.status = 'deleted';
             target.isDropdownDefault = false;
             // لا نحذف accountLogs: الفواتير والحركات القديمة تبقى قابلة للتدقيق.
             localStorage.setItem('cashtop_funds_db_v4', JSON.stringify(cashtop_funds_db));
+            window.Cashtop?.repairFundDropdownsR115?.(document);
+            window.dispatchEvent(new CustomEvent('cashtop:sync-now', { detail:{ reason:'fund-account-delete' } }));
             initLayout();
             closeModal('deleteModal');
             showToast('تم حذف الصندوق من القوائم مع إبقاء حركاته التاريخية محفوظة.', 'success');
