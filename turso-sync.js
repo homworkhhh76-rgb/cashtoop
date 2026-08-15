@@ -1,5 +1,6 @@
 (() => {
 'use strict';
+// R123 recovery-safe paging: partial page caches can never replace full cloud registers.
 const settings = window.CASHTOP_TURSO || {};
 const core = window.Cashtop;
 
@@ -31,6 +32,49 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     'cashtop_funds_db'
   ]);
   const LOSSLESS_OBJECT_KEYS = new Set(['cashtop_funds_db']);
+  // R116 — large register datasets are pulled 50 records at a time. Full
+  // dataset reads are still allowed only when a pending local write must be
+  // merged losslessly with the cloud copy.
+  const PAGED_DATA_KEYS = new Set([
+    'cashtop_products',
+    'cashtop_customers',
+    'cashtop_invoices'
+  ]);
+  const PRIMARY_PAGED_PAGE_DATASET = {
+    'products.html': 'cashtop_products',
+    'customers.html': 'cashtop_customers',
+    'invoices.html': 'cashtop_invoices'
+  };
+  function shouldAutoPageDataset(key) {
+    return PRIMARY_PAGED_PAGE_DATASET[String(core.FILE || '')] === key;
+  }
+  const PAGE_SIZE = 50;
+  const DATASET_SEARCH_FIELDS = {
+    cashtop_products:['name','barcode','unitBarcode','code','id','sku'],
+    cashtop_materials:['name','barcode','code','id'],
+    cashtop_customers:['name','phone','mobile','code','id'],
+    cashtop_customer_groups:['name','code','id'],
+    cashtop_suppliers:['name','phone','mobile','code','id'],
+    cashtop_invoices:['id','invoiceNo','number','customerName','customer','phone','barcode'],
+    cashtop_sales_returns:['id','invoiceId','customerName','customer','reference'],
+    cashtop_purchases:['id','invoiceNo','number','supplierName','supplier','barcode','reference'],
+    cashtop_purchase_returns:['id','invoiceId','supplierName','supplier','reference'],
+    cashtop_expenses:['id','title','type','category','note','description'],
+    cashtop_vouchers:['id','number','name','customerName','supplierName','note','description'],
+    cashtop_units:['id','name','code'], cashtop_stores:['id','name','code'], cashtop_branches:['id','name','code'],
+    cashtop_employees:['id','name','username','phone','code'], cashtop_workers:['id','name','phone','code'],
+    cashtop_sales_agents:['id','name','phone','code'], cashtop_sales_offers:['id','name','title','code'],
+    cashtop_journal:['id','reference','description','accountName','note']
+  };
+  const DATASET_SORT = {
+    // السجلات الكبيرة تحفظ الإضافات الجديدة في نهاية المصفوفة؛ ترتيب idx تنازلي
+    // يضمن أن الصفحة الأولى هي آخر 50 عميل/منتج/فاتورة فعلياً.
+    cashtop_products:['','desc'], cashtop_customers:['','desc'], cashtop_invoices:['','desc'],
+    cashtop_sales_returns:['date','desc'], cashtop_purchases:['date','desc'],
+    cashtop_purchase_returns:['date','desc'], cashtop_expenses:['date','desc'], cashtop_vouchers:['date','desc'],
+    cashtop_supplier_movements:['date','desc'], cashtop_transfer_history:['date','desc'], cashtop_branch_transfer_history:['date','desc'],
+    cashtop_agent_movements:['date','desc'], cashtop_salary_payments:['date','desc'], cashtop_journal:['date','desc']
+  };
   const usagePolicy = settings.usagePolicy || {};
   const AUTO_REMOTE_CHECK_MS = Math.max(7000, Number(usagePolicy.remoteCheckMs || 10000));
   const NAV_REMOTE_CHECK_MS = Math.max(3000, Number(usagePolicy.navigationCheckMs || 5000));
@@ -80,6 +124,8 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   let selectedLocation = null;
   let authFallbackReason = '';
   let backgroundPullTimer = null;
+  const runtimeStartedAt = Date.now();
+  const primaryPagedRuntime = Boolean(PRIMARY_PAGED_PAGE_DATASET[String(core.FILE || '')]);
   let backgroundPullRunning = false;
   let realtimeSource = null;
   let realtimeLocationPath = '';
@@ -511,6 +557,301 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     return await response.json();
   }
 
+
+  function pageCacheMetaKey(key) {
+    return `ct_remote_page_meta_v116::${encodeURIComponent(canonicalCompanyId)}::${encodeURIComponent(financialGroupId)}::${encodeURIComponent(key)}`;
+  }
+
+  function cachePagedRecordsLocally(key, records, result = {}, options = {}) {
+    if (!Array.isArray(records)) return [];
+    const currentRaw = core.getRawCompanyDataset ? core.getRawCompanyDataset(key) : localStorage.getItem(key);
+    let current = [];
+    try { const parsed = JSON.parse(currentRaw || '[]'); current = Array.isArray(parsed) ? parsed : []; } catch (_) {}
+    const identity = (item, index = 0) => String(core.recordIdentity?.(item) || item?.id || item?.code || item?.number || `anon:${index}:${JSON.stringify(item)}`);
+    let next;
+    if (options.replaceLocal === true) {
+      // الصفحة الأولى هي الكاش الدائم الوحيد للسجلات الكبيرة. لا نحتفظ
+      // بالصفحات 2+ في localStorage حتى لا يكبر التحميل مع مرور الوقت.
+      next = records.slice(0, PAGE_SIZE);
+    } else {
+      const merged = new Map();
+      current.forEach((item,index)=>merged.set(identity(item,index), item));
+      records.forEach((item,index)=>merged.set(identity(item,index), item));
+      next = [...merged.values()];
+    }
+    core.rawSet(core.namespaceKey(key), JSON.stringify(next));
+    const oldMeta = localMetaFor(key);
+    core.rawSet(core.metaKey(key), JSON.stringify({
+      ...oldMeta,
+      updatedAt: Math.max(Number(oldMeta.updatedAt || 0), Number(result.updatedAt || 0)),
+      remotePaged: true,
+      remoteTotal: Number(result.total || 0),
+      remotePageSize: Number(result.pageSize || PAGE_SIZE),
+      lastRemotePage: Number(result.page || 1),
+      source: 'turso-paged-r123-safe'
+    }));
+    try { rawStorage.set(pageCacheMetaKey(key), JSON.stringify({ total:Number(result.total||0), pageSize:Number(result.pageSize||PAGE_SIZE), updatedAt:Number(result.updatedAt||0), at:Date.now() })); } catch (_) {}
+    if (options.dispatch !== false) window.dispatchEvent(new CustomEvent('cashtop:remote-applied', { detail:{ key, paged:true, page:Number(result.page||1), total:Number(result.total||0) } }));
+    return next;
+  }
+
+  function recoveryTenantIds() {
+    const ids = [canonicalCompanyId];
+    const companyKey = String(session.companyKey || '').trim().toUpperCase();
+    if (companyKey) {
+      try {
+        const extra = JSON.parse(rawStorage.get(`ct_recovery_tenants_v123::${encodeURIComponent(companyKey)}`) || '[]');
+        if (Array.isArray(extra)) extra.forEach(id => ids.push(String(id || '').trim()));
+      } catch (_) {}
+    }
+    return [...new Set(ids.filter(Boolean))].slice(0, 6);
+  }
+
+  function pagedCompatibilityPaths(location, key) {
+    const paths = [];
+    const add = value => {
+      const clean = String(value || '').replace(/^\/+|\/+$/g, '');
+      if (clean && !paths.includes(clean)) paths.push(clean);
+    };
+    const roots = [...new Set([location?.root || primaryRoot, primaryRoot, ...legacyRoots])]
+      .map(root => String(root || '').replace(/^\/+|\/+$/g, '')).filter(Boolean);
+    const tenants = [...new Set([location?.companyId || canonicalCompanyId, ...recoveryTenantIds()])].filter(Boolean);
+    for (const tenantId of tenants) {
+      for (const root of roots) {
+        const candidateLocation = { root, companyId: tenantId };
+        add(directBridgePath(candidateLocation, `datasets/${sanitizeSegment(remoteDatasetKey(key))}`));
+        add(directBridgePath(candidateLocation, `datasets/${sanitizeSegment(key)}`));
+        add(directBridgePath(candidateLocation, `datasets/fg_${sanitizeSegment(legacyFinancialGroupId)}__${sanitizeSegment(key)}`));
+      }
+    }
+    return paths;
+  }
+
+  function pagedResolvedPathCacheKey(key) {
+    return `ct_paged_resolved_path_v123::${encodeURIComponent(canonicalCompanyId)}::${encodeURIComponent(financialGroupId)}::${encodeURIComponent(key)}`;
+  }
+
+  function readResolvedPagedPath(key) {
+    try { return String(rawStorage.get(pagedResolvedPathCacheKey(key)) || '').trim(); }
+    catch (_) { return ''; }
+  }
+
+  function saveResolvedPagedPath(key, path) {
+    const clean = String(path || '').trim();
+    if (!clean) return;
+    try { rawStorage.set(pagedResolvedPathCacheKey(key), clean); } catch (_) {}
+  }
+
+  function clearResolvedPagedPath(key) {
+    try { rawStorage.remove(pagedResolvedPathCacheKey(key)); } catch (_) {}
+  }
+
+  function maxObservedPagedTotalKey(key) {
+    return `ct_paged_max_total_v123::${encodeURIComponent(canonicalCompanyId)}::${encodeURIComponent(financialGroupId)}::${encodeURIComponent(key)}`;
+  }
+
+  function readMaxObservedPagedTotal(key) {
+    try { return Math.max(0, Number(rawStorage.get(maxObservedPagedTotalKey(key)) || 0)); } catch (_) { return 0; }
+  }
+
+  function noteObservedPagedTotal(key, total) {
+    const next = Math.max(readMaxObservedPagedTotal(key), Math.max(0, Number(total || 0)));
+    try { rawStorage.set(maxObservedPagedTotalKey(key), String(next)); } catch (_) {}
+    return next;
+  }
+
+  function withPagerDeadline(promise, timeoutMs = 9000) {
+    let timer = 0;
+    return Promise.race([
+      Promise.resolve(promise).finally(() => { if (timer) clearTimeout(timer); }),
+      new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('PAGED_READ_TIMEOUT')), timeoutMs); })
+    ]);
+  }
+
+  function localPagedFallback(key, options = {}) {
+    let values = [];
+    try {
+      const raw = core.getRawCompanyDataset ? core.getRawCompanyDataset(key) : localStorage.getItem(key);
+      const parsed = JSON.parse(raw || '[]');
+      values = Array.isArray(parsed) ? parsed.filter(item => item && typeof item === 'object') : [];
+    } catch (_) { values = []; }
+
+    // R123 emergency local recovery: if the current tenant namespace is empty,
+    // inspect only tenant ids previously verified for this same company key and
+    // use the largest matching local dataset/page cache. No cross-key data is read.
+    if (!values.length) {
+      let best = [];
+      for (const tenantId of recoveryTenantIds()) {
+        const prefix = `cashtop_data::${encodeURIComponent(tenantId)}::`;
+        for (let i = 0; i < localStorage.length; i += 1) {
+          const storageKey = Storage.prototype.key.call(localStorage, i);
+          if (!storageKey || !storageKey.startsWith(prefix) || !storageKey.endsWith(key)) continue;
+          try {
+            const parsed = JSON.parse(rawStorage.get(storageKey) || '[]');
+            if (Array.isArray(parsed) && parsed.length > best.length) best = parsed.filter(item => item && typeof item === 'object');
+          } catch (_) {}
+        }
+      }
+      values = best;
+    }
+    if (!values.length) return null;
+    const pageSize = Math.max(1, Math.min(100, Number(options.pageSize || PAGE_SIZE)));
+    const page = Math.max(1, Number(options.page || 1));
+    const search = String(options.search || '').trim().toLocaleLowerCase();
+    const fields = Array.isArray(options.searchFields) && options.searchFields.length ? options.searchFields : (DATASET_SEARCH_FIELDS[key] || []);
+    if (search) values = values.filter(item => fields.some(field => String(item?.[field] ?? '').toLocaleLowerCase().includes(search)));
+    // A legacy full local array is oldest->newest. A paged cache is already
+    // newest->oldest, as marked in metadata.
+    let isRemotePaged = false;
+    try { isRemotePaged = localMetaFor(key)?.remotePaged === true; } catch (_) {}
+    if (!isRemotePaged && (DATASET_SORT[key]?.[1] || '').toLowerCase() === 'desc') values = values.slice().reverse();
+    const start = (page - 1) * pageSize;
+    return {
+      items: values.slice(start, start + pageSize), total: values.length, page,
+      pages: Math.max(1, Math.ceil(values.length / pageSize)), pageSize,
+      hasNext: start + pageSize < values.length, hasPrev: page > 1,
+      updatedAt: Number(localMetaFor(key)?.updatedAt || 0), localFallback: true
+    };
+  }
+
+  async function queryDatasetPage(key, options = {}) {
+    if (!PAGED_DATA_KEYS.has(key) || !window.CashtopTursoBridge?.readDatasetPage) {
+      const raw = await readDatasetLocation((await cheapDatabaseAccess()).location, key, '', { fresh:true });
+      const payload = normalizeRemotePayload(raw);
+      let values = payloadJsonValue(payload);
+      if (!Array.isArray(values)) values = [];
+      const pageSize = Math.max(1, Math.min(100, Number(options.pageSize || PAGE_SIZE)));
+      const page = Math.max(1, Number(options.page || 1));
+      const start = (page - 1) * pageSize;
+      return { items:values.slice(start,start+pageSize), total:values.length, page, pages:Math.max(1,Math.ceil(values.length/pageSize)), pageSize, hasNext:start+pageSize<values.length, hasPrev:page>1, updatedAt:Number(payload.updatedAt||0) };
+    }
+    const access = await cheapDatabaseAccess();
+    const location = access.location;
+    const [sortField, sortDir] = DATASET_SORT[key] || ['', 'asc'];
+    const pageNow = new Date();
+    const pageTodayIso = `${pageNow.getFullYear()}-${String(pageNow.getMonth()+1).padStart(2,'0')}-${String(pageNow.getDate()).padStart(2,'0')}`;
+    const pageTodayDisplay = `${String(pageNow.getDate()).padStart(2,'0')}/${String(pageNow.getMonth()+1).padStart(2,'0')}/${pageNow.getFullYear()}`;
+    const statsKind = options.includeStats === true ? (key === 'cashtop_invoices' ? 'invoices' : key === 'cashtop_customers' ? 'customers' : key === 'cashtop_products' ? 'products' : '') : '';
+    const bridgeOptions = {
+      page:Math.max(1, Number(options.page || 1)),
+      pageSize:Math.max(1, Math.min(100, Number(options.pageSize || PAGE_SIZE))),
+      search:String(options.search || '').trim(),
+      searchFields:Array.isArray(options.searchFields) && options.searchFields.length ? options.searchFields : (DATASET_SEARCH_FIELDS[key] || []),
+      sortField:options.sortField || sortField,
+      sortDir:options.sortDir || sortDir,
+      statsKind,
+      todayIso:pageTodayIso,
+      todayDisplay:pageTodayDisplay
+    };
+    const canonicalPath = directBridgePath(location, `datasets/${sanitizeSegment(remoteDatasetKey(key))}`);
+    const rememberedPath = readResolvedPagedPath(key);
+    const firstPath = rememberedPath || canonicalPath;
+    let result = null;
+    try {
+      result = await withPagerDeadline(window.CashtopTursoBridge.readDatasetPage(firstPath, bridgeOptions), 8000);
+    } catch (firstReadError) {
+      console.warn('[CASH TOP R123] paged primary path:', key, firstReadError);
+      result = { items: [], total: 0, page: bridgeOptions.page, pages: 1, pageSize: bridgeOptions.pageSize };
+    }
+
+    const hasRows = candidate => Number(candidate?.total || 0) > 0 || (Array.isArray(candidate?.items) && candidate.items.length > 0);
+    const localFallback = localPagedFallback(key, bridgeOptions);
+    const priorRemoteTotal = Math.max(
+      readMaxObservedPagedTotal(key),
+      Number(localMetaFor(key)?.remoteTotal || 0),
+      Number((() => { try { return JSON.parse(rawStorage.get(pageCacheMetaKey(key)) || '{}')?.total || 0; } catch (_) { return 0; } })())
+    );
+    const suspiciousShrink = priorRemoteTotal > 0 && Number(result?.total || 0) < priorRemoteTotal;
+
+    // If the canonical/indexed tenant is empty (or suddenly much smaller than a
+    // previously observed total), look at the exact historical roots/tenant ids
+    // in parallel. This is read-only and selects the path with the most records.
+    if (!hasRows(result) || suspiciousShrink) {
+      if (rememberedPath && !hasRows(result)) clearResolvedPagedPath(key);
+      const candidates = [...new Set([canonicalPath, ...pagedCompatibilityPaths(location, key)])]
+        .filter(path => path && path !== firstPath);
+      const probes = await Promise.allSettled(candidates.map(candidatePath => withPagerDeadline(
+        window.CashtopTursoBridge.readDatasetPage(candidatePath, bridgeOptions), 6500
+      ).then(candidate => ({ candidate, candidatePath }))));
+      const found = probes
+        .filter(item => item.status === 'fulfilled' && hasRows(item.value?.candidate))
+        .map(item => item.value)
+        .sort((a,b) => Number(b.candidate?.total || 0) - Number(a.candidate?.total || 0))[0] || null;
+      if (found && Number(found.candidate?.total || 0) >= Number(result?.total || 0)) {
+        result = { ...found.candidate, compatibilitySource: found.candidatePath, recoveredPath:true };
+        saveResolvedPagedPath(key, found.candidatePath);
+      }
+    } else {
+      saveResolvedPagedPath(key, firstPath);
+    }
+
+    // Never turn a known local page into zero because a path/index temporarily
+    // points at an empty tenant. Keep the local page available while recovery
+    // probes or the next network attempt happen.
+    if (!hasRows(result) && localFallback) result = { ...localFallback, protectedLocalFallback:true };
+
+    if (hasRows(result) && !result?.localFallback) noteObservedPagedTotal(key, Number(result.total || 0));
+    if (options.cacheLocal !== false && !result?.localFallback && hasRows(result)) {
+      cachePagedRecordsLocally(key, result.items, result, { dispatch:options.dispatch, replaceLocal:options.replaceLocal === true });
+    }
+    return result;
+  }
+
+  async function queryDatasetStats(key, options = {}) {
+    if (!PAGED_DATA_KEYS.has(key) || !window.CashtopTursoBridge?.readDatasetStats) return null;
+    const access = await cheapDatabaseAccess();
+    const location = access.location;
+    const kind = key === 'cashtop_invoices' ? 'invoices' : key === 'cashtop_customers' ? 'customers' : key === 'cashtop_products' ? 'products' : '';
+    const now = new Date();
+    const todayIso = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    const todayDisplay = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
+    const canonicalStatsPath = directBridgePath(location, `datasets/${sanitizeSegment(remoteDatasetKey(key))}`);
+    const statsPath = readResolvedPagedPath(key) || canonicalStatsPath;
+    let result = await withPagerDeadline(
+      window.CashtopTursoBridge.readDatasetStats(statsPath, { kind, todayIso, todayDisplay }),
+      14000
+    );
+    const priorTotal = Math.max(readMaxObservedPagedTotal(key), Number(localMetaFor(key)?.remoteTotal || 0));
+    if (Number(result?.total || 0) === 0 || (priorTotal > 0 && Number(result?.total || 0) < priorTotal)) {
+      const candidates = [...new Set([canonicalStatsPath, ...pagedCompatibilityPaths(location, key)])]
+        .filter(path => path && path !== statsPath);
+      const probes = await Promise.allSettled(candidates.map(candidatePath => withPagerDeadline(
+        window.CashtopTursoBridge.readDatasetStats(candidatePath, { kind, todayIso, todayDisplay }), 6500
+      ).then(candidate => ({ candidate, candidatePath }))));
+      const found = probes
+        .filter(item => item.status === 'fulfilled' && Number(item.value?.candidate?.total || 0) > 0)
+        .map(item => item.value)
+        .sort((a,b) => Number(b.candidate?.total || 0) - Number(a.candidate?.total || 0))[0] || null;
+      if (found && Number(found.candidate?.total || 0) >= Number(result?.total || 0)) {
+        result = { ...found.candidate, compatibilitySource:found.candidatePath, recoveredPath:true };
+        saveResolvedPagedPath(key, found.candidatePath);
+      }
+    }
+    if (Number(result?.total || 0) > 0) noteObservedPagedTotal(key, Number(result.total || 0));
+    if (Number(result?.total || 0) === 0) {
+      let localItems = [];
+      try {
+        const raw = core.getRawCompanyDataset ? core.getRawCompanyDataset(key) : localStorage.getItem(key);
+        const parsed = JSON.parse(raw || '[]');
+        localItems = Array.isArray(parsed) ? parsed.filter(item => item && typeof item === 'object') : [];
+      } catch (_) { localItems = []; }
+      if (localItems.length) {
+        if (key === 'cashtop_products') {
+          let totalCost = 0, totalSale = 0;
+          localItems.forEach(prod => {
+            const stock = Number(prod?.stockPieces ?? prod?.stock ?? 0) || 0;
+            totalCost += (Number(prod?.cost || 0) || 0) * stock;
+            totalSale += (Number(prod?.pricePiece ?? prod?.price ?? 0) || 0) * stock;
+          });
+          result = { total: localItems.length, totalCost, totalSale, updatedAt:Number(localMetaFor(key)?.updatedAt || 0), localFallback:true };
+        } else {
+          result = { ...(result || {}), total:localItems.length, updatedAt:Number(localMetaFor(key)?.updatedAt || 0), localFallback:true };
+        }
+      }
+    }
+    return result;
+  }
+
   async function readMetaLocation(location, token = '', options = {}) {
     if (isPathProxy && window.CashtopTursoBridge?.readExact) {
       const value = await window.CashtopTursoBridge.readExact(
@@ -581,17 +922,17 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   function pagePriorityDatasets() {
     const common = ['cashtop_company_access', 'cashtop_financial_groups', 'cashtop_branches', 'cashtop_employees'];
     const map = {
-      'لوحة التحكم.html': ['cashtop_invoices', 'cashtop_products', 'cashtop_customers', 'cashtop_expenses', 'cashtop_funds_db'],
+      'لوحة التحكم.html': ['cashtop_expenses', 'cashtop_funds_db'],
       // Listing folders only needs the compact shared group index. The rare
       // close/open action explicitly pulls its required balances once.
       'financial-groups.html': ['cashtop_financial_groups'],
       'cashier.html': ['cashtop_products', 'cashtop_product_categories', 'cashtop_customers', 'cashtop_customer_groups', 'cashtop_funds_db', 'cashtop_sales_offers', 'cashtop_tax_settings', 'cashtop_units', 'cashtop_stores', 'cashtop_settings'],
-      'products.html': ['cashtop_products', 'cashtop_product_categories', 'cashtop_units', 'cashtop_stores', 'cashtop_suppliers', 'cashtop_purchases', 'cashtop_funds_db', 'cashtop_tax_settings', 'cashtop_settings'],
+      'products.html': ['cashtop_products', 'cashtop_product_categories', 'cashtop_units', 'cashtop_stores', 'cashtop_tax_settings', 'cashtop_settings'],
       'categories.html': ['cashtop_product_categories', 'cashtop_products'],
       'materials.html': ['cashtop_materials', 'cashtop_material_purchases', 'cashtop_units', 'cashtop_stores', 'cashtop_suppliers', 'cashtop_funds_db'],
-      'invoices.html': ['cashtop_invoices', 'cashtop_products', 'cashtop_customers', 'cashtop_funds_db', 'cashtop_sales_offers', 'cashtop_sales_returns'],
+      'invoices.html': ['cashtop_invoices'],
       'مرجع المبيعات.html': ['cashtop_sales_returns', 'cashtop_products', 'cashtop_customers', 'cashtop_funds_db', 'cashtop_invoices'],
-      'customers.html': ['cashtop_customers', 'cashtop_customer_groups', 'cashtop_invoices', 'cashtop_sales_returns', 'cashtop_vouchers'],
+      'customers.html': ['cashtop_customers', 'cashtop_customer_groups'],
       'customer-groups.html': ['cashtop_customer_groups', 'cashtop_customers', 'cashtop_products'],
       'suppliers.html': ['cashtop_suppliers', 'cashtop_supplier_movements', 'cashtop_purchases'],
       'المشتريات.html': ['cashtop_purchases', 'cashtop_purchase_reversals', 'cashtop_products', 'cashtop_suppliers', 'cashtop_funds_db', 'cashtop_stores', 'cashtop_tax_settings', 'cashtop_settings'],
@@ -619,6 +960,11 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       'notifications.html': ['cashtop_notification_settings', 'cashtop_settings', 'cashtop_products', 'cashtop_customers', 'cashtop_invoices', 'cashtop_workers', 'cashtop_salary_payments', 'cashtop_funds_db']
     };
     return [...new Set([...common, ...(map[core.FILE] || [])])].filter(key => CLOUD_DATA_KEYS.includes(key));
+  }
+
+  function automaticPagePriorityDatasets() {
+    const primary = PRIMARY_PAGED_PAGE_DATASET[String(core.FILE || '')] || '';
+    return pagePriorityDatasets().filter(key => key !== primary);
   }
 
   function assertAccessIdentity(rawPayload, location) {
@@ -956,9 +1302,11 @@ if (settings.enabled && core && settings.config?.databaseURL) {
    * بها فقط، بينما تبقى العملية الأحدث في الطابور للدفعة التالية. هذا يمنع
    * ضياع فرع/موظف/فاتورة أُضيفت أثناء مزامنة جارية.
    */
-  function markUploaded(key, payload) {
+  function markUploaded(key, payload, options = {}) {
     const currentRaw = core.getRawCompanyDataset ? core.getRawCompanyDataset(key) : localStorage.getItem(key);
-    const expectedRaw = payload.deleted ? null : payload.value;
+    const expectedRaw = Object.prototype.hasOwnProperty.call(options, 'expectedRaw')
+      ? options.expectedRaw
+      : (payload.deleted ? null : payload.value);
     const currentMeta = localMetaFor(key);
     if (currentRaw !== expectedRaw || Number(currentMeta.updatedAt || 0) > Number(payload.updatedAt || 0)) {
       return false;
@@ -974,6 +1322,23 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     }));
     completePendingForKey(key);
     return true;
+  }
+
+  async function refreshPagedFirstPageCache(key) {
+    if (!PAGED_DATA_KEYS.has(key) || !window.CashtopTursoBridge?.readDatasetPage) return false;
+    try {
+      await queryDatasetPage(key, {
+        page: 1,
+        pageSize: PAGE_SIZE,
+        cacheLocal: true,
+        replaceLocal: true,
+        dispatch: true
+      });
+      return true;
+    } catch (error) {
+      console.warn('[CASH TOP 2] refresh first paged cache:', key, error);
+      return false;
+    }
   }
 
   function canApplyRemote(key, payload, allowEqual = true) {
@@ -1111,11 +1476,46 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     };
 
     try {
-      if (isPathProxy && window.CashtopTursoBridge?.readMany) {
-        const paths = requested.map(key => directBridgePath(location, `datasets/${sanitizeSegment(remoteDatasetKey(key))}`));
+      const pagedKeys = isPathProxy && window.CashtopTursoBridge?.readDatasetPage
+        ? requested.filter(key => shouldAutoPageDataset(key) && !pendingForKey(key))
+        : [];
+      const normalKeys = requested.filter(key => !pagedKeys.includes(key));
+
+      // Large registers: only page 1 (50 rows) is transferred. Page 2+ is
+      // requested explicitly by the pager/search UI.
+      if (pagedKeys.length) {
+        const pagedConcurrency = Math.max(1, Math.min(6, Number(options.concurrency || 4)));
+        for (let i = 0; i < pagedKeys.length; i += pagedConcurrency) {
+          const chunk = pagedKeys.slice(i, i + pagedConcurrency);
+          const pageResults = await Promise.all(chunk.map(async key => {
+            try {
+              const result = await queryDatasetPage(key, { page:1, pageSize:PAGE_SIZE, cacheLocal:true, replaceLocal:true, dispatch:true });
+              return { key, result };
+            } catch (error) {
+              return { key, error };
+            }
+          }));
+          for (const item of pageResults) {
+            processed += 1;
+            if (item.error) {
+              failedKeys.push(item.key);
+              console.warn('[CASH TOP 2] paged dataset pull:', item.key, item.error);
+            } else {
+              successfullyRead.push(item.key);
+              found += Number(item.result?.total || 0) > 0 ? 1 : 0;
+              newestDatasetTime = Math.max(newestDatasetTime, Number(item.result?.updatedAt || 0));
+              applied += 1;
+            }
+            if (showProgress) reportSyncProgress(processed, requested.length, `تحديث آخر 50 سجل من ${item.key}...`);
+          }
+        }
+      }
+
+      if (normalKeys.length && isPathProxy && window.CashtopTursoBridge?.readMany) {
+        const paths = normalKeys.map(key => directBridgePath(location, `datasets/${sanitizeSegment(remoteDatasetKey(key))}`));
         const batch = await window.CashtopTursoBridge.readMany(paths, { cache: options.freshCache !== false ? false : true });
-        for (let index = 0; index < requested.length; index += 1) {
-          const key = requested[index];
+        for (let index = 0; index < normalKeys.length; index += 1) {
+          const key = normalKeys[index];
           const raw = batch[paths[index]];
           processed += 1;
           successfullyRead.push(key);
@@ -1138,10 +1538,10 @@ if (settings.enabled && core && settings.config?.databaseURL) {
           }
           if (showProgress) reportSyncProgress(processed, requested.length, `تحديث ${key}...`);
         }
-      } else {
+      } else if (normalKeys.length) {
         const concurrency = Math.max(1, Math.min(8, Number(options.concurrency || 4)));
-        for (let i = 0; i < requested.length; i += concurrency) {
-          const chunk = requested.slice(i, i + concurrency);
+        for (let i = 0; i < normalKeys.length; i += concurrency) {
+          const chunk = normalKeys.slice(i, i + concurrency);
           const results = await Promise.all(chunk.map(async key => {
             try { return { key, raw: await readDatasetLocation(location, key, token, { fresh: true }) }; }
             catch (error) { return { key, error }; }
@@ -1399,8 +1799,8 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     return value;
   }
 
-  function stableRecordId(item) {
-    return core.recordIdentity ? core.recordIdentity(item) : '';
+  function stableRecordId(item, index = 0) {
+    return core.recordIdentity ? core.recordIdentity(item, index) : '';
   }
 
   function syncRecordIdentity(record, index = 0) {
@@ -1440,11 +1840,12 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   function mergeArrayByDelta(localValue, remoteValue, touchedIds = [], deletedIds = []) {
     const touched = new Set(touchedIds || []);
     const deleted = new Set(deletedIds || []);
-    const localMap = new Map(localValue.map(item => [stableRecordId(item), item]).filter(([id]) => id));
+    const localMap = new Map(localValue.map((item, index) => [stableRecordId(item, index), item]).filter(([id]) => id));
     const merged = [];
     const seen = new Set();
-    for (const remoteItem of remoteValue) {
-      const id = stableRecordId(remoteItem);
+    for (let remoteIndex = 0; remoteIndex < remoteValue.length; remoteIndex += 1) {
+      const remoteItem = remoteValue[remoteIndex];
+      const id = stableRecordId(remoteItem, remoteIndex);
       if (id && deleted.has(id)) continue;
       if (id && touched.has(id) && localMap.has(id)) {
         merged.push(localMap.get(id));
@@ -1454,27 +1855,55 @@ if (settings.enabled && core && settings.config?.databaseURL) {
         if (id) seen.add(id);
       }
     }
-    for (const localItem of localValue) {
-      const id = stableRecordId(localItem);
+    for (let localIndex = 0; localIndex < localValue.length; localIndex += 1) {
+      const localItem = localValue[localIndex];
+      const id = stableRecordId(localItem, localIndex);
       if (!id) {
         if (!merged.some(item => JSON.stringify(item) === JSON.stringify(localItem))) merged.push(localItem);
         continue;
       }
       if (deleted.has(id) || seen.has(id)) continue;
-      if (touched.has(id) || !remoteValue.some(item => stableRecordId(item) === id)) merged.push(localItem);
+      if (touched.has(id) || !remoteValue.some((item, index) => stableRecordId(item, index) === id)) merged.push(localItem);
       seen.add(id);
     }
     return merged;
   }
 
   function arrayDeltaPresent(remoteValue, desiredValue, touchedIds = [], deletedIds = []) {
-    const remoteMap = new Map(remoteValue.map(item => [stableRecordId(item), item]).filter(([id]) => id));
-    const desiredMap = new Map(desiredValue.map(item => [stableRecordId(item), item]).filter(([id]) => id));
+    const remoteMap = new Map(remoteValue.map((item, index) => [stableRecordId(item, index), item]).filter(([id]) => id));
+    const desiredMap = new Map(desiredValue.map((item, index) => [stableRecordId(item, index), item]).filter(([id]) => id));
     for (const id of touchedIds || []) {
       if (!remoteMap.has(id) || JSON.stringify(remoteMap.get(id)) !== JSON.stringify(desiredMap.get(id))) return false;
     }
     for (const id of deletedIds || []) if (remoteMap.has(id)) return false;
     return true;
+  }
+
+  function pagedPendingHasExplicitDelta(pending) {
+    return Boolean(pending && (
+      (pending.touchedIds || []).length ||
+      (pending.deletedIds || []).length
+    ));
+  }
+
+  function sanitizePagedPending(key, pending, localPayload, remotePayload) {
+    if (!PAGED_DATA_KEYS.has(key) || !pending) return pending;
+    const next = { ...pending, touchedIds:[...(pending.touchedIds || [])], deletedIds:[...(pending.deletedIds || [])] };
+    const localValue = payloadJsonValue(localPayload);
+    const remoteValue = payloadJsonValue(remotePayload);
+    const meta = localMetaFor(key);
+    if (meta?.remotePaged === true && Array.isArray(localValue) && Array.isArray(remoteValue) && remoteValue.length > localValue.length) {
+      const missingFromLocal = Math.max(0, remoteValue.length - localValue.length);
+      // A page cache replacing a previously full array can manufacture hundreds
+      // of false deletions. Never propagate that pattern to the cloud.
+      if (next.deletedIds.length >= Math.max(12, Math.floor(missingFromLocal * 0.5))) {
+        console.warn('[CASH TOP R123] blocked synthetic paged deletions:', key, next.deletedIds.length, 'remote', remoteValue.length, 'local', localValue.length);
+        next.deletedIds = [];
+      }
+      next.forceReplace = false;
+      next.deletedDataset = false;
+    }
+    return next;
   }
 
   function mergePendingPayload(key, localPayload, remotePayload, pending) {
@@ -1542,15 +1971,15 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     if (!remotePayload) return false;
     const remote = normalizeRemotePayload(remotePayload);
     if (pending?.deletedDataset === true) return remote.deleted === true || remote.value == null;
-    if (pending?.forceReplace === true) {
-      return remote.deleted === desiredPayload.deleted && String(remote.value ?? '') === String(desiredPayload.value ?? '');
-    }
     const remoteValue = payloadJsonValue(remote);
     const desiredValue = payloadJsonValue(desiredPayload);
 
     if (Array.isArray(remoteValue) && Array.isArray(desiredValue) &&
         ((pending?.touchedIds?.length || 0) + (pending?.deletedIds?.length || 0) > 0)) {
       return arrayDeltaPresent(remoteValue, desiredValue, pending.touchedIds || [], pending.deletedIds || []);
+    }
+    if (pending?.forceReplace === true) {
+      return remote.deleted === desiredPayload.deleted && String(remote.value ?? '') === String(desiredPayload.value ?? '');
     }
 
     if (remoteValue && desiredValue && typeof remoteValue === 'object' && typeof desiredValue === 'object' &&
@@ -1608,6 +2037,15 @@ if (settings.enabled && core && settings.config?.databaseURL) {
 
       for (const key of keys) {
         let pending = core.getSyncQueue().find(item => item.key === key) || null;
+        if (!pending && shouldAutoPageDataset(key) && isPathProxy && window.CashtopTursoBridge?.readDatasetPage) {
+          try {
+            const pageResult = await queryDatasetPage(key, { page:1, pageSize:PAGE_SIZE, cacheLocal:true, replaceLocal:true, dispatch:true });
+            if (Number(pageResult.total || 0) > 0 || Array.isArray(pageResult.items)) pulled += 1;
+          } catch (error) {
+            console.warn('[CASH TOP 2] Turso paged reconcile:', key, error);
+          }
+          continue;
+        }
         let remoteRaw;
         try {
           remoteRaw = await readDatasetLocation(location, key, token);
@@ -1642,8 +2080,11 @@ if (settings.enabled && core && settings.config?.databaseURL) {
           const localUnchanged = currentRaw === (sourceLocalPayload.deleted ? null : sourceLocalPayload.value) &&
             Number(currentMeta.updatedAt || 0) <= Number(sourceLocalPayload.updatedAt || 0);
           if (localUnchanged) {
-            applyMergedPayloadLocally(key, desired);
-            if (markUploaded(key, desired)) uploaded += 1;
+            if (!PAGED_DATA_KEYS.has(key)) applyMergedPayloadLocally(key, desired);
+            if (markUploaded(key, desired, PAGED_DATA_KEYS.has(key) ? { expectedRaw: sourceLocalPayload.deleted ? null : sourceLocalPayload.value } : {})) {
+              uploaded += 1;
+              if (PAGED_DATA_KEYS.has(key)) await refreshPagedFirstPageCache(key);
+            }
           }
           continue;
         }
@@ -1754,13 +2195,14 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       const remoteChanged = remoteStampBefore > 0 && knownRemoteStamp > 0 && remoteStampBefore > knownRemoteStamp;
 
       let pendingProgress = 0;
-      reportSyncProgress(0, pendingKeys.length, options.importSync === true ? 'جاري رفع النسخة الاحتياطية...' : 'جاري رفع التعديلات المجمعة...');
+      const showSyncProgress = options.manual === true || options.importSync === true;
+      if (showSyncProgress) reportSyncProgress(0, pendingKeys.length, options.importSync === true ? 'جاري رفع النسخة الاحتياطية...' : 'جاري رفع التعديلات المجمعة...');
 
       for (const key of pendingKeys) {
         if (!canRetryDatasetNow(key, manual)) {
           failedKeys.push(key);
           pendingProgress += 1;
-          reportSyncProgress(pendingProgress, pendingKeys.length, `تأجيل ${key} مؤقتاً...`);
+          if (showSyncProgress) reportSyncProgress(pendingProgress, pendingKeys.length, `تأجيل ${key} مؤقتاً...`);
           continue;
         }
 
@@ -1776,16 +2218,42 @@ if (settings.enabled && core && settings.config?.databaseURL) {
           if (key === 'cashtop_company_access' && remoteRaw != null) mergeAdminControlledAccess(remoteRaw);
 
           const sourceLocalPayload = makeLocalPayload(key, remote?.revision || 0);
-          const desired = mergePendingPayload(key, sourceLocalPayload, remote, pending);
+          const safePending = PAGED_DATA_KEYS.has(key) ? sanitizePagedPending(key, pending, sourceLocalPayload, remote) : pending;
+          if (PAGED_DATA_KEYS.has(key) && !pagedPendingHasExplicitDelta(safePending)) {
+            // Never upload a 50-row display cache as a full customers/invoices/products dataset.
+            console.warn('[CASH TOP R123] discarded unsafe whole-paged upload:', key, pending);
+            completePendingForKey(key);
+            await refreshPagedFirstPageCache(key).catch(() => false);
+            clearDatasetFailure(key);
+            continue;
+          }
+          const desired = mergePendingPayload(key, sourceLocalPayload, remote, safePending);
           await writeDatasetLocation(location, key, token, desired);
+
+          // R115: الحذف لا يخرج من الطابور بمجرد HTTP 200. نعيد قراءة المجموعة
+          // فقط إذا كانت العملية تحتوي حذفاً، ونتأكد أن السجل/الحقل اختفى فعلياً.
+          // هذا يضيف قراءة واحدة لعمليات الحذف فقط ولا يزيد استهلاك الحفظ العادي.
+          const verifyPending = typeof safePending !== 'undefined' ? safePending : pending;
+          const nestedHasDeletes = Object.values(verifyPending?.nestedArrayChanges || {}).some(delta => (delta?.deletedIds || []).length > 0);
+          const deletionMutation = verifyPending?.deletedDataset === true || (verifyPending?.deletedIds || []).length > 0 || (verifyPending?.deletedFields || []).length > 0 || nestedHasDeletes;
+          if (deletionMutation) {
+            const verifiedRaw = await readDatasetLocation(location, key, token, { fresh:true });
+            if (!pendingChangesPresent(verifiedRaw, desired, (typeof safePending !== 'undefined' ? safePending : pending))) {
+              throw new Error(`لم يتم تثبيت حذف ${key} في قاعدة البيانات بعد، وستبقى العملية معلقة لإعادة المحاولة.`);
+            }
+          }
 
           const currentRaw = core.getRawCompanyDataset ? core.getRawCompanyDataset(key) : localStorage.getItem(key);
           const currentMeta = localMetaFor(key);
           const localUnchanged = currentRaw === (sourceLocalPayload.deleted ? null : sourceLocalPayload.value) &&
             Number(currentMeta.updatedAt || 0) <= Number(sourceLocalPayload.updatedAt || 0);
           if (localUnchanged) {
-            if (!desired.deleted) applyMergedPayloadLocally(key, desired);
-            if (markUploaded(key, desired)) { uploaded += 1; uploadedKeys.push(key); }
+            if (!desired.deleted && !PAGED_DATA_KEYS.has(key)) applyMergedPayloadLocally(key, desired);
+            if (markUploaded(key, desired, PAGED_DATA_KEYS.has(key) ? { expectedRaw: sourceLocalPayload.deleted ? null : sourceLocalPayload.value } : {})) {
+              uploaded += 1;
+              uploadedKeys.push(key);
+              if (PAGED_DATA_KEYS.has(key)) await refreshPagedFirstPageCache(key);
+            }
           }
           clearDatasetFailure(key);
         } catch (error) {
@@ -1795,7 +2263,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
           console.warn('[CASH TOP 2] deferred dataset sync:', key, error);
         } finally {
           pendingProgress += 1;
-          reportSyncProgress(pendingProgress, Math.max(1, pendingKeys.length), `مزامنة ${key}...`);
+          if (showSyncProgress) reportSyncProgress(pendingProgress, Math.max(1, pendingKeys.length), `مزامنة ${key}...`);
         }
       }
 
@@ -1804,7 +2272,9 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       // page pull anymore.
       if ((remoteChanged && options.importSync !== true) || options.forceCheck === true || options.manualPull === true) {
         try {
-          const candidateKeys = CLOUD_DATA_KEYS;
+          // المزامنة اليدوية تبقى محصورة ببيانات الصفحة الحالية؛ لا نسحب كل الشركة.
+          // في صفحات العملاء/الفواتير/المنتجات يكون السجل الأساسي أول 50 فقط.
+          const candidateKeys = pagePriorityDatasets();
           const pullKeys = (options.forceCheck === true
             ? candidateKeys
             : changedPriorityKeysFromMeta(remoteMeta, candidateKeys))
@@ -1894,7 +2364,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     } finally {
       syncing = false;
       core.updateSyncBadge();
-      reportSyncProgress(1, 1, core.getSyncQueue().length ? 'بقيت عمليات معلقة وستُعاد تلقائياً' : 'اكتملت المزامنة', {
+      if (options.manual === true || options.importSync === true) reportSyncProgress(1, 1, core.getSyncQueue().length ? 'بقيت عمليات معلقة وستُعاد تلقائياً' : 'اكتملت المزامنة', {
         active: false, done: true, success: core.getSyncQueue().length === 0
       });
     }
@@ -1926,9 +2396,10 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       }
       if (core.getSyncQueue().length) return reconcileAll(options);
       if (options.manual === true || options.forceCheck === true) {
-        // الفحص اليدوي/الإجباري يزامن كل بيانات الشركة، لا بيانات الصفحة فقط.
-        // هذا مهم للأجهزة الجديدة أو جهاز ظل مغلقاً فترة طويلة.
-        return pullAll({ force: true, concurrency: 6 });
+        // R116: المزامنة اليدوية لا تعمل Full Pull. ترفع كل العمليات المحلية
+        // المعلقة، ثم تسحب فقط datasets الخاصة بالصفحة الحالية، وأول 50 سجل
+        // فقط من أي سجل كبير.
+        return pullPriorityDatasets({ force: true, concurrency: 5 });
       }
       return checkRemoteAndPull(false);
     };
@@ -1974,18 +2445,18 @@ if (settings.enabled && core && settings.config?.databaseURL) {
 
     const bootstrapped = Boolean(rawStorage.get(bootstrapKey));
     if (!bootstrapped && !hasSubstantialLocalCache()) {
-      // جهاز جديد: اسحب كل datasets مرة واحدة حتى لا يبدأ بجزء من بيانات الشركة.
-      const result = await pullAll({ concurrency: 6, remoteMeta: meta });
+      // R116: الجهاز الجديد يسحب فقط datasets المطلوبة للصفحة الحالية،
+      // والمجموعات الكبيرة منها لا تتجاوز أول 50 سجل. لا يوجد full pull تلقائي.
+      const result = await pullDatasetKeys(automaticPagePriorityDatasets(), { concurrency: 5, remoteMeta: meta, silentProgress: true });
       const nextUsage = readUsageState();
       writeUsageState({
         pageRemoteStamps: {
           ...(nextUsage.pageRemoteStamps || {}),
           [pageKey]: Math.max(remoteStamp, Number(result?.remoteUpdatedAt || 0))
-        },
-        lastFullPullAt: Date.now()
+        }
       });
-      rawStorage.set(bootstrapKey, JSON.stringify({ at: Date.now(), full: true, remoteUpdatedAt: remoteStamp }));
-      return { ...result, bootstrap: true, full: true };
+      rawStorage.set(bootstrapKey, JSON.stringify({ at: Date.now(), paged: true, remoteUpdatedAt: remoteStamp }));
+      return { ...result, bootstrap: true, paged: true };
     }
 
     if (!bootstrapped) {
@@ -2001,9 +2472,9 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       return { skipped: true, emptyRemote: true };
     }
 
-    const syncScope = CLOUD_DATA_KEYS;
+    const syncScope = force ? pagePriorityDatasets() : automaticPagePriorityDatasets();
     const changedKeys = force
-      ? CLOUD_DATA_KEYS
+      ? syncScope
       : changedPriorityKeysFromMeta(meta, syncScope, readUsageState());
     if (!force && !fullRefreshDue && !changedKeys.length) {
       const latestUsage = readUsageState();
@@ -2016,14 +2487,14 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       return { skipped: true, noRelevantPageChanges: true, remoteUpdatedAt: remoteStamp, page: pageKey };
     }
 
-    const keysToPull = fullRefreshDue && !force ? CLOUD_DATA_KEYS : changedKeys;
+    const keysToPull = fullRefreshDue && !force ? syncScope : changedKeys;
     const result = await pullDatasetKeys(keysToPull, {
       force: force === true, concurrency: 6, silentProgress: !force, remoteMeta: meta
     });
 
     const latestUsage = readUsageState();
     writeUsageState({
-      lastFullPullAt: (force || fullRefreshDue || keysToPull.length >= CLOUD_DATA_KEYS.length) ? Date.now() : Number(latestUsage.lastFullPullAt || 0),
+      lastFullPullAt: fullRefreshDue ? Date.now() : Number(latestUsage.lastFullPullAt || 0),
       pageRemoteStamps: {
         ...(latestUsage.pageRemoteStamps || {}),
         [pageKey]: Math.max(remoteStamp, Number(result?.remoteUpdatedAt || 0))
@@ -2063,7 +2534,8 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   }
 
   async function pullAllWithRetry(options = {}) {
-    let result = await pullAll({ force: options.force !== false, concurrency: options.concurrency || 6 });
+    // الاسم محفوظ للتوافق مع sync.html، لكن R116 يجعله Page-Scoped فعلياً.
+    let result = await pullPriorityDatasets({ force: options.force !== false, concurrency: options.concurrency || 5 });
     let failed = Array.isArray(result?.failedKeys) ? [...result.failedKeys] : [];
     for (let attempt = 0; failed.length && attempt < 2; attempt += 1) {
       await new Promise(resolve => setTimeout(resolve, 450 + attempt * 650));
@@ -2083,7 +2555,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     }
     const remaining = core.getSyncQueue().length;
     const complete = !failed.length && remaining === 0;
-    if (complete) markLoginFullSyncComplete({ recovery: options.reason || 'full-pull', datasetCount: CLOUD_DATA_KEYS.length });
+    if (complete) markLoginFullSyncComplete({ recovery: options.reason || 'paged-pull', datasetCount: pagePriorityDatasets().length, paged:true });
     return { ...result, convergenceUpload, remaining, complete };
   }
 
@@ -2104,7 +2576,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       const now = Date.now();
       const fullPullDue = options.forceFullPull === true || now - lastConnectivityFullPullAt > 45000;
       if (!fullPullDue) return { ...uploadResult, recovered: true, fullPullSkipped: true };
-      const pullResult = await pullAllWithRetry({ force: true, concurrency: 6, reason });
+      const pullResult = await pullAllWithRetry({ force: true, concurrency: 5, reason });
       const recovered = Number(pullResult?.failed || 0) === 0 && Number(pullResult?.remaining || 0) === 0 && pullResult?.complete !== false;
       if (recovered) lastConnectivityFullPullAt = Date.now();
       return { ...uploadResult, pull: pullResult, recovered };
@@ -2117,6 +2589,11 @@ if (settings.enabled && core && settings.config?.databaseURL) {
 
   async function uploadDataset(key) {
     if (!CLOUD_DATA_KEYS.includes(key)) return false;
+    if (PAGED_DATA_KEYS.has(key)) {
+      console.warn('[CASH TOP R123] whole paged upload blocked for data safety:', key);
+      await refreshPagedFirstPageCache(key).catch(() => false);
+      return false;
+    }
     core.enqueueSyncOperation(key);
     const result = await syncAll({ forceRetry: true });
     return Number(result.uploaded || 0) > 0;
@@ -2310,6 +2787,10 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     fetchAuditTrailDay,
     fetchAuditTrailHour,
     fetchAuditTrailRecent,
+    queryDatasetPage,
+    queryDatasetStats,
+    isPagedDataset: key => PAGED_DATA_KEYS.has(key),
+    getDatasetPageMeta: key => { try { return JSON.parse(rawStorage.get(pageCacheMetaKey(key)) || 'null'); } catch (_) { return null; } },
     flushPendingQueue,
     uploadDataset,
     importDatasets,
@@ -2368,6 +2849,13 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   const resumeSyncRuntime = event => {
     datasetRetryState.clear();
     const reason = event?.type || 'resume';
+    // Give the dedicated 50-row pager the first network turn on heavy register
+    // pages. Supporting datasets/meta checks continue shortly afterwards.
+    if (primaryPagedRuntime && Date.now() - runtimeStartedAt < 1400 && !core.getSyncQueue().length && reason !== 'change') {
+      clearTimeout(backgroundPullTimer);
+      backgroundPullTimer = setTimeout(() => checkRemoteAndPull(false).catch(() => null), 1450);
+      return;
+    }
     if (core.getSyncQueue().length) recoverConnectivityAndSync(reason).catch(() => null);
     else if (reason === 'change') recoverConnectivityAndSync('connection-change', { forceFullPull: true }).catch(() => null);
     else checkRemoteAndPull(false).catch(() => null);
@@ -2423,7 +2911,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     // The login synchronization gate owns the first full upload/pull sequence so
     // its percentage reflects one deterministic job rather than racing startup.
   } else if (core.getSyncQueue().length) scheduleSync(80);
-  else setTimeout(() => checkRemoteAndPull(false).catch(() => null), 220);
+  else setTimeout(() => checkRemoteAndPull(false).catch(() => null), primaryPagedRuntime ? 1450 : 220);
 } else if (core) {
   console.warn('[CASH TOP 2] إعداد Turso للمزامنة غير مكتمل.');
   core.updateSyncBadge();

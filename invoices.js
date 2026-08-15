@@ -55,13 +55,9 @@ window.addEventListener('load', async () => {
   refreshInvoices();
   try { await (window.Cashtop?.localReady || Promise.resolve()); } catch (_) {}
   refreshInvoices();
-  // لا نسحب من الشبكة قبل اكتمال استعادة التخزين المحلي وطابور المزامنة؛
-  // وإلا قد تصل نسخة سحابية أقدم فوق فاتورة محلية لم يُستعد طابورها بعد.
+  // Turso sync performs the page-scoped first-50 refresh once for this page.
+  // لا نكرر طلب أول 50 فاتورة مرة ثانية بعد اكتمال syncReady.
   try { await (window.Cashtop?.syncReady || Promise.resolve()); } catch (_) {}
-  setTimeout(() => {
-    window.CashtopTurso?.pullDatasetKeys?.([DB_KEY], { concurrency: 1, silentProgress: true })
-      ?.catch?.(() => null);
-  }, 80);
 });
 window.addEventListener('cashtop:local-ready', refreshInvoices);
 window.addEventListener('cashtop:durable-restored', event => {
@@ -389,6 +385,17 @@ function updateStats(source = visibleInvoices()) {
     document.getElementById('stat-total-debt').innerText = money(stats.totalDebt);
     document.getElementById('stat-today-count').innerText = stats.todayCount;
   };
+  const globalStats = window.CashtopRegisterPager?.globalStats;
+  const periodMode = document.getElementById('invoicePeriodFilter')?.value || 'all';
+  if (globalStats && periodMode === 'all') {
+    apply({
+      totalSales: Number(globalStats.totalSales || 0),
+      totalPaid: Number(globalStats.totalPaid || 0),
+      totalDebt: Number(globalStats.totalDebt || 0),
+      todayCount: Number(globalStats.todayCount || 0)
+    });
+    return;
+  }
   if (source.length >= 1000 && window.Cashtop?.runWorkerTask) {
     window.Cashtop.runWorkerTask('invoice-stats', { records: source, today: todayStr }, fallback).then(apply).catch(() => apply(fallback()));
   } else apply(fallback());
@@ -436,7 +443,7 @@ function renderTable(data) {
     };
     if (window.Cashtop?.renderVirtualRows) {
       window.Cashtop.renderVirtualRows(tbody, sorted, createRow, {
-        chunkSize: 80, eagerLimit: 160, colspan: 10,
+        chunkSize: 80, eagerLimit: 160, colspan: 10, pagination: false,
         emptyHtml: '<tr><td colspan="10" style="padding:20px;color:#999;text-align:center">لا توجد فواتير</td></tr>'
       });
     } else {

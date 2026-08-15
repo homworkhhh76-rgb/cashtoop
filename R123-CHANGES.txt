@@ -1,0 +1,10 @@
+CASH TOP R123 — Recovery Safe Registers
+
+- Prevents 50-row local page caches from ever replacing full cloud customers/invoices/products.
+- Drops unsafe old whole-register queued writes for paged datasets.
+- Preserves explicit record edits/deletes using delta merge against the full remote dataset.
+- Recovers the stable tenant for a company key from prior local company-access bindings before trusting a stale/new key index.
+- Searches current + legacy roots and remembered tenant IDs for customers/invoices/products when the selected path is empty or unexpectedly smaller.
+- Keeps local cached pages when a remote path temporarily returns zero.
+- Uses one resolved path per heavy dataset after recovery.
+- Cache version bumped to R123.

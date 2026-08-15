@@ -1,0 +1,11 @@
+CASH TOP R121
+
+- Products: robust server-side last-50 paging across old atomic/object/string formats and legacy root locations.
+- Products: an empty/failed remote compatibility read never wipes a valid local product cache.
+- Customers/products/invoices: cards use global server aggregates, independent of the current 50-row page.
+- Dashboard: full sales/debt summaries use Turso aggregate queries while recent invoices remain paged.
+- Header sync progress line removed; automatic synchronization runs in the background.
+- Visited pages remain cached for offline use; pages are not prefetched.
+- Cache/script revision bumped to R121.
+- Login no longer routes through sync.html; it opens the dashboard immediately and sync continues in background.
+- Normal 50-row page response now carries full-dataset aggregate card stats in the same Turso pipeline request.
