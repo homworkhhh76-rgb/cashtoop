@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const VERSION = '123';
+  const VERSION = '124';
   const PAGE_SIZE = 50;
   const CACHE_PREFIX = 'ct_register_page_cache_v122';
   const CACHE_INDEX_PREFIX = 'ct_register_page_index_v122';
@@ -57,7 +57,7 @@
       totalStat: 'statProductsCount',
       totalSuffix: ' منتج',
       searchInput: 'searchInput',
-      searchFields: ['name','barcode','unitBarcode','code','id','sku'],
+      searchFields: ['name','barcode','pieceBarcode','unitBarcode','code','id','sku','variants','unitChain'],
       getRows: () => (typeof productsData !== 'undefined' && Array.isArray(productsData) ? productsData : []),
       setRows: rows => { productsData = Array.isArray(rows) ? rows : []; },
       applyStats: stats => {

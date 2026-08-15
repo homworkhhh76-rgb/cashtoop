@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-// R123 recovery-safe paging: partial page caches can never replace full cloud registers.
+// R124 global search + R123 recovery-safe paging: 50-row display caches never limit cloud search or replace full registers.
 const settings = window.CASHTOP_TURSO || {};
 const core = window.Cashtop;
 
@@ -50,7 +50,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   }
   const PAGE_SIZE = 50;
   const DATASET_SEARCH_FIELDS = {
-    cashtop_products:['name','barcode','unitBarcode','code','id','sku'],
+    cashtop_products:['name','barcode','pieceBarcode','unitBarcode','code','id','sku','variants','unitChain'],
     cashtop_materials:['name','barcode','code','id'],
     cashtop_customers:['name','phone','mobile','code','id'],
     cashtop_customer_groups:['name','code','id'],
@@ -761,12 +761,15 @@ if (settings.enabled && core && settings.config?.databaseURL) {
       Number(localMetaFor(key)?.remoteTotal || 0),
       Number((() => { try { return JSON.parse(rawStorage.get(pageCacheMetaKey(key)) || '{}')?.total || 0; } catch (_) { return 0; } })())
     );
-    const suspiciousShrink = priorRemoteTotal > 0 && Number(result?.total || 0) < priorRemoteTotal;
+    const isSearchQuery = Boolean(String(bridgeOptions.search || '').trim());
+    // Search totals are match counts, not dataset totals. Never compare a search
+    // result (for example 3 matches) with the full remote total (for example 500)
+    // or every keystroke would trigger expensive legacy-path recovery probes.
+    const suspiciousShrink = !isSearchQuery && priorRemoteTotal > 0 && Number(result?.total || 0) < priorRemoteTotal;
 
-    // If the canonical/indexed tenant is empty (or suddenly much smaller than a
-    // previously observed total), look at the exact historical roots/tenant ids
-    // in parallel. This is read-only and selects the path with the most records.
-    if (!hasRows(result) || suspiciousShrink) {
+    // Path recovery belongs to normal register loading. Once a path is resolved,
+    // a search returning zero simply means "no matches" and must stay fast.
+    if (!isSearchQuery && (!hasRows(result) || suspiciousShrink)) {
       if (rememberedPath && !hasRows(result)) clearResolvedPagedPath(key);
       const candidates = [...new Set([canonicalPath, ...pagedCompatibilityPaths(location, key)])]
         .filter(path => path && path !== firstPath);
@@ -781,16 +784,16 @@ if (settings.enabled && core && settings.config?.databaseURL) {
         result = { ...found.candidate, compatibilitySource: found.candidatePath, recoveredPath:true };
         saveResolvedPagedPath(key, found.candidatePath);
       }
-    } else {
+    } else if (hasRows(result) || !isSearchQuery) {
       saveResolvedPagedPath(key, firstPath);
     }
 
     // Never turn a known local page into zero because a path/index temporarily
     // points at an empty tenant. Keep the local page available while recovery
     // probes or the next network attempt happen.
-    if (!hasRows(result) && localFallback) result = { ...localFallback, protectedLocalFallback:true };
+    if (!isSearchQuery && !hasRows(result) && localFallback) result = { ...localFallback, protectedLocalFallback:true };
 
-    if (hasRows(result) && !result?.localFallback) noteObservedPagedTotal(key, Number(result.total || 0));
+    if (!isSearchQuery && hasRows(result) && !result?.localFallback) noteObservedPagedTotal(key, Number(result.total || 0));
     if (options.cacheLocal !== false && !result?.localFallback && hasRows(result)) {
       cachePagedRecordsLocally(key, result.items, result, { dispatch:options.dispatch, replaceLocal:options.replaceLocal === true });
     }

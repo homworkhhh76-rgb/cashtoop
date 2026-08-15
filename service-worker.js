@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v123-recovery-safe-registers';
+const CACHE_VERSION = 'v124-global-register-search';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = 'cash-top-2-remote-static-persistent-v1';
 

@@ -2971,7 +2971,7 @@
     'invoices.html':'cashtop_invoices'
   };
   const CT_REMOTE_SEARCH_FIELDS = {
-    cashtop_products:['name','barcode','unitBarcode','code','id','sku'], cashtop_materials:['name','barcode','code','id'],
+    cashtop_products:['name','barcode','pieceBarcode','unitBarcode','code','id','sku','variants','unitChain'], cashtop_materials:['name','barcode','code','id'],
     cashtop_customers:['name','phone','mobile','code','id'], cashtop_customer_groups:['name','code','id'],
     cashtop_suppliers:['name','phone','mobile','code','id'], cashtop_invoices:['id','invoiceNo','number','customerName','customer','phone','barcode'],
     cashtop_purchases:['id','invoiceNo','number','supplierName','supplier','barcode','reference'], cashtop_sales_returns:['id','invoiceId','customerName','reference'],

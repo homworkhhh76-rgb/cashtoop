@@ -1,0 +1,10 @@
+CASH TOP R124 — Global Search Across All Pages
+
+- Cashier customer suggestions now search all cloud customers, not only the first cached 50.
+- Cashier product search now searches the complete cloud product register and returns only matching rows.
+- Barcode fallback can locate products outside the first 50 records.
+- Normal browsing still loads only 50 records; global search does not preload the full register.
+- Products/customers/invoices page search remains server-side across the full dataset with 50 results per page.
+- Product search now includes pieceBarcode as well as name/barcode/unitBarcode/code/id/sku.
+- Selected remote customer/product is merged only into the current cashier working set so invoice/debt/stock updates remain safe with R123 delta sync protection.
+- Cache bumped to R124.
