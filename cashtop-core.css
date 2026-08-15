@@ -1869,3 +1869,7 @@ html:has(.sr-modal.show) .ct-sidebar {
 .ct-records-stream-loader.active{opacity:1;visibility:visible;transform:translate3d(-50%,0,0)}
 .ct-records-stream-loader .ct-records-spinner{width:19px;height:19px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:ctRecordsSpin .6s linear infinite;flex:0 0 19px}
 @keyframes ctRecordsSpin{to{transform:rotate(360deg)}}
+
+/* R110 branding prepaint: do not flash built-in logo before company branding is restored. */
+.ct-sidebar-brand img,.ct-topbar-logo{visibility:hidden}
+html[data-ct-brand-ready="1"] .ct-sidebar-brand img,html[data-ct-brand-ready="1"] .ct-topbar-logo{visibility:visible}

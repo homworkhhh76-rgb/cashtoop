@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v108-data-safety-sync-offline';
+const CACHE_VERSION = 'v114-purchase-composer';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = 'cash-top-2-remote-static-persistent-v1';
 
@@ -21,6 +21,8 @@ const LOCAL_ASSETS = [
   './cashier.html',
   './categories.html',
   './cashtop-core.css',
+  './ghazal-theme.css',
+  './ghazal-theme.js',
   './cashtop-core.js',
   './turso-config.js',
   './turso-rtdb.js',

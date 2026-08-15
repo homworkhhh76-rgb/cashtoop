@@ -155,13 +155,44 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=100">
-    <script src="cashtop-core.js?v=108"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=110">
+    <script src="cashtop-core.js?v=110"></script>
     <script src="multi-system.js?v=100"></script>
     <script src="turso-config.js?v=100"></script><script src="turso-rtdb.js?v=100"></script>
     <script src="accounting-engine.js?v=100"></script>
     <script src="turso-sync.js?v=108"></script>
 <script src="cashtop-download-fix.js"></script>
+
+<link rel="stylesheet" href="ghazal-theme.css?v=9">
+
+<style id="ct-v9-branch-dashboard-cards">
+/* R114: branch KPI cards use the same white + colored icon-panel language as the dashboard cards. */
+.top-cards-grid .main-card{
+  --ct-card-accent:#2563eb;--ct-card-tint:#eff6ff;
+  background:#fff!important;color:#0f172a!important;padding:0 0 0 76px!important;
+  border:1px solid #e2e8f0!important;border-radius:12px!important;min-height:92px!important;
+  display:flex!important;flex-direction:column!important;justify-content:center!important;overflow:hidden!important;
+  box-shadow:0 7px 18px rgba(15,23,42,.055)!important;position:relative!important;
+}
+.top-cards-grid .main-card.card-branches{--ct-card-accent:#0284c7;--ct-card-tint:#e0f2fe}
+.top-cards-grid .main-card.card-active{--ct-card-accent:#16a34a;--ct-card-tint:#ecfdf3}
+.top-cards-grid .main-card.card-inactive{--ct-card-accent:#dc2626;--ct-card-tint:#fef2f2}
+.top-cards-grid .main-card.card-managers{--ct-card-accent:#7c3aed;--ct-card-tint:#f3e8ff}
+.top-cards-grid .main-card .card-header-title{display:block!important;margin:0!important;padding:13px 15px 2px!important;color:#0f172a!important;text-align:right!important;font-size:13px!important;line-height:1.4!important}
+.top-cards-grid .main-card .card-header-title span{display:block!important}
+.top-cards-grid .main-card .card-header-title i{
+  position:absolute!important;left:0!important;top:0!important;bottom:0!important;width:76px!important;height:100%!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;margin:0!important;
+  background:var(--ct-card-tint)!important;color:var(--ct-card-accent)!important;opacity:1!important;font-size:25px!important;
+}
+.top-cards-grid .main-card .card-stat{border:0!important;margin:0!important;padding:2px 15px 13px!important;color:#64748b!important;font-size:21px!important;line-height:1.3!important;text-align:right!important}
+@media(max-width:768px){
+ .top-cards-grid .main-card{padding-left:58px!important;min-height:80px!important;border-radius:10px!important}
+ .top-cards-grid .main-card .card-header-title{font-size:11px!important;padding:10px 10px 1px!important}
+ .top-cards-grid .main-card .card-stat{font-size:18px!important;padding:1px 10px 10px!important}
+ .top-cards-grid .main-card .card-header-title i{width:58px!important;font-size:20px!important}
+}
+</style>
 </head>
 <body>
 <div class="ct-sidebar-overlay" id="ctSidebarOverlay" data-ct-action="close-sidebar"></div>
@@ -1513,6 +1544,8 @@
 
 <script type="application/json" id="ctEmbeddedShellMarker">{"embedded":true,"page":"branches.html"}</script>
 <script src="cashtop-export.js"></script>
+
+<script src="ghazal-theme.js?v=9"></script>
 </body>
 
 </html>

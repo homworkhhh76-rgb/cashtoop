@@ -2950,6 +2950,101 @@
     });
   }
 
+  /* R109 — fixed 50-row record pages.\n     Large registers render only the active page into the DOM, so customers,\n     invoices, products and other records stay light even after years of data. */
+  const CT_RECORD_PAGE_SIZE = 50;
+  const ctRecordPagerStates = new WeakMap();
+
+  function ctRecordSignature(list) {
+    const first = list?.[0] || {};
+    const last = list?.[list.length - 1] || {};
+    const stamp = value => String(value?.id ?? value?.code ?? value?.invoiceNo ?? value?.number ?? value?.date ?? '');
+    return `${list?.length || 0}|${stamp(first)}|${stamp(last)}`;
+  }
+
+  function ctRecordPagerMount(tbody) {
+    const table = tbody?.closest?.('table');
+    if (!table) return tbody;
+    return table.closest('.table-responsive-box,.table-responsive,.table-wrapper,.table-wrap,.table-container,.data-table-wrap') || table;
+  }
+
+  function ensureCtRecordPager(tbody, state) {
+    if (state.pager?.isConnected) return state.pager;
+    const pager = document.createElement('div');
+    pager.className = 'ct-record-pager ghazal-pager';
+    pager.setAttribute('aria-label', 'صفحات السجلات');
+    pager.innerHTML = '<button type="button" data-ct-record-page="prev">السابق</button><span class="ct-record-page-info ghazal-page-info">صفحة 1</span><button type="button" data-ct-record-page="next">التالي</button>';
+    const mount = ctRecordPagerMount(tbody);
+    mount?.insertAdjacentElement?.('afterend', pager);
+    state.pager = pager;
+    pager.addEventListener('click', event => {
+      const button = event.target.closest('button[data-ct-record-page]');
+      if (!button || button.disabled) return;
+      const direction = button.dataset.ctRecordPage;
+      if (direction === 'prev') state.page = Math.max(1, state.page - 1);
+      if (direction === 'next') state.page = Math.min(state.pages || 1, state.page + 1);
+      state.paint?.();
+      try { mount?.scrollIntoView?.({ block:'nearest', behavior:'auto' }); } catch (_) {}
+    });
+    return pager;
+  }
+
+  function renderRecordPage50(tbody, records, rowFactory, options = {}) {
+    const previous = pendingVirtualRenders.get(tbody);
+    if (previous?.observer) previous.observer.disconnect();
+    if (previous?.idleId) cancelWhenIdle(previous.idleId);
+    if (previous?.scrollCleanup) previous.scrollCleanup();
+
+    const list = Array.isArray(records) ? records : [];
+    let state = ctRecordPagerStates.get(tbody);
+    if (!state) {
+      state = { page:1, pages:1, pager:null, signature:'', paint:null, list:[], rowFactory:null, options:null };
+      ctRecordPagerStates.set(tbody, state);
+    }
+    const signature = ctRecordSignature(list);
+    if (state.signature !== signature) state.page = 1;
+    state.signature = signature;
+    state.list = list;
+    state.rowFactory = rowFactory;
+    state.options = options;
+    state.pages = Math.max(1, Math.ceil(list.length / CT_RECORD_PAGE_SIZE));
+    state.page = Math.min(Math.max(1, Number(state.page || 1)), state.pages);
+
+    const table = tbody.closest?.('table');
+    if (table) table.dataset.ctRecordPaged = '1';
+    const pager = ensureCtRecordPager(tbody, state);
+
+    state.paint = () => {
+      state.pages = Math.max(1, Math.ceil(state.list.length / CT_RECORD_PAGE_SIZE));
+      state.page = Math.min(Math.max(1, Number(state.page || 1)), state.pages);
+      const start = (state.page - 1) * CT_RECORD_PAGE_SIZE;
+      const pageRows = state.list.slice(start, start + CT_RECORD_PAGE_SIZE);
+      const fragment = document.createDocumentFragment();
+      for (let index = 0; index < pageRows.length; index += 1) {
+        const row = state.rowFactory(pageRows[index], start + index);
+        if (!row) continue;
+        try { row.style.contentVisibility = 'auto'; row.style.containIntrinsicSize = `${Math.max(32, Number(state.options?.rowHeight || 48))}px`; } catch (_) {}
+        fragment.appendChild(row);
+      }
+      if (!pageRows.length) {
+        tbody.innerHTML = state.options?.emptyHtml || '';
+      } else {
+        tbody.replaceChildren(fragment);
+      }
+      const info = pager?.querySelector?.('.ct-record-page-info');
+      if (info) info.textContent = `صفحة ${state.page}`;
+      const prev = pager?.querySelector?.('[data-ct-record-page="prev"]');
+      const next = pager?.querySelector?.('[data-ct-record-page="next"]');
+      if (prev) prev.disabled = state.page <= 1;
+      if (next) next.disabled = state.page >= state.pages;
+      if (pager) pager.style.display = 'flex';
+      state.options?.onProgress?.({ rendered:pageRows.length, total:state.list.length, start, end:start + pageRows.length, page:state.page, pages:state.pages, paged:true });
+    };
+
+    state.paint();
+    pendingVirtualRenders.set(tbody, { cancelled:false, observer:null, idleId:null, scrollCleanup:null, paged:true });
+    return { rendered:Math.min(CT_RECORD_PAGE_SIZE, list.length), total:list.length, page:state.page, pages:state.pages, paged:true };
+  }
+
   /**
    * Lazy table renderer: only the first chunk is inserted initially. More rows
    * are appended when the user approaches the sentinel. This is intentionally
@@ -2957,6 +3052,7 @@
    */
   function renderVirtualRows(tbody, records, rowFactory, options = {}) {
     if (!tbody || typeof rowFactory !== 'function') return { rendered: 0, total: 0 };
+    if (options.pagination !== false) return renderRecordPage50(tbody, records, rowFactory, options);
     const previous = pendingVirtualRenders.get(tbody);
     if (previous?.observer) previous.observer.disconnect();
     if (previous?.idleId) cancelWhenIdle(previous.idleId);
@@ -4661,7 +4757,7 @@
   }
 
   function isFundActive(account) {
-    return Boolean(account) && account.disabled !== true && account.active !== false && String(account.status || '').toLowerCase() !== 'inactive';
+    return Boolean(account) && account.deleted !== true && account.disabled !== true && account.active !== false && !['inactive','deleted'].includes(String(account.status || '').toLowerCase());
   }
 
   function activeFundAccounts(fundsOrAccounts) {
@@ -4713,21 +4809,42 @@
     return value * (1 + percent / 100);
   }
 
+  function brandingLogoCacheKey() {
+    return `ct_brand_logo_cache_v2::${tenantIdFromSession() || 'default'}`;
+  }
+
+  function cacheBrandLogo(value) {
+    try {
+      const key = brandingLogoCacheKey();
+      if (String(value || '').trim()) rawSet(key, String(value).trim());
+      else rawRemove(key);
+    } catch (_) {}
+  }
+
+  function cachedBrandLogo() {
+    try { return String(rawGet(brandingLogoCacheKey()) || '').trim(); } catch (_) { return ''; }
+  }
+
   function applySystemBranding() {
     const session = getSession() || {};
     const settings = getSystemSettings();
     const companyName = String(settings.companyName || session.companyName || session.companyKey || APP_NAME).trim();
-    const logo = String(settings.logo || '').trim();
+    const configuredLogo = String(settings.logo || '').trim();
+    if (configuredLogo) cacheBrandLogo(configuredLogo);
+    const logo = configuredLogo || cachedBrandLogo();
     const address = String(settings.address || '').trim();
     const phone = String(settings.phone || '').trim();
     setText('ctCompanyTitle', [companyName, address, phone].filter(Boolean).join(' · ') || 'نظام المحاسبة والمخزون');
     setText('ctSidebarCompany', companyName || APP_NAME);
     document.querySelectorAll('.ct-sidebar-brand img, .ct-topbar-logo').forEach(image => {
-      if (logo) image.src = logo;
+      if (logo) { image.src = logo; image.dataset.ctCustomLogo = '1'; }
+      else { image.dataset.ctCustomLogo = '0'; if (!image.getAttribute('src')) image.src = 'cashtop-logo.png'; }
       image.alt = companyName || APP_NAME;
       image.title = [companyName, address, phone].filter(Boolean).join(' - ');
+      image.style.visibility = 'visible';
     });
     document.documentElement.dataset.companyName = companyName;
+    document.documentElement.dataset.ctBrandReady = '1';
     window.dispatchEvent(new CustomEvent('cashtop:branding-applied', { detail: { companyName, logo, address, phone } }));
     return { companyName, logo, address, phone };
   }
@@ -6605,7 +6722,7 @@
     archiveRecords, readArchivedRecords, compactCompletedData, trustedNowMs,
     getSyncQueue, enqueueSyncOperation, completeSyncOperation, clearSyncQueue, resetSyncQueueCompletely, preservePendingSyncState, updateSyncBadge, restoreSyncQueueBackup, migrateLegacySyncQueues,
     setSyncProgress, restoreDurableCompanyData, flushDurableLocalWrites, commitCriticalData, readDurableLocalKey,
-    getSystemSettings, getProfitRate, getInventoryAccountingMethod, salePriceFromCost, applySystemBranding, recordIdentity, sortNewestFirstRecords,
+    getSystemSettings, getProfitRate, getInventoryAccountingMethod, salePriceFromCost, applySystemBranding, cacheBrandLogo, cachedBrandLogo, recordIdentity, sortNewestFirstRecords,
     debounce, runWhenIdle, renderVirtualRows, renderVirtualGrid, runWorkerTask, queryRecords, atomicSetItems, recoverAtomicTransactions,
     captureModalDraft, restoreModalDraft, clearModalDraft, getAuditPending, getAuditPendingAsync, getAuditPendingCountAsync, completeAuditPending, completeAuditPendingAsync, getRecentAuditCache,
   });
@@ -6683,7 +6800,7 @@
       if (alreadyShown) return;
       try { RAW.set.call(localStorage, storagePressureNoticeLocalKey, '1'); } catch (_) {}
       try { await persistDurableLocalKey(storagePressureNoticeDurableKey, '1'); } catch (_) {}
-      showToast('تم تحويل التخزين تلقائياً إلى قاعدة IndexedDB المحلية الكبيرة للحفاظ على البيانات.', 'info', 4200);
+      // Ghazal UI: storage pressure is handled silently; business data stays protected in IndexedDB.
     };
     window.addEventListener('cashtop:local-storage-pressure', () => { showStoragePressureNoticeOnce().catch(() => null); });
     document.addEventListener('keydown', event => {
@@ -6746,6 +6863,38 @@
       });
     }
 
+    async function trimHotLocalMirrorsSilently(limit = 8) {
+      try {
+        const tenant = encodeURIComponent(tenantIdFromSession());
+        const dataPrefix = `cashtop_data::${tenant}::`;
+        const metaPrefix = `cashtop_meta::${tenant}::`;
+        const pending = new Set((getSyncQueue() || []).map(item => canonicalKey(item?.key || '')).filter(Boolean));
+        const candidates = [];
+        for (let index = 0; index < localStorage.length; index += 1) {
+          const physical = RAW.key.call(localStorage, index);
+          if (!physical || !physical.startsWith(dataPrefix)) continue;
+          const dataset = logicalDatasetFromPhysicalKey(physical, tenantIdFromSession());
+          if (!dataset || pending.has(dataset)) continue;
+          // Keep small identity/security datasets mirrored synchronously at all times.
+          if (['cashtop_company_access','cashtop_settings','cashtop_branches','cashtop_employees','cashtop_sales_agents'].includes(dataset)) continue;
+          const raw = RAW.get.call(localStorage, physical);
+          if (raw == null) continue;
+          const metaPhysical = physical.replace(dataPrefix, metaPrefix);
+          const meta = safeJson(rawGet(metaPhysical), {}) || {};
+          candidates.push({ physical, raw, dataset, updatedAt:Number(meta.updatedAt || meta.syncedAt || 0), size:String(raw).length });
+        }
+        candidates.sort((a,b) => (a.updatedAt - b.updatedAt) || (b.size - a.size));
+        let removed = 0;
+        for (const item of candidates.slice(0, Math.max(0, Number(limit || 0)))) {
+          const durable = await persistDurableLocalKey(item.physical, item.raw).catch(() => false);
+          if (!durable) continue;
+          durableMemory.set(item.physical, item.raw);
+          try { RAW.remove.call(localStorage, item.physical); removed += 1; } catch (_) {}
+        }
+        return removed;
+      } catch (_) { return 0; }
+    }
+
     const maximizeBrowserStorage = async (options = {}) => {
       const result = { persisted:false, usage:0, quota:0, compacted:false };
       try {
@@ -6778,6 +6927,7 @@
         const audit = safeJson(localStorage.getItem('cashtop_audit_log'), []) || [];
         if (Array.isArray(audit) && audit.length > 80) localStorage.setItem('cashtop_audit_log', JSON.stringify(audit.slice(-80)));
       } catch (_) {}
+      try { result.hotMirrorsTrimmed = await trimHotLocalMirrorsSilently(8); } catch (_) { result.hotMirrorsTrimmed = 0; }
       return result;
     };
     window.addEventListener('cashtop:local-storage-pressure', () => {
