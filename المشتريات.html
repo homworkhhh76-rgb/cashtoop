@@ -219,13 +219,86 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=100">
-    <script src="cashtop-core.js?v=108"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=110">
+    <script src="cashtop-core.js?v=123"></script>
     <script src="multi-system.js?v=100"></script>
-    <script src="turso-config.js?v=100"></script><script src="turso-rtdb.js?v=100"></script>
+    <script src="turso-config.js?v=100"></script><script src="turso-rtdb.js?v=123"></script>
     <script src="accounting-engine.js?v=100"></script>
-    <script src="turso-sync.js?v=108"></script>
+    <script src="turso-sync.js?v=123"></script>
 <script src="cashtop-download-fix.js"></script>
+
+<link rel="stylesheet" href="ghazal-theme.css?v=9">
+
+<style id="ct-v9-purchase-composer-style">
+/* R114 purchase composer: fixed invoice fields on top, one entry form, colored staged-items table. */
+#ctPurchaseComposer{display:flex;flex-direction:column;gap:14px}
+.ct-purchase-header-card{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:14px!important;padding:17px!important;border:1px solid #dbe5f1!important;border-radius:12px!important;background:#fff!important;box-shadow:0 7px 18px rgba(15,23,42,.04)!important}
+.ct-purchase-header-card>.invoice-title-box{grid-column:1/-1!important;margin:0 0 2px!important;padding:0 0 10px!important;border-bottom:1px solid #edf2f7!important}
+.ct-purchase-header-card>.invoice-title-box h2{font-size:17px!important;color:#0f172a!important}
+.ct-purchase-header-card>.invoice-title-box p{font-size:11px!important;color:#64748b!important;margin-top:3px!important}
+.ct-purchase-header-card>.form-row{display:contents!important}
+.ct-purchase-header-card .form-group{min-width:0!important;margin:0!important}
+.ct-purchase-header-card .form-control{min-height:42px!important;background:#fffdf5!important;border-color:#d6d3c7!important;border-radius:7px!important}
+.ct-purchase-header-card .form-group label{background:#fff!important;color:#475569!important}
+.ct-purchase-top-switch{grid-column:1/-1!important;border:1px solid #dbeafe!important;background:#eff6ff!important;border-radius:9px!important;padding:10px 12px!important}
+.ct-purchase-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 4px 12px rgba(15,23,42,.035)}
+.ct-purchase-actions .ct-purchase-action{border:0;border-radius:7px;min-height:39px;padding:8px 15px;font:800 12px Cairo,sans-serif;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.ct-purchase-action.add{background:#0f9d58;color:#fff}.ct-purchase-action.save{background:#2563eb;color:#fff}.ct-purchase-action.clear{background:#f1f5f9;color:#475569}
+#productsContainer{margin:0!important}
+#productsContainer>.product-item{margin:0!important}
+#productsContainer>.product-item.ct-staged-item{display:none!important}
+#productsContainer>.product-item.ct-purchase-editor-card{display:block!important;border:1px solid #e6dfc3!important;border-radius:12px!important;background:linear-gradient(180deg,#fffdf5,#fff)!important;padding:17px!important;box-shadow:0 7px 18px rgba(15,23,42,.035)!important}
+.ct-purchase-editor-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:-2px 0 15px;padding-bottom:10px;border-bottom:1px solid #ede9d8;color:#1e293b;font-size:15px;font-weight:900}
+.ct-purchase-editor-title small{font-size:10px;color:#64748b;font-weight:700}
+.ct-purchase-editor-card>.btn-remove-item{display:none!important}
+.ct-purchase-editor-card .form-row{gap:12px!important;margin-bottom:13px!important}
+.ct-purchase-editor-card .form-control{min-height:42px!important;border-radius:7px!important;background:#fffef8!important;border-color:#d7d2c3!important}
+.ct-purchase-editor-card .form-group label{background:#fffdf6!important;color:#475569!important}
+.ct-purchase-editor-card .switch-container{width:100%!important;min-height:48px!important;border:1px solid #d9dee8!important;border-radius:8px!important;background:#f8fafc!important;padding:8px 12px!important;margin:10px 0!important}
+.ct-purchase-editor-card .variants-section,.ct-purchase-editor-card .purchase-unit-chain-box,.ct-purchase-editor-card .item-finance-zone{border-radius:8px!important}
+.ct-purchase-stage-card{background:#fff;border:1px solid #dce5ef;border-radius:12px;overflow:hidden;box-shadow:0 7px 18px rgba(15,23,42,.035)}
+.ct-purchase-stage-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 15px;border-bottom:1px solid #e8eef5;background:#f8fbff}
+.ct-purchase-stage-head h3{margin:0;font-size:15px;color:#17365d}.ct-purchase-stage-head span{font-size:11px;color:#64748b}
+.ct-purchase-table-wrap{overflow:auto;width:100%}
+.ct-purchase-stage-table{width:100%;border-collapse:collapse;text-align:center;font-size:11px;min-width:820px}
+.ct-purchase-stage-table thead th{background:#245b89;color:#fff;padding:10px 7px;border-left:1px solid rgba(255,255,255,.23);font-weight:800;white-space:nowrap}
+.ct-purchase-stage-table tbody td{padding:10px 7px;border-left:1px solid #d7dee7;border-bottom:1px solid #d7dee7;background:#fff;color:#334155;vertical-align:middle}
+.ct-purchase-stage-table tbody tr:last-child td{border-bottom:0}
+.ct-purchase-stage-table td.ct-col-qty{background:#fff0bf;color:#8a5a00;font-weight:900}
+.ct-purchase-stage-table td.ct-col-cost{background:#fde2e2;color:#9f1239;font-weight:900}
+.ct-purchase-stage-table td.ct-col-total{background:#cfefff;color:#075985;font-weight:900}
+.ct-purchase-stage-table td.ct-col-store{background:#e8f6dc;color:#3f6212;font-weight:800}
+.ct-purchase-stage-table td.ct-col-method{background:#e9e7fb;color:#4c1d95;font-weight:800}
+.ct-purchase-stage-table .ct-row-actions{display:flex;align-items:center;justify-content:center;gap:5px}
+.ct-purchase-stage-table .ct-row-action{border:0;width:30px;height:30px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.ct-purchase-stage-table .ct-row-action.edit{background:#eff6ff;color:#2563eb}.ct-purchase-stage-table .ct-row-action.delete{background:#fef2f2;color:#dc2626}
+.ct-purchase-stage-empty{padding:26px;text-align:center;color:#94a3b8;font-size:12px;background:#fff}
+.invoice-main-panel>.btn-add-another-product{display:none!important}
+.invoice-summary-panel{margin-top:0!important}
+@media(min-width:993px){
+ .invoice-work-grid{grid-template-columns:minmax(0,1fr)!important}
+ .invoice-main-panel{width:100%!important}
+ .ct-purchase-editor-card .form-row{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ .ct-purchase-header-card .purchase-currency-wrap{display:contents!important}
+}
+@media(max-width:992px){
+ .ct-purchase-header-card{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ .ct-purchase-actions{position:sticky;bottom:8px;z-index:80;box-shadow:0 10px 30px rgba(15,23,42,.14)}
+}
+@media(max-width:640px){
+ .ct-purchase-header-card{grid-template-columns:1fr!important;padding:13px!important;gap:12px!important}
+ .ct-purchase-header-card>.invoice-title-box,.ct-purchase-top-switch{grid-column:1!important}
+ .ct-purchase-actions{display:grid!important;grid-template-columns:1fr 1fr!important;padding:8px!important;gap:7px!important}
+ .ct-purchase-actions .ct-purchase-action{width:100%!important;padding:8px 7px!important;font-size:11px!important}
+ .ct-purchase-actions .ct-purchase-action.clear{grid-column:1/-1!important}
+ #productsContainer>.product-item.ct-purchase-editor-card{padding:13px!important;border-radius:10px!important}
+ .ct-purchase-editor-card .form-row{grid-template-columns:1fr!important;gap:11px!important}
+ .ct-purchase-editor-title{align-items:flex-start;flex-direction:column;gap:2px}
+ .ct-purchase-stage-card{border-radius:10px!important}
+ .ct-purchase-stage-table{min-width:720px;font-size:10px}
+ .ct-purchase-stage-table thead th,.ct-purchase-stage-table tbody td{padding:8px 6px}
+}
+</style>
 </head>
 <body>
 <div class="ct-sidebar-overlay" id="ctSidebarOverlay" data-ct-action="close-sidebar"></div>
@@ -2041,13 +2114,15 @@
         }
 
         function reversePurchaseItemStock(inv, item) {
+            // حذف فاتورة الشراء مسموح حتى لو استُهلك جزء من البضاعة لاحقاً.
+            // نعكس كامل كمية الشراء، وقد ينتج مخزون سالب وهو الأثر الصحيح
+            // عندما تبقى مبيعات/استهلاكات لاحقة بدون فاتورة الشراء الأصلية.
             const productIndex = productsDB.findIndex(product => String(product.id) === String(item.productId));
-            if (productIndex === -1) throw new Error(`تعذر العثور على المنتج [${item.name || item.productId}].`);
+            if (productIndex === -1) return; // المنتج حُذف مسبقاً؛ لا نمنع عكس باقي القيود المالية.
             const product = productsDB[productIndex];
             const warehouseId = String(item.warehouseId || 'shop');
-            const reverseQuantity = Math.max(0, Number(item.quantityPieces || 0));
+            const reverseQuantity = Math.max(0, Number(item.quantityPieces ?? item.purchaseQuantity ?? 0));
             const totalBefore = getProductTotalStock(product);
-            if (totalBefore + 0.001 < reverseQuantity) throw new Error(`لا يمكن حذف [${item.name}] لأن الكمية الحالية أقل من كمية الشراء المراد عكسها.`);
 
             if (Array.isArray(item.variants) && item.variants.length && Array.isArray(product.variants)) {
                 item.variants.forEach(oldVariant => {
@@ -2055,45 +2130,33 @@
                         (oldVariant.barcode && String(current?.barcode || '') === String(oldVariant.barcode)) ||
                         (String(current?.size || '') === String(oldVariant.size || '') && String(current?.color || '') === String(oldVariant.color || ''))
                     );
-                    if (!variant) throw new Error(`تعذر العثور على متغير الصنف [${item.name}].`);
+                    if (!variant) return;
                     const quantity = Math.max(0, Number(oldVariant.qty || 0));
                     variant.storeStocks = variant.storeStocks && typeof variant.storeStocks === 'object' ? variant.storeStocks : {};
-                    const available = warehouseId === 'shop' ? Number(variant.qty || 0) : Number(variant.storeStocks[warehouseId] || 0);
-                    if (available + 0.001 < quantity) throw new Error(`لا يمكن حذف [${item.name}] لأن جزءاً من كميته تم بيعه أو إهلاكه.`);
-                    if (warehouseId === 'shop') variant.qty = Math.max(0, available - quantity);
-                    else variant.storeStocks[warehouseId] = Math.max(0, available - quantity);
+                    if (warehouseId === 'shop') variant.qty = Number(variant.qty || 0) - quantity;
+                    else variant.storeStocks[warehouseId] = Number(variant.storeStocks[warehouseId] || 0) - quantity;
                 });
             }
 
             if (warehouseId === 'shop') {
-                const available = Number(product.stockPieces || 0);
-                if (available + 0.001 < reverseQuantity) throw new Error(`لا يمكن حذف [${item.name}] لأن المخزون الحالي لا يكفي لعكسه.`);
-                product.stockPieces = Math.max(0, available - reverseQuantity);
+                product.stockPieces = Number(product.stockPieces || 0) - reverseQuantity;
             } else {
                 product.storeStocks = product.storeStocks && typeof product.storeStocks === 'object' ? product.storeStocks : {};
-                const available = Number(product.storeStocks[warehouseId] || 0);
-                if (available + 0.001 < reverseQuantity) throw new Error(`لا يمكن حذف [${item.name}] لأن مخزون المستودع الحالي لا يكفي لعكسه.`);
-                product.storeStocks[warehouseId] = Math.max(0, available - reverseQuantity);
+                product.storeStocks[warehouseId] = Number(product.storeStocks[warehouseId] || 0) - reverseQuantity;
             }
 
             if (Array.isArray(product.inventoryLots)) {
-                const lotIndex = product.inventoryLots.findIndex(lot =>
-                    (item.inventoryLotId && String(lot?.id) === String(item.inventoryLotId)) ||
-                    (String(lot?.sourceType || '') === 'purchaseInvoice' && String(lot?.sourceId || '') === String(inv.id) && String(lot?.warehouseId || 'shop') === warehouseId)
-                );
-                if (lotIndex > -1) {
-                    const lot = product.inventoryLots[lotIndex];
-                    const remaining = Math.max(0, Number(lot.remainingPieces ?? lot.quantityPieces ?? 0));
-                    if (remaining + 0.001 < reverseQuantity) throw new Error(`لا يمكن حذف [${item.name}] لأن جزءاً من الدفعة تم بيعه أو إهلاكه.`);
-                    lot.remainingPieces = Math.max(0, remaining - reverseQuantity);
-                    if (lot.remainingPieces <= 0.000001) product.inventoryLots.splice(lotIndex, 1);
-                }
+                product.inventoryLots = product.inventoryLots.filter(lot => !((item.inventoryLotId && String(lot?.id) === String(item.inventoryLotId)) ||
+                    (String(lot?.sourceType || '') === 'purchaseInvoice' && String(lot?.sourceId || '') === String(inv.id) && String(lot?.warehouseId || 'shop') === warehouseId)));
             }
 
             const totalAfter = totalBefore - reverseQuantity;
             const currentCost = Math.max(0, Number(product.cost || 0));
-            const purchaseCost = Math.max(0, Number(item.purchaseCost || 0));
-            product.cost = totalAfter > 0 ? Math.max(0, ((totalBefore * currentCost) - (reverseQuantity * purchaseCost)) / totalAfter) : 0;
+            const purchaseCost = Math.max(0, Number(item.purchaseCost ?? item.purchaseUnitCost ?? 0));
+            product.cost = totalAfter > 0
+                ? Math.max(0, ((totalBefore * currentCost) - (reverseQuantity * purchaseCost)) / totalAfter)
+                : 0;
+            product.updatedAt = new Date().toISOString();
             productsDB[productIndex] = product;
         }
 
@@ -2261,84 +2324,11 @@
             };
 
             try {
-            // 1. عكس المخزون ومتوسط التكلفة من المخزن الذي استلم البضاعة
+            // 1. عكس المخزون ومتوسط التكلفة من المخزن الذي استلم البضاعة.
+            // لا نمنع الحذف إذا استُهلكت الكمية لاحقاً؛ المخزون يمكن أن يصبح سالباً
+            // ليبقى أثر المبيعات/الاستهلاك اللاحق صحيحاً بدلاً من كسر بقية القيود.
             if (Array.isArray(inv.items) && inv.items.length) {
-                inv.items.forEach(item => {
-                    const productIndex = productsDB.findIndex(product => String(product.id) === String(item.productId));
-                    if (productIndex === -1) throw new Error(`تعذر العثور على المنتج [${item.name || item.productId}] لعكس الفاتورة.`);
-                    const product = productsDB[productIndex];
-                    const warehouseId = String(item.warehouseId || 'shop');
-                    const reverseQuantity = Math.max(0, Number(item.quantityPieces || 0));
-                    const totalBefore = getProductTotalStock(product);
-                    const totalAfter = totalBefore - reverseQuantity;
-                    if (totalAfter < -0.001) {
-                        showToast(`لا يمكن عكس مخزون [${item.name}] لأن إجمالي الكمية الحالية أقل من كمية الفاتورة.`, 'error');
-                        throw new Error('PURCHASE_STOCK_CONFLICT');
-                    }
-
-                    if (Array.isArray(item.variants) && item.variants.length && Array.isArray(product.variants)) {
-                        item.variants.forEach(oldVariant => {
-                            const variant = product.variants.find(current =>
-                                (oldVariant.barcode && String(current?.barcode || '') === String(oldVariant.barcode)) ||
-                                (String(current?.size || '') === String(oldVariant.size || '') && String(current?.color || '') === String(oldVariant.color || ''))
-                            );
-                            if (!variant) throw new Error('PURCHASE_VARIANT_NOT_FOUND');
-                            const quantity = Math.max(0, Number(oldVariant.qty || 0));
-                            if (warehouseId === 'shop') {
-                                const available = Number(variant.qty || 0);
-                                if (available + 0.001 < quantity) throw new Error('PURCHASE_STOCK_CONFLICT');
-                                variant.qty = Math.max(0, available - quantity);
-                            } else {
-                                variant.storeStocks = variant.storeStocks && typeof variant.storeStocks === 'object' ? variant.storeStocks : {};
-                                const available = Number(variant.storeStocks[warehouseId] || 0);
-                                if (available + 0.001 < quantity) throw new Error('PURCHASE_STOCK_CONFLICT');
-                                variant.storeStocks[warehouseId] = Math.max(0, available - quantity);
-                            }
-                        });
-                        if (warehouseId === 'shop') {
-                            const available = Number(product.stockPieces || 0);
-                            if (available + 0.001 < reverseQuantity) throw new Error('PURCHASE_STOCK_CONFLICT');
-                            product.stockPieces = Math.max(0, available - reverseQuantity);
-                        } else if (product.storeStocks && Object.prototype.hasOwnProperty.call(product.storeStocks, warehouseId)) {
-                            product.storeStocks[warehouseId] = Math.max(0, Number(product.storeStocks[warehouseId] || 0) - reverseQuantity);
-                        }
-                    } else if (warehouseId === 'shop') {
-                        const available = Number(product.stockPieces || 0);
-                        if (available + 0.001 < reverseQuantity) throw new Error('PURCHASE_STOCK_CONFLICT');
-                        product.stockPieces = Math.max(0, available - reverseQuantity);
-                    } else {
-                        product.storeStocks = product.storeStocks && typeof product.storeStocks === 'object' ? product.storeStocks : {};
-                        const available = Number(product.storeStocks[warehouseId] || 0);
-                        if (available + 0.001 < reverseQuantity) throw new Error('PURCHASE_STOCK_CONFLICT');
-                        product.storeStocks[warehouseId] = Math.max(0, available - reverseQuantity);
-                    }
-
-                    if (Array.isArray(product.inventoryLots)) {
-                        const lotIndex = product.inventoryLots.findIndex(lot =>
-                            (item.inventoryLotId && String(lot?.id) === String(item.inventoryLotId)) ||
-                            (String(lot?.sourceType || '') === 'purchaseInvoice' && String(lot?.sourceId || '') === String(inv.id) && String(lot?.warehouseId || 'shop') === warehouseId)
-                        );
-                        if (lotIndex > -1) {
-                            const lot = product.inventoryLots[lotIndex];
-                            const remaining = Math.max(0, Number(lot.remainingPieces ?? lot.quantityPieces ?? 0));
-                            if (remaining + 0.001 < reverseQuantity) {
-                                showToast(`لا يمكن حذف الفاتورة لأن جزءاً من دفعة [${item.name}] تم بيعه أو إهلاكه.`, 'error');
-                                throw new Error('PURCHASE_STOCK_CONFLICT');
-                            }
-                            lot.remainingPieces = Math.max(0, remaining - reverseQuantity);
-                            if (lot.remainingPieces <= 0.000001) product.inventoryLots.splice(lotIndex, 1);
-                        }
-                    }
-
-                    const currentCost = Math.max(0, Number(product.cost || 0));
-                    const purchaseCost = Math.max(0, Number(item.purchaseCost || 0));
-                    if (totalAfter > 0) {
-                        product.cost = Math.max(0, ((totalBefore * currentCost) - (reverseQuantity * purchaseCost)) / totalAfter);
-                    } else {
-                        product.cost = 0;
-                    }
-                    productsDB[productIndex] = product;
-                });
+                inv.items.forEach(item => reversePurchaseItemStock(inv, item));
             }
 
             // 2. عكس المديونية على المورد بقيد مستقل مع إبقاء حركة الشراء الأصلية للتدقيق
@@ -2494,6 +2484,172 @@
 
 <script type="application/json" id="ctEmbeddedShellMarker">{"embedded":true,"page":"المشتريات.html"}</script>
 <script src="cashtop-export.js"></script>
+
+<script src="ghazal-theme.js?v=9"></script>
+
+<script id="ct-v9-purchase-composer-script">
+(function(){
+  'use strict';
+  const money = value => Number(value||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' ₪';
+  let ready=false;
+
+  function rowSnapshot(card){
+    if(!card) return null;
+    const typeSelect=card.querySelector('.add-type-select');
+    const type=(typeSelect?.value||'piece')==='piece'?'piece':'unit';
+    const name=(card.querySelector('.prod-name')?.value||'').trim();
+    const warehouse=card.querySelector('.destination-store-select');
+    const storeName=warehouse?.selectedOptions?.[0]?.textContent?.trim()||'المخزن الرئيسي';
+    let qty=0,cost=0,unit='قطعة';
+    if(type==='piece'){
+      cost=Number(card.querySelector('.piece-buy')?.value||0);
+      const variants=card.querySelector('.var-toggle-checkbox')?.checked;
+      if(variants){card.querySelectorAll('.variants-table .v-qty').forEach(el=>qty+=Number(el.value||0));}
+      else qty=Number(card.querySelector('.piece-qty')?.value||0);
+      unit='قطعة';
+    }else{
+      qty=Number(card.querySelector('.unit-qty')?.value||0);
+      cost=Number(card.querySelector('.unit-buy')?.value||0);
+      unit=card.querySelector('.purchase-unit-level')?.selectedOptions?.[0]?.textContent?.trim()||card.querySelector('.unit-name')?.value||'وحدة';
+    }
+    return {name,type,method:typeSelect?.selectedOptions?.[0]?.textContent?.trim()||(type==='piece'?'قطعة':'وحدة'),qty,cost,total:qty*cost,unit,storeName};
+  }
+
+  function hasEditorData(card){
+    const snap=rowSnapshot(card); if(!snap) return false;
+    return Boolean(snap.name || snap.qty>0 || snap.cost>0 || (card.dataset.existingId||''));
+  }
+
+  function activeEditor(){
+    return document.querySelector('#productsContainer .product-item.ct-purchase-editor-card:not(.ct-staged-item)') ||
+      [...document.querySelectorAll('#productsContainer .product-item:not(.ct-staged-item)')].pop() || null;
+  }
+
+  function decorateEditor(card){
+    if(!card) return;
+    document.querySelectorAll('#productsContainer .product-item:not(.ct-staged-item)').forEach(row=>row.classList.remove('ct-purchase-editor-card'));
+    card.classList.add('ct-purchase-editor-card');
+    if(!card.querySelector('.ct-purchase-editor-title')){
+      const title=document.createElement('div'); title.className='ct-purchase-editor-title';
+      title.innerHTML='<span><i class="fa-solid fa-cart-plus"></i> إضافة صنف إلى الفاتورة</span><small>املأ بيانات الصنف ثم اضغط «إضافة الصنف» لينتقل إلى الجدول.</small>';
+      card.insertBefore(title,card.firstChild);
+    }
+  }
+
+  function ensureEditor(){
+    let editor=activeEditor();
+    if(!editor){
+      if(typeof window.addNewProductRow==='function') window.addNewProductRow();
+      editor=[...document.querySelectorAll('#productsContainer .product-item:not(.ct-staged-item)')].pop()||null;
+    }
+    decorateEditor(editor); return editor;
+  }
+
+  function stagedRows(){return [...document.querySelectorAll('#productsContainer .product-item.ct-staged-item')];}
+
+  function renderStage(){
+    const body=document.getElementById('ctPurchaseStageBody');
+    const empty=document.getElementById('ctPurchaseStageEmpty');
+    const count=document.getElementById('ctPurchaseStageCount');
+    if(!body) return;
+    const rows=stagedRows(); if(count) count.textContent=rows.length+' صنف';
+    body.innerHTML=rows.map((card,index)=>{
+      const s=rowSnapshot(card)||{};
+      return `<tr data-row-id="${card.id}">
+        <td>${index+1}</td>
+        <td><strong>${escapeHtml(s.name||'صنف')}</strong></td>
+        <td class="ct-col-method">${escapeHtml(s.method||'')}</td>
+        <td class="ct-col-store">${escapeHtml(s.storeName||'')}</td>
+        <td class="ct-col-qty">${Number(s.qty||0).toLocaleString('en-US')} ${escapeHtml(s.unit||'')}</td>
+        <td class="ct-col-cost">${money(s.cost)}</td>
+        <td class="ct-col-total">${money(s.total)}</td>
+        <td><div class="ct-row-actions"><button type="button" class="ct-row-action edit" title="تعديل" onclick="ctEditPurchaseDraft('${card.id}')"><i class="fa-solid fa-pen"></i></button><button type="button" class="ct-row-action delete" title="حذف" onclick="ctDeletePurchaseDraft('${card.id}')"><i class="fa-solid fa-trash-can"></i></button></div></td>
+      </tr>`;
+    }).join('');
+    if(empty) empty.style.display=rows.length?'none':'block';
+  }
+
+  function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+  function stageEditor(createNext=true){
+    const card=ensureEditor(); if(!card) return false;
+    const s=rowSnapshot(card);
+    if(!s?.name){window.showToast?.('اكتب اسم الصنف أو اختره من البحث أولاً','error'); card.querySelector('.prod-name')?.focus(); return false;}
+    if(!(s.qty>0)){window.showToast?.('أدخل كمية مشتراة أكبر من صفر','error'); return false;}
+    if(!(s.cost>=0)){window.showToast?.('أدخل سعر الشراء','error'); return false;}
+    card.classList.remove('ct-purchase-editor-card'); card.classList.add('ct-staged-item');
+    if(createNext){ if(typeof window.addNewProductRow==='function') window.addNewProductRow(); ensureEditor(); }
+    window.calculateInvoiceFinance?.(); renderStage(); return true;
+  }
+
+  window.ctStagePurchaseItem=()=>stageEditor(true);
+  window.ctDeletePurchaseDraft=function(id){
+    const row=document.getElementById(id); if(!row) return;
+    row.remove(); window.calculateInvoiceFinance?.(); renderStage(); ensureEditor();
+  };
+  window.ctEditPurchaseDraft=function(id){
+    const target=document.getElementById(id); if(!target) return;
+    const editor=activeEditor();
+    if(editor && editor!==target && !hasEditorData(editor)) editor.remove();
+    else if(editor && editor!==target && hasEditorData(editor)){
+      window.showToast?.('أضف أو امسح الصنف الجاري أولاً قبل تعديل صنف من الجدول','error'); return;
+    }
+    target.classList.remove('ct-staged-item'); decorateEditor(target); renderStage();
+    target.scrollIntoView({behavior:'smooth',block:'center'});
+  };
+  window.ctClearPurchaseEditor=function(){
+    const editor=activeEditor(); if(editor) editor.remove(); ensureEditor(); window.calculateInvoiceFinance?.();
+  };
+
+  function buildComposer(){
+    if(ready) return;
+    const main=document.querySelector('.invoice-main-panel');
+    const container=document.getElementById('productsContainer');
+    const supplier=document.getElementById('supplierSelect');
+    if(!main||!container||!supplier) return;
+    ready=true;
+    const header=supplier.closest('.invoice-card');
+    if(header){header.classList.add('ct-purchase-header-card'); main.insertBefore(header,main.firstChild);}
+    const hideBox=document.getElementById('hidePurchaseItemsFromCashier')?.closest('.invoice-card');
+    if(hideBox){hideBox.classList.add('ct-purchase-top-switch'); if(header) header.appendChild(hideBox);}
+
+    const actions=document.createElement('div'); actions.className='ct-purchase-actions'; actions.id='ctPurchaseTopActions';
+    actions.innerHTML='<button type="button" class="ct-purchase-action add" data-ct-permission="purchases.create" onclick="ctStagePurchaseItem()"><i class="fa-solid fa-plus"></i> إضافة الصنف للفاتورة</button><button type="button" class="ct-purchase-action save" data-ct-permission="purchases.create" onclick="savePurchaseInvoice()"><i class="fa-solid fa-floppy-disk"></i> حفظ الفاتورة</button><button type="button" class="ct-purchase-action clear" onclick="ctClearPurchaseEditor()"><i class="fa-solid fa-eraser"></i> مسح حقول الصنف</button>';
+    if(header) header.insertAdjacentElement('afterend',actions); else main.insertBefore(actions,container);
+
+    const stage=document.createElement('div'); stage.className='ct-purchase-stage-card'; stage.id='ctPurchaseStageCard';
+    stage.innerHTML='<div class="ct-purchase-stage-head"><h3><i class="fa-solid fa-table-list"></i> أصناف الفاتورة قبل الحفظ</h3><span id="ctPurchaseStageCount">0 صنف</span></div><div class="ct-purchase-table-wrap"><table class="ct-purchase-stage-table"><thead><tr><th>#</th><th>الصنف</th><th>طريقة الإضافة</th><th>المخزن</th><th>الكمية</th><th>سعر الشراء</th><th>الإجمالي</th><th>إجراء</th></tr></thead><tbody id="ctPurchaseStageBody"></tbody></table><div id="ctPurchaseStageEmpty" class="ct-purchase-stage-empty">لم تتم إضافة أصناف للفاتورة بعد.</div></div>';
+    container.insertAdjacentElement('afterend',stage);
+    ensureEditor(); renderStage();
+
+    const original=window.savePurchaseInvoice;
+    if(typeof original==='function' && !window.__ctV9SaveWrapped){
+      window.__ctV9SaveWrapped=true;
+      window.savePurchaseInvoice=function(){
+        const editor=activeEditor();
+        if(editor && hasEditorData(editor)){
+          if(!stageEditor(false)) return;
+        } else if(editor){ editor.remove(); }
+        if(!stagedRows().length){ ensureEditor(); window.showToast?.('أضف صنفاً واحداً على الأقل للفاتورة','error'); return; }
+        const before=document.getElementById('invIdBox')?.value||'';
+        const result=original.apply(this,arguments);
+        const after=document.getElementById('invIdBox')?.value||'';
+        if(after && after!==before){
+          document.querySelectorAll('#productsContainer .product-item').forEach(row=>row.classList.remove('ct-staged-item','ct-purchase-editor-card'));
+          ensureEditor(); renderStage();
+        }else{
+          ensureEditor(); renderStage();
+        }
+        return result;
+      };
+    }
+    window.Cashtop?.applyActionPermissions?.(main); window.Cashtop?.applyPermissionVisibility?.(main);
+  }
+
+  window.addEventListener('load',()=>setTimeout(buildComposer,80));
+  document.addEventListener('cashtop:remote-applied',()=>{ if(ready) setTimeout(renderStage,20); });
+})();
+</script>
 </body>
 
 </html>
