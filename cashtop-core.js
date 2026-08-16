@@ -1340,11 +1340,13 @@
     return normalized;
   }
 
-  function recordIdentity(item, index = 0) {
-    // R115: نفس هوية السجل تُستخدم في الكشف عن الحذف والدمج السحابي.
-    // النسخ السابقة لم تعتبر invoiceId/refNumber/number وغيرها هوية، فكان حذف
-    // بعض العملاء/الفواتير يظهر محلياً ثم تعيد المزامنة السجل من السحابة.
-    return losslessRecordIdentity(item, index);
+  function recordIdentity(item) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return '';
+    for (const field of ['id', '_id', 'uuid', 'code', 'key', 'barcode']) {
+      const value = item[field];
+      if (value !== undefined && value !== null && String(value).trim()) return `${field}:${String(value).trim()}`;
+    }
+    return '';
   }
 
   function describeManagedChange(oldValue, newValue) {
@@ -1352,8 +1354,8 @@
     const after = safeJson(newValue, null);
     const detail = { touchedIds: [], deletedIds: [], touchedFields: [], deletedFields: [], nestedArrayChanges: {} };
     if (Array.isArray(before) && Array.isArray(after)) {
-      const beforeMap = new Map(before.map((item, index) => [recordIdentity(item, index), item]).filter(([id]) => id));
-      const afterMap = new Map(after.map((item, index) => [recordIdentity(item, index), item]).filter(([id]) => id));
+      const beforeMap = new Map(before.map(item => [recordIdentity(item), item]).filter(([id]) => id));
+      const afterMap = new Map(after.map(item => [recordIdentity(item), item]).filter(([id]) => id));
       if (beforeMap.size || afterMap.size) {
         for (const [id, item] of afterMap) {
           if (!beforeMap.has(id) || JSON.stringify(beforeMap.get(id)) !== JSON.stringify(item)) detail.touchedIds.push(id);
@@ -1370,8 +1372,8 @@
         if (!Object.prototype.hasOwnProperty.call(before, key) || JSON.stringify(before[key]) !== JSON.stringify(after[key])) {
           detail.touchedFields.push(key);
           if (Array.isArray(before[key]) && Array.isArray(after[key])) {
-            const beforeMap = new Map(before[key].map((item, index) => [recordIdentity(item, index), item]).filter(([id]) => id));
-            const afterMap = new Map(after[key].map((item, index) => [recordIdentity(item, index), item]).filter(([id]) => id));
+            const beforeMap = new Map(before[key].map(item => [recordIdentity(item), item]).filter(([id]) => id));
+            const afterMap = new Map(after[key].map(item => [recordIdentity(item), item]).filter(([id]) => id));
             if (beforeMap.size || afterMap.size) {
               const touchedIds = [];
               const deletedIds = [];
@@ -1390,15 +1392,6 @@
 
   function enqueueSyncOperation(key, change = {}) {
     const canonical = canonicalKey(key);
-    // R123: when customers/invoices/products are a remotePaged display cache,
-    // never turn a generic forceReplace into a whole-dataset cloud overwrite.
-    if (['cashtop_customers','cashtop_invoices','cashtop_products'].includes(canonical)) {
-      const meta = safeJson(rawGet(metaKey(canonical)), {}) || {};
-      if (meta.remotePaged === true && change.forceReplace === true &&
-          !((change.touchedIds || []).length || (change.deletedIds || []).length)) {
-        change = { ...change, forceReplace:false };
-      }
-    }
     const queue = getSyncQueue();
     const mergeUnique = (a, b) => [...new Set([...(Array.isArray(a) ? a : []), ...(Array.isArray(b) ? b : [])])];
     // عملية واحدة لكل dataset، مع الاحتفاظ بتفاصيل السجلات/الحقول المتغيرة
@@ -2550,20 +2543,16 @@
     }
     rawSet(ns, stringValue);
     const previousMeta = safeJson(rawGet(metaKey(canonical)), {}) || {};
-    const managedChange = describeManagedChange(oldValue, stringValue);
     rawSet(metaKey(canonical), JSON.stringify({
       ...previousMeta,
       updatedAt: Date.now(),
       revision: Number(previousMeta.revision || 0) + 1,
       deviceId: getDeviceId(),
       page: FILE,
-      fullDatasetWrite: true,
-      recordTombstones: LOSSLESS_RECORD_DATASETS.has(canonical)
-        ? mergeRecordTombstones(previousMeta.recordTombstones, managedChange)
-        : previousMeta.recordTombstones
+      fullDatasetWrite: true
     }));
     if (options.audit !== false) appendAudit(canonical, oldValue, stringValue, options.action);
-    const operationId = options.enqueue === false ? null : enqueueSyncOperation(canonical, { ...managedChange, deletedDataset:false, forceReplace: options.forceReplace === true });
+    const operationId = options.enqueue === false ? null : enqueueSyncOperation(canonical);
     emitDataChange(canonical, oldValue, stringValue, 'local-full', operationId);
     return { changed: true, operationId };
   }
@@ -2961,200 +2950,6 @@
     });
   }
 
-  /* R109 — fixed 50-row record pages.\n     Large registers render only the active page into the DOM, so customers,\n     invoices, products and other records stay light even after years of data. */
-  const CT_RECORD_PAGE_SIZE = 50;
-  const ctRecordPagerStates = new WeakMap();
-  let ctPrimaryRemotePagerClaimed = false;
-  const CT_PRIMARY_REMOTE_DATASET = {
-    'products.html':'cashtop_products',
-    'customers.html':'cashtop_customers',
-    'invoices.html':'cashtop_invoices'
-  };
-  const CT_REMOTE_SEARCH_FIELDS = {
-    cashtop_products:['name','barcode','pieceBarcode','unitBarcode','code','id','sku','variants','unitChain'], cashtop_materials:['name','barcode','code','id'],
-    cashtop_customers:['name','phone','mobile','code','id'], cashtop_customer_groups:['name','code','id'],
-    cashtop_suppliers:['name','phone','mobile','code','id'], cashtop_invoices:['id','invoiceNo','number','customerName','customer','phone','barcode'],
-    cashtop_purchases:['id','invoiceNo','number','supplierName','supplier','barcode','reference'], cashtop_sales_returns:['id','invoiceId','customerName','reference'],
-    cashtop_purchase_returns:['id','invoiceId','supplierName','reference'], cashtop_expenses:['id','title','type','category','note','description'],
-    cashtop_vouchers:['id','number','name','customerName','supplierName','note'], cashtop_employees:['id','name','username','phone','code'],
-    cashtop_workers:['id','name','phone','code'], cashtop_sales_agents:['id','name','phone','code'], cashtop_sales_offers:['id','name','title','code'],
-    cashtop_journal:['id','reference','description','accountName','note']
-  };
-
-  function ctCurrentRecordSearchTerm() {
-    for (const id of ['searchInput','searchTerm','searchBox','invoiceSearch','customerSearch','productSearch']) {
-      const el = document.getElementById(id);
-      if (el && typeof el.value === 'string' && el.value.trim()) return el.value.trim();
-    }
-    return '';
-  }
-
-  function ctInferRemoteDataset(options = {}) {
-    if (options.remotePaging === false) return '';
-    if (options.remoteKey) return String(options.remoteKey);
-    const key = CT_PRIMARY_REMOTE_DATASET[FILE] || '';
-    if (!key || ctPrimaryRemotePagerClaimed) return '';
-    ctPrimaryRemotePagerClaimed = true;
-    return key;
-  }
-
-  function ctRecordSignature(list) {
-    const first = list?.[0] || {};
-    const last = list?.[list.length - 1] || {};
-    const stamp = value => String(value?.id ?? value?.code ?? value?.invoiceNo ?? value?.number ?? value?.date ?? '');
-    return `${list?.length || 0}|${stamp(first)}|${stamp(last)}`;
-  }
-
-  function ctRecordPagerMount(tbody) {
-    const table = tbody?.closest?.('table');
-    if (!table) return tbody;
-    return table.closest('.table-responsive-box,.table-responsive,.table-wrapper,.table-wrap,.table-container,.data-table-wrap') || table;
-  }
-
-  function ensureCtRecordPager(tbody, state) {
-    if (state.pager?.isConnected) return state.pager;
-    const pager = document.createElement('div');
-    pager.className = 'ct-record-pager ghazal-pager';
-    pager.setAttribute('aria-label', 'صفحات السجلات');
-    pager.innerHTML = '<button type="button" data-ct-record-page="prev">السابق</button><span class="ct-record-page-info ghazal-page-info">صفحة 1</span><button type="button" data-ct-record-page="next">التالي</button>';
-    const mount = ctRecordPagerMount(tbody);
-    mount?.insertAdjacentElement?.('afterend', pager);
-    state.pager = pager;
-    pager.addEventListener('click', async event => {
-      const button = event.target.closest('button[data-ct-record-page]');
-      if (!button || button.disabled || state.loadingRemote) return;
-      const direction = button.dataset.ctRecordPage;
-      const targetPage = direction === 'prev' ? Math.max(1, state.page - 1) : state.page + 1;
-      const query = ctCurrentRecordSearchTerm();
-      if (state.remoteKey && window.CashtopTurso?.queryDatasetPage && (query || targetPage > 1)) {
-        await state.loadRemotePage?.(targetPage, query);
-      } else {
-        state.remoteMode = false;
-        state.page = Math.max(1, Math.min(state.pages || 1, targetPage));
-        state.paint?.();
-      }
-      try { mount?.scrollIntoView?.({ block:'nearest', behavior:'auto' }); } catch (_) {}
-    });
-    return pager;
-  }
-
-  function renderRecordPage50(tbody, records, rowFactory, options = {}) {
-    const previous = pendingVirtualRenders.get(tbody);
-    if (previous?.observer) previous.observer.disconnect();
-    if (previous?.idleId) cancelWhenIdle(previous.idleId);
-    if (previous?.scrollCleanup) previous.scrollCleanup();
-
-    const list = Array.isArray(records) ? records : [];
-    let state = ctRecordPagerStates.get(tbody);
-    if (!state) {
-      state = { page:1, pages:1, pager:null, signature:'', paint:null, list:[], rowFactory:null, options:null, remoteKey:'', remoteRows:null, remoteMode:false, remoteTotal:0, remoteQuery:'', loadingRemote:false, requestSeq:0 };
-      ctRecordPagerStates.set(tbody, state);
-    }
-    const signature = ctRecordSignature(list);
-    if (state.signature !== signature && !state.remoteMode) state.page = 1;
-    state.signature = signature;
-    state.list = list;
-    state.rowFactory = rowFactory;
-    state.options = options;
-    if (!state.remoteKey) state.remoteKey = ctInferRemoteDataset(options);
-    const activeQuery = ctCurrentRecordSearchTerm();
-    if (state.remoteQuery !== activeQuery) {
-      state.remoteQuery = activeQuery;
-      state.page = 1;
-      state.remoteMode = false;
-      state.remoteRows = null;
-    }
-    let knownRemoteMeta = null;
-    try { knownRemoteMeta = state.remoteKey ? window.CashtopTurso?.getDatasetPageMeta?.(state.remoteKey) : null; } catch (_) {}
-    state.remoteTotal = Math.max(Number(state.remoteTotal || 0), Number(knownRemoteMeta?.total || 0));
-    if (state.remoteKey && !knownRemoteMeta && state.remoteTotal <= list.length && list.length >= CT_RECORD_PAGE_SIZE) {
-      // Unknown total on the very first render: keep "التالي" available once.
-      // The first click obtains the exact count from Turso and corrects it.
-      state.remoteTotal = list.length + 1;
-    }
-    state.pages = Math.max(1, Math.ceil(Math.max(list.length, state.remoteTotal) / CT_RECORD_PAGE_SIZE));
-    state.page = Math.min(Math.max(1, Number(state.page || 1)), state.pages);
-
-    const table = tbody.closest?.('table');
-    if (table) table.dataset.ctRecordPaged = '1';
-    const pager = ensureCtRecordPager(tbody, state);
-
-    state.paint = () => {
-      const totalForPages = state.remoteMode ? Number(state.remoteTotal || state.remoteRows?.length || 0) : Math.max(state.list.length, Number(state.remoteTotal || 0));
-      state.pages = Math.max(1, Math.ceil(totalForPages / CT_RECORD_PAGE_SIZE));
-      state.page = Math.min(Math.max(1, Number(state.page || 1)), state.pages);
-      const start = (state.page - 1) * CT_RECORD_PAGE_SIZE;
-      const pageRows = state.remoteMode && Array.isArray(state.remoteRows)
-        ? state.remoteRows
-        : state.list.slice(start, start + CT_RECORD_PAGE_SIZE);
-      const fragment = document.createDocumentFragment();
-      for (let index = 0; index < pageRows.length; index += 1) {
-        const row = state.rowFactory(pageRows[index], start + index);
-        if (!row) continue;
-        try { row.style.contentVisibility = 'auto'; row.style.containIntrinsicSize = `${Math.max(32, Number(state.options?.rowHeight || 48))}px`; } catch (_) {}
-        fragment.appendChild(row);
-      }
-      if (!pageRows.length) {
-        tbody.innerHTML = state.options?.emptyHtml || '';
-      } else {
-        tbody.replaceChildren(fragment);
-      }
-      const info = pager?.querySelector?.('.ct-record-page-info');
-      if (info) info.textContent = `صفحة ${state.page}`;
-      const prev = pager?.querySelector?.('[data-ct-record-page="prev"]');
-      const next = pager?.querySelector?.('[data-ct-record-page="next"]');
-      if (prev) prev.disabled = state.page <= 1;
-      if (next) next.disabled = state.page >= state.pages;
-      if (pager) pager.style.display = 'flex';
-      state.options?.onProgress?.({ rendered:pageRows.length, total:totalForPages, start, end:start + pageRows.length, page:state.page, pages:state.pages, paged:true });
-    };
-
-    state.loadRemotePage = async (page = 1, query = '') => {
-      if (!state.remoteKey || !window.CashtopTurso?.queryDatasetPage) return false;
-      const seq = ++state.requestSeq;
-      state.loadingRemote = true;
-      const prev = pager?.querySelector?.('[data-ct-record-page="prev"]');
-      const next = pager?.querySelector?.('[data-ct-record-page="next"]');
-      if (prev) prev.disabled = true;
-      if (next) next.disabled = true;
-      setRecordsStreamLoading(true, query ? 'جاري البحث في السجلات...' : `جاري تحميل الصفحة ${page}...`);
-      try {
-        const persistFirstPage = page === 1 && !String(query || '').trim();
-        const result = await window.CashtopTurso.queryDatasetPage(state.remoteKey, {
-          page, pageSize:CT_RECORD_PAGE_SIZE, search:query,
-          searchFields:CT_REMOTE_SEARCH_FIELDS[state.remoteKey] || [],
-          cacheLocal:persistFirstPage, replaceLocal:persistFirstPage, dispatch:false
-        });
-        if (seq !== state.requestSeq) return false;
-        state.page = Math.max(1, Number(result.page || page));
-        state.remoteRows = Array.isArray(result.items) ? result.items : [];
-        state.remoteTotal = Math.max(0, Number(result.total || 0));
-        state.remoteMode = true;
-        state.remoteQuery = query;
-        window.dispatchEvent(new CustomEvent('cashtop:remote-page', { detail:{ key:state.remoteKey, records:state.remoteRows, page:state.page, total:state.remoteTotal, query } }));
-        state.paint();
-        return true;
-      } catch (error) {
-        console.warn('[CASH TOP 2] remote page load:', state.remoteKey, error);
-        showToast('تعذر تحميل الصفحة المطلوبة الآن. تم إبقاء البيانات المحلية.', 'warning', 2600);
-        state.remoteMode = false;
-        state.paint();
-        return false;
-      } finally {
-        state.loadingRemote = false;
-        setRecordsStreamLoading(false);
-      }
-    };
-
-    state.paint();
-    if (state.remoteKey && activeQuery && window.CashtopTurso?.queryDatasetPage) {
-      clearTimeout(state.searchTimer);
-      state.searchTimer = setTimeout(() => state.loadRemotePage(1, activeQuery), 180);
-    }
-    pendingVirtualRenders.set(tbody, { cancelled:false, observer:null, idleId:null, scrollCleanup:null, paged:true });
-    return { rendered:Math.min(CT_RECORD_PAGE_SIZE, state.remoteMode ? (state.remoteRows?.length || 0) : list.length), total:state.remoteMode ? state.remoteTotal : Math.max(list.length,state.remoteTotal||0), page:state.page, pages:state.pages, paged:true, remoteKey:state.remoteKey };
-  }
-
   /**
    * Lazy table renderer: only the first chunk is inserted initially. More rows
    * are appended when the user approaches the sentinel. This is intentionally
@@ -3162,7 +2957,6 @@
    */
   function renderVirtualRows(tbody, records, rowFactory, options = {}) {
     if (!tbody || typeof rowFactory !== 'function') return { rendered: 0, total: 0 };
-    if (options.pagination !== false) return renderRecordPage50(tbody, records, rowFactory, options);
     const previous = pendingVirtualRenders.get(tbody);
     if (previous?.observer) previous.observer.disconnect();
     if (previous?.idleId) cancelWhenIdle(previous.idleId);
@@ -3730,18 +3524,13 @@
           if (!entry?.ns || !entry?.key) return;
           rawSet(entry.ns, entry.newValue);
           const previousMeta = safeJson(entry.oldMeta, {}) || {};
-          const recoveredChange = describeManagedChange(entry.oldValue, entry.newValue);
           rawSet(entry.metaNs || metaKey(entry.key), JSON.stringify({
-            ...previousMeta,
             updatedAt: Date.now() + index,
             revision: Number(previousMeta.revision || 0) + 1,
             deviceId: getDeviceId(), page: FILE,
-            transactionId: tx.id || '', recovered: true,
-            recordTombstones: LOSSLESS_RECORD_DATASETS.has(entry.key)
-              ? mergeRecordTombstones(previousMeta.recordTombstones, recoveredChange)
-              : previousMeta.recordTombstones
+            transactionId: tx.id || '', recovered: true
           }));
-          enqueueSyncOperation(entry.key, { ...recoveredChange, deletedDataset:false });
+          enqueueSyncOperation(entry.key);
         });
       } catch (error) {
         console.error('[CASH TOP 2] atomic transaction recovery:', error);
@@ -3756,7 +3545,7 @@
        still use their legacy render functions. */
     const style = document.createElement('style');
     style.id = 'ctPerformanceGuards';
-    style.textContent = '[hidden]{display:none!important}tbody tr{content-visibility:auto;contain-intrinsic-size:auto 44px}.product-item-card,.category-card{content-visibility:auto;contain-intrinsic-size:auto 150px;contain:layout paint style}.ct-lazy-table-sentinel,.ct-virtual-spacer,.ct-virtual-window-sentinel{content-visibility:visible!important;contain:none!important}html{scroll-behavior:auto}body{overscroll-behavior-y:contain}.ct-sidebar,.ct-topbar,.ct-bottom-nav,.modal-box,.modal-content,.ct-select-popover{transform:translate3d(0,0,0);backface-visibility:hidden;contain:layout style}.modal-overlay.active .modal-box,.modal-overlay.active .modal-content,.ct-select-popover{will-change:transform,opacity}button,a,input,select,textarea{touch-action:manipulation}@media(prefers-reduced-motion:no-preference){.modal-box,.modal-content,.ct-select-popover,.product-item-card,.category-card{transition-property:transform,opacity,box-shadow,border-color!important;transition-duration:100ms!important}}';
+    style.textContent = '[hidden]{display:none!important}tbody tr{content-visibility:auto;contain-intrinsic-size:auto 44px}.product-item-card,.category-card{content-visibility:auto;contain-intrinsic-size:auto 150px;contain:layout paint style}.ct-lazy-table-sentinel,.ct-virtual-spacer,.ct-virtual-window-sentinel{content-visibility:visible!important;contain:none!important}html{scroll-behavior:auto}body{overscroll-behavior-y:contain}.ct-sidebar,.ct-topbar,.ct-bottom-nav,.modal-box,.modal-content,.ct-select-popover{transform:translate3d(0,0,0);backface-visibility:hidden;will-change:transform,opacity;contain:layout style}button,a,input,select,textarea{touch-action:manipulation}@media(prefers-reduced-motion:no-preference){.modal-box,.modal-content,.ct-select-popover,.product-item-card,.category-card{transition-property:transform,opacity,box-shadow,border-color!important;transition-duration:100ms!important}}';
     document.head.appendChild(style);
 
     // Normalize legacy field captions without rewriting every page template. The
@@ -4872,7 +4661,7 @@
   }
 
   function isFundActive(account) {
-    return Boolean(account) && account.deleted !== true && account.disabled !== true && account.active !== false && !['inactive','deleted'].includes(String(account.status || '').toLowerCase());
+    return Boolean(account) && account.disabled !== true && account.active !== false && String(account.status || '').toLowerCase() !== 'inactive';
   }
 
   function activeFundAccounts(fundsOrAccounts) {
@@ -4901,85 +4690,6 @@
     });
   }
 
-  const FUND_SELECT_IDS_R115 = new Set([
-    'accountSelect','accountSelectBox','debtVaultSelect','eSalaryAccountSelect','expAccountSelect',
-    'materialAccount','payRepVaultSelect','payVaultSelect','paymentAccount','wVaultSelect',
-    'transferFromSelect','transferToSelect'
-  ]);
-
-  function currentFundSnapshotR115() {
-    const db = safeJson(localStorage.getItem('cashtop_funds_db') || localStorage.getItem('cashtop_funds_db_v4') || '{}', {}) || {};
-    const accounts = activeFundAccounts(Array.isArray(db.accounts) ? db.accounts : []);
-    return { ...db, accounts: sortFundAccountsForDropdown(accounts) };
-  }
-
-  function repairFundSelectElementR115(select) {
-    if (!select || select.tagName !== 'SELECT' || !FUND_SELECT_IDS_R115.has(String(select.id || ''))) return false;
-    const snapshot = currentFundSnapshotR115();
-    const accounts = snapshot.accounts || [];
-    const allDb = safeJson(localStorage.getItem('cashtop_funds_db') || localStorage.getItem('cashtop_funds_db_v4') || '{}', {}) || {};
-    const allAccountIds = new Set(normalizeArrayValue(allDb.accounts || [], []).map(a => String(a?.id ?? '')).filter(Boolean));
-    const activeIds = new Set(accounts.map(a => String(a?.id ?? '')).filter(Boolean));
-    const previous = String(select.value || '');
-    [...select.options].forEach(option => {
-      const value = String(option.value || '');
-      if (allAccountIds.has(value) && !activeIds.has(value)) option.remove();
-    });
-    accounts.forEach(account => {
-      const id = String(account.id ?? '');
-      if (!id || [...select.options].some(option => String(option.value) === id)) return;
-      const option = document.createElement('option');
-      option.value = id;
-      option.textContent = String(account.name || 'صندوق مالي');
-      option.dataset.ctFundRepair = '1';
-      select.appendChild(option);
-    });
-    if (previous && [...select.options].some(option => String(option.value) === previous)) select.value = previous;
-    else if (!String(select.value || '') && accounts.length) {
-      const preferred = getDefaultFundAccount(accounts);
-      if (preferred && [...select.options].some(option => String(option.value) === String(preferred.id))) select.value = String(preferred.id);
-    }
-    try { window.CashtopMulti?.refreshEnhancedSelect?.(select); } catch (_) {}
-    return true;
-  }
-
-  function repairFundDropdownsR115(scope = document) {
-    if (!scope) return 0;
-    const nodes = [];
-    if (scope.matches?.('select') && FUND_SELECT_IDS_R115.has(String(scope.id || ''))) nodes.push(scope);
-    scope.querySelectorAll?.('select').forEach(select => { if (FUND_SELECT_IDS_R115.has(String(select.id || ''))) nodes.push(select); });
-    return [...new Set(nodes)].reduce((count, select) => count + (repairFundSelectElementR115(select) ? 1 : 0), 0);
-  }
-
-  function deletionRepairMarkerR115() {
-    return `ct_delete_sync_repair_r115::${encodeURIComponent(companyIdFromSession())}::${encodeURIComponent(currentFinancialGroupId())}`;
-  }
-
-  function repairDeletionSyncQueueR115() {
-    const markerKey = deletionRepairMarkerR115();
-    if (rawGet(markerKey) === '1') return { queued:0, skipped:true };
-    let queued = 0;
-    LOSSLESS_RECORD_DATASETS.forEach(key => {
-      if (!DATA_KEYS.includes(key)) return;
-      const meta = safeJson(rawGet(metaKey(key)), {}) || {};
-      const tombstones = meta.recordTombstones && typeof meta.recordTombstones === 'object' ? meta.recordTombstones : {};
-      const deletedIds = Object.keys(tombstones).filter(Boolean);
-      if (!deletedIds.length) return;
-      enqueueSyncOperation(key, { deletedIds, deletedDataset:false });
-      queued += 1;
-    });
-    // الحسابات/الصناديق مجموعة object وبداخلها accounts/accountLogs. إعادة رفع
-    // دمجية واحدة في R115 تصلح أي صندوق أضيف/حُذف محلياً قبل هذا الإصدار.
-    const fundsRaw = rawGet(namespaceKey('cashtop_funds_db'));
-    const fundsMeta = safeJson(rawGet(metaKey('cashtop_funds_db')), {}) || {};
-    if (fundsRaw != null && fundsMeta.seeded !== true) {
-      enqueueSyncOperation('cashtop_funds_db', { forceReplace:true, deletedDataset:false });
-      queued += 1;
-    }
-    rawSet(markerKey, '1');
-    return { queued, skipped:false };
-  }
-
   function getSystemSettings() {
     return safeJson(localStorage.getItem('cashtop_settings'), {}) || {};
   }
@@ -5003,42 +4713,21 @@
     return value * (1 + percent / 100);
   }
 
-  function brandingLogoCacheKey() {
-    return `ct_brand_logo_cache_v2::${tenantIdFromSession() || 'default'}`;
-  }
-
-  function cacheBrandLogo(value) {
-    try {
-      const key = brandingLogoCacheKey();
-      if (String(value || '').trim()) rawSet(key, String(value).trim());
-      else rawRemove(key);
-    } catch (_) {}
-  }
-
-  function cachedBrandLogo() {
-    try { return String(rawGet(brandingLogoCacheKey()) || '').trim(); } catch (_) { return ''; }
-  }
-
   function applySystemBranding() {
     const session = getSession() || {};
     const settings = getSystemSettings();
     const companyName = String(settings.companyName || session.companyName || session.companyKey || APP_NAME).trim();
-    const configuredLogo = String(settings.logo || '').trim();
-    if (configuredLogo) cacheBrandLogo(configuredLogo);
-    const logo = configuredLogo || cachedBrandLogo();
+    const logo = String(settings.logo || '').trim();
     const address = String(settings.address || '').trim();
     const phone = String(settings.phone || '').trim();
     setText('ctCompanyTitle', [companyName, address, phone].filter(Boolean).join(' · ') || 'نظام المحاسبة والمخزون');
     setText('ctSidebarCompany', companyName || APP_NAME);
     document.querySelectorAll('.ct-sidebar-brand img, .ct-topbar-logo').forEach(image => {
-      if (logo) { image.src = logo; image.dataset.ctCustomLogo = '1'; }
-      else { image.dataset.ctCustomLogo = '0'; if (!image.getAttribute('src')) image.src = 'cashtop-logo.png'; }
+      if (logo) image.src = logo;
       image.alt = companyName || APP_NAME;
       image.title = [companyName, address, phone].filter(Boolean).join(' - ');
-      image.style.visibility = 'visible';
     });
     document.documentElement.dataset.companyName = companyName;
-    document.documentElement.dataset.ctBrandReady = '1';
     window.dispatchEvent(new CustomEvent('cashtop:branding-applied', { detail: { companyName, logo, address, phone } }));
     return { companyName, logo, address, phone };
   }
@@ -5428,7 +5117,7 @@
         return;
       }
       const script = document.createElement('script');
-      script.src = 'turso-sync.js?v=122';
+      script.src = 'turso-sync.js?v=78';
       script.async = true;
       script.dataset.ctSyncRuntime = 'classic';
       script.onload = () => resolve(Boolean(window.CashtopTurso?.syncAll));
@@ -6160,10 +5849,9 @@
       syncBadge.id = 'ctSyncBadge';
       sync.appendChild(syncBadge);
     }
-    // R121: page-entry synchronization is intentionally background-only.
-    // Keep the cloud button/badge, but never mount the thin header progress line.
-    const oldProgress = sync?.querySelector?.('#ctSyncProgress');
-    if (oldProgress) oldProgress.remove();
+    // R125: لا نعرض خط تقدم المزامنة في الهيدر. المحرك يعمل بالخلفية فقط.
+    const oldSyncProgress = sync?.querySelector?.('#ctSyncProgress');
+    if (oldSyncProgress) oldSyncProgress.remove();
     if (showManagerBell) {
       if (sync) sync.insertAdjacentElement('afterend', bell);
       else actions.insertBefore(bell, actions.firstChild);
@@ -6911,7 +6599,7 @@
     archiveRecords, readArchivedRecords, compactCompletedData, trustedNowMs,
     getSyncQueue, enqueueSyncOperation, completeSyncOperation, clearSyncQueue, resetSyncQueueCompletely, preservePendingSyncState, updateSyncBadge, restoreSyncQueueBackup, migrateLegacySyncQueues,
     setSyncProgress, restoreDurableCompanyData, flushDurableLocalWrites, commitCriticalData, readDurableLocalKey,
-    getSystemSettings, getProfitRate, getInventoryAccountingMethod, salePriceFromCost, applySystemBranding, cacheBrandLogo, cachedBrandLogo, recordIdentity, sortNewestFirstRecords, repairFundDropdownsR115,
+    getSystemSettings, getProfitRate, getInventoryAccountingMethod, salePriceFromCost, applySystemBranding, recordIdentity, sortNewestFirstRecords,
     debounce, runWhenIdle, renderVirtualRows, renderVirtualGrid, runWorkerTask, queryRecords, atomicSetItems, recoverAtomicTransactions,
     captureModalDraft, restoreModalDraft, clearModalDraft, getAuditPending, getAuditPendingAsync, getAuditPendingCountAsync, completeAuditPending, completeAuditPendingAsync, getRecentAuditCache,
   });
@@ -6938,15 +6626,7 @@
     window.addEventListener('pageshow', () => { if (FILE !== 'sync.html' && getSyncQueue().length) syncNow({ manual: false }); }, { passive: true });
     window.addEventListener('cashtop:sync-queue-changed', updateSyncBadge);
     window.addEventListener('cashtop:sync-queue-restored', () => { if (FILE !== 'sync.html') syncNow({ manual: false }); });
-    window.addEventListener('cashtop:data-changed', event => {
-      if (event.detail?.key === 'cashtop_settings') applySystemBranding();
-      if (event.detail?.key === 'cashtop_funds_db') requestAnimationFrame(() => repairFundDropdownsR115(document));
-    });
-    window.addEventListener('cashtop:funds-changed', () => requestAnimationFrame(() => repairFundDropdownsR115(document)));
-    window.addEventListener('cashtop:remote-applied', event => { if (event.detail?.key === 'cashtop_funds_db') requestAnimationFrame(() => repairFundDropdownsR115(document)); });
-    window.addEventListener('cashtop:local-ready', () => requestAnimationFrame(() => repairFundDropdownsR115(document)));
-    document.addEventListener('pointerdown', event => { if (event.target?.tagName === 'SELECT' && FUND_SELECT_IDS_R115.has(String(event.target.id || ''))) repairFundSelectElementR115(event.target); }, true);
-    document.addEventListener('focusin', event => { if (event.target?.tagName === 'SELECT' && FUND_SELECT_IDS_R115.has(String(event.target.id || ''))) repairFundSelectElementR115(event.target); }, true);
+    window.addEventListener('cashtop:data-changed', event => { if (event.detail?.key === 'cashtop_settings') applySystemBranding(); });
     window.addEventListener('offline', updateNetworkStatus);
     const flushDurableOfflineState = () => { preservePendingSyncState().catch(() => null); };
     // ثبّت طابور المزامنة والبيانات المتغيرة في IndexedDB قبل تجميد/إغلاق الصفحة.
@@ -6972,8 +6652,6 @@
       })
       .then(() => migrateLegacySyncQueues().catch(() => ({ migrated: 0 })))
       .then(() => {
-        repairDeletionSyncQueueR115();
-        repairFundDropdownsR115(document);
         updateSyncBadge();
         if (FILE !== 'sync.html' && getSyncQueue().length) syncNow({ manual: false });
         return { ready: true, queueLength: getSyncQueue().length };
@@ -6999,7 +6677,7 @@
       if (alreadyShown) return;
       try { RAW.set.call(localStorage, storagePressureNoticeLocalKey, '1'); } catch (_) {}
       try { await persistDurableLocalKey(storagePressureNoticeDurableKey, '1'); } catch (_) {}
-      // Ghazal UI: storage pressure is handled silently; business data stays protected in IndexedDB.
+      showToast('تم تحويل التخزين تلقائياً إلى قاعدة IndexedDB المحلية الكبيرة للحفاظ على البيانات.', 'info', 4200);
     };
     window.addEventListener('cashtop:local-storage-pressure', () => { showStoragePressureNoticeOnce().catch(() => null); });
     document.addEventListener('keydown', event => {
@@ -7062,38 +6740,6 @@
       });
     }
 
-    async function trimHotLocalMirrorsSilently(limit = 8) {
-      try {
-        const tenant = encodeURIComponent(tenantIdFromSession());
-        const dataPrefix = `cashtop_data::${tenant}::`;
-        const metaPrefix = `cashtop_meta::${tenant}::`;
-        const pending = new Set((getSyncQueue() || []).map(item => canonicalKey(item?.key || '')).filter(Boolean));
-        const candidates = [];
-        for (let index = 0; index < localStorage.length; index += 1) {
-          const physical = RAW.key.call(localStorage, index);
-          if (!physical || !physical.startsWith(dataPrefix)) continue;
-          const dataset = logicalDatasetFromPhysicalKey(physical, tenantIdFromSession());
-          if (!dataset || pending.has(dataset)) continue;
-          // Keep small identity/security datasets mirrored synchronously at all times.
-          if (['cashtop_company_access','cashtop_settings','cashtop_branches','cashtop_employees','cashtop_sales_agents'].includes(dataset)) continue;
-          const raw = RAW.get.call(localStorage, physical);
-          if (raw == null) continue;
-          const metaPhysical = physical.replace(dataPrefix, metaPrefix);
-          const meta = safeJson(rawGet(metaPhysical), {}) || {};
-          candidates.push({ physical, raw, dataset, updatedAt:Number(meta.updatedAt || meta.syncedAt || 0), size:String(raw).length });
-        }
-        candidates.sort((a,b) => (a.updatedAt - b.updatedAt) || (b.size - a.size));
-        let removed = 0;
-        for (const item of candidates.slice(0, Math.max(0, Number(limit || 0)))) {
-          const durable = await persistDurableLocalKey(item.physical, item.raw).catch(() => false);
-          if (!durable) continue;
-          durableMemory.set(item.physical, item.raw);
-          try { RAW.remove.call(localStorage, item.physical); removed += 1; } catch (_) {}
-        }
-        return removed;
-      } catch (_) { return 0; }
-    }
-
     const maximizeBrowserStorage = async (options = {}) => {
       const result = { persisted:false, usage:0, quota:0, compacted:false };
       try {
@@ -7126,7 +6772,6 @@
         const audit = safeJson(localStorage.getItem('cashtop_audit_log'), []) || [];
         if (Array.isArray(audit) && audit.length > 80) localStorage.setItem('cashtop_audit_log', JSON.stringify(audit.slice(-80)));
       } catch (_) {}
-      try { result.hotMirrorsTrimmed = await trimHotLocalMirrorsSilently(8); } catch (_) { result.hotMirrorsTrimmed = 0; }
       return result;
     };
     window.addEventListener('cashtop:local-storage-pressure', () => {

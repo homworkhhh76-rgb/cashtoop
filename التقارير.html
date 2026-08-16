@@ -156,36 +156,13 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=110">
-    <script src="cashtop-core.js?v=123"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=125">
+    <script src="cashtop-core.js?v=125"></script>
     <script src="multi-system.js?v=100"></script>
-    <script src="turso-config.js?v=100"></script><script src="turso-rtdb.js?v=123"></script>
+    <script src="turso-config.js?v=100"></script><script src="turso-rtdb.js?v=100"></script>
     <script src="accounting-engine.js?v=100"></script>
-    <script src="turso-sync.js?v=123"></script>
+    <script src="turso-sync.js?v=108"></script>
 <script src="cashtop-download-fix.js"></script>
-
-<link rel="stylesheet" href="ghazal-theme.css?v=8">
-<style id="ct-r120-report-card-fix">
-/* R120: بطاقات التقارير متوافقة مع نظام بطاقات غزال بدون تداخل النص والقيمة. */
-.ct-original-page .report-kpi-grid>.main-card{min-width:0!important}
-.ct-original-page .report-kpi-grid>.main-card .card-content-side{min-width:0!important;overflow:hidden!important}
-.ct-original-page .report-kpi-grid>.main-card .card-header-title{white-space:normal!important;line-height:1.35!important;max-width:100%!important}
-.ct-original-page .report-kpi-grid>.main-card .card-stat{max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important;direction:ltr!important;text-align:right!important}
-@media(max-width:768px){
-  .ct-original-page .report-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important}
-  .ct-original-page .report-kpi-grid>.main-card{grid-template-columns:44px minmax(0,1fr)!important;height:86px!important;min-height:86px!important;border-radius:10px!important}
-  .ct-original-page .report-kpi-grid>.main-card .card-icon-side{width:44px!important;min-width:44px!important;max-width:44px!important;min-height:84px!important}
-  .ct-original-page .report-kpi-grid>.main-card .card-content-side{padding:8px 9px!important;gap:4px!important}
-  .ct-original-page .report-kpi-grid>.main-card .card-header-title{font-size:10.5px!important;line-height:1.35!important}
-  .ct-original-page .report-kpi-grid>.main-card .card-stat{font-size:15px!important;line-height:1.25!important}
-}
-@media(max-width:380px){
-  .ct-original-page .report-kpi-grid>.main-card{grid-template-columns:40px minmax(0,1fr)!important}
-  .ct-original-page .report-kpi-grid>.main-card .card-icon-side{width:40px!important;min-width:40px!important;max-width:40px!important}
-  .ct-original-page .report-kpi-grid>.main-card .card-content-side{padding-inline:7px!important}
-  .ct-original-page .report-kpi-grid>.main-card .card-stat{font-size:13px!important}
-}
-</style>
 </head>
 <body>
 <div class="ct-sidebar-overlay" id="ctSidebarOverlay" data-ct-action="close-sidebar"></div>
@@ -297,22 +274,22 @@
     <div class="dashboard-container">
         
         <!-- الكروت الإحصائية الرئيسية -->
-        <div class="top-cards-grid report-kpi-grid">
+        <div class="top-cards-grid">
             <div class="main-card bg-sales">
-                <div class="card-icon-side"><i class="fa-solid fa-cart-shopping"></i></div>
-                <div class="card-content-side"><span class="card-header-title">إجمالي المبيعات</span><span class="card-stat" id="mainSales">0.00 ₪</span></div>
+                <div class="card-header"><span>إجمالي المبيعات</span><i class="fa-solid fa-cart-shopping"></i></div>
+                <div class="card-stat" id="mainSales">0.00 ₪</div>
             </div>
             <div class="main-card bg-profit">
-                <div class="card-icon-side"><i class="fa-solid fa-hand-holding-dollar"></i></div>
-                <div class="card-content-side"><span class="card-header-title">صافي الأرباح</span><span class="card-stat" id="mainProfit">0.00 ₪</span></div>
+                <div class="card-header"><span>صافي الأرباح</span><i class="fa-solid fa-hand-holding-dollar"></i></div>
+                <div class="card-stat" id="mainProfit">0.00 ₪</div>
             </div>
             <div class="main-card bg-inventory">
-                <div class="card-icon-side"><i class="fa-solid fa-boxes-stacked"></i></div>
-                <div class="card-content-side"><span class="card-header-title">قيمة المخزون (بالتكلفة)</span><span class="card-stat" id="mainInventory">0.00 ₪</span></div>
+                <div class="card-header"><span>قيمة المخزون (بالتكلفة)</span><i class="fa-solid fa-boxes-stacked"></i></div>
+                <div class="card-stat" id="mainInventory">0.00 ₪</div>
             </div>
             <div class="main-card bg-debt">
-                <div class="card-icon-side"><i class="fa-solid fa-file-invoice-dollar"></i></div>
-                <div class="card-content-side"><span class="card-header-title">إجمالي الديون (السوق)</span><span class="card-stat" id="mainDebt">0.00 ₪</span></div>
+                <div class="card-header"><span>إجمالي الديون (السوق)</span><i class="fa-solid fa-file-invoice-dollar"></i></div>
+                <div class="card-stat" id="mainDebt">0.00 ₪</div>
             </div>
         </div>
 
@@ -1028,8 +1005,6 @@
 
 <script type="application/json" id="ctEmbeddedShellMarker">{"embedded":true,"page":"التقارير.html"}</script>
 <script src="cashtop-export.js"></script>
-
-<script src="ghazal-theme.js?v=8"></script>
 </body>
 
 </html>

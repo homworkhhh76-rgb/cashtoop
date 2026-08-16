@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v124-global-register-search';
+const CACHE_VERSION = 'v125-r108-pager-background-sync';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = 'cash-top-2-remote-static-persistent-v1';
 
@@ -21,11 +21,7 @@ const LOCAL_ASSETS = [
   './cashier.html',
   './categories.html',
   './cashtop-core.css',
-  './ghazal-theme.css',
-  './ghazal-theme.js',
   './cashtop-core.js',
-  './cashtop-lazy-page-hooks.js',
-  './cashtop-register-pager.js',
   './turso-config.js',
   './turso-rtdb.js',
   './turso-sync.js',
@@ -33,6 +29,7 @@ const LOCAL_ASSETS = [
   './cashtop-export.js',
   './cashtop-logo.png',
   './cashtop-printer.js',
+  './cashtop-record-pager.js',
   './cashtop-worker.js',
   './customer-groups.html',
   './customer-portal.html',

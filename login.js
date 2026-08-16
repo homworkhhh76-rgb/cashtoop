@@ -184,9 +184,7 @@
     } catch (_) { return false; }
   }
   function nextPageAfterLogin(session) {
-    // R121: لا نوقف المستخدم على شاشة مزامنة بعد تسجيل الدخول.
-    // تدخل لوحة التحكم فوراً، بينما cashtop-core/turso-sync يكملان المزامنة
-    // الخفيفة في الخلفية داخل النظام.
+    // R125: الدخول مباشر. المزامنة تكمل داخل النظام بالخلفية بدون شاشة/خط انتظار.
     return 'لوحة التحكم.html';
   }
 
@@ -282,66 +280,6 @@
     if (!key || !tenant) return;
     const bindings = getTenantBindings(); bindings[key] = tenant;
     rawSet('cashtop_tenant_bindings', JSON.stringify(bindings));
-  }
-
-
-  // R123 — recover the stable tenant behind a company key before trusting a
-  // possibly stale/new keyIndex row. Existing business data must never disappear
-  // just because the same key was pointed at an empty tenant path.
-  function localTenantBusinessScore(tenantId) {
-    const encoded = encodeURIComponent(String(tenantId || ''));
-    const dataPrefix = `cashtop_data::${encoded}::`;
-    const metaPrefix = `cashtop_meta::${encoded}::`;
-    const heavy = ['cashtop_customers','cashtop_invoices','cashtop_products'];
-    let score = 0;
-    let maxRows = 0;
-    let remoteHint = 0;
-    for (let i = 0; i < localStorage.length; i += 1) {
-      const storageKey = rawKey(i);
-      if (!storageKey) continue;
-      const isHeavy = heavy.some(dataset => storageKey.endsWith(`::${dataset}`) || storageKey.endsWith(dataset));
-      if (!isHeavy) continue;
-      if (storageKey.startsWith(dataPrefix)) {
-        const rows = normalizeArray(rawGet(storageKey));
-        score += rows.length;
-        maxRows = Math.max(maxRows, rows.length);
-      } else if (storageKey.startsWith(metaPrefix)) {
-        const meta = decodeJsonValue(rawGet(storageKey), {}) || {};
-        remoteHint = Math.max(remoteHint, Number(meta.remoteTotal || 0));
-      }
-    }
-    return { score: score + remoteHint, maxRows: Math.max(maxRows, remoteHint), remoteHint };
-  }
-
-  function localTenantCandidates(companyKey) {
-    const wanted = normalizeKey(companyKey);
-    const byTenant = new Map();
-    const binding = String(getTenantBindings()[wanted] || '').trim();
-    for (let i = 0; i < localStorage.length; i += 1) {
-      const storageKey = rawKey(i);
-      if (!storageKey || !storageKey.endsWith('::cashtop_company_access')) continue;
-      const access = decodeJsonValue(rawGet(storageKey), null);
-      if (!access || normalizeKey(access.companyKey) !== wanted) continue;
-      const tenantId = String(access.tenantId || access.companyId || '').trim();
-      if (!tenantId) continue;
-      const business = localTenantBusinessScore(tenantId);
-      byTenant.set(tenantId, { tenantId, access, score: business.score, maxRows: business.maxRows, bound: tenantId === binding });
-    }
-    if (binding && !byTenant.has(binding)) {
-      const access = decodeJsonValue(rawGet(namespaceKey(binding, 'cashtop_company_access')), null);
-      if (access && normalizeKey(access.companyKey) === wanted) {
-        const business = localTenantBusinessScore(binding);
-        byTenant.set(binding, { tenantId:binding, access, score:business.score, maxRows:business.maxRows, bound:true });
-      }
-    }
-    return [...byTenant.values()].sort((a,b) => (b.score-a.score) || (b.maxRows-a.maxRows) || (Number(b.bound)-Number(a.bound)));
-  }
-
-  function rememberRecoveryTenants(companyKey, candidates = []) {
-    const key = `ct_recovery_tenants_v123::${encodeURIComponent(normalizeKey(companyKey))}`;
-    const ids = [...new Set((candidates || []).map(item => String(item?.tenantId || item || '').trim()).filter(Boolean))].slice(0, 6);
-    try { rawSet(key, JSON.stringify(ids)); } catch (_) {}
-    return ids;
   }
 
   function datasetValue(companyNode, key, fallback) {
@@ -634,10 +572,10 @@
     return tenantId ? { tenantId, companyId: tenantId, key: company.key || companyKey, source: 'companies-fallback' } : null;
   }
 
-  async function fetchLoginBootstrap(companyKey, tenantId, rootOverride = '') {
+  async function fetchLoginBootstrap(companyKey, tenantId) {
     const settings = window.CASHTOP_TURSO || {};
     const base = String(settings.config?.databaseURL || '').replace(/\/+$/, '');
-    const root = String(rootOverride || settings.rootPath || 'cashTopExchange/cashTopPOS').replace(/^\/+|\/+$/g, '');
+    const root = String(settings.rootPath || 'cashTopExchange/cashTopPOS').replace(/^\/+|\/+$/g, '');
     const canonicalTenant = sanitizeSegment(tenantId);
     if (!base || !canonicalTenant) return null;
     const datasetUrl = key => `${base}/${root}/${canonicalTenant}/datasets/${sanitizeSegment(key)}.json`;
@@ -728,37 +666,8 @@
   }
 
   async function findRemoteCompany(companyKey) {
-    // R123: a previously used tenant for this exact company key is authoritative
-    // enough to verify first. We only accept it after reading its own access row
-    // and confirming the same companyKey, so no cross-company guessing occurs.
-    const localCandidates = localTenantCandidates(companyKey);
-    const recoveryIds = rememberRecoveryTenants(companyKey, localCandidates);
-    if (localCandidates.length) {
-      const settings = window.CASHTOP_TURSO || {};
-      const roots = [...new Set([settings.rootPath || 'cashTopExchange/cashTopPOS', ...(settings.legacyRootPaths || [])])]
-        .map(root => String(root || '').replace(/^\/+|\/+$/g, '')).filter(Boolean);
-      for (const candidate of localCandidates) {
-        for (const root of roots) {
-          try {
-            const remote = await fetchLoginBootstrap(companyKey, candidate.tenantId, root);
-            if (!remote) continue;
-            const remoteKey = normalizeKey(remote.access?.companyKey || remote.node?.meta?.companyKey || '');
-            const remoteTenant = sanitizeSegment(remote.access?.tenantId || remote.access?.companyId || remote.tenantId || remote.companyId || '');
-            if (remoteKey !== companyKey || remoteTenant !== sanitizeSegment(candidate.tenantId)) continue;
-            setTenantBinding(companyKey, candidate.tenantId);
-            return { ...remote, recoveryTenantIds: recoveryIds, recoveredStableTenant: true };
-          } catch (error) {
-            console.warn('[CASH TOP R123] stable tenant probe:', candidate.tenantId, root, error);
-          }
-        }
-      }
-    }
-
     const indexed = await findRemoteCompanyViaAdminIndex(companyKey);
-    if (indexed) {
-      rememberRecoveryTenants(companyKey, [indexed.tenantId || indexed.companyId, ...recoveryIds]);
-      return indexed;
-    }
+    if (indexed) return indexed;
 
     // لا نفحص جذر قاعدة البيانات كاملاً ولا نختار شركة بالتخمين. عند غياب
     // فهرس الإدارة نسمح فقط بمسار محلي معروف مسبقاً لنفس المفتاح (ترحيل قديم).
@@ -915,7 +824,7 @@
         }
       }
       await loginDurableWriteChain.catch(() => false);
-      showStatus('تم تسجيل الدخول بنجاح. جاري فتح النظام...', 'success');
+      showStatus('تم تسجيل الدخول بنجاح. جاري تجهيز المزامنة...', 'success');
       const loggedSession = readTabSession();
       setTimeout(() => location.replace(nextPageAfterLogin(loggedSession)), 80);
     } catch (error) {

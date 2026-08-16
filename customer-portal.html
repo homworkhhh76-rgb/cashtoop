@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-<script src="turso-config.js?v=100"></script><script src="turso-rtdb.js?v=123"></script>
+<script src="turso-config.js?v=100"></script><script src="turso-rtdb.js?v=100"></script>
 <style>
 :root{--app-header-bg:#5e5296;--bg-color:#f8f9fa;--card-bg:#fff;--text-dark:#2d3748;--text-muted:#718096;--border:#e2e8f0;--green:#00b065;--red:#ea5446;--blue:#03a9f4;--orange:#f59e0b}
 *{box-sizing:border-box;margin:0;padding:0;font-family:'Cairo',sans-serif}html,body{background:var(--bg-color);color:var(--text-dark);overflow-x:hidden;scroll-behavior:smooth}button,input{font:inherit}.hidden{display:none!important}
@@ -19,8 +19,6 @@
 
 </style>
 <script src="cashtop-download-fix.js"></script>
-
-<link rel="stylesheet" href="ghazal-theme.css?v=8">
 </head>
 <body><div id="portalLoader" class="portal-loader"><div class="portal-spinner"></div><div id="portalLoaderText" class="portal-loader-text">جاري تحميل البيانات...</div></div>
 <div id="login-wrapper"><div class="login-box"><img id="companyLogoLogin" class="company-logo" src="cashtop-logo.png" alt="شعار الشركة" onerror="this.src='cashtop-logo.png'"><div class="company-badge"><i class="fa-solid fa-building"></i><span id="companyNameLogin">بوابة العملاء</span></div><div class="login-title">سجل حساب العميل</div><div class="login-subtitle">أدخل مفتاح العميل الرقمي الموجود في سجلك لدى الشركة.</div><div class="input-group"><i class="fas fa-key"></i><input type="text" id="customerKeyInput" class="login-input" placeholder="مفتاح العميل" inputmode="numeric" autocomplete="one-time-code"></div><button class="login-btn" id="loginBtn" onclick="handleLogin()">دخول</button><div class="error-msg" id="loginError"><i class="fas fa-exclamation-circle"></i> مفتاح العميل غير صحيح.</div></div></div>
@@ -108,6 +106,4 @@ function downloadPDF(){
 }
 document.getElementById('customerKeyInput').addEventListener('keydown',e=>{if(e.key==='Enter')handleLogin()});boot();
 </script>
-
-<script src="ghazal-theme.js?v=8"></script>
 </body></html>

@@ -12,9 +12,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<link rel="icon" href="icon-192.png"><link rel="stylesheet" href="cashtop-core.css?v=110">
-<script src="cashtop-core.js?v=123"></script>
-    <script src="multi-system.js?v=100"></script><script src="turso-config.js?v=100"></script><script src="turso-rtdb.js?v=123"></script><script src="accounting-engine.js?v=100"></script><script src="turso-sync.js?v=123"></script>
+<link rel="icon" href="icon-192.png"><link rel="stylesheet" href="cashtop-core.css?v=125">
+<script src="cashtop-core.js?v=125"></script>
+    <script src="multi-system.js?v=100"></script><script src="turso-config.js?v=100"></script><script src="turso-rtdb.js?v=100"></script><script src="accounting-engine.js?v=100"></script><script src="turso-sync.js?v=108"></script>
 <style>
         * {
             box-sizing: border-box;
@@ -547,9 +547,7 @@
       const ws=XLSX.utils.json_to_sheet(rows(items)); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'العروض'); XLSX.writeFile(wb,`عروض-المبيعات-${Date.now()}.xlsx`); return;
     }
     if (mode==='print') {
-      const win=window.open('','_blank'); win.document.write(`<html dir="rtl"><head><title>عروض المبيعات</title><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="ghazal-theme.css?v=8">
-</head><body>${exportMarkup(items)}<script>onload=()=>print()<\/script></body></html>`); win.document.close(); return;
+      const win=window.open('','_blank'); win.document.write(`<html dir="rtl"><head><title>عروض المبيعات</title><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet"></head><body>${exportMarkup(items)}<script>onload=()=>print()<\/script></body></html>`); win.document.close(); return;
     }
     if (mode==='pdf') {
       const data = rows(items);
@@ -587,6 +585,4 @@
       <a href="customers.html"><i class="fa-solid fa-users"></i><span>العملاء</span></a>
       <a href="invoices.html"><i class="fa-solid fa-file-invoice"></i><span>الفواتير</span></a>
     </nav></section></div><script src="cashtop-export.js"></script>
-
-<script src="ghazal-theme.js?v=8"></script>
 </body></html>
