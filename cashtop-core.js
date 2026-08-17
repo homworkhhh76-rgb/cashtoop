@@ -2261,6 +2261,9 @@
   }
 
   function quotaViolation(canonical, oldRaw, newRaw) {
+    // سندات القبض والصرف بدون أي سقف في جميع الخطط والنسخ.
+    // العرض قد يستخدم Paging، لكن الحفظ والمزامنة والتصدير لا يضع حدًا لعدد السندات.
+    if (canonical === 'cashtop_vouchers') return '';
     const plan = currentPlan();
     if (plan === 'pro') return '';
 
@@ -4843,7 +4846,7 @@
         .ct-maintenance-btn:disabled{opacity:.6;cursor:wait}.ct-cache-refresh-btn{background:#605ca8;color:#fff}.ct-queue-reset-btn{background:#fff1f2;color:#be123c;border:1px solid #fecdd3}
         @media(max-width:620px){.ct-maintenance-actions{grid-template-columns:1fr}.ct-sync-cache-maintenance{padding:14px}}
       </style>
-      <div class="ct-maintenance-head"><strong><i class="fa-solid fa-cloud-arrow-up"></i> المزامنة وتحديث التطبيق</strong><span class="ct-maintenance-version">R93</span></div>
+      <div class="ct-maintenance-head"><strong><i class="fa-solid fa-cloud-arrow-up"></i> المزامنة وتحديث التطبيق</strong><span class="ct-maintenance-version">R129</span></div>
       <p class="ct-maintenance-description">تحديث الكاش يحفظ العمليات المعلقة في IndexedDB أولاً، ثم ينزّل ملفات الموقع الجديدة ويعيد فتح التطبيق. تصفير الطابور يحذف العمليات القديمة فقط ولا يحذف البيانات المحلية.</p>
       <div class="ct-maintenance-status"><i class="fa-solid fa-list-check"></i><span>العمليات المعلقة حالياً: <b id="ctMaintenanceQueueCount">0</b></span></div>
       <div class="ct-maintenance-actions">

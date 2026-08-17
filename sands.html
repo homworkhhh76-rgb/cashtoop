@@ -956,7 +956,17 @@
                 const account=fundsDB.accounts.find(item=>String(item?.id)===String(payment.accountId));if(!account)throw new Error('ACCOUNT_NOT_FOUND');
                 const nativeAmount=Math.max(0,Number(payment.accountAmount||payment.accountAmountNative||0));if(!(nativeAmount>0))throw new Error('INVALID_VOUCHER_AMOUNT');
                 if(isReversal){if(voucher.type==='قبض')account.balance=Number(account.balance||0)-nativeAmount;else account.balance=Number(account.balance||0)+nativeAmount;}
-                else{if(voucher.type==='قبض')account.balance=Number(account.balance||0)+nativeAmount;else account.balance=Number(account.balance||0)-nativeAmount;if(account.balance<-.0001)throw new Error('INSUFFICIENT_FUNDS');fundsDB.accountLogs.push({id:`LOG_V_${voucher.id}_${index}_${Date.now()}`,sourceType:'voucher',sourceId:voucher.id,accountId:account.id,date:voucher.date,type:voucher.type==='قبض'?'إيداع':'سحب',amount:nativeAmount,baseAmount:Number(payment.baseAmount||0),currencyId:payment.accountCurrencyId||account.currencyId,transactionAmount:Number(payment.transactionAmount||0),transactionCurrencyId:payment.transactionCurrencyId||voucher.currencyId||cfg.baseCurrencyId,notes:`${voucher.type==='قبض'?'سند قبض':'سند صرف'}${paymentRows?' متعدد':''} [${voucher.refNumber}] | ${voucher.relationName} | ${voucher.notes||''}`});}
+                else{
+                    if(voucher.type==='قبض'){
+                        // سند القبض يزيد رصيد الحساب ولا يجوز أن يفشل بسبب رصيد سابق سالب.
+                        account.balance=Number(account.balance||0)+nativeAmount;
+                    }else{
+                        // سند الصرف فقط يحتاج فحص كفاية الرصيد قبل/بعد الخصم.
+                        account.balance=Number(account.balance||0)-nativeAmount;
+                        if(account.balance<-.0001)throw new Error('INSUFFICIENT_FUNDS');
+                    }
+                    fundsDB.accountLogs.push({id:`LOG_V_${voucher.id}_${index}_${Date.now()}`,sourceType:'voucher',sourceId:voucher.id,accountId:account.id,date:voucher.date,type:voucher.type==='قبض'?'إيداع':'سحب',amount:nativeAmount,baseAmount:Number(payment.baseAmount||0),currencyId:payment.accountCurrencyId||account.currencyId,transactionAmount:Number(payment.transactionAmount||0),transactionCurrencyId:payment.transactionCurrencyId||voucher.currencyId||cfg.baseCurrencyId,notes:`${voucher.type==='قبض'?'سند قبض':'سند صرف'}${paymentRows?' متعدد':''} [${voucher.refNumber}] | ${voucher.relationName} | ${voucher.notes||''}`});
+                }
             });
             if(isReversal)fundsDB.accountLogs=(fundsDB.accountLogs||[]).filter(log=>!(String(log?.sourceType||'')==='voucher'&&String(log?.sourceId||'')===String(voucher.id)));
             if(voucher.relationType==='client'){const client=clientsDB.find(item=>String(item?.id)===String(voucher.relationId));if(!client)throw new Error('CLIENT_NOT_FOUND');const direction=voucher.type==='قبض'?-1:1;client.balance=Number(client.balance||0)+(isReversal?-direction:direction)*amount;}

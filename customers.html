@@ -243,12 +243,12 @@
 
     <!-- CASH TOP: shared shell, unified storage, accounting and Turso sync -->
     <link rel="icon" href="icon-192.png">
-    <link rel="stylesheet" href="cashtop-core.css?v=127">
-    <script src="cashtop-core.js?v=127"></script>
+    <link rel="stylesheet" href="cashtop-core.css?v=130">
+    <script src="cashtop-core.js?v=130"></script>
     <script src="multi-system.js?v=100"></script>
-    <script src="turso-config.js?v=100"></script><script src="turso-rtdb.js?v=127"></script>
+    <script src="turso-config.js?v=100"></script><script src="turso-rtdb.js?v=130"></script>
     <script src="accounting-engine.js?v=100"></script>
-    <script src="turso-sync.js?v=127"></script>
+    <script src="turso-sync.js?v=130"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
 <body>
@@ -705,58 +705,145 @@
         }
 
         let customerHydrationPromise = null;
+        const CUSTOMER_MOVEMENT_HYDRATION_VERSION = 'v2';
+        function customerHydrationMarkerKey(){
+            try { return window.Cashtop?.namespaceKey?.(`ct_customer_movement_hydration_${CUSTOMER_MOVEMENT_HYDRATION_VERSION}`) || `ct_customer_movement_hydration_${CUSTOMER_MOVEMENT_HYDRATION_VERSION}`; }
+            catch (_) { return `ct_customer_movement_hydration_${CUSTOMER_MOVEMENT_HYDRATION_VERSION}`; }
+        }
+        function hasCustomerMovementHydrationRun(){
+            try { return localStorage.getItem(customerHydrationMarkerKey()) === '1'; } catch (_) { return false; }
+        }
+        function markCustomerMovementHydrationRun(){
+            try { localStorage.setItem(customerHydrationMarkerKey(), '1'); } catch (_) {}
+        }
+        function getCustomerDeletedTombstones(){
+            try {
+                const metaKey = window.Cashtop?.metaKey?.('cashtop_customers');
+                const meta = metaKey ? window.Cashtop?.safeJson?.(localStorage.getItem(metaKey), {}) : {};
+                return new Set(Object.keys(meta?.recordTombstones || {}).map(String));
+            } catch (_) { return new Set(); }
+        }
         function normalizeCustomerIdentity(value) {
             return String(value ?? '').replace(/[٠-٩]/g,d=>'0123456789'['٠١٢٣٤٥٦٧٨٩'.indexOf(d)]).replace(/[۰-۹]/g,d=>'0123456789'['۰۱۲۳۴۵۶۷۸۹'.indexOf(d)]).trim().toLowerCase().replace(/[\s\-_.()+]/g,'');
         }
         async function hydrateCustomersFromRemoteMovements(reason='customers-page') {
             if (customerHydrationPromise) return customerHydrationPromise;
+            // استخراج العملاء من الحركات هو ترحيل لمرة واحدة فقط. بعد نجاحه لا نعيد
+            // لمس العملاء الحاليين حتى لا تعود القيم القديمة وتلغي تعديلات المستخدم.
+            if (hasCustomerMovementHydrationRun()) return;
             customerHydrationPromise = (async()=>{
                 if (navigator.onLine === false || !window.CashtopTurso?.pullDatasetKeys) return;
-                const keys=['cashtop_customers','cashtop_invoices','cashtop_vouchers','cashtop_sales_returns','cashtop_funds_db','cashtop_customer_groups'];
-                try { await window.CashtopTurso.pullDatasetKeys(keys,{force:true,concurrency:6,silentProgress:true,freshCache:true}); } catch(error) { console.warn('[CASH TOP R127] customers full hydration:',error); return; }
+                const keys=['cashtop_customers','cashtop_invoices','cashtop_vouchers','cashtop_sales_returns','cashtop_funds_db'];
+                try { await window.CashtopTurso.pullDatasetKeys(keys,{force:true,concurrency:6,silentProgress:true,freshCache:true}); }
+                catch(error) { console.warn('[CASH TOP R130] customers one-time hydration:',error); return; }
+
                 const remoteCustomers=readArray('cashtop_customers');
                 const invoices=readArray('cashtop_invoices');
                 const vouchers=readArray('cashtop_vouchers');
                 const returns=readArray('cashtop_sales_returns');
                 const funds=readObject('cashtop_funds_db',{});
                 const accountLogs=Array.isArray(funds.accountLogs)?funds.accountLogs:[];
+                const deletedIds=getCustomerDeletedTombstones();
                 const base=remoteCustomers.slice();
                 const byId=new Map(),byPhone=new Map(),byName=new Map();
-                const addIndex=c=>{if(!c||typeof c!=='object')return;const id=normalizeCustomerIdentity(c.id);const phone=normalizeCustomerIdentity(c.phone||c.mobile);const name=normalizeCustomerIdentity(c.name);if(id)byId.set(id,c);if(phone)byPhone.set(phone,c);if(name&&!byName.has(name))byName.set(name,c);};
+                const autoCreatedIds=new Set();
+                const addIndex=c=>{
+                    if(!c||typeof c!=='object')return;
+                    const id=normalizeCustomerIdentity(c.id);
+                    const phone=normalizeCustomerIdentity(c.phone||c.mobile);
+                    const name=normalizeCustomerIdentity(c.name);
+                    if(id)byId.set(id,c);
+                    if(phone)byPhone.set(phone,c);
+                    if(name&&!byName.has(name))byName.set(name,c);
+                };
                 base.forEach(addIndex);
-                const resolve=(id,name,phone)=>{const a=id&&byId.get(normalizeCustomerIdentity(id));if(a)return a;const b=phone&&byPhone.get(normalizeCustomerIdentity(phone));if(b)return b;const c=name&&byName.get(normalizeCustomerIdentity(name));if(c)return c;return null;};
-                let created=0,changed=0;
-                const ensure=(info,source)=>{
+                const resolve=(id,name,phone)=>{
+                    const sid=normalizeCustomerIdentity(id);
+                    if(sid && deletedIds.has(String(id))) return null;
+                    const a=id&&byId.get(sid); if(a)return a;
+                    const b=phone&&byPhone.get(normalizeCustomerIdentity(phone)); if(b)return b;
+                    const c=name&&byName.get(normalizeCustomerIdentity(name)); if(c)return c;
+                    return null;
+                };
+                const movementInfoByCustomer=new Map();
+                const touchMovementInfo=(c,delta)=>{
+                    if(!c)return;
+                    const id=String(c.id);
+                    const item=movementInfoByCustomer.get(id)||{debit:0,credit:0};
+                    item.debit += Number(delta?.debit||0);
+                    item.credit += Number(delta?.credit||0);
+                    movementInfoByCustomer.set(id,item);
+                };
+                let created=0;
+                const ensure=(info)=>{
                     const name=String(info?.name||info?.customer||info?.customerName||info?.relationName||'').trim();
                     const id=String(info?.id||info?.customerId||info?.relationId||'').trim();
-                    const phone=String(info?.phone||info?.mobile||info?.customerPhone||'').trim();
-                    if(!name && !id)return null;
+                    const phone=String(info?.phone||info?.mobile||info?.customerPhone||info?.relationPhone||'').trim();
+                    if(!name && !id) return null;
+                    // أي سجل محذوف سابقاً يُمنع من العودة من الحركة.
+                    if(id && deletedIds.has(id)) return null;
                     let c=resolve(id,name,phone);
-                    if(!c){c={id:id||`CUST_AUTO_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,name:name||'عميل بدون اسم',phone:phone||'',address:'',balance:0,creditLimit:0,notes:'',createdAt:info?.date||info?.createdAt||new Date().toISOString(),source:'auto-from-movements'};base.push(c);addIndex(c);created++;}
-                    else { const patch={}; if(name&&(!c.name||c.name==='عميل بدون اسم'))patch.name=name; if(phone&&!c.phone)patch.phone=phone; if(Object.keys(patch).length){Object.assign(c,patch);changed++;} }
+                    if(!c){
+                        c={
+                            id:id || `CUST_AUTO_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,
+                            name:name || 'عميل بدون اسم',
+                            phone:phone || '',
+                            address:'', balance:0, creditLimit:0, notes:'',
+                            createdAt:info?.date||info?.createdAt||new Date().toISOString(),
+                            source:'one-time-movement-recovery',
+                            recoveredFromMovements:true,
+                            recoveredAt:new Date().toISOString()
+                        };
+                        base.push(c); addIndex(c); autoCreatedIds.add(String(c.id)); created++;
+                    }
+                    // ممنوع تعديل اسم/رقم/دين/ملاحظات/حد ائتماني للعميل الموجود مسبقاً.
                     return c;
                 };
-                invoices.filter(x=>x&&x.status!=='draft'&&x.deleted!==true).forEach(inv=>ensure({id:inv.customerId,customerId:inv.customerId,name:inv.customer||inv.customerName,phone:inv.customerPhone,date:inv.date||inv.createdAt},'invoice'));
-                vouchers.forEach(v=>{if(String(v?.relationType||'')==='client')ensure({id:v.relationId,name:v.relationName,phone:v.relationPhone,date:v.date||v.updatedAt},'voucher');});
-                returns.forEach(r=>ensure({id:r.customerId,name:r.customerName||r.customer,phone:r.customerPhone,date:r.date||r.createdAt},'return'));
-                accountLogs.filter(l=>String(l?.relationType||'')==='client').forEach(l=>ensure({id:l.relationId,name:l.relationName,phone:l.relationPhone,date:l.date||l.createdAt},'account-log'));
-                const invoiceDebit=new Map(),paymentCredit=new Map();
-                const add=(map,id,v)=>{const k=normalizeCustomerIdentity(id);if(!k)return;map.set(k,(map.get(k)||0)+Math.max(0,Number(v)||0));};
-                invoices.filter(x=>x&&x.status!=='draft'&&x.deleted!==true).forEach(inv=>{const c=resolve(inv.customerId,inv.customer,inv.customerPhone);if(!c)return;add(invoiceDebit,c.id,Math.max(0,Number(inv.debt)||0));});
-                vouchers.forEach(v=>{if(String(v?.relationType||'')!=='client')return;const c=resolve(v.relationId,v.relationName,v.relationPhone);if(!c)return;const amount=Math.max(0,Number(v.amount)||0);if(String(v.type||'')==='قبض')add(paymentCredit,c.id,amount);else add(invoiceDebit,c.id,amount);});
-                const logPayments=new Map();
-                accountLogs.filter(l=>String(l?.relationType||'')==='client').forEach(l=>{const c=resolve(l.relationId,l.relationName,l.relationPhone);if(!c)return;const amount=Math.max(0,Number(l.baseAmount??l.amount)||0);if(String(l.sourceType||'')==='voucher' || String(l.type||'')==='إيداع')add(logPayments,c.id,amount);});
-                base.forEach(c=>{const id=normalizeCustomerIdentity(c.id);const derivedDebit=(invoiceDebit.get(id)||0);const derivedPayments=(paymentCredit.get(id)||0);const derivedLogs=(logPayments.get(id)||0);if(derivedDebit||derivedPayments||derivedLogs){const current=Number(c.balance)||0;const movement=current===0?derivedDebit-derivedPayments:current; if(Math.abs(current-movement)>0.005 && !c.balanceDerivedFromMovements){c.balance=movement;c.balanceDerivedFromMovements=true;c.updatedAt=new Date().toISOString();changed++;} if(derivedLogs){c.totalAccountPayments=derivedLogs;c.updatedAt=c.updatedAt||new Date().toISOString();}}});
-                if(created||changed){
-                    customersData=base;
-                    if(window.Cashtop?.setRawCompanyDataset) window.Cashtop.setRawCompanyDataset('cashtop_customers',JSON.stringify(base),{action:'customer-auto-hydrate',enqueue:false,audit:false});
-                    else localStorage.setItem('cashtop_customers',JSON.stringify(base));
-                    window.Cashtop?.enqueueSyncOperation?.('cashtop_customers',{forceReplace:true});
+
+                invoices.filter(x=>x&&x.status!=='draft'&&x.deleted!==true).forEach(inv=>{
+                    const c=ensure({id:inv.customerId,customerId:inv.customerId,name:inv.customer||inv.customerName,phone:inv.customerPhone,date:inv.date||inv.createdAt});
+                    if(c) touchMovementInfo(c,{debit:Number(inv.debt)||0});
+                });
+                vouchers.forEach(v=>{
+                    if(String(v?.relationType||'')!=='client')return;
+                    const c=ensure({id:v.relationId,name:v.relationName,phone:v.relationPhone,date:v.date||v.updatedAt});
+                    if(c){ const amount=Math.max(0,Number(v.amount)||0); String(v.type||'')==='قبض' ? touchMovementInfo(c,{credit:amount}) : touchMovementInfo(c,{debit:amount}); }
+                });
+                returns.forEach(r=>ensure({id:r.customerId,name:r.customerName||r.customer,phone:r.customerPhone,date:r.date||r.createdAt}));
+                accountLogs.filter(l=>String(l?.relationType||'')==='client').forEach(l=>{
+                    const c=ensure({id:l.relationId,name:l.relationName,phone:l.relationPhone,date:l.date||l.createdAt});
+                    if(c){
+                        const amount=Math.max(0,Number(l.baseAmount??l.amount)||0);
+                        if(String(l.sourceType||'')==='voucher' || String(l.type||'')==='إيداع') touchMovementInfo(c,{credit:amount});
+                    }
+                });
+
+                // احسب الرصيد فقط للعميل الذي أنشأناه في عملية الترحيل الحالية.
+                // العملاء المسجلون مسبقاً لا تُلمس أرصدتهم إطلاقاً.
+                autoCreatedIds.forEach(id=>{
+                    const c=byId.get(normalizeCustomerIdentity(id));
+                    const movement=movementInfoByCustomer.get(String(id));
+                    if(!c || !movement) return;
+                    c.balance=Number((movement.debit-movement.credit).toFixed(2));
+                    c.updatedAt=new Date().toISOString();
+                });
+
+                customersData=base;
+                if(created){
+                    if(window.Cashtop?.atomicSetItems){
+                        try {
+                            window.Cashtop.atomicSetItems({cashtop_customers:base},{label:'customer-one-time-movement-recovery',action:'customer-recovery'});
+                        } catch (_) {
+                            window.Cashtop?.setRawCompanyDataset?.('cashtop_customers',JSON.stringify(base),{action:'customer-one-time-movement-recovery',enqueue:false,audit:false});
+                            window.Cashtop?.enqueueSyncOperation?.('cashtop_customers',{forceReplace:true,touchedIds:[...autoCreatedIds]});
+                        }
+                    } else localStorage.setItem('cashtop_customers',JSON.stringify(base));
                     try{await window.Cashtop?.syncImportedData?.(['cashtop_customers']);}catch(_){}
-                } else customersData=readArray('cashtop_customers');
+                }
+                markCustomerMovementHydrationRun();
                 groupsData=readArray('cashtop_customer_groups');
                 runCustomerStep('hydrate table',renderTable);
-                window.dispatchEvent(new CustomEvent('cashtop:customers-hydrated',{detail:{created,changed,total:customersData.length,reason}}));
+                window.dispatchEvent(new CustomEvent('cashtop:customers-hydrated',{detail:{created,total:customersData.length,reason,oneTime:true}}));
             })().finally(()=>{customerHydrationPromise=null;});
             return customerHydrationPromise;
         }
@@ -1220,10 +1307,19 @@
                     });
                 }
 
-                // جميع المفاتيح التالية مدارة من Cashtop Core؛ كل كتابة تدخل طابور Turso الخاص بالشركة والفرع الحالي.
-                localStorage.setItem('cashtop_vouchers', JSON.stringify(vouchers));
-                localStorage.setItem('cashtop_funds_db_v4', JSON.stringify(funds));
-                localStorage.setItem('cashtop_customers', JSON.stringify(nextCustomers));
+                // احفظ الدفعة كعملية ذرّية واحدة: السند + الصندوق + العميل.
+                // نستخدم المفتاح القانوني cashtop_funds_db؛ v4 مجرد alias لنفس dataset.
+                if (window.Cashtop?.atomicSetItems) {
+                    window.Cashtop.atomicSetItems({
+                        cashtop_vouchers: vouchers,
+                        cashtop_funds_db: funds,
+                        cashtop_customers: nextCustomers
+                    }, { label: 'customer-payment', action: 'create' });
+                } else {
+                    localStorage.setItem('cashtop_vouchers', JSON.stringify(vouchers));
+                    localStorage.setItem('cashtop_funds_db', JSON.stringify(funds));
+                    localStorage.setItem('cashtop_customers', JSON.stringify(nextCustomers));
+                }
                 customersData = nextCustomers;
                 filterTable();
                 closeCustomerPaymentModal();
@@ -1232,7 +1328,10 @@
             } catch (error) {
                 customersData = originalCustomers;
                 console.error('[CASH TOP 2] customer payment:', error);
-                showToast('تعذر تسجيل الدفعة بالكامل. أعد المحاولة.', 'error');
+                const message = String(error?.message || '');
+                if (error?.code === 'CASHTOP_PLAN_LIMIT' || /وصلت خطة/.test(message)) showToast(message, 'error');
+                else if (error?.code === 'CASHTOP_FINANCIAL_GROUP_READ_ONLY') showToast(message, 'error');
+                else showToast('تعذر تسجيل الدفعة بالكامل. لم يتم اعتماد أي جزء منها. أعد المحاولة.', 'error');
             } finally {
                 customerPaymentBusy = false;
                 if (submit) submit.disabled = false;
@@ -1441,15 +1540,30 @@
         function deleteCustomer(id) {
             if(confirm("هل أنت متأكد من حذف هذا العميل؟")) {
                 const customerId = String(id);
-                customersData = customersData.filter(c => String(c?.id) !== customerId);
-                groupsData = groupsData.map(group => ({
+                const nextCustomers = customersData.filter(c => String(c?.id) !== customerId);
+                const nextGroups = groupsData.map(group => ({
                     ...group,
                     customerIds: (Array.isArray(group.customerIds) ? group.customerIds : []).map(String).filter(item => item !== customerId),
                     updatedAt: new Date().toISOString()
                 }));
-                localStorage.setItem('cashtop_customers', JSON.stringify(customersData));
-                localStorage.setItem('cashtop_customer_groups', JSON.stringify(groupsData));
-                renderTable();
+                try {
+                    if (window.Cashtop?.atomicSetItems) {
+                        window.Cashtop.atomicSetItems({
+                            cashtop_customers: nextCustomers,
+                            cashtop_customer_groups: nextGroups
+                        }, {label:'delete-customer', action:'delete-customer'});
+                    } else {
+                        localStorage.setItem('cashtop_customers', JSON.stringify(nextCustomers));
+                        localStorage.setItem('cashtop_customer_groups', JSON.stringify(nextGroups));
+                    }
+                    customersData = nextCustomers;
+                    groupsData = nextGroups;
+                    renderTable();
+                    showToast('تم حذف العميل، ولن تتم إعادته تلقائياً من الفواتير أو السندات.', 'success');
+                } catch (error) {
+                    console.error('[CASH TOP R130] delete customer:', error);
+                    showToast('تعذر حذف العميل. أعد المحاولة.', 'error');
+                }
             }
         }
 
@@ -1984,7 +2098,7 @@
 
 <script type="application/json" id="ctEmbeddedShellMarker">{"embedded":true,"page":"customers.html"}</script>
 <script src="cashtop-export.js?v=100"></script>
-<script src="cashtop-record-pager.js?v=127"></script>
+<script src="cashtop-record-pager.js?v=130"></script>
 </body>
 
 </html>

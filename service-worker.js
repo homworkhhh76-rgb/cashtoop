@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v126-r108-pager-license-watch';
+const CACHE_VERSION = 'v130-one-time-customer-recovery';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = 'cash-top-2-remote-static-persistent-v1';
 
