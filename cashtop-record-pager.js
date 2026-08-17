@@ -142,7 +142,7 @@
   }
 
   function remoteCacheKey(page) {
-    return `ct_r125_register_page::${scopeId()}::${config.key}::${Math.max(1, Number(page || 1))}`;
+    return `ct_r127_register_page::${scopeId()}::${config.key}::${Math.max(1, Number(page || 1))}`;
   }
 
   function readRemotePageCache(page) {

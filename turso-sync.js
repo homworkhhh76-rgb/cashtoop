@@ -77,6 +77,9 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   let syncing = false;
   let scheduledSync = null;
   let pollTimer = null;
+  let licenseWatchTimer = null;
+  let licenseWatchInFlight = false;
+  let licenseLogoutTriggered = false;
   let selectedLocation = null;
   let authFallbackReason = '';
   let backgroundPullTimer = null;
@@ -966,6 +969,93 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     if (mergedRaw === String(localRaw || '')) return false;
     core.rawSet(core.namespaceKey(key), mergedRaw);
     return true;
+  }
+
+
+  // R126 — مراقبة مستقلة وخفيفة للمفتاح من السحابة.
+  // لا تنتظر مزامنة السجلات ولا تسحب أي جدول: تقرأ cashtop_company_access فقط.
+  function remoteLicenseReason(rawPayload) {
+    if (rawPayload == null) return 'deleted';
+    const normalized = normalizeRemotePayload(rawPayload);
+    if (normalized.deleted) return 'deleted';
+    const access = decodeDatasetObject(rawPayload);
+    if (!Object.keys(access).length) return 'deleted';
+    const remoteTenant = sanitizeSegment(access.tenantId || access.companyId || canonicalCompanyId);
+    const remoteKey = String(access.companyKey || '').trim().toUpperCase();
+    if (remoteTenant && remoteTenant !== canonicalCompanyId) return 'tenant-mismatch';
+    if (normalizedCompanyKey && remoteKey && remoteKey !== normalizedCompanyKey) return 'tenant-mismatch';
+    if (access.deleted === true || String(access.status || '').trim().toLowerCase() === 'deleted') return 'deleted';
+    const status = String(access.status || 'active').trim().toLowerCase();
+    if (status && status !== 'active') return 'stopped';
+    const endAt = access.endAt ? new Date(access.endAt).getTime() : 0;
+    if (endAt && Number.isFinite(endAt) && core.trustedNowMs?.(core.getSession()) >= endAt) return 'expired';
+    if (access.manager && access.manager.active === false) return 'user-disabled';
+    return '';
+  }
+
+  async function checkLicenseCloudNow(options = {}) {
+    if (licenseLogoutTriggered || licenseWatchInFlight) return { skipped: true };
+    const currentSession = core.getSession?.();
+    if (!currentSession) return { skipped: true, noSession: true };
+    if (document.hidden && options.force !== true) return { skipped: true, hidden: true };
+    if (navigator.onLine === false && options.force !== true) return { skipped: true, offline: true };
+    licenseWatchInFlight = true;
+    const startedAt = Date.now();
+    try {
+      const location = exactLocation();
+      let token = '';
+      let rawAccess;
+      try {
+        rawAccess = await readDatasetLocation(location, 'cashtop_company_access', '', { fresh: true });
+      } catch (error) {
+        if (!isPermissionError(error)) throw error;
+        token = await requireDatabaseToken();
+        rawAccess = await readDatasetLocation(location, 'cashtop_company_access', token, { fresh: true });
+      }
+
+      const reason = remoteLicenseReason(rawAccess);
+      if (reason) {
+        licenseLogoutTriggered = true;
+        // إذا كانت العقدة ما زالت موجودة (إيقاف/حذف ناعم) نحدّث النسخة المحلية
+        // أولاً حتى لا تعيد أي صفحة أخرى اعتبار المفتاح نشطاً أثناء الخروج.
+        if (rawAccess != null) {
+          try { mergeAdminControlledAccess(rawAccess); } catch (_) {}
+          try { window.dispatchEvent(new CustomEvent('cashtop:remote-applied', { detail: { key: 'cashtop_company_access', source: 'license-watch' } })); } catch (_) {}
+        }
+        writeState({ licenseCheckedAt: Date.now(), licenseStatus: reason, licenseWatchMs: Date.now() - startedAt });
+        await core.logout(reason);
+        return { ok: false, reason };
+      }
+
+      const changed = mergeAdminControlledAccess(rawAccess);
+      writeState({ licenseCheckedAt: Date.now(), licenseStatus: 'active', licenseWatchMs: Date.now() - startedAt });
+      if (changed) {
+        try { window.dispatchEvent(new CustomEvent('cashtop:remote-applied', { detail: { key: 'cashtop_company_access', source: 'license-watch' } })); } catch (_) {}
+      }
+      const localResult = core.validateSessionLocal?.(core.getSession?.());
+      if (localResult && localResult.ok === false) {
+        licenseLogoutTriggered = true;
+        await core.logout(localResult.reason || 'auth-required');
+        return { ok: false, reason: localResult.reason || 'auth-required' };
+      }
+      return { ok: true };
+    } catch (error) {
+      // أخطاء الشبكة أو المصادقة المؤقتة لا تسجل خروج المستخدم. الخروج يحدث فقط
+      // عندما تصل إجابة صريحة من مسار الشركة بأن المفتاح توقف/حذف/انتهى.
+      writeState({ licenseCheckedAt: Date.now(), licenseWatchError: String(error?.message || error || ''), licenseWatchMs: Date.now() - startedAt });
+      return { ok: false, transient: true, error };
+    } finally {
+      licenseWatchInFlight = false;
+    }
+  }
+
+  function startLicenseCloudWatch() {
+    if (licenseWatchTimer || licenseLogoutTriggered) return;
+    // فحص مباشر عند فتح أي صفحة، ثم كل 2.5 ثانية ما دامت الصفحة ظاهرة.
+    setTimeout(() => checkLicenseCloudNow({ force: true }).catch(() => null), 0);
+    licenseWatchTimer = setInterval(() => {
+      if (!document.hidden) checkLicenseCloudNow().catch(() => null);
+    }, 2500);
   }
 
   function pendingForKey(key) {
@@ -2349,6 +2439,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     checkRemoteAndPull,
     probeConnectivity,
     recoverConnectivityAndSync,
+    checkLicenseCloudNow,
     resetSyncRuntime,
     signOut,
     getState: readState,
@@ -2427,6 +2518,15 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   window.addEventListener('pageshow', resumeSyncRuntime, { passive:true });
   navigator.connection?.addEventListener?.('change', resumeSyncRuntime);
 
+  // المفتاح له مراقبة خاصة مستقلة عن مزامنة السجلات الثقيلة.
+  startLicenseCloudWatch();
+  window.addEventListener('focus', () => checkLicenseCloudNow({ force:true }).catch(() => null), { passive:true });
+  window.addEventListener('pageshow', () => checkLicenseCloudNow({ force:true }).catch(() => null), { passive:true });
+  window.addEventListener('online', () => checkLicenseCloudNow({ force:true }).catch(() => null), { passive:true });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') checkLicenseCloudNow({ force:true }).catch(() => null);
+  }, { passive:true });
+
   window.addEventListener('pagehide', event => {
     clearTimeout(scheduledSync);
     clearTimeout(backgroundPullTimer);
@@ -2436,6 +2536,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     // Keep the watchdog interval alive in that case; pageshow will immediately
     // resume pending upload / remote revision checking.
     if (!event.persisted && pollTimer) clearInterval(pollTimer);
+    if (!event.persisted && licenseWatchTimer) { clearInterval(licenseWatchTimer); licenseWatchTimer = null; }
   });
 
   if (AUDIT_CLOUD_ENABLED) {

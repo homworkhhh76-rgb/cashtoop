@@ -4005,7 +4005,12 @@
     if (!location.pathname.endsWith(encodeURI('صفحة تسجيل الدخول.html'))) location.replace(target);
   }
 
+  let logoutInProgress = false;
   async function logout(reason) {
+    if (logoutInProgress) return;
+    logoutInProgress = true;
+    const logoutReason = reason || 'logout';
+    const forcedLicenseLogout = ['expired','stopped','deleted','user-disabled','auth-required','device-limit','tenant-mismatch'].includes(String(logoutReason));
     // العمليات المعلقة تخص الشركة لا جلسة التبويب؛ نحفظ نسخة IndexedDB قبل
     // تسجيل الخروج حتى تبقى جاهزة للمزامنة عند الدخول مجدداً أو عودة الإنترنت.
     try { await backupSyncQueue(getSyncQueue()); } catch (_) {}
@@ -4015,16 +4020,38 @@
       }
     } catch (_) { /* local session is still cleared */ }
     const companyId = companyIdFromSession();
-    const currentSession = getSession();
     try {
       sessionStorage.removeItem(`ct_turso_state::${encodeURIComponent(companyId)}`);
       sessionStorage.removeItem(TAB_SESSION_KEY);
+      // مفاتيح التصفح المؤقتة لا يجوز أن تبقي جلسة مصادقة حية بعد إيقاف المفتاح.
+      for (let i = sessionStorage.length - 1; i >= 0; i -= 1) {
+        const key = sessionStorage.key(i);
+        if (key && /^(?:cashtop_tab_session_v2|ct_auth_|ct_turso_auth|ct_license_)/.test(key)) sessionStorage.removeItem(key);
+      }
     } catch (_) {}
     try { rawRemove(PERSISTENT_SESSION_KEY); } catch (_) {}
+    if (forcedLicenseLogout) {
+      try { rawRemove('cashtop_remembered_key'); } catch (_) {}
+    }
+    // R126: لا نتحول لصفحة الدخول قبل أن تُحذف نسخة الجلسة المتينة من IndexedDB.
+    // في الإصدارات السابقة كان التحويل السريع يسمح لصفحة الدخول أن تستعيد جلسة قديمة
+    // من IndexedDB بعد أن تم حذف مرآتها فقط من localStorage.
+    try { await flushDurableLocalWrites(); } catch (_) {}
+    try { await deleteDurableLocalKey(PERSISTENT_SESSION_KEY); } catch (_) {}
+    if (forcedLicenseLogout) {
+      try { await deleteDurableLocalKey('cashtop_remembered_key'); } catch (_) {}
+    }
+    try {
+      Storage.prototype.removeItem.call(localStorage, PERSISTENT_SESSION_KEY);
+      if (forcedLicenseLogout) Storage.prototype.removeItem.call(localStorage, 'cashtop_remembered_key');
+    } catch (_) {}
     try {
       if (String(window.name || '').startsWith(WINDOW_SESSION_PREFIX)) window.name = '';
     } catch (_) {}
-    redirectToLogin(reason || 'logout');
+    if (forcedLicenseLogout) {
+      try { channel?.postMessage?.({ type:'license-invalidated', reason:logoutReason, companyId, at:Date.now() }); } catch (_) {}
+    }
+    redirectToLogin(logoutReason);
   }
 
   function ensureAuthenticated() {
@@ -5117,7 +5144,7 @@
         return;
       }
       const script = document.createElement('script');
-      script.src = 'turso-sync.js?v=78';
+      script.src = 'turso-sync.js?v=126';
       script.async = true;
       script.dataset.ctSyncRuntime = 'classic';
       script.onload = () => resolve(Boolean(window.CashtopTurso?.syncAll));
@@ -5246,7 +5273,19 @@
     };
   }
 
-  function exportBackup() {
+  async function exportBackup() {
+    // R127: النسخة الاحتياطية مستقلة تماماً عن الـPager. قبل إنشاء الملف
+    // نسحب كامل الـdatasets من السحابة إلى الجهاز، بما فيها السجلات التي لم
+    // تظهر في صفحات 1/2/3...، ثم نبني النسخة من كامل المخزن.
+    try {
+      if (navigator.onLine !== false && window.CashtopTurso?.pullAllWithRetry) {
+        await window.CashtopTurso.pullAllWithRetry({ force: true, concurrency: 6, silentProgress: true, reason: 'full-backup' });
+      } else if (navigator.onLine !== false && window.CashtopTurso?.pullAll) {
+        await window.CashtopTurso.pullAll({ force: true, concurrency: 6 });
+      }
+    } catch (error) {
+      console.warn('[CASH TOP R127] full backup pull:', error);
+    }
     const backup = getAllCompanyData();
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -5255,7 +5294,7 @@
     a.download = `CASH_TOP_${backup.companyName || backup.companyId || 'company'}_${new Date().toISOString().slice(0, 10)}.backup.json`;
     a.click();
     URL.revokeObjectURL(url);
-    showToast('تم إنشاء النسخة الاحتياطية بنجاح.', 'success');
+    showToast('تم إنشاء النسخة الاحتياطية من كامل السجلات، وليس من صفحات العرض.', 'success');
   }
 
   function isBackupImportEnabled() {
@@ -6729,6 +6768,10 @@
     if (channel) {
       channel.addEventListener('message', event => {
         const data = event.data || {};
+        if (data.type === 'license-invalidated' && (!data.companyId || data.companyId === companyIdFromSession())) {
+          logout(data.reason || 'stopped');
+          return;
+        }
         if (data.type === 'license-change') {
           const result = validateSessionLocal(getSession());
           if (!result.ok) logout(result.reason);
