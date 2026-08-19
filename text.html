@@ -3,153 +3,175 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة إشعارات Cash Top</title>
+    <title>مشغل فيديو يوتيوب احترافي</title>
     <style>
+        :root {
+            --primary-color: #ff0000;
+            --primary-hover: #cc0000;
+            --bg-color: #f4f7f6;
+            --text-color: #333;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f0f2f5;
-            margin: 0;
-            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             display: flex;
             justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
         }
-        .dashboard {
-            background: #fff;
+
+        .container {
+            background-color: #fff;
             padding: 30px;
             border-radius: 12px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
             width: 100%;
-            max-width: 500px;
-        }
-        .dashboard h2 {
+            max-width: 800px;
             text-align: center;
-            color: #0044cc;
+        }
+
+        h2 {
+            margin-top: 0;
+            color: #2c3e50;
             margin-bottom: 20px;
         }
-        .form-group {
-            margin-bottom: 15px;
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
         }
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #333;
-        }
-        .form-group input[type="text"], .form-group input[type="file"] {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            box-sizing: border-box;
-        }
-        .send-btn {
-            width: 100%;
+
+        .input-group input {
+            flex: 1;
             padding: 15px;
-            font-size: 18px;
-            color: #fff;
-            background-color: #0044cc;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+            min-width: 200px;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .input-group button {
+            padding: 15px 30px;
+            background-color: var(--primary-color);
+            color: white;
             border: none;
             border-radius: 8px;
-            cursor: pointer;
+            font-size: 16px;
             font-weight: bold;
-            margin-top: 20px;
-            transition: background-color 0.3s;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+            white-space: nowrap;
         }
-        .send-btn:hover {
-            background-color: #003399;
+
+        .input-group button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .input-group button:active {
+            transform: scale(0.98);
+        }
+
+        .error-msg {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            display: none;
+            font-weight: bold;
+        }
+
+        /* حاوية الفيديو المتجاوبة (16:9 Aspect Ratio) */
+        .video-wrapper {
+            position: relative;
+            padding-bottom: 56.25%; /* نسبة العرض إلى الارتفاع 16:9 */
+            height: 0;
+            overflow: hidden;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            background-color: #000;
+            display: none; /* مخفي افتراضياً حتى يتم جلب الفيديو */
+        }
+
+        .video-wrapper iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
         }
     </style>
 </head>
 <body>
 
-    <div class="dashboard">
-        <h2>إرسال إشعار مخصص</h2>
+    <div class="container">
+        <h2>مشغل فيديو يوتيوب</h2>
         
-        <div class="form-group">
-            <label>عنوان الإشعار:</label>
-            <input type="text" id="notifTitle" placeholder="مثال: خصم جديد في المتجر!" value="تحديث جديد من Cash Top">
+        <div class="input-group">
+            <input type="text" id="youtubeUrl" placeholder="ضع رابط فيديو يوتيوب هنا..." autocomplete="off">
+            <button onclick="loadVideo()">عرض الفيديو</button>
         </div>
 
-        <div class="form-group">
-            <label>نص الإشعار:</label>
-            <input type="text" id="notifBody" placeholder="اكتب تفاصيل الإشعار هنا..." value="تم إضافة ميزات جديدة للنظام، اكتشفها الآن.">
-        </div>
+        <div id="errorMsg" class="error-msg">الرابط غير صحيح، يرجى التأكد من إدخال رابط يوتيوب صالح.</div>
 
-        <div class="form-group">
-            <label>الأيقونة المصغرة (لتبديل حرف الـ C):</label>
-            <input type="file" id="notifIcon" accept="image/*">
+        <div class="video-wrapper" id="videoWrapper">
+            <iframe id="youtubePlayer" src="" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
         </div>
-
-        <div class="form-group">
-            <label>الصورة الكبيرة داخل الإشعار (اختياري):</label>
-            <input type="file" id="notifImage" accept="image/*">
-        </div>
-
-        <div class="form-group">
-            <label>الرابط عند الضغط على الإشعار:</label>
-            <input type="text" id="mainUrl" placeholder="https://..." value="https://google.com">
-        </div>
-
-        <button class="send-btn" onclick="buildAndSendNotification()">إطلاق الإشعار 🚀</button>
     </div>
 
     <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js')
-            .then(() => console.log("تم تسجيل ملف sw.js بنجاح"))
-            .catch(err => console.error("فشل تسجيل sw.js:", err));
-        }
+        function loadVideo() {
+            const urlInput = document.getElementById('youtubeUrl').value.trim();
+            const videoWrapper = document.getElementById('videoWrapper');
+            const player = document.getElementById('youtubePlayer');
+            const errorMsg = document.getElementById('errorMsg');
 
-        async function buildAndSendNotification() {
-            if (!('Notification' in window)) {
-                alert("متصفحك لا يدعم الإشعارات.");
+            // إخفاء رسالة الخطأ في البداية
+            errorMsg.style.display = 'none';
+
+            if (!urlInput) {
                 return;
             }
 
-            let permission = Notification.permission;
-            if (permission === 'default' || permission === 'prompt') {
-                permission = await Notification.requestPermission();
-            }
+            // استخراج معرف الفيديو (Video ID) من الروابط المختلفة ليوتيوب
+            const videoId = extractVideoID(urlInput);
 
-            if (permission === 'denied') {
-                alert("لقد قمت برفض الإشعارات مسبقاً. يرجى تفعيلها من إعدادات المتصفح.");
-                return;
-            }
-
-            const title = document.getElementById('notifTitle').value || 'إشعار جديد';
-            const body = document.getElementById('notifBody').value || '';
-            const mainUrl = document.getElementById('mainUrl').value;
-            
-            // معالجة الأيقونة المصغرة (لإزالة حرف C)
-            const iconFile = document.getElementById('notifIcon').files[0];
-            let iconUrl = 'https://cdn-icons-png.flaticon.com/512/843/843260.png'; // أيقونة افتراضية في حال لم ترفع صورة
-            if (iconFile) {
-                iconUrl = URL.createObjectURL(iconFile);
-            }
-
-            // معالجة الصورة الكبيرة
-            const imageFile = document.getElementById('notifImage').files[0];
-            let imageUrl = null;
-            if (imageFile) {
-                imageUrl = URL.createObjectURL(imageFile);
-            }
-
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.ready.then(registration => {
-                    registration.showNotification(title, {
-                        body: body,
-                        icon: iconUrl, // هنا يتم تحديد الأيقونة بدلاً من حرف C
-                        badge: iconUrl,
-                        image: imageUrl,
-                        data: {
-                            url: mainUrl
-                        }
-                    }).catch(err => alert("حدث خطأ أثناء عرض الإشعار: " + err));
-                });
+            if (videoId) {
+                // تحديث مصدر الإطار (iframe) وإظهاره
+                player.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+                videoWrapper.style.display = 'block';
             } else {
-                alert("Service Worker غير مدعوم في متصفحك.");
+                // إخفاء الفيديو وإظهار رسالة الخطأ
+                videoWrapper.style.display = 'none';
+                player.src = '';
+                errorMsg.style.display = 'block';
             }
         }
+
+        // دالة لاستخراج المعرف الخاص بالفيديو من أي صيغة رابط ليوتيوب
+        function extractVideoID(url) {
+            const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[7].length === 11) ? match[7] : false;
+        }
+
+        // دعم الضغط على زر Enter لتشغيل الفيديو
+        document.getElementById('youtubeUrl').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                loadVideo();
+            }
+        });
     </script>
+
 </body>
 </html>
