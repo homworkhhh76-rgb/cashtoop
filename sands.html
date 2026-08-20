@@ -118,7 +118,8 @@
         .select-dropdown-list { position: absolute; top: 100%; right: 0; left: 0; background: #fff; border: 2px solid #e2e8f0; border-top: none; border-radius: 0 0 6px 6px; max-height: 200px; overflow-y: auto; z-index: 999; display: none; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
         .dropdown-search-inside { padding: 8px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 2; }
         .dropdown-search-inside input { width: 100%; padding: 8px; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; }
-        .select-option-item { padding: 10px 15px; font-size: 13px; cursor: pointer; text-align: right; border-bottom: 1px solid #f1f5f9; font-weight: 600;}
+        .select-option-item { padding: 10px 15px; font-size: 13px; cursor: pointer; text-align: right; border-bottom: 1px solid #f1f5f9; font-weight: 600; pointer-events: auto !important; position: relative; z-index: 1; user-select: none; -webkit-user-select: none;}
+        .select-dropdown-list, .select-dropdown-list * { pointer-events: auto; }
         .select-option-item:hover { background-color: #0284c7; color: white; }
         
         .conditional-row { display: none; }
@@ -806,6 +807,31 @@
             });
         }
 
+        function commitCustomSelectOption(wrapper, option) {
+            if (!wrapper || !option) return;
+            const input = wrapper.querySelector('.search-select-input');
+            const hidden = wrapper.querySelector('.hidden-select-value');
+            const list = wrapper.querySelector('.select-dropdown-list');
+            const optionValue = option.getAttribute('data-value') || '';
+
+            if (input?.id === 'vAccountInput' && optionValue === VOUCHER_MULTI_PAYMENT_VALUE) {
+                const ok = openVoucherMultiPayment();
+                if (!ok) {
+                    if (hidden) hidden.value = '';
+                    if (input) input.value = '';
+                } else {
+                    option.dataset.ctPointerSelected = '1';
+                }
+                if (list) list.style.display = 'none';
+                return;
+            }
+
+            if (input) input.value = option.textContent.trim();
+            if (input?.id === 'vAccountInput') voucherMultiPayments = [];
+            if (hidden) hidden.value = optionValue;
+            if (list) list.style.display = 'none';
+        }
+
         function initCustomSelects() {
             document.querySelectorAll('.custom-select-wrapper').forEach(wrapper => {
                 const input = wrapper.querySelector('.search-select-input');
@@ -820,7 +846,7 @@
                         list.style.display = list.style.display === 'block' ? 'none' : 'block';
                         if (list.style.display === 'block' && searchInput) {
                             searchInput.value = '';
-                            list.querySelectorAll('.select-option-item').forEach(item => item.style.display = 'block');
+                            list.querySelectorAll('.select-option-item').forEach(item => { item.style.display = 'block'; item.dataset.ctPointerSelected = '0'; });
                             searchInput.focus({ preventScroll: true });
                         }
                     });
@@ -837,29 +863,40 @@
                     searchInput.dataset.ctSelectSearchBound = 'true';
                 }
 
+                // Laptop / mouse fix: handle the option on pointerdown as well as click.
+                // This avoids the selection being swallowed by another document-level click
+                // handler while the custom dropdown is open inside the scrollable modal.
+                if (wrapper.dataset.ctSelectPointerBound !== 'true') {
+                    wrapper.addEventListener('pointerdown', function(e) {
+                        const option = e.target.closest?.('.select-option-item');
+                        if (!option || !wrapper.contains(option)) return;
+                        e.preventDefault();
+                        e.stopPropagation();
+                        option.dataset.ctPointerSelected = '1';
+                        commitCustomSelectOption(wrapper, option);
+                    });
+                    wrapper.dataset.ctSelectPointerBound = 'true';
+                }
+
                 if (wrapper.dataset.ctSelectBound !== 'true') {
                     wrapper.addEventListener('click', function(e) {
                         const option = e.target.closest?.('.select-option-item');
                         if (!option || !wrapper.contains(option)) return;
+                        e.preventDefault();
                         e.stopPropagation();
-                        const visibleInput = wrapper.querySelector('.search-select-input');
-                        if (visibleInput) visibleInput.value = option.textContent;
-                        const hidden = wrapper.querySelector('.hidden-select-value');
-                        const optionValue = option.getAttribute('data-value') || '';
-                        if (visibleInput?.id === 'vAccountInput' && optionValue === VOUCHER_MULTI_PAYMENT_VALUE) {
-                            if (!openVoucherMultiPayment()) { if (hidden) hidden.value=''; if (visibleInput) visibleInput.value=''; }
-                            list.style.display='none'; return;
+                        if (option.dataset.ctPointerSelected === '1') {
+                            option.dataset.ctPointerSelected = '0';
+                            return;
                         }
-                        if (visibleInput?.id === 'vAccountInput') voucherMultiPayments=[];
-                        if (hidden) hidden.value = optionValue;
-                        list.style.display = 'none';
+                        commitCustomSelectOption(wrapper, option);
                     });
                     wrapper.dataset.ctSelectBound = 'true';
                 }
             });
 
             if (document.documentElement.dataset.ctSelectDocumentBound !== 'true') {
-                document.addEventListener('click', () => {
+                document.addEventListener('click', (event) => {
+                    if (event.target?.closest?.('.custom-select-wrapper')) return;
                     document.querySelectorAll('.select-dropdown-list').forEach(list => list.style.display = 'none');
                 });
                 document.documentElement.dataset.ctSelectDocumentBound = 'true';
