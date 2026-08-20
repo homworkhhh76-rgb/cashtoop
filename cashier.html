@@ -18,6 +18,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
+        .invoice-notes-date-row { display:grid; grid-template-columns:minmax(0,1fr) 220px; gap:12px; align-items:end; }
+        @media (max-width: 700px) { .invoice-notes-date-row { grid-template-columns:1fr; gap:8px; } }
+
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
         body { background-color: #f4f6f9; padding: 15px; padding-bottom: 112px; color: #333; overflow-x: hidden; }
 
@@ -478,7 +481,16 @@
                         </select>
                     </div>
                 </div>
-                <div class="form-group" style="margin-top:10px;"><label>ملاحظات الفاتورة</label><input type="text" id="invoiceNotesInput" class="form-control" placeholder="ملاحظات إضافية..."></div>
+                <div class="invoice-notes-date-row" style="margin-top:10px;">
+                    <div class="form-group">
+                        <label>ملاحظات الفاتورة</label>
+                        <input type="text" id="invoiceNotesInput" class="form-control" placeholder="ملاحظات إضافية...">
+                    </div>
+                    <div class="form-group">
+                        <label for="invoiceDateInput"><i class="fa-regular fa-calendar"></i> تاريخ الفاتورة</label>
+                        <input type="date" id="invoiceDateInput" class="form-control" aria-label="تاريخ فاتورة المبيعات">
+                    </div>
+                </div>
                 
                 <!-- إجماليات الموبايل -->
                 <div class="mobile-summary-container">
@@ -2290,6 +2302,7 @@
             document.getElementById('customerNameInput').value = '';
             document.getElementById('customerPhoneInput').value = '';
             document.getElementById('invoiceNotesInput').value = '';
+            setCurrentDate();
             document.getElementById('mobile-badge').innerText = '0';
             renderBasket(); // التفريغ يرجع المخزون الوهمي
         }
@@ -2757,6 +2770,7 @@
             document.getElementById('customerNameInput').value = '';
             document.getElementById('customerPhoneInput').value = '';
             document.getElementById('invoiceNotesInput').value = '';
+            setCurrentDate();
             document.getElementById('mobile-badge').innerText = '0';
             
             renderBasket(); 
@@ -2868,7 +2882,7 @@
             return {
                 id: currentlyEditingInvoiceId || `INV_${Date.now()}`,
                 status: status,
-                date: new Date().toISOString(),
+                date: getInvoiceDateISOFromInput(),
                 createdAt: editingOriginalInvoice?.createdAt || editingOriginalInvoice?.date || new Date().toISOString(),
                 savedAt: new Date().toISOString(),
                 customer: customerName,
@@ -3032,6 +3046,7 @@
                 document.getElementById('customerNameInput').value = inv.customer === 'عميل نقدي' ? '' : inv.customer;
                 document.getElementById('customerPhoneInput').value = inv.phone || '';
                 document.getElementById('invoiceNotesInput').value = inv.notes || '';
+                setInvoiceDateInput(inv.date || inv.createdAt || new Date().toISOString());
                 cashierTaxMode = inv.taxMode || (inv.taxId ? `tax:${inv.taxId}` : 'default');
                 cashierTaxName = inv.taxName || '';
                 cashierTaxRate = Number(inv.taxRate || 0);
@@ -3272,12 +3287,41 @@
             });
         }
 
-        function setCurrentDate() {
-            const field = document.getElementById('invoiceCurrentDate');
+        function localDateInputValue(value) {
+            const date = value ? new Date(value) : new Date();
+            if (!Number.isFinite(date.getTime())) return localDateInputValue();
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function setInvoiceDateInput(value = null) {
+            const field = document.getElementById('invoiceDateInput');
             if (!field) return;
-            const update = () => { if (field.isConnected) field.value = new Date().toLocaleString('en-GB'); };
-            update();
-            if (!window.__cashTopCashierClock) window.__cashTopCashierClock = setInterval(update, 60000);
+            field.value = localDateInputValue(value);
+        }
+
+        function getInvoiceDateISOFromInput() {
+            const field = document.getElementById('invoiceDateInput');
+            const selected = String(field?.value || '').trim();
+            const originalDate = editingOriginalInvoice?.date || editingOriginalInvoice?.createdAt || '';
+
+            // عند التعديل، إذا لم يغيّر المستخدم التاريخ نحافظ على التاريخ الأصلي والوقت الأصلي.
+            if (selected && originalDate && localDateInputValue(originalDate) === selected) return originalDate;
+
+            // عند إنشاء فاتورة أو اختيار يوم مختلف، خزّن اليوم المحدد مع الوقت المحلي الحالي.
+            const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(selected);
+            if (!match) return new Date().toISOString();
+            const now = new Date();
+            const chosen = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+            return Number.isFinite(chosen.getTime()) ? chosen.toISOString() : new Date().toISOString();
+        }
+
+        function setCurrentDate() {
+            const field = document.getElementById('invoiceDateInput');
+            if (!field) return;
+            if (!currentlyEditingInvoiceId) setInvoiceDateInput();
         }
         
         function setupSwipeGestures() {
