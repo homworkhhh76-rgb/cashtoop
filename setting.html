@@ -360,6 +360,14 @@
                     </div>
                     
                     <div class="toggle-wrapper">
+                        <span class="toggle-label-text">بيع بالوحدة الأكبر في الكاشير</span>
+                        <label class="switch">
+                            <input type="checkbox" id="sysSaleByLargestUnitToggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="toggle-wrapper">
                         <span class="toggle-label-text">تعديل الكمية حسب السعر</span>
                         <label class="switch">
                             <input type="checkbox" id="sysQtyByPriceToggle">
@@ -577,6 +585,7 @@
                 const accountingSelect = document.getElementById('sysInventoryAccountingMethod');
                 if (accountingSelect) { accountingSelect.value = inventoryMethod; window.CashtopMulti?.refreshEnhancedSelect?.(accountingSelect); }
                 document.getElementById('sysQtyByPriceToggle').checked = sysSettings.qtyByPrice === true;
+                document.getElementById('sysSaleByLargestUnitToggle').checked = sysSettings.saleByLargestUnit === true;
                 document.getElementById('sysFractionQtyToggle').checked = sysSettings.allowFractionQty !== false;
                 document.getElementById('sysRoundInvoicePrintToggle').checked = sysSettings.roundInvoicePrintTotals === true;
                 document.getElementById('sysQuantityStep').value = Number(sysSettings.quantityStep || 0.001);
@@ -963,6 +972,7 @@ function saveSystemSettings(event) {
                 profitRate: String(document.getElementById('sysProfitRate').value || '').trim() === '' ? (previousSettings.profitRate ?? 25) : Math.max(0, parseFloat(document.getElementById('sysProfitRate').value)),
                 inventoryAccountingMethod: ['fifo','lifo'].includes(String(document.getElementById('sysInventoryAccountingMethod')?.value || '').toLowerCase()) ? String(document.getElementById('sysInventoryAccountingMethod').value).toLowerCase() : 'default',
                 qtyByPrice: document.getElementById('sysQtyByPriceToggle').checked,
+                saleByLargestUnit: document.getElementById('sysSaleByLargestUnitToggle').checked,
                 allowFractionQty: document.getElementById('sysFractionQtyToggle').checked,
                 roundInvoicePrintTotals: document.getElementById('sysRoundInvoicePrintToggle')?.checked === true,
                 quantityStep: String(document.getElementById('sysQuantityStep').value || '').trim() === '' ? (previousSettings.quantityStep ?? null) : Math.max(0.000001, parseFloat(document.getElementById('sysQuantityStep').value)),

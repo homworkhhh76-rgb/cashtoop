@@ -57,6 +57,7 @@
         .item-row-top { display: flex; justify-content: space-between; align-items: center; gap:8px; }
         .basket-item-main { display:flex; align-items:center; gap:8px; min-width:0; flex:1; }
         /* المنتجات والسلة تستخدم أيقونة الصندوق فقط. */
+        .basket-item-visual img { width:100%; height:100%; object-fit:cover; display:block; border-radius:8px; }
         .basket-item-visual { width:44px; height:44px; flex:0 0 44px; border-radius:8px; overflow:hidden; background:#f0f8ff; display:flex; align-items:center; justify-content:center; color:#3c8dbc; font-size:17px; position:relative; }
         .item-name-badge { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width:0; }
         .item-title { font-weight: bold; font-size: 13px; overflow-wrap:anywhere; }
@@ -1041,6 +1042,11 @@
             const key = String(event.key || '').replace(/^.*::(cashtop_[^:]+)$/, '$1');
             if (['cashtop_product_categories','cashtop_products','cashtop_materials','cashtop_manufacturing_recipes','cashtop_customers','cashtop_customer_groups','cashtop_branches','cashtop_sales_agents','cashtop_funds_db','cashtop_settings'].includes(key)) refreshCashierDataFromStorage(key);
         });
+        window.addEventListener('cashtop:products-updated', event => {
+            if (Array.isArray(event.detail?.products)) productsData = event.detail.products;
+            else productsData = readArray('cashtop_products');
+            runCashierStep('live product image update', () => { renderProductsGrid(); renderBasket(); });
+        });
         window.addEventListener('cashtop:remote-applied', event => {
             if (['cashtop_product_categories','cashtop_products','cashtop_materials','cashtop_manufacturing_recipes','cashtop_customers','cashtop_customer_groups','cashtop_branches','cashtop_sales_agents','cashtop_funds_db','cashtop_settings'].includes(event.detail?.key)) refreshCashierDataFromStorage(event.detail.key);
         });
@@ -1701,6 +1707,27 @@
                    customerGroupsData.find(g => Array.isArray(g.customerIds) && g.customerIds.map(String).includes(String(customer.id))) || null;
         }
 
+        function cashierUseLargestSaleUnit() {
+            try { return JSON.parse(localStorage.getItem('cashtop_settings') || '{}')?.saleByLargestUnit === true; } catch (_) { return false; }
+        }
+
+        function cashierProductImageUrl(product) {
+            // الأولوية للنسخة المحلية المضغوطة، ثم الرابط الأصلي كاحتياط.
+            return String(product?.imageData ?? product?.imageUrl ?? product?.image ?? product?.photo ?? '').trim();
+        }
+
+        function normalizeCashierProductImage(product) {
+            if (!product || typeof product !== 'object') return '';
+            return cashierProductImageUrl(product);
+        }
+
+        function cashierProductVisualHtml(product, className='basket-product-image') {
+            const url = normalizeCashierProductImage(product);
+            if (!url) return `<div class="${className}"><i class="fa-solid fa-box"></i></div>`;
+            const safe = url.replace(/"/g,'&quot;');
+            return `<div class="${className}"><img src="${safe}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';"><i class="fa-solid fa-box" style="display:none;"></i></div>`;
+        }
+
         function getEffectiveProductPrice(product, unit = 'piece') {
             if (!product) return 0;
             const group = getCustomerGroup(selectedCustomer);
@@ -1881,7 +1908,8 @@
                     if (cashierProductCardState(current).isOutOfStock) return showToast('الكمية انتهت من المخزون!', 'error');
                     if (current.hasVariants) openVariantModal(current.id); else addToBasket(current.id);
                 });
-                card.innerHTML = `<div class="product-icon-box"><i class="fa-solid fa-box"></i></div><div class="product-item-title">${prod.name}</div>${isCompositeProduct(prod) ? '<div class="product-type-badge"><i class="fa-solid fa-cube"></i> غير متعدد</div>' : ''}<div class="product-item-price">${cashierBaseSymbol()} ${moneyDisplay(getEffectiveProductPrice(prod, 'piece'))}</div><div class="stock-text" data-cashier-stock="1" style="${state.stockStr ? '' : 'display:none'}">${state.stockStr}</div>`;
+                const displayUnitId = cashierUseLargestSaleUnit() ? cashierUnitChainForProduct(prod).slice(-1)[0]?.id : 'piece';
+                card.innerHTML = `${cashierProductVisualHtml(prod, 'product-icon-box')}<div class="product-item-title">${prod.name}</div>${isCompositeProduct(prod) ? '<div class="product-type-badge"><i class="fa-solid fa-cube"></i> غير متعدد</div>' : ''}<div class="product-item-price">${cashierBaseSymbol()} ${moneyDisplay(getEffectiveProductPrice(prod, displayUnitId || 'piece'))}</div><div class="stock-text" data-cashier-stock="1" style="${state.stockStr ? '' : 'display:none'}">${state.stockStr}</div>`;
                 return card;
             };
 
@@ -1984,24 +2012,18 @@
         // ==========================================
         function addToBasket(productId) {
             const product = productsData.find(p => String(p.id) === String(productId));
-            if (!product) { refreshCashierDataFromStorage('cashtop_products'); showToast('تعذر العثور على الصنف. تم تحديث قائمة المنتجات.', 'error'); return false; }
-            if (!representativeCanSeeProduct(product)) { showToast('هذا الصنف غير محمل ضمن عهدة المندوب.', 'error'); return false; }
+            if (!product) {
+                refreshCashierDataFromStorage('cashtop_products');
+                showToast('تعذر العثور على الصنف. تم تحديث قائمة المنتجات.', 'error');
+                return false;
+            }
+            if (!representativeCanSeeProduct(product)) {
+                showToast('هذا الصنف غير محمل ضمن عهدة المندوب.', 'error');
+                return false;
+            }
             const chain = cashierUnitChainForProduct(product);
-            const baseUnit = chain[0];
-            let avail = getAvailableStock(productId);
-            if (avail + 1e-9 < getQuantitySettings().step) { showToast('الكمية انتهت من المخزون!', 'error'); return; }
-            const existingItem = basketItems.find(item => String(item.id) === String(productId) && String(cashierNormalizeUnitId(product, item.selectedUnit)) === String(baseUnit.id) && !item.isCustom && !item.isVariant);
-            const itemPrice = getEffectiveProductPrice(product, baseUnit.id);
-            const incrementQty = normalizeQuantity(Math.min(1, avail));
-            if (existingItem) existingItem.qty = normalizeQuantity(Number(existingItem.qty || 0) + incrementQty);
-            else basketItems.push({
-                id: product.id, name: product.name, price: itemPrice, referencePrice: itemPrice, costPerPiece: Number(product.cost || 0), cost: product.cost, qty: incrementQty,
-                selectedUnit: baseUnit.id, unitName: chain[chain.length - 1]?.name || '', pieceName: baseUnit.name || 'قطعة',
-                piecesPerUnit: Number(chain[chain.length - 1]?.factorToBase || 1), unitChain: chain,
-                hasSaleUnit: chain.length > 1, isCustom: false, isVariant: false
-            });
-            renderBasket();
-            return true;
+            const defaultUnit = cashierUseLargestSaleUnit() ? (chain[chain.length - 1] || chain[0]) : chain[0];
+            return cashierAddToBasketByUnit(product.id, defaultUnit?.id || 'piece');
         }
 
         function handleQuickProductSubmit(e) {
@@ -2062,7 +2084,7 @@
                 itemDiv.innerHTML = `
                     <div class="item-row-top">
                         <div class="basket-item-main">
-                            <div class="basket-item-visual"><i class="fa-solid fa-box"></i></div>
+                            ${cashierProductVisualHtml(productsData.find(product => String(product?.id) === String(item.id)) || item, 'basket-item-visual')}
                             <div class="item-name-badge">
                                 ${unitSelectorHtml}
                                 <span class="item-title">${item.name}</span>

@@ -2499,7 +2499,7 @@
   function transformManagedRead(canonical, rawValue) {
     if (rawValue == null) return rawValue;
     if (canonical === 'cashtop_products') {
-      const projected = stripProductImageFieldsFromRows(safeJson(projectProducts(safeJson(rawValue, [])), []));
+      const projected = safeJson(projectProducts(safeJson(rawValue, [])), []);
       return JSON.stringify(sortNewestFirstRecords(projected));
     }
     if (BRANCH_SCOPED_ARRAY_KEYS.has(canonical)) {
@@ -2514,7 +2514,7 @@
   }
 
   function transformManagedWrite(canonical, oldRaw, value) {
-    if (canonical === 'cashtop_products') return stripProductImageFieldsRaw(mergeProducts(safeJson(oldRaw, []), safeJson(value, [])));
+    if (canonical === 'cashtop_products') return mergeProducts(safeJson(oldRaw, []), safeJson(value, []));
     if (BRANCH_SCOPED_ARRAY_KEYS.has(canonical)) {
       const merged = mergeBranchArray(safeJson(oldRaw, []), safeJson(value, []));
       return PRODUCT_IMAGE_HISTORY_KEYS.has(canonical) ? stripInvoiceItemImageFieldsRaw(merged) : merged;
@@ -5666,8 +5666,7 @@
       storageValue = JSON.stringify(mergeLosslessObjectDataset(canonical, localObject, remoteObject));
     }
 
-    if (canonical === 'cashtop_products' && value != null) storageValue = stripProductImageFieldsRaw(storageValue);
-    else if (PRODUCT_IMAGE_HISTORY_KEYS.has(canonical) && value != null) storageValue = stripInvoiceItemImageFieldsRaw(storageValue);
+    if (PRODUCT_IMAGE_HISTORY_KEYS.has(canonical) && value != null) storageValue = stripInvoiceItemImageFieldsRaw(storageValue);
 
     const mergedMeta = {
       ...previousMeta,

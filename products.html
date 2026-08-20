@@ -110,11 +110,17 @@
         .form-control:disabled { background-color: #f1f5f9; color: #94a3b8; }
 
         #pNameInput::-webkit-calendar-picker-indicator { display: none !important; -webkit-appearance: none !important; }
+        .product-name-image-wrap { position: relative; display:flex; align-items:center; gap:6px; }
+        .product-image-url-btn { width:34px; height:34px; border:1px solid #d2d6de; background:#fff; color:#605ca8; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; transition:.2s; }
+        .product-image-url-btn:hover { border-color:#605ca8; background:#f5f3ff; }
+        .product-image-preview-mini { width:30px; height:30px; border-radius:6px; object-fit:cover; border:1px solid #e5e7eb; display:none; flex:0 0 auto; }
+        .product-image-url-modal-box { max-width:520px; }
 
         .barcode-input-wrapper { display: flex; gap: 5px; width: 100%; }
         .btn-barcode-scan { background-color: #e2e8f0; border: 1px solid #ccc; padding: 0 14px; border-radius: 4px; cursor: pointer; color: #3b82f6; font-size: 15px; transition: 0.2s; }
         .btn-barcode-scan:hover { background-color: #cbd5e1; color: #1d4ed8; }
 
+        .product-record-thumb img { width:100%;height:100%;object-fit:cover;border-radius:8px;display:block; }
         .product-record-thumb { width:45px;height:45px;border-radius:8px;background:#f0f8ff;color:#3c8dbc;display:flex;align-items:center;justify-content:center;flex:0 0 45px;font-size:20px; }
         .product-name-with-thumb { display:flex;align-items:center;gap:9px;text-align:right; }
         .product-name-with-thumb .product-name-copy { min-width:0; }
@@ -154,7 +160,7 @@
         .modal-footer { display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #f4f4f4; padding-top: 15px; margin-top: 15px; }
         .btn-submit { background-color: #00a65a; color: white; border: none; padding: 10px 25px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600; transition: 0.3s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
         .btn-submit:hover { background-color: #008d4c; }
-        .btn-stage { background-color: #3b82f6; color: white; border: none; padding: 10px 25px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600; transition: 0.3s; display: none; align-items: center; justify-content: center; gap: 8px; }
+        .btn-stage { background-color: #3b82f6; color: white; border: none; padding: 10px 25px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600; transition: 0.3s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
         .btn-stage:hover { background-color: #2563eb; }
         .btn-cancel { background-color: #f4f4f4; color: #444; border: 1px solid #ddd; padding: 10px 25px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600; transition: 0.3s; text-align: center; }
         .btn-cancel:hover { background-color: #e2e8f0; }
@@ -473,6 +479,8 @@
             
             <form id="productForm">
                 <input type="hidden" id="editingId">
+                <input type="hidden" id="productImageUrlHidden">
+                <input type="hidden" id="productImageDataHidden">
                 
                 <div class="form-row full-width" id="multiProductToggleRow">
                     <div class="toggle-wrapper">
@@ -486,7 +494,11 @@
 
                 <div class="form-row">
                     <div class="form-group">
-                        <input type="text" class="form-control" required id="pNameInput" autocomplete="off">
+                        <div class="product-name-image-wrap">
+                            <input type="text" class="form-control" required id="pNameInput" autocomplete="off">
+                            <button type="button" class="product-image-url-btn" onclick="openProductImageUrlModal()" title="إضافة صورة المنتج من رابط"><i class="fa-solid fa-image"></i></button>
+                            <img id="productImageMiniPreview" class="product-image-preview-mini" alt="صورة المنتج" loading="lazy">
+                        </div>
                         <label for="pNameInput">اسم المنتج</label>
                     </div>
                     <div class="form-group">
@@ -674,6 +686,28 @@
     </div>
 
     <!-- النافذة المنبثقة 2: عرض تفاصيل المقاسات -->
+    <div class="modal-overlay" id="productImageUrlModal">
+        <div class="modal-box product-image-url-modal-box">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fa-solid fa-image" style="color:#605ca8;"></i> صورة المنتج</div>
+                <button class="modal-close" type="button" onclick="closeModal('productImageUrlModal')">&times;</button>
+            </div>
+            <div class="form-group">
+                <input type="url" class="form-control" id="productImageUrlInput" placeholder="https://example.com/product.jpg" dir="ltr" autocomplete="off">
+                <label for="productImageUrlInput">رابط صورة المنتج</label>
+                <small style="display:block;margin-top:7px;color:#64748b;line-height:1.8;">ضع رابط الصورة المباشر، وسيتم جلب الصورة من الرابط وعرضها بدل أيقونة المنتج.</small>
+            </div>
+            <div id="productImageUrlPreviewWrap" style="display:none;text-align:center;border:1px dashed #dbe1e8;border-radius:8px;padding:12px;margin-top:10px;background:#fafafa;">
+                <img id="productImageUrlPreview" alt="معاينة صورة المنتج" style="max-width:180px;max-height:180px;border-radius:8px;object-fit:contain;">
+                <div id="productImageUrlPreviewStatus" style="font-size:11px;color:#16a34a;margin-top:7px;font-weight:700;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="closeModal('productImageUrlModal')">إلغاء</button>
+                <button type="button" id="btnFetchSaveProductImage" class="btn-stage" onclick="saveProductImageUrl()"><i class="fa-solid fa-cloud-arrow-down"></i> جلب وحفظ</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="variantsViewModal">
         <div class="modal-box" style="max-width: 650px; border-top-color: #f39c12;">
             <div class="modal-header">
@@ -1467,6 +1501,8 @@
             const form = document.getElementById('productForm');
             const nameInput = document.getElementById('pNameInput');
             const prodName = String(nameInput?.value || '').trim();
+            const imageUrl = String(document.getElementById('productImageUrlHidden')?.value || '').trim();
+            const imageData = String(document.getElementById('productImageDataHidden')?.value || '').trim();
             if (!prodName) {
                 showToast('أدخل اسم المنتج أولاً', 'error');
                 nameInput?.focus();
@@ -1573,7 +1609,7 @@
                 ? 'المحل / المخزون الرئيسي'
                 : (storesData.find(store => String(store.id) === destinationStoreId)?.name || 'مخزن غير معروف');
             return {
-                id, name: prodName, barcode, pieceBarcode, unitBarcode, stockPieces, inputQty,
+                id, name: prodName, imageUrl, imageData, barcode, pieceBarcode, unitBarcode, stockPieces, inputQty,
                 cost, pricePiece, priceUnit, unitId: unitId === 'none' ? null : unitId,
                 unitName, pieceName, piecesPerUnit, addType: type, unitChain, unitPrices,
                 hasVariants, variants: variantsArray, untrackedStock, totalLineCost,
@@ -1591,6 +1627,8 @@
                 renderStagedTable();
                 
                 document.getElementById('editingId').value = '';
+                document.getElementById('productImageUrlHidden').value = '';
+                updateProductImagePreview('');
                 document.getElementById('pNameInput').value = '';
                 document.getElementById('pBarcode').value = '';
                 document.getElementById('pUnitBarcodeInput').value = '';
@@ -1653,6 +1691,9 @@
             const prod = stagedProducts[index];
             
             document.getElementById('editingId').value = prod.id;
+            document.getElementById('productImageUrlHidden').value = prod.imageUrl || prod.image || prod.photo || '';
+            document.getElementById('productImageDataHidden').value = prod.imageData || '';
+            updateProductImagePreview(prod.imageData || document.getElementById('productImageUrlHidden').value);
             document.getElementById('pNameInput').value = prod.name || '';
             document.getElementById('addTypeSelect').value = productAddMethodValue(prod);
             toggleAddType();
@@ -1820,6 +1861,13 @@
 
             existing.pricePiece = incoming.pricePiece;
             existing.priceUnit = incoming.priceUnit;
+            // صورة المنتج جزء من بيانات الصنف نفسها، ويجب تحديثها عند الإضافة أو التعديل
+            // حتى تظهر في صفحة المنتجات والكاشير، خصوصاً عند دمج منتج له نفس الباركود.
+            if (Object.prototype.hasOwnProperty.call(incoming, 'imageUrl')) {
+                existing.imageUrl = String(incoming.imageUrl || '').trim();
+            } else if (!existing.imageUrl && (existing.image || existing.photo)) {
+                existing.imageUrl = String(existing.image || existing.photo || '').trim();
+            }
             existing.barcode = incoming.barcode || existing.barcode || '';
             existing.unitBarcode = incoming.unitBarcode || existing.unitBarcode || '';
             existing.unitId = incoming.unitId;
@@ -2024,6 +2072,7 @@
                 loadSuppliersDropdown();
                 renderTable();
                 window.dispatchEvent(new CustomEvent('cashtop:sync-now', { detail: { reason: isEditMode ? 'edit-product' : 'save-products-purchase' } }));
+                window.dispatchEvent(new CustomEvent('cashtop:products-updated', { detail: { key: 'cashtop_products', products: productsData } }));
             } catch (error) {
                 Object.entries(storageSnapshot).forEach(([key, value]) => {
                     try {
@@ -2099,6 +2148,17 @@
             showToast(product.hideFromCashier ? 'تم إخفاء المنتج من الكاشير.' : 'تم إظهار المنتج في الكاشير.', 'success');
         }
 
+        function productImageSource(prod) {
+            return String(prod?.imageData || prod?.imageUrl || prod?.image || prod?.photo || '').trim();
+        }
+
+        function productImageVisualHtml(prod) {
+            const source = productImageSource(prod);
+            if (!source) return '<i class="fa-solid fa-box"></i>';
+            const safe = source.replace(/\"/g, '&quot;');
+            return `<img src="${safe}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-block';"><i class="fa-solid fa-box" style="display:none;"></i>`;
+        }
+
         function renderTable(data = productsData) {
             const tbody = document.getElementById('productsTableBody');
             if (!tbody) return;
@@ -2127,7 +2187,7 @@
                     : `<span title="باركود القطعة"><i class="fa-solid fa-barcode"></i> ${prod.barcode || 'لايوجد'}</span>`;
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td><div class="product-name-with-thumb"><div class="product-record-thumb"><i class="fa-solid fa-box"></i></div><div class="product-name-copy"><strong>${prod.name || 'بدون اسم'}</strong>${prod.hideFromCashier===true?' <span style="font-size:9px;background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;border-radius:999px;padding:2px 6px;white-space:nowrap">غير ظاهر في الكاشير</span>':''}<br><small style="color:#777; display:inline-block; margin-top:3px;">${barcodeDisplay}</small>${variantBadge}</div></div></td>
+                    <td><div class="product-name-with-thumb"><div class="product-record-thumb">${productImageVisualHtml(prod)}</div><div class="product-name-copy"><strong>${prod.name || 'بدون اسم'}</strong>${prod.hideFromCashier===true?' <span style="font-size:9px;background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;border-radius:999px;padding:2px 6px;white-space:nowrap">غير ظاهر في الكاشير</span>':''}<br><small style="color:#777; display:inline-block; margin-top:3px;">${barcodeDisplay}</small>${variantBadge}</div></div></td>
                     <td>${prod.untrackedStock === true ? '<span style="color:#94a3b8;">—</span>' : `<span class="badge-stock">${pStock <= 0 ? (compositeInfo ? 'المخزون نفد' : 'نفد المخزون') : stockStr}</span>`}</td>
                     <td><span class="badge-unit">${productUnitChainLabel(prod)}</span></td>
                     <td style="color: #444; font-weight:bold;">${moneyDisplay(pCost)} ${productBaseSymbol()}</td>
@@ -2268,11 +2328,167 @@
             showToast('تم حذف المنتج بدون إنشاء قيد عكسي', 'success');
         }
 
+        function updateProductImagePreview(url) {
+            const preview = document.getElementById('productImageMiniPreview');
+            if (!preview) return;
+            const value = String(url || '').trim();
+            if (!value) { preview.removeAttribute('src'); preview.style.display = 'none'; return; }
+            preview.onerror = () => { preview.removeAttribute('src'); preview.style.display = 'none'; };
+            preview.onload = () => { preview.style.display = 'block'; };
+            preview.src = value;
+        }
+
+        function openProductImageUrlModal() {
+            const input = document.getElementById('productImageUrlInput');
+            const current = String(document.getElementById('productImageUrlHidden')?.value || '');
+            if (input) input.value = current;
+            const preview = document.getElementById('productImageUrlPreview');
+            const wrap = document.getElementById('productImageUrlPreviewWrap');
+            const status = document.getElementById('productImageUrlPreviewStatus');
+            if (preview && wrap) {
+                preview.onerror = () => { wrap.style.display='block'; if(status) status.textContent='تعذر جلب الصورة من هذا الرابط.'; if(status) status.style.color='#dc2626'; };
+                preview.onload = () => { wrap.style.display='block'; if(status) status.textContent='تم جلب الصورة بنجاح'; if(status) status.style.color='#16a34a'; };
+                if (current) { preview.src = current; wrap.style.display='block'; } else { preview.removeAttribute('src'); wrap.style.display='none'; }
+            }
+            openModal('productImageUrlModal');
+        }
+
+        function blobToDataUrl(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onerror = () => reject(reader.error || new Error('IMAGE_DATA_READ_FAILED'));
+                reader.onload = () => resolve(String(reader.result || ''));
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        async function fetchAndStoreProductImage(url) {
+            let response = null;
+            let blob = null;
+            try {
+                response = await fetch(url, { mode: 'cors', cache: 'no-store', credentials: 'omit' });
+                if (!response.ok) throw new Error(`HTTP_${response.status}`);
+                blob = await response.blob();
+            } catch (directError) {
+                // بعض مواقع الصور تمنع CORS. نجرب بوابة صور عامة لإحضار نفس الصورة
+                // ثم نحفظ النسخة المضغوطة محلياً وقاعدة البيانات، بدلاً من حفظ الرابط فقط.
+                const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(url)}&output=jpg`;
+                response = await fetch(proxyUrl, { mode: 'cors', cache: 'no-store', credentials: 'omit' });
+                if (!response.ok) throw directError;
+                blob = await response.blob();
+            }
+            if (!blob || !String(blob.type || '').startsWith('image/')) throw new Error('NOT_IMAGE');
+            const compressed = window.CashtopImages?.compress
+                ? await window.CashtopImages.compress(blob, 50)
+                : blob;
+            const dataUrl = await blobToDataUrl(compressed);
+            if (!dataUrl.startsWith('data:image/')) throw new Error('INVALID_IMAGE_DATA');
+            return { dataUrl, sizeBytes: compressed.size || 0 };
+        }
+
+        async function saveProductImageUrl() {
+            const input = document.getElementById('productImageUrlInput');
+            const btn = document.getElementById('btnFetchSaveProductImage');
+            const hidden = document.getElementById('productImageUrlHidden');
+            const hiddenData = document.getElementById('productImageDataHidden');
+            const preview = document.getElementById('productImageUrlPreview');
+            const wrap = document.getElementById('productImageUrlPreviewWrap');
+            const status = document.getElementById('productImageUrlPreviewStatus');
+            const value = String(input?.value || '').trim();
+
+            if (!value) {
+                if (hidden) hidden.value = '';
+                if (hiddenData) hiddenData.value = '';
+                updateProductImagePreview('');
+                if (preview) preview.removeAttribute('src');
+                if (wrap) wrap.style.display = 'none';
+                const editingId = String(document.getElementById('editingId')?.value || '').trim();
+                if (editingId) {
+                    const existingProduct = productsData.find(p => String(p?.id) === editingId);
+                    if (existingProduct) {
+                        delete existingProduct.imageData;
+                        delete existingProduct.imageUrl;
+                        existingProduct.updatedAt = new Date().toISOString();
+                        window.Cashtop?.atomicSetItems?.({ cashtop_products: productsData }, { label: 'remove-product-image' });
+                        window.dispatchEvent(new CustomEvent('cashtop:products-updated', { detail: { key: 'cashtop_products', products: productsData } }));
+                        renderTable();
+                    }
+                }
+                closeModal('productImageUrlModal');
+                showToast('تم إزالة صورة المنتج.', 'success');
+                return;
+            }
+
+            try { new URL(value); } catch (_) {
+                showToast('أدخل رابط صورة صحيح يبدأ بـ http أو https.', 'error');
+                input?.focus();
+                return;
+            }
+
+            const oldHtml = btn?.innerHTML || '<i class="fa-solid fa-cloud-arrow-down"></i> جلب وحفظ';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري جلب الصورة...';
+            }
+            if (wrap) wrap.style.display = 'block';
+            if (status) { status.textContent = 'جاري جلب الصورة وحفظ نسخة محلية...'; status.style.color = '#2563eb'; }
+
+            try {
+                const stored = await fetchAndStoreProductImage(value);
+                if (hidden) hidden.value = value;
+                if (hiddenData) hiddenData.value = stored.dataUrl;
+                if (preview) {
+                    preview.onerror = () => {
+                        if (status) { status.textContent = 'تم الحفظ محلياً لكن تعذر عرض المعاينة.'; status.style.color = '#dc2626'; }
+                    };
+                    preview.onload = () => {
+                        if (wrap) wrap.style.display = 'block';
+                        if (status) { status.textContent = `تم جلب الصورة وحفظها محلياً (${Math.max(1, Math.round(stored.sizeBytes / 1024))} KB)`; status.style.color = '#16a34a'; }
+                    };
+                    preview.src = stored.dataUrl;
+                }
+                updateProductImagePreview(stored.dataUrl);
+
+                const editingId = String(document.getElementById('editingId')?.value || '').trim();
+                if (editingId) {
+                    const existingProduct = productsData.find(p => String(p?.id) === editingId);
+                    if (existingProduct) {
+                        existingProduct.imageUrl = value;
+                        existingProduct.imageData = stored.dataUrl;
+                        existingProduct.updatedAt = new Date().toISOString();
+                        if (window.Cashtop?.atomicSetItems) {
+                            window.Cashtop.atomicSetItems({ cashtop_products: productsData }, { label: 'product-image-local-save' });
+                        } else {
+                            localStorage.setItem('cashtop_products', JSON.stringify(productsData));
+                        }
+                        productsData = readArray('cashtop_products');
+                        window.dispatchEvent(new CustomEvent('cashtop:products-updated', { detail: { key: 'cashtop_products', products: productsData } }));
+                        renderTable();
+                    }
+                }
+
+                closeModal('productImageUrlModal');
+                showToast(editingId ? 'تم جلب الصورة وحفظها محلياً وقاعدة البيانات والكاشير.' : 'تم جلب الصورة وحفظ النسخة المحلية. اضغط حفظ المنتج لاعتمادها نهائياً.', 'success');
+            } catch (error) {
+                console.error('[CASH TOP] product image fetch:', error);
+                if (status) { status.textContent = 'تعذر جلب الصورة وحفظها.'; status.style.color = '#dc2626'; }
+                showToast('تعذر جلب الصورة. تأكد أن الرابط مباشر لصورة ويمكن الوصول إليه.', 'error');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = oldHtml;
+                }
+            }
+        }
+
         function openProductModal() {
             window.Cashtop?.closeTransientUi?.();
             document.getElementById('productForm').reset();
             document.getElementById('productModal').dataset.mode = 'create';
             document.getElementById('editingId').value = '';
+            document.getElementById('productImageUrlHidden').value = '';
+            document.getElementById('productImageDataHidden').value = '';
+            updateProductImagePreview('');
             toggleAddType();
             document.getElementById('variantsTableBody').innerHTML = '';
             document.getElementById('invoiceDiscountInput').value = '';
