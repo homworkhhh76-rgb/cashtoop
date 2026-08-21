@@ -2346,9 +2346,14 @@
             const wrap = document.getElementById('productImageUrlPreviewWrap');
             const status = document.getElementById('productImageUrlPreviewStatus');
             if (preview && wrap) {
-                preview.onerror = () => { wrap.style.display='block'; if(status) status.textContent='تعذر جلب الصورة من هذا الرابط.'; if(status) status.style.color='#dc2626'; };
-                preview.onload = () => { wrap.style.display='block'; if(status) status.textContent='تم جلب الصورة بنجاح'; if(status) status.style.color='#16a34a'; };
-                if (current) { preview.src = current; wrap.style.display='block'; } else { preview.removeAttribute('src'); wrap.style.display='none'; }
+                const previewUrl = normalizeProductImageUrl(current);
+                if (previewUrl) {
+                    wrap.style.display = 'block';
+                    setProductImagePreviewSource(preview, wrap, status, previewUrl, 'تم عرض الصورة بنجاح');
+                } else {
+                    preview.removeAttribute('src');
+                    wrap.style.display = 'none';
+                }
             }
             openModal('productImageUrlModal');
         }
@@ -2362,28 +2367,76 @@
             });
         }
 
-        async function fetchAndStoreProductImage(url) {
-            let response = null;
-            let blob = null;
+        // يدعم روابط الصور الشائعة التي تكون عبارة عن رابط مشاركة وليس رابط الصورة النهائي.
+        function normalizeProductImageUrl(url) {
+            const raw = String(url || '').trim();
+            if (!raw) return '';
             try {
-                response = await fetch(url, { mode: 'cors', cache: 'no-store', credentials: 'omit' });
-                if (!response.ok) throw new Error(`HTTP_${response.status}`);
-                blob = await response.blob();
-            } catch (directError) {
-                // بعض مواقع الصور تمنع CORS. نجرب بوابة صور عامة لإحضار نفس الصورة
-                // ثم نحفظ النسخة المضغوطة محلياً وقاعدة البيانات، بدلاً من حفظ الرابط فقط.
-                const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(url)}&output=jpg`;
-                response = await fetch(proxyUrl, { mode: 'cors', cache: 'no-store', credentials: 'omit' });
-                if (!response.ok) throw directError;
-                blob = await response.blob();
+                const parsed = new URL(raw);
+                const host = parsed.hostname.toLowerCase();
+                const driveMatch = parsed.pathname.match(/^\/file\/d\/([^/]+)/);
+                if (host === 'drive.google.com' && driveMatch?.[1]) {
+                    return `https://drive.google.com/uc?export=view&id=${encodeURIComponent(driveMatch[1])}`;
+                }
+                if (host === 'docs.google.com' && /^\/uc\b/.test(parsed.pathname)) return raw;
+            } catch (_) {}
+            return raw;
+        }
+
+        function setProductImagePreviewSource(preview, wrap, status, source, successText) {
+            if (!preview || !source) return;
+            preview.onerror = () => {
+                preview.removeAttribute('src');
+                if (wrap) wrap.style.display = 'block';
+                if (status) {
+                    status.textContent = 'تم حفظ الرابط، لكن الموقع يمنع عرض الصورة مباشرة.';
+                    status.style.color = '#dc2626';
+                }
+            };
+            preview.onload = () => {
+                if (wrap) wrap.style.display = 'block';
+                if (status) {
+                    status.textContent = successText || 'تم عرض الصورة بنجاح';
+                    status.style.color = '#16a34a';
+                }
+            };
+            preview.src = source;
+        }
+
+        async function fetchAndStoreProductImage(url) {
+            const normalizedUrl = normalizeProductImageUrl(url);
+            const candidates = [];
+            if (normalizedUrl) candidates.push(normalizedUrl);
+            // بوابات وسيطة اختيارية فقط لنسخ الصورة محلياً عندما يمنع المصدر CORS.
+            if (normalizedUrl) {
+                candidates.push(`https://images.weserv.nl/?url=${encodeURIComponent(normalizedUrl)}&output=jpg`);
+                candidates.push(`https://wsrv.nl/?url=${encodeURIComponent(normalizedUrl)}&output=jpg`);
             }
-            if (!blob || !String(blob.type || '').startsWith('image/')) throw new Error('NOT_IMAGE');
-            const compressed = window.CashtopImages?.compress
-                ? await window.CashtopImages.compress(blob, 50)
-                : blob;
-            const dataUrl = await blobToDataUrl(compressed);
-            if (!dataUrl.startsWith('data:image/')) throw new Error('INVALID_IMAGE_DATA');
-            return { dataUrl, sizeBytes: compressed.size || 0 };
+
+            let lastError = null;
+            for (const candidate of candidates) {
+                try {
+                    const response = await fetch(candidate, { mode:'cors', cache:'no-store', credentials:'omit' });
+                    if (!response.ok) throw new Error(`HTTP_${response.status}`);
+                    const blob = await response.blob();
+                    if (!blob || !String(blob.type || '').toLowerCase().startsWith('image/')) throw new Error('NOT_IMAGE');
+                    const compressed = window.CashtopImages?.compress
+                        ? await window.CashtopImages.compress(blob, 50)
+                        : blob;
+                    const dataUrl = await blobToDataUrl(compressed);
+                    if (!dataUrl.startsWith('data:image/')) throw new Error('INVALID_IMAGE_DATA');
+                    return { dataUrl, imageUrl: normalizedUrl, sizeBytes: compressed.size || 0, localCopy: true };
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+
+            // لا نرفض الرابط فقط لأن CORS يمنع الجلب من المتصفح.
+            // نحفظ الرابط نفسه ليعمل <img> مباشرة، ويمكن للمتصفح عرض الصور من أي نطاق يسمح بالتضمين.
+            if (normalizedUrl) {
+                return { dataUrl: '', imageUrl: normalizedUrl, sizeBytes: 0, localCopy: false, fallback: true, error: lastError };
+            }
+            throw lastError || new Error('IMAGE_URL_INVALID');
         }
 
         async function saveProductImageUrl() {
@@ -2435,26 +2488,24 @@
 
             try {
                 const stored = await fetchAndStoreProductImage(value);
-                if (hidden) hidden.value = value;
-                if (hiddenData) hiddenData.value = stored.dataUrl;
+                const finalUrl = stored.imageUrl || normalizeProductImageUrl(value);
+                if (hidden) hidden.value = finalUrl;
+                if (hiddenData) hiddenData.value = stored.dataUrl || '';
                 if (preview) {
-                    preview.onerror = () => {
-                        if (status) { status.textContent = 'تم الحفظ محلياً لكن تعذر عرض المعاينة.'; status.style.color = '#dc2626'; }
-                    };
-                    preview.onload = () => {
-                        if (wrap) wrap.style.display = 'block';
-                        if (status) { status.textContent = `تم جلب الصورة وحفظها محلياً (${Math.max(1, Math.round(stored.sizeBytes / 1024))} KB)`; status.style.color = '#16a34a'; }
-                    };
-                    preview.src = stored.dataUrl;
+                    if (stored.dataUrl) {
+                        setProductImagePreviewSource(preview, wrap, status, stored.dataUrl, `تم جلب الصورة وحفظ نسخة محلية (${Math.max(1, Math.round(stored.sizeBytes / 1024))} KB)`);
+                    } else {
+                        setProductImagePreviewSource(preview, wrap, status, finalUrl, 'تم حفظ رابط الصورة وسيتم عرضها مباشرة');
+                    }
                 }
-                updateProductImagePreview(stored.dataUrl);
+                updateProductImagePreview(stored.dataUrl || finalUrl);
 
                 const editingId = String(document.getElementById('editingId')?.value || '').trim();
                 if (editingId) {
                     const existingProduct = productsData.find(p => String(p?.id) === editingId);
                     if (existingProduct) {
-                        existingProduct.imageUrl = value;
-                        existingProduct.imageData = stored.dataUrl;
+                        existingProduct.imageUrl = finalUrl;
+                        existingProduct.imageData = stored.dataUrl || '';
                         existingProduct.updatedAt = new Date().toISOString();
                         if (window.Cashtop?.atomicSetItems) {
                             window.Cashtop.atomicSetItems({ cashtop_products: productsData }, { label: 'product-image-local-save' });
@@ -2468,11 +2519,16 @@
                 }
 
                 closeModal('productImageUrlModal');
-                showToast(editingId ? 'تم جلب الصورة وحفظها محلياً وقاعدة البيانات والكاشير.' : 'تم جلب الصورة وحفظ النسخة المحلية. اضغط حفظ المنتج لاعتمادها نهائياً.', 'success');
+                showToast(
+                    stored.localCopy
+                        ? (editingId ? 'تم جلب الصورة وحفظها محلياً وقاعدة البيانات والكاشير.' : 'تم جلب الصورة وحفظ النسخة المحلية. اضغط حفظ المنتج لاعتمادها نهائياً.')
+                        : (editingId ? 'تم حفظ رابط الصورة واستخدامه في المنتجات والكاشير.' : 'تم حفظ رابط الصورة. اضغط حفظ المنتج لاعتمادها نهائياً.'),
+                    'success'
+                );
             } catch (error) {
                 console.error('[CASH TOP] product image fetch:', error);
-                if (status) { status.textContent = 'تعذر جلب الصورة وحفظها.'; status.style.color = '#dc2626'; }
-                showToast('تعذر جلب الصورة. تأكد أن الرابط مباشر لصورة ويمكن الوصول إليه.', 'error');
+                if (status) { status.textContent = 'الرابط غير صالح أو لا يمكن الوصول إليه.'; status.style.color = '#dc2626'; }
+                showToast('تعذر استخدام الرابط. تأكد أنه رابط صورة صحيح يبدأ بـ http أو https.', 'error');
             } finally {
                 if (btn) {
                     btn.disabled = false;
