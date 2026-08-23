@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1220" />
+  <meta name="description" content="محادثة محلية على نفس الشبكة برمز مكوّن من رقمين، مع رسائل وصوت ومكالمات." />
+  
+  <title>خطّي — محادثة محلية</title>
+  <style>
+    :root{
+      --bg:#07111f;--panel:#0d1a2b;--panel2:#111f32;--line:rgba(255,255,255,.09);
+      --text:#f5f7fb;--muted:#93a3b8;--brand:#6d5efc;--brand2:#8e7cff;--ok:#23c483;--danger:#ff5a6a;
+      --bubble:#17263b;--mine:#614ff1;--shadow:0 24px 80px rgba(0,0,0,.35);--radius:22px;
+    }
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:radial-gradient(circle at 50% -10%,#1b2d4b 0,#07111f 42%,#050b14 100%);color:var(--text);font-family:Cairo,Tahoma,Arial,sans-serif}
+    button,input{font:inherit}button{border:0;cursor:pointer;color:inherit}.hidden{display:none!important}
+    .app{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:18px}.shell{width:min(1120px,100%);height:min(900px,calc(100vh - 36px));min-height:640px;background:rgba(8,18,31,.9);backdrop-filter:blur(20px);border:1px solid var(--line);border-radius:30px;box-shadow:var(--shadow);overflow:hidden;position:relative}
+    .login{height:100%;display:grid;place-items:center;padding:24px}.login-card{width:min(480px,100%);padding:34px;border:1px solid var(--line);border-radius:28px;background:linear-gradient(160deg,rgba(25,39,62,.95),rgba(11,21,35,.96));box-shadow:0 20px 70px rgba(0,0,0,.3);text-align:center}.brand-mark{width:76px;height:76px;border-radius:24px;margin:0 auto 18px;display:grid;place-items:center;background:linear-gradient(135deg,var(--brand),#3e8cff);font-weight:900;font-size:28px;box-shadow:0 16px 40px rgba(109,94,252,.28)}
+    h1{margin:0 0 8px;font-size:30px}.sub{color:var(--muted);line-height:1.8;margin:0 0 26px}.field{margin:12px 0;text-align:right}.field label{display:block;color:#c8d2e0;font-size:13px;margin:0 0 7px}.field input{width:100%;padding:15px 16px;border-radius:15px;border:1px solid var(--line);background:#091523;color:var(--text);outline:none}.field input:focus{border-color:rgba(142,124,255,.75);box-shadow:0 0 0 4px rgba(109,94,252,.14)}.code-input{font-size:29px;letter-spacing:12px;text-align:center;font-weight:900;direction:ltr}.primary{width:100%;padding:15px 18px;margin-top:10px;border-radius:16px;background:linear-gradient(135deg,var(--brand),#8574ff);font-weight:800;box-shadow:0 12px 28px rgba(109,94,252,.22)}.hint{margin-top:16px;color:var(--muted);font-size:12px;line-height:1.7}
+    .chat{height:100%;display:grid;grid-template-columns:310px 1fr}.side{border-left:1px solid var(--line);background:rgba(6,14,25,.65);padding:18px;display:flex;flex-direction:column;gap:16px}.side-head{display:flex;align-items:center;justify-content:space-between}.me{display:flex;align-items:center;gap:10px}.avatar{width:44px;height:44px;border-radius:15px;display:grid;place-items:center;background:linear-gradient(135deg,#3e8cff,var(--brand));font-weight:900}.me .name{font-weight:800}.status{font-size:12px;color:var(--muted)}.status.online{color:var(--ok)}.room-card{padding:16px;border-radius:20px;background:linear-gradient(145deg,#111f34,#0b1728);border:1px solid var(--line)}.room-code{font-size:30px;font-weight:900;letter-spacing:8px;direction:ltr}.room-note{color:var(--muted);font-size:12px;margin-top:2px}.peer{display:flex;align-items:center;gap:10px;padding:12px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid var(--line)}.peer .dot{width:9px;height:9px;border-radius:50%;background:#67778c}.peer.ready .dot{background:var(--ok);box-shadow:0 0 0 5px rgba(35,196,131,.1)}.side-actions{margin-top:auto;display:grid;gap:8px}.ghost{padding:12px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid var(--line);color:#d6deea}.danger{color:#ff9aa5;border-color:rgba(255,90,106,.2)}
+    .main{display:grid;grid-template-rows:auto 1fr auto;min-width:0}.topbar{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;background:rgba(8,18,31,.75)}.peer-head{display:flex;align-items:center;gap:12px}.peer-head .avatar{width:42px;height:42px;border-radius:14px}.head-name{font-weight:900}.head-status{font-size:12px;color:var(--muted)}.head-buttons{display:flex;gap:8px}.icon-btn{width:42px;height:42px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid var(--line);display:grid;place-items:center}.icon-btn:hover{background:rgba(255,255,255,.09)}.icon{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    .messages{padding:22px;overflow:auto;display:flex;flex-direction:column;gap:12px;background:linear-gradient(180deg,rgba(8,17,29,.2),rgba(8,17,29,.65))}.empty{margin:auto;max-width:350px;text-align:center;color:var(--muted);line-height:1.8}.empty strong{display:block;color:#f0f3f8;font-size:17px;margin-bottom:6px}.day{align-self:center;padding:7px 12px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid var(--line);font-size:11px;color:var(--muted)}.msg{max-width:min(76%,560px);display:flex;flex-direction:column;gap:5px}.msg.mine{align-self:flex-start;align-items:flex-start}.msg.theirs{align-self:flex-end;align-items:flex-end}.bubble{padding:11px 14px;border-radius:18px;line-height:1.7;white-space:pre-wrap;word-break:break-word;background:var(--bubble);border:1px solid var(--line)}.mine .bubble{background:linear-gradient(135deg,#5d4be8,#735ff6);border-color:transparent;border-bottom-left-radius:6px}.theirs .bubble{border-bottom-right-radius:6px}.meta{font-size:10px;color:#7f90a8;padding:0 4px}.voice-bubble{display:flex;align-items:center;gap:10px;min-width:210px}.voice-bubble audio{width:185px;height:36px}.audio-time{font-size:11px;color:#dfe5ef}.composer{padding:12px 14px;border-top:1px solid var(--line);background:rgba(8,17,29,.9);display:flex;align-items:flex-end;gap:8px}.composer textarea{flex:1;resize:none;max-height:140px;min-height:48px;padding:13px 15px;border-radius:17px;background:#0a1625;border:1px solid var(--line);color:var(--text);outline:none}.composer textarea:focus{border-color:rgba(142,124,255,.7)}.recording{display:flex;align-items:center;gap:8px;color:#ff9ca7;padding:0 6px;font-size:12px}.send{background:linear-gradient(135deg,var(--brand),#8b7bff)}
+    .call{position:absolute;inset:0;background:rgba(2,8,15,.93);backdrop-filter:blur(18px);display:grid;place-items:center;z-index:20}.call-card{width:min(780px,92%);padding:25px;border:1px solid var(--line);border-radius:30px;background:linear-gradient(160deg,#102039,#091321);box-shadow:var(--shadow);text-align:center}.call-title{font-size:13px;color:var(--muted)}.call-name{font-size:28px;font-weight:900;margin:4px 0}.timer{color:#b9c7d8;font-variant-numeric:tabular-nums}.videos{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:20px 0}.video{height:300px;background:#030912;border-radius:22px;border:1px solid var(--line);object-fit:cover;width:100%}.controls{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}.circle{width:55px;height:55px;border-radius:50%;display:grid;place-items:center;background:#1b2a40;border:1px solid var(--line)}.circle.end{background:var(--danger)}
+    .toast{position:absolute;bottom:90px;left:50%;transform:translateX(-50%) translateY(15px);padding:10px 15px;border-radius:999px;background:#f4f7fb;color:#07111f;font-size:12px;font-weight:800;opacity:0;pointer-events:none;transition:.25s;z-index:30}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    @media(max-width:820px){.shell{height:100vh;min-height:0;border-radius:0;border:0}.app{padding:0}.chat{grid-template-columns:1fr}.side{display:none}.msg{max-width:86%}.videos{grid-template-columns:1fr}.video{height:230px}.topbar{padding:11px 12px}.messages{padding:15px}.login-card{padding:26px}.head-buttons .wide-hide{display:none}}
+  </style>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+</head>
+<body>
+<div class="app"><div class="shell">
+  <section id="login" class="login">
+    <div class="login-card">
+      <div class="brand-mark">↔</div>
+      <h1>خطّي</h1>
+      <p class="sub">محادثة خاصة على نفس الشبكة.<br>أدخل نفس الرقم المكوّن من 5 أرقام على الجهازين، وسيتم اكتشاف الطرف الآخر تلقائياً وإرسال الرسائل مباشرة.</p>
+      <div class="field"><label>اسمك</label><input id="name" maxlength="24" placeholder="مثلاً: أحمد" autocomplete="name"></div>
+      <div class="field"><label>رقم الخط</label><input id="code" class="code-input" maxlength="5" inputmode="numeric" pattern="[0-9]{2}" placeholder="12345" autocomplete="off"></div>
+      
+      <button id="joinBtn" class="primary">دخول إلى الخط</button>
+      <div class="hint">لا تحتاج لتشغيل أي سيرفر على هاتفك أو كمبيوترك. اكتب نفس رمز الخط من 5 أرقام على الجهازين واضغط دخول.</div>
+    </div>
+  </section>
+
+  <section id="chat" class="chat hidden">
+    <aside class="side">
+      <div class="side-head"><div class="me"><div id="myAvatar" class="avatar">أ</div><div><div id="myName" class="name">مستخدم</div><div id="connStatus" class="status">جارٍ الاتصال...</div></div></div></div>
+      <div class="room-card"><div class="room-note">رقم الخط</div><div id="roomCode" class="room-code">00</div><div class="room-note">الرقم يحدد الخط، والاتصال بين الهاتفين مباشر.</div></div>
+      <div id="peerCard" class="peer"><span class="dot"></span><div><b id="peerName">في انتظار الجهاز الثاني</b><div id="peerState" class="status">أرسل الرابط للجهاز الآخر</div></div></div>
+      <div class="side-actions"><button id="copyLink" class="ghost">نسخ رابط الشبكة</button><button id="leaveBtn" class="ghost danger">الخروج من الخط</button></div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar"><div class="peer-head"><div id="peerAvatar" class="avatar">؟</div><div><div id="headerPeer" class="head-name">في انتظار الاتصال</div><div id="headerState" class="head-status">غير متصل</div></div></div><div class="head-buttons"><button id="voiceCallBtn" class="icon-btn" title="مكالمة صوتية"><svg class="icon" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.18 2A19.8 19.8 0 0 1 3.1 5.18 2 2 0 0 1 5.1 3h3a2 2 0 0 1 2 1.72l.38 2.66a2 2 0 0 1-.57 1.7L8.64 10.36a16 16 0 0 0 5 5l1.28-1.27a2 2 0 0 1 1.7-.57l2.66.38A2 2 0 0 1 22 16.9z"/></svg></button><button id="videoCallBtn" class="icon-btn" title="مكالمة فيديو"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="5" width="13" height="14" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></svg></button></div></header>
+      <div id="messages" class="messages"><div class="empty"><strong>الخط جاهز</strong>اربط الهاتف الثاني مرة واحدة، وبعدها تعمل الرسائل والصوت والمكالمات مباشرة بين الجهازين.</div></div>
+      <footer class="composer"><button id="recordBtn" class="icon-btn" title="تسجيل صوتي"><svg class="icon" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"/></svg></button><textarea id="text" rows="1" placeholder="اكتب رسالة..."></textarea><div id="recordingInfo" class="recording hidden"><span>●</span><span id="recordTime">00:00</span></div><button id="sendBtn" class="icon-btn send" title="إرسال"><svg class="icon" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button></footer>
+    </main>
+
+    <div id="callOverlay" class="call hidden"><div class="call-card"><div id="callTitle" class="call-title">مكالمة</div><div id="callName" class="call-name">مستخدم</div><div id="callTimer" class="timer">00:00</div><div class="videos"><video id="remoteVideo" class="video" autoplay playsinline></video><video id="localVideo" class="video" autoplay playsinline muted></video></div><div class="controls"><button id="muteBtn" class="circle" title="كتم الميكروفون"><svg class="icon" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10a7 7 0 0 1-14 0M12 19v3M8 22h8"/></svg></button><button id="cameraBtn" class="circle" title="الكاميرا"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="5" width="13" height="14" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></svg></button><button id="hangupBtn" class="circle end" title="إنهاء المكالمة"><svg class="icon" viewBox="0 0 24 24"><path d="M5 10.5a13 13 0 0 1 14 0l-1.4 3.1a2 2 0 0 1-2.5 1l-2.4-1a2 2 0 0 1-1.4-1.3 2 2 0 0 0-2.6 0 2 2 0 0 1-1.4 1.3l-2.4 1a2 2 0 0 1-2.5-1Z"/></svg></button></div></div></div>
+    <div id="toast" class="toast"></div>
+  </section>
+</div></div>
+<script>
+const $=s=>document.querySelector(s);
+const login=$('#login'),chat=$('#chat');
+const state={name:'',code:'',peerName:'',connected:false,role:null};
+let dataPc=null,dataCh=null,callPc=null,localStream=null,callType=null,callTimer=null,callStarted=0;
+let mediaRecorder=null,recordChunks=[],recordStarted=0,recordTimer=null;
+const rtcConfig={iceServers:[{urls:'stun:stun.l.google.com:19302'}]};
+
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),3000)}
+function initials(n){return (n||'م').trim().slice(0,1)}
+function now(){return new Intl.DateTimeFormat('ar',{hour:'2-digit',minute:'2-digit'}).format(new Date())}
+function setPeer(name,ok){state.peerName=name||'الجهاز الثاني';state.connected=!!ok;$('#peerName').textContent=state.peerName;$('#peerState').textContent=ok?'متصل الآن':'بانتظار الربط';$('#peerCard').classList.toggle('ready',ok);$('#headerPeer').textContent=ok?state.peerName:'في انتظار الاتصال';$('#headerState').textContent=ok?'متصل الآن':'غير متصل';$('#peerAvatar').textContent=ok?initials(state.peerName):'؟';$('#connStatus').textContent=ok?'متصل مباشرة':'غير متصل';$('#connStatus').classList.toggle('online',ok)}
+function addMessage(m,mine=false){const e=$('.empty');if(e)e.remove();const w=document.createElement('div');w.className='msg '+(mine?'mine':'theirs');const b=document.createElement('div');b.className='bubble';if(m.kind==='voice'){const row=document.createElement('div');row.className='voice-bubble';const a=document.createElement('audio');a.controls=true;a.src=m.data;const t=document.createElement('span');t.className='audio-time';t.textContent=(m.duration||'')+' ث';row.append(a,t);b.append(row)}else b.textContent=m.text;const meta=document.createElement('div');meta.className='meta';meta.textContent=(mine?'أنت':(m.from||state.peerName||'الطرف الآخر'))+' • '+now();w.append(b,meta);$('#messages').append(w);$('#messages').scrollTop=$('#messages').scrollHeight}
+function encode(obj){return btoa(unescape(encodeURIComponent(JSON.stringify(obj))))}
+function decode(str){return JSON.parse(decodeURIComponent(escape(atob(str.trim()))))}
+function waitIce(pc){return new Promise(resolve=>{if(pc.iceGatheringState==='complete')return resolve();const f=()=>{if(pc.iceGatheringState==='complete'){pc.removeEventListener('icegatheringstatechange',f);resolve()}};pc.addEventListener('icegatheringstatechange',f);setTimeout(resolve,8000)})}
+function exportLocal(pc){return encode({type:pc.localDescription.type,sdp:pc.localDescription.sdp})}
+function importDesc(v){const x=decode(v);if(!x.type||!x.sdp)throw new Error('رمز غير صحيح');return x}
+
+// الرسائل والمكالمات تستخدم نفس اتصال PeerJS الذي ينجح في جلب اسم الطرف الآخر.
+function setupData(role){ /* غير مستخدم في وضع 5 أرقام */ }
+function attachChannel(ch){ /* غير مستخدم في وضع 5 أرقام */ }
+
+async function makeOffer(){
+  state.role='offer';setupData('offer');
+  const offer=await dataPc.createOffer();await dataPc.setLocalDescription(offer);await waitIce(dataPc);
+  $('#pairTitle').textContent='رمز الاتصال — الجهاز الأول';$('#pairHint').textContent='انسخ هذا الرمز وأرسله للجهاز الثاني';$('#offerBox').value=exportLocal(dataPc);$('#answerInput').classList.remove('hidden');$('#pairStep').textContent='1';$('#pairModal').classList.remove('hidden');
+}
+async function makeAnswer(){
+  const v=$('#remoteCode').value.trim();if(!v)return toast('الصق رمز الجهاز الأول أولاً');
+  try{const offer=importDesc(v);state.role='answer';setupData('answer');await dataPc.setRemoteDescription(offer);const ans=await dataPc.createAnswer();await dataPc.setLocalDescription(ans);await waitIce(dataPc);$('#pairTitle').textContent='رمز الرد — الجهاز الثاني';$('#pairHint').textContent='انسخ هذا الرمز وأرسله للجهاز الأول';$('#offerBox').value=exportLocal(dataPc);$('#offerBox').select();$('#pairStep').textContent='2';$('#answerMode').classList.add('hidden');$('#pairModal').classList.remove('hidden')}catch(e){toast('رمز الاتصال غير صالح')}}
+async function applyAnswer(){const v=$('#answerInput').value.trim();if(!v)return toast('الصق رمز الرد أولاً');try{await dataPc.setRemoteDescription(importDesc(v));$('#pairModal').classList.add('hidden');toast('جاري إنشاء الاتصال المباشر...')}catch{toast('رمز الرد غير صالح')}}
+
+function secureMedia(){return location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1'}
+async function startCall(kind){if(!state.connected)return toast('اربط الجهازين أولاً');if(!navigator.mediaDevices?.getUserMedia)return toast('المتصفح لا يسمح بالمايك/الكاميرا من هذا المكان. استخدم Chrome أو HTTPS.');
+  callType=kind;callPc=new RTCPeerConnection(rtcConfig);localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:kind==='video'});localStream.getTracks().forEach(t=>callPc.addTrack(t,localStream));$('#localVideo').srcObject=localStream;$('#callTitle').textContent=kind==='video'?'مكالمة فيديو':'مكالمة صوتية';$('#callName').textContent=state.peerName||'الطرف الآخر';$('#callOverlay').classList.remove('hidden');$('#cameraBtn').classList.toggle('hidden',kind!=='video');startCallTimer();
+  callPc.ontrack=e=>{if(e.streams[0])$('#remoteVideo').srcObject=e.streams[0]};callPc.onicecandidate=e=>{if(e.candidate)send({t:'call',s:{candidate:e.candidate}})};callPc.onconnectionstatechange=()=>{if(['failed','closed','disconnected'].includes(callPc.connectionState))endCall(false)};
+  const offer=await callPc.createOffer();await callPc.setLocalDescription(offer);send({t:'call',s:{offer:callPc.localDescription},kind});
+}
+async function handleCallSignal(m){if(m.s?.offer){await acceptCall(m.kind||'audio',m.s.offer);return}if(!callPc)return;if(m.s?.answer){await callPc.setRemoteDescription(m.s.answer)}if(m.s?.candidate){try{await callPc.addIceCandidate(m.s.candidate)}catch{}}}
+async function acceptCall(kind,offer){if(callPc)endCall(false);callType=kind;callPc=new RTCPeerConnection(rtcConfig);localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:kind==='video'});localStream.getTracks().forEach(t=>callPc.addTrack(t,localStream));$('#localVideo').srcObject=localStream;$('#callTitle').textContent=kind==='video'?'مكالمة فيديو':'مكالمة صوتية';$('#callName').textContent=state.peerName||'الطرف الآخر';$('#callOverlay').classList.remove('hidden');$('#cameraBtn').classList.toggle('hidden',kind!=='video');startCallTimer();callPc.ontrack=e=>{if(e.streams[0])$('#remoteVideo').srcObject=e.streams[0]};callPc.onicecandidate=e=>{if(e.candidate)send({t:'call',s:{candidate:e.candidate}})};callPc.onconnectionstatechange=()=>{if(['failed','closed','disconnected'].includes(callPc.connectionState))endCall(false)};await callPc.setRemoteDescription(offer);const ans=await callPc.createAnswer();await callPc.setLocalDescription(ans);send({t:'call',s:{answer:callPc.localDescription},kind})}
+function startCallTimer(){clearInterval(callTimer);callStarted=Date.now();callTimer=setInterval(()=>{let s=Math.floor((Date.now()-callStarted)/1000);$('#callTimer').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')},250)}
+function endCall(notify=true){if(notify)send({t:'hangup'});if(callPc){callPc.close();callPc=null}if(localStream){localStream.getTracks().forEach(t=>t.stop());localStream=null}$('#localVideo').srcObject=null;$('#remoteVideo').srcObject=null;$('#callOverlay').classList.add('hidden');clearInterval(callTimer);$('#callTimer').textContent='00:00'}
+
+let peer=null, dataConn=null, peerRole=null, connecting=false;
+function setOnline(on,name=''){
+  state.connected=!!on;
+  setPeer(name,on);
+  $('#connStatus').textContent=on?'متصل الآن':'جاري البحث عن الطرف الآخر...';
+  $('#headerState').textContent=on?'متصل الآن':'جاري البحث...';
+  $('#peerState').textContent=on?'متصل الآن':'جاري البحث تلقائياً';
+}
+function lineHostId(){return `khati-${state.code}-host`}
+function destroyPeer(){try{peer?.destroy()}catch{} peer=null;dataConn=null;dataCh=null}
+function handleIncomingData(m){
+  if(typeof m==='string'){try{m=JSON.parse(m)}catch{return}}
+  if(!m || typeof m!=='object') return;
+  if(m.t==='hello'){
+    setPeer(m.name||'مستخدم',true);
+    return;
+  }
+  if(m.t==='chat'){
+    const text=String(m.text??'');
+    if(text.length){
+      addMessage({text,from:m.from||'الطرف الآخر'},false);
+    }
+    return;
+  }
+  if(m.t==='voice'){
+    addMessage({kind:'voice',data:m.data,duration:m.duration,from:m.from||'الطرف الآخر'},false);
+    return;
+  }
+  if(m.t==='call'){
+    handleCallSignal(m);
+    return;
+  }
+  if(m.t==='hangup'){
+    endCall(false);
+  }
+}
+function wireConn(c){
+  dataConn=c;
+  dataCh=c;
+  // افتح الاتصال واعتمد الإرسال كنص JSON لضمان عمله على المتصفحات وفتح الملف مباشرة.
+  c.on('open',()=>{
+    setOnline(true);
+    try{c.send(JSON.stringify({t:'hello',name:state.name,ts:Date.now()}));}catch(e){console.error('hello send',e)}
+    toast('تم الاتصال بالخط مباشرة');
+  });
+  c.on('data',(payload)=>{
+    let m=payload;
+    if(m instanceof ArrayBuffer){try{m=new TextDecoder().decode(m)}catch{}}
+    if(typeof m==='string'){try{m=JSON.parse(m)}catch(e){console.warn('invalid packet',m);return}}
+    handleIncomingData(m);
+  });
+  c.on('close',()=>{
+    if(dataConn===c){dataConn=null;dataCh=null}
+    setOnline(false,'');
+    toast('انقطع الاتصال، جاري إعادة البحث...');
+    setTimeout(()=>autoConnect(),1200);
+  });
+  c.on('error',(err)=>{
+    console.warn('PeerJS data connection error',err);
+  });
+}
+function hostLine(){
+  destroyPeer();
+  const id=lineHostId();
+  const p=new Peer(id,{debug:0}); peer=p; peerRole='host';
+  p.on('open',()=>{setOnline(false); toast('تم فتح الخط. بانتظار الهاتف الآخر...')});
+  p.on('connection',c=>{if(dataConn?.open)return;wireConn(c)});
+  p.on('error',e=>{
+    if(e.type==='unavailable-id'){
+      // The host already exists, so this device becomes the guest automatically.
+      guestLine();
+    }else if(['network','server-error','socket-error','socket-closed'].includes(e.type)){
+      setOnline(false);toast('تعذر الوصول لخدمة الربط. تأكد من وجود إنترنت على الهاتفين.');
+    }
+  });
+}
+function guestLine(){
+  destroyPeer();
+  const p=new Peer(undefined,{debug:0}); peer=p; peerRole='guest';
+  p.on('open',()=>{
+    const c=p.connect(lineHostId(),{reliable:true,serialization:'json',metadata:{channel:'khati-chat-v1'}});
+    wireConn(c);
+    setOnline(false);
+    toast('جاري الاتصال بالطرف الآخر...');
+  });
+  p.on('error',e=>{
+    if(e.type==='peer-unavailable'){
+      setOnline(false);
+      setTimeout(()=>autoConnect(),1600);
+    }else if(['network','server-error','socket-error','socket-closed'].includes(e.type)){
+      setOnline(false);toast('تعذر الوصول لخدمة الربط. تأكد من وجود إنترنت على الهاتفين.');
+    }
+  });
+}
+function autoConnect(){
+  if(connecting||!state.code)return;
+  connecting=true;
+  // First device naturally becomes host; second device automatically becomes guest.
+  try{hostLine()}finally{setTimeout(()=>{connecting=false},900)}
+}
+
+function send(m){
+  const conn=(dataConn && dataConn.open)?dataConn:null;
+  if(!conn){toast('الجهاز الثاني غير متصل بعد');return false}
+  const packet={...m,from:state.name,ts:Date.now()};
+  try{
+    // نرسل نص JSON صريحاً بدل الاعتماد على serialization الداخلي لـPeerJS.
+    conn.send(JSON.stringify(packet));
+    return true;
+  }catch(e){
+    console.error('send failed',e);
+    toast('تعذر إرسال الرسالة، حاول مرة أخرى');
+    return false;
+  }
+}
+
+$('#joinBtn').onclick=()=>{
+  const name=$('#name').value.trim()||'مستخدم';
+  const code=$('#code').value.replace(/\D/g,'');
+  if(!/^\d{5}$/.test(code))return toast('اكتب 5 أرقام فقط مثل 39172');
+  state.name=name;state.code=code;
+  $('#myName').textContent=name;$('#myAvatar').textContent=initials(name);$('#roomCode').textContent=code;
+  login.classList.add('hidden');chat.classList.remove('hidden');
+  setPeer('',false);$('#headerPeer').textContent='الخط '+code;
+  toast('جاري البحث عن الهاتف الآخر تلقائياً...');
+  autoConnect();
+};
+$('#code').oninput=e=>e.target.value=e.target.value.replace(/\D/g,'').slice(0,5);
+
+$('#sendBtn').onclick=()=>{
+  const t=$('#text').value.trim();
+  if(!t)return;
+  if(send({t:'chat',text:t})){
+    addMessage({text:t},true);
+    $('#text').value='';
+    $('#text').style.height='48px';
+  }
+};
+$('#text').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('#sendBtn').click()}};$('#text').oninput=e=>{e.target.style.height='48px';e.target.style.height=Math.min(e.target.scrollHeight,140)+'px'};
+$('#voiceCallBtn').onclick=()=>startCall('audio').catch(()=>toast('تعذر تشغيل الميكروفون'));$('#videoCallBtn').onclick=()=>startCall('video').catch(()=>toast('تعذر تشغيل الكاميرا/الميكروفون'));$('#hangupBtn').onclick=()=>endCall(true);
+$('#muteBtn').onclick=()=>{const t=localStream?.getAudioTracks()[0];if(t){t.enabled=!t.enabled;$('#muteBtn').style.opacity=t.enabled?'1':'.55'}};$('#cameraBtn').onclick=()=>{const t=localStream?.getVideoTracks()[0];if(t){t.enabled=!t.enabled;$('#cameraBtn').style.opacity=t.enabled?'1':'.55'}};
+$('#leaveBtn').onclick=()=>location.reload();
+$('#recordBtn').onclick=async()=>{if(!state.connected)return toast('الجهاز الثاني غير متصل');if(mediaRecorder?.state==='recording'){mediaRecorder.stop();return}try{const s=await navigator.mediaDevices.getUserMedia({audio:true});recordChunks=[];recordStarted=Date.now();mediaRecorder=new MediaRecorder(s);$('#recordingInfo').classList.remove('hidden');recordTimer=setInterval(()=>{let x=Math.floor((Date.now()-recordStarted)/1000);$('#recordTime').textContent=String(Math.floor(x/60)).padStart(2,'0')+':'+String(x%60).padStart(2,'0')},250);mediaRecorder.ondataavailable=e=>e.data.size&&recordChunks.push(e.data);mediaRecorder.onstop=()=>{clearInterval(recordTimer);$('#recordingInfo').classList.add('hidden');s.getTracks().forEach(t=>t.stop());const blob=new Blob(recordChunks,{type:mediaRecorder.mimeType||'audio/webm'});if(blob.size>3500000)return toast('التسجيل طويل جداً');const r=new FileReader();const duration=Math.max(1,Math.round((Date.now()-recordStarted)/1000));r.onload=()=>{send({t:'voice',data:r.result,duration});addMessage({kind:'voice',data:r.result,duration},true)};r.readAsDataURL(blob)};mediaRecorder.start();toast('جاري التسجيل... اضغط مرة أخرى للإرسال');setTimeout(()=>mediaRecorder?.state==='recording'&&mediaRecorder.stop(),120000)}catch{toast('اسمح بالميكروفون')}};
+
+// الاتصال يتم تلقائياً بعد إدخال نفس رمز الخط من 5 أرقام على الجهازين.
+</script>
+</body>
+</html>
