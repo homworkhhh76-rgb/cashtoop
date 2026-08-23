@@ -3,175 +3,418 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مشغل فيديو يوتيوب احترافي</title>
+    <title>تطبيق المحادثة اللاسلكي</title>
+    <!-- خط كايرو -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- أيقونات FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
         :root {
-            --primary-color: #ff0000;
-            --primary-hover: #cc0000;
-            --bg-color: #f4f7f6;
-            --text-color: #333;
+            --primary: #00d2ff;
+            --primary-dark: #3a7bd5;
+            --bg-color: #121212;
+            --surface: #1e1e1e;
+            --text: #ffffff;
+            --text-muted: #a0a0a0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Cairo', sans-serif;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--bg-color);
-            color: var(--text-color);
+            color: var(--text);
+            height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
+            overflow: hidden;
         }
 
-        .container {
-            background-color: #fff;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        .app-container {
             width: 100%;
-            max-width: 800px;
+            max-width: 450px;
+            height: 100%;
+            background-color: var(--surface);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        /* --- واجهة الدخول --- */
+        #login-screen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            padding: 20px;
             text-align: center;
         }
 
-        h2 {
-            margin-top: 0;
-            color: #2c3e50;
+        .radio-icon {
+            font-size: 80px;
+            color: var(--primary);
             margin-bottom: 20px;
+            filter: drop-shadow(0 0 10px rgba(0, 210, 255, 0.5));
         }
 
-        .input-group {
+        #login-screen h2 {
+            margin-bottom: 10px;
+        }
+
+        #login-screen p {
+            color: var(--text-muted);
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .channel-input {
+            width: 120px;
+            text-align: center;
+            font-size: 32px;
+            padding: 10px;
+            border: 2px solid var(--primary-dark);
+            background: transparent;
+            color: white;
+            border-radius: 15px;
+            outline: none;
+            margin-bottom: 20px;
+            letter-spacing: 5px;
+        }
+
+        .channel-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(0, 210, 255, 0.3);
+        }
+
+        .btn {
+            background: linear-gradient(45deg, var(--primary-dark), var(--primary));
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: 700;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        /* --- واجهة الدردشة --- */
+        #chat-screen {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .header {
+            background-color: #1a1a1a;
+            padding: 15px 20px;
             display: flex;
-            gap: 10px;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
         }
 
-        .input-group input {
+        .header-info h3 {
+            font-size: 16px;
+            margin: 0;
+        }
+
+        .header-info span {
+            font-size: 11px;
+            color: var(--primary);
+        }
+
+        .header-actions button {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 20px;
+            margin-right: 15px;
+            cursor: pointer;
+        }
+
+        .header-actions .call-btn {
+            color: #25D366;
+        }
+
+        .chat-area {
             flex: 1;
             padding: 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s ease;
-            min-width: 200px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
         }
 
-        .input-group input:focus {
+        .message {
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .message.sent {
+            align-self: flex-start;
+            background: linear-gradient(45deg, var(--primary-dark), var(--primary));
+            border-bottom-right-radius: 0;
+        }
+
+        .message.received {
+            align-self: flex-end;
+            background-color: #2a2a2a;
+            border-bottom-left-radius: 0;
+        }
+
+        .message audio {
+            height: 35px;
+            width: 200px;
             outline: none;
-            border-color: var(--primary-color);
         }
 
-        .input-group button {
-            padding: 15px 30px;
-            background-color: var(--primary-color);
+        .input-area {
+            padding: 15px;
+            background-color: #1a1a1a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .msg-input {
+            flex: 1;
+            background-color: #2a2a2a;
+            border: none;
             color: white;
+            padding: 12px 15px;
+            border-radius: 25px;
+            outline: none;
+            font-size: 14px;
+        }
+
+        .action-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
             border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 18px;
             cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.1s ease;
-            white-space: nowrap;
+            transition: 0.3s;
         }
 
-        .input-group button:hover {
-            background-color: var(--primary-hover);
+        .send-btn {
+            background-color: var(--primary);
         }
 
-        .input-group button:active {
-            transform: scale(0.98);
+        .mic-btn {
+            background-color: #ff4757;
         }
 
-        .error-msg {
-            color: var(--primary-color);
-            margin-bottom: 15px;
-            display: none;
-            font-weight: bold;
+        .mic-btn.recording {
+            animation: pulse 1s infinite;
         }
 
-        /* حاوية الفيديو المتجاوبة (16:9 Aspect Ratio) */
-        .video-wrapper {
-            position: relative;
-            padding-bottom: 56.25%; /* نسبة العرض إلى الارتفاع 16:9 */
-            height: 0;
-            overflow: hidden;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            background-color: #000;
-            display: none; /* مخفي افتراضياً حتى يتم جلب الفيديو */
-        }
-
-        .video-wrapper iframe {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            border: none;
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(255, 71, 87, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0); }
         }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h2>مشغل فيديو يوتيوب</h2>
+    <div class="app-container">
         
-        <div class="input-group">
-            <input type="text" id="youtubeUrl" placeholder="ضع رابط فيديو يوتيوب هنا..." autocomplete="off">
-            <button onclick="loadVideo()">عرض الفيديو</button>
+        <!-- واجهة إدخال القناة -->
+        <div id="login-screen">
+            <i class="fa-solid fa-walkie-talkie radio-icon"></i>
+            <h2>تأمين الاتصال</h2>
+            <p>أدخل رقم القناة (رقمين) للتواصل مع الطرف الآخر.</p>
+            <input type="text" id="channel" class="channel-input" maxlength="2" placeholder="55" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+            <button class="btn" onclick="joinChannel()">دخول للقناة</button>
         </div>
 
-        <div id="errorMsg" class="error-msg">الرابط غير صحيح، يرجى التأكد من إدخال رابط يوتيوب صالح.</div>
+        <!-- واجهة المحادثة -->
+        <div id="chat-screen">
+            <div class="header">
+                <div class="header-info">
+                    <h3>غرفة الاتصال</h3>
+                    <span id="channel-display">قناة متصلة: --</span>
+                </div>
+                <div class="header-actions">
+                    <button class="call-btn" onclick="startCall()"><i class="fa-solid fa-phone"></i></button>
+                    <button onclick="leaveChannel()"><i class="fa-solid fa-right-from-bracket"></i></button>
+                </div>
+            </div>
 
-        <div class="video-wrapper" id="videoWrapper">
-            <iframe id="youtubePlayer" src="" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            <div class="chat-area" id="chat-area"></div>
+
+            <div class="input-area">
+                <input type="text" id="msg-input" class="msg-input" placeholder="اكتب رسالة..." onkeypress="handleKeyPress(event)">
+                <button class="action-btn send-btn" onclick="sendText()">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+                <button class="action-btn mic-btn" id="mic-btn" onmousedown="startRecording()" onmouseup="stopRecording()" ontouchstart="startRecording()" ontouchend="stopRecording()">
+                    <i class="fa-solid fa-microphone"></i>
+                </button>
+            </div>
         </div>
+
     </div>
 
     <script>
-        function loadVideo() {
-            const urlInput = document.getElementById('youtubeUrl').value.trim();
-            const videoWrapper = document.getElementById('videoWrapper');
-            const player = document.getElementById('youtubePlayer');
-            const errorMsg = document.getElementById('errorMsg');
+        let currentChannel = "";
+        let mediaRecorder;
+        let audioChunks = [];
+        let ws;
 
-            // إخفاء رسالة الخطأ في البداية
-            errorMsg.style.display = 'none';
+        // ضع هنا عنوان آيبي الكمبيوتر أو الوسيط الذي يشغل السيرفر المحلي
+        const SERVER_URL = 'ws://192.168.1.100:8080'; 
 
-            if (!urlInput) {
+        function joinChannel() {
+            const input = document.getElementById('channel').value;
+            if (input.length !== 2) {
+                alert("الرجاء إدخال رقمين (مثل 55)");
                 return;
             }
+            currentChannel = input;
 
-            // استخراج معرف الفيديو (Video ID) من الروابط المختلفة ليوتيوب
-            const videoId = extractVideoID(urlInput);
+            // الانتقال الفوري لشاشة المحادثة بدون أي تعليق
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('chat-screen').style.display = 'flex';
+            document.getElementById('channel-display').innerText = `القناة: ${currentChannel} (جاري الاتصال...)`;
 
-            if (videoId) {
-                // تحديث مصدر الإطار (iframe) وإظهاره
-                player.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
-                videoWrapper.style.display = 'block';
-            } else {
-                // إخفاء الفيديو وإظهار رسالة الخطأ
-                videoWrapper.style.display = 'none';
-                player.src = '';
-                errorMsg.style.display = 'block';
+            // محاولة الاتصال بالشبكة في الخلفية
+            try {
+                ws = new WebSocket(SERVER_URL);
+                
+                ws.onopen = () => {
+                    ws.send(JSON.stringify({ type: 'join', channel: currentChannel }));
+                    document.getElementById('channel-display').innerText = `القناة: ${currentChannel} (متصل بالشبكة)`;
+                };
+
+                ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'msg' && data.channel === currentChannel) {
+                        addMessageToDOM(data.content, 'received', data.msgType);
+                    }
+                };
+
+                ws.onerror = () => {
+                    document.getElementById('channel-display').innerText = `القناة: ${currentChannel} (وضع محلي)`;
+                };
+            } catch(e) {
+                console.log("خطأ في الاتصال");
             }
         }
 
-        // دالة لاستخراج المعرف الخاص بالفيديو من أي صيغة رابط ليوتيوب
-        function extractVideoID(url) {
-            const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
-            const match = url.match(regExp);
-            return (match && match[7].length === 11) ? match[7] : false;
+        function leaveChannel() {
+            if(ws) ws.close();
+            document.getElementById('chat-screen').style.display = 'none';
+            document.getElementById('login-screen').style.display = 'flex';
+            document.getElementById('channel').value = '';
+            document.getElementById('chat-area').innerHTML = '';
         }
 
-        // دعم الضغط على زر Enter لتشغيل الفيديو
-        document.getElementById('youtubeUrl').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                loadVideo();
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') sendText();
+        }
+
+        function sendText() {
+            const input = document.getElementById('msg-input');
+            const text = input.value.trim();
+            if (text === "") return;
+
+            addMessageToDOM(text, 'sent', 'text');
+            
+            if(ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'msg', channel: currentChannel, content: text, msgType: 'text' }));
             }
-        });
+            
+            input.value = "";
+        }
+
+        function addMessageToDOM(content, type, contentType) {
+            const chatArea = document.getElementById('chat-area');
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('message', type);
+
+            if (contentType === 'text') {
+                msgDiv.innerText = content;
+            } else if (contentType === 'audio') {
+                const audio = document.createElement('audio');
+                audio.controls = true;
+                audio.src = content;
+                msgDiv.appendChild(audio);
+            }
+
+            chatArea.appendChild(msgDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        async function startRecording() {
+            const micBtn = document.getElementById('mic-btn');
+            micBtn.classList.add('recording');
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.start();
+            } catch (err) {
+                alert("يرجى إعطاء صلاحية الميكروفون للتطبيق");
+                micBtn.classList.remove('recording');
+            }
+        }
+
+        function stopRecording() {
+            const micBtn = document.getElementById('mic-btn');
+            micBtn.classList.remove('recording');
+            
+            if (mediaRecorder && mediaRecorder.state === "recording") {
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    addMessageToDOM(audioUrl, 'sent', 'audio');
+                    
+                    const reader = new FileReader();
+                    reader.readAsDataURL(audioBlob);
+                    reader.onloadend = function() {
+                        const base64Audio = reader.result;
+                        if(ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({ type: 'msg', channel: currentChannel, content: base64Audio, msgType: 'audio' }));
+                        }
+                    }
+                };
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            }
+        }
+
+        function startCall() {
+            alert(`جاري طلب الاتصال الصوتي على القناة ${currentChannel}`);
+        }
     </script>
-
 </body>
 </html>
