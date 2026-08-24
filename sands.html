@@ -431,16 +431,11 @@
 
                 <div class="form-row voucher-payment-relation-row">
                     <div class="form-group">
-                        <label>طرق الدفع</label>
-                        <div class="custom-select-wrapper">
-                            <input type="text" class="form-control search-select-input" id="vAccountInput" placeholder="اختر طريقة الدفع..." readonly required>
-                            <input type="hidden" id="vAccountId" class="hidden-select-value" required>
-                            <i class="fa-solid fa-chevron-down arrow-icon"></i>
-                            <div class="select-dropdown-list" id="accountDropdownList">
-                                <div class="dropdown-search-inside"><input type="text" placeholder="اكتب للبحث عن طريقة دفع..."></div>
-                                <div id="accountOptionsContainer"></div>
-                            </div>
-                        </div>
+                        <label for="vAccountInput">طريقة الدفع / الصندوق</label>
+                        <select class="form-control" id="vAccountInput" required onchange="handleVoucherAccountSelect()">
+                            <option value="">اختر طريقة الدفع أو الصندوق...</option>
+                        </select>
+                        <input type="hidden" id="vAccountId" value="">
                     </div>
                     <div class="form-group">
                         <label>الجهة المرتبطة بالسند</label>
@@ -740,17 +735,17 @@
         function voucherDisplayAmount(v){ const cfg=voucherCurrencyConfig(); const cid=v?.currencyId||cfg.baseCurrencyId; const cur=window.CashtopMulti?.getCurrency?.(cid)||cfg.base; return `${voucherNativeAmount(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:3})} ${cur.symbol||cur.code}`; }
 
         function populateSelects() {
-            const accContainer = document.getElementById('accountOptionsContainer');
-            accContainer.innerHTML = '';
+            const accSelect = document.getElementById('vAccountInput');
+            if (accSelect) accSelect.innerHTML = '<option value="">اختر طريقة الدفع أو الصندوق...</option>';
             normalizeVoucherAccountCurrencies();
             const cfg=voucherCurrencyConfig(); const cid=cfg.enabled?voucherCurrencyId():cfg.baseCurrencyId;
-            if(fundsDB.accounts) {
+            if(fundsDB.accounts && accSelect) {
                 const activeVoucherAccounts=fundsDB.accounts.filter(a => window.Cashtop?.isFundActive ? window.Cashtop.isFundActive(a) : (a?.disabled !== true && a?.active !== false && String(a?.status || '').toLowerCase() !== 'inactive'));
                 const voucherAccounts=window.Cashtop?.sortFundAccountsForDropdown?.(activeVoucherAccounts)||activeVoucherAccounts;
-                if(voucherAccounts.length>1) accContainer.innerHTML += `<div class="select-option-item" data-value="${VOUCHER_MULTI_PAYMENT_VALUE}"><i class="fa-solid fa-layer-group" style="color:#605ca8;margin-left:6px"></i> دفع متعدد</div>`;
+                if(voucherAccounts.length>1) accSelect.insertAdjacentHTML('beforeend', `<option value="${VOUCHER_MULTI_PAYMENT_VALUE}">دفع متعدد</option>`);
                 voucherAccounts.forEach(a => {
                     const cur=window.CashtopMulti?.getCurrency?.(a.currencyId||cfg.baseCurrencyId)||cfg.base;
-                    accContainer.innerHTML += `<div class="select-option-item" data-value="${a.id}">${a.name} [${a.type}] — ${Number(a.balance||0).toFixed(2)} ${cur.symbol||cur.code}</div>`;
+                    accSelect.insertAdjacentHTML('beforeend', `<option value="${String(a.id).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}">${String(a.name||'صندوق').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')} [${String(a.type||'حساب').replace(/&/g,'&amp;')}] — ${Number(a.balance||0).toFixed(2)} ${cur.symbol||cur.code}</option>`);
                 });
             }
 
@@ -767,6 +762,25 @@
             });
 
             initCustomSelects(); 
+        }
+
+        function handleVoucherAccountSelect() {
+            const select = document.getElementById('vAccountInput');
+            const hidden = document.getElementById('vAccountId');
+            const value = String(select?.value || '');
+            if (value === VOUCHER_MULTI_PAYMENT_VALUE) {
+                const ok = openVoucherMultiPayment();
+                if (!ok) {
+                    if (select) select.value = '';
+                    if (hidden) hidden.value = '';
+                    voucherMultiPayments = [];
+                } else if (hidden) {
+                    hidden.value = VOUCHER_MULTI_PAYMENT_VALUE;
+                }
+                return;
+            }
+            voucherMultiPayments = [];
+            if (hidden) hidden.value = value;
         }
 
         function handleRelationChange() {
@@ -803,7 +817,7 @@
                 accounts:(fundsDB.accounts||[]).filter(a=>window.Cashtop?.isFundActive?window.Cashtop.isFundActive(a):(a?.disabled!==true&&a?.active!==false&&String(a?.status||'').toLowerCase()!=='inactive')),
                 transactionCurrencyId:currencyId,direction:type==='صرف'?'out':'in',requireExact:true,exactTransactionAmount:amountNative,
                 initialSplits:voucherMultiPayments,defaultTransactionAmount:voucherMultiPayments.length?0:amountNative,
-                onSave:(splits)=>{voucherMultiPayments=splits.map(item=>({...item}));document.getElementById('vAccountId').value=VOUCHER_MULTI_PAYMENT_VALUE;document.getElementById('vAccountInput').value='دفع متعدد';}
+                onSave:(splits)=>{voucherMultiPayments=splits.map(item=>({...item}));document.getElementById('vAccountId').value=VOUCHER_MULTI_PAYMENT_VALUE;document.getElementById('vAccountInput').value=VOUCHER_MULTI_PAYMENT_VALUE;}
             });
         }
 
@@ -1091,8 +1105,8 @@
                 
                 voucherMultiPayments = Array.isArray(v.payments) ? v.payments.map(item=>({...item})) : [];
                 let acc = fundsDB.accounts.find(a => a.id == v.accountId);
-                if(voucherMultiPayments.length){document.getElementById('vAccountId').value=VOUCHER_MULTI_PAYMENT_VALUE;document.getElementById('vAccountInput').value='دفع متعدد';}
-                else if(acc){document.getElementById('vAccountId').value=acc.id;document.getElementById('vAccountInput').value=acc.name;}
+                if(voucherMultiPayments.length){document.getElementById('vAccountId').value=VOUCHER_MULTI_PAYMENT_VALUE;document.getElementById('vAccountInput').value=VOUCHER_MULTI_PAYMENT_VALUE;}
+                else if(acc){document.getElementById('vAccountId').value=acc.id;document.getElementById('vAccountInput').value=String(acc.id);}
 
                 document.getElementById('relationType').value = v.relationType;
                 handleRelationChange();

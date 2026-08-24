@@ -5762,11 +5762,22 @@
 
     products.forEach(product => {
       const stock = Number(product.stockPieces ?? product.stock ?? 0) || 0;
-      if (stock <= Number(cfg.lowStockThreshold || 0)) {
+      const hasLow = Object.prototype.hasOwnProperty.call(product, 'lowStockThreshold') && Number.isFinite(Number(product.lowStockThreshold));
+      const hasLegacy = Object.prototype.hasOwnProperty.call(product, 'alertLimit') && Number.isFinite(Number(product.alertLimit));
+      // إعداد الإشعارات العام لا يتغلب على الحد المخصص للصنف.
+      // البيانات القديمة: إذا كان lowStockThreshold ما زال على الحد العام
+      // بينما alertLimit يحتوي قيمة مخصصة، نعتمد القيمة المخصصة القديمة.
+      const productThreshold = product.lowStockThresholdExplicit === true && hasLow
+        ? Math.max(0, Number(product.lowStockThreshold))
+        : (hasLow && hasLegacy && Math.max(0, Number(product.lowStockThreshold)) === Math.max(0, Number(cfg.lowStockThreshold || 0)) && Math.max(0, Number(product.alertLimit)) !== Math.max(0, Number(cfg.lowStockThreshold || 0))
+          ? Math.max(0, Number(product.alertLimit))
+          : (hasLow ? Math.max(0, Number(product.lowStockThreshold)) : (hasLegacy ? Math.max(0, Number(product.alertLimit)) : null)));
+      if (productThreshold === null) return;
+      if (stock <= productThreshold) {
         out.push({
           id: `stock_${product.id}`, type: 'stock', severity: stock <= 0 ? 'danger' : 'warning',
           title: stock <= 0 ? 'نفاد مخزون' : 'مخزون منخفض',
-          message: `${product.name || 'منتج'}: المتوفر ${stock} ${product.pieceName || 'قطعة'}`,
+          message: `${product.name || 'منتج'}: المتوفر ${stock} ${product.pieceName || 'قطعة'} — الحد الأدنى المخصص للصنف ${productThreshold}`,
           href: 'products.html', date: now
         });
       }

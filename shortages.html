@@ -471,7 +471,7 @@
         }
 
         // إعدادات النظام وقاعدة البيانات الموحدة
-        let globalAlertLimit = 5; // يمكن جلبه من إعدادات النظام لاحقاً
+        let globalAlertLimit = 5; // الحد الافتراضي من إعدادات النظام
         let productsData = [];
         let suppliersData = [];
         let unitsData = [];
@@ -483,6 +483,9 @@
         // قراءة البيانات الفعلية من LocalStorage (نفس قاعدة بيانات المخزون)
         function loadDatabase() {
             try {
+                const settings = JSON.parse(localStorage.getItem('cashtop_settings') || '{}') || {};
+                const configured = Number(settings.alertLimit);
+                globalAlertLimit = Number.isFinite(configured) && configured >= 0 ? configured : 5;
                 const localProducts = localStorage.getItem('cashtop_products');
                 if (localProducts) productsData = JSON.parse(localProducts);
 
@@ -506,7 +509,18 @@
         function extractShortages() {
             shortageList = [];
             productsData.forEach(p => {
-                let pLimit = p.alertLimit || globalAlertLimit; // إذا كان للمنتج حد مخصص
+                // الحد المخصص للصنف هو الأساس. للبيانات القديمة التي تحمل alertLimit
+                // مخصصاً مع lowStockThreshold افتراضي 5، نستخدم alertLimit القديم حتى لا
+                // نعيد ضبط الأصناف الموجودة عند ترقية النسخة. بعد أي تعديل يدوي يتم مزامنة
+                // الحقلين معاً.
+                const hasLow = Object.prototype.hasOwnProperty.call(p, 'lowStockThreshold') && Number.isFinite(Number(p.lowStockThreshold));
+                const hasLegacy = Object.prototype.hasOwnProperty.call(p, 'alertLimit') && Number.isFinite(Number(p.alertLimit));
+                let pLimit;
+                if (p.lowStockThresholdExplicit === true && hasLow) pLimit = Math.max(0, Number(p.lowStockThreshold));
+                else if (hasLegacy && hasLow && Math.max(0, Number(p.lowStockThreshold)) === globalAlertLimit && Math.max(0, Number(p.alertLimit)) !== globalAlertLimit) pLimit = Math.max(0, Number(p.alertLimit));
+                else if (hasLow) pLimit = Math.max(0, Number(p.lowStockThreshold));
+                else if (hasLegacy) pLimit = Math.max(0, Number(p.alertLimit));
+                else pLimit = globalAlertLimit;
                 
                 // إذا كان المنتج له مقاسات وألوان (أصناف فرعية)
                 if (p.hasVariants && p.variants) {
@@ -854,10 +868,14 @@
         function customLimitPrompt(productId) {
             let p = productsData.find(x => x.id === productId);
             if(p) {
-                let current = p.alertLimit || globalAlertLimit;
+                let current = Object.prototype.hasOwnProperty.call(p, 'lowStockThreshold') && Number.isFinite(Number(p.lowStockThreshold))
+                    ? Number(p.lowStockThreshold)
+                    : (Object.prototype.hasOwnProperty.call(p, 'alertLimit') && Number.isFinite(Number(p.alertLimit)) ? Number(p.alertLimit) : globalAlertLimit);
                 let newVal = prompt(`أدخل حد الأمان (النواقص) المخصص للمنتج: [ ${p.name} ]`, current);
                 if (newVal !== null && !isNaN(newVal)) {
-                    p.alertLimit = parseInt(newVal);
+                    p.lowStockThreshold = Math.max(0, Number(newVal));
+                    p.lowStockThresholdExplicit = true;
+                    p.alertLimit = p.lowStockThreshold;
                     localStorage.setItem('cashtop_products', JSON.stringify(productsData));
                     showToast('⚙️ تم حفظ حد الأمان المخصص للمنتج!', 'success');
                     initPage();
