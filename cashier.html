@@ -1763,20 +1763,52 @@
         }
 
         function cashierProductImageUrl(product) {
-            // الأولوية للنسخة المحلية المضغوطة، ثم الرابط الأصلي كاحتياط.
-            return String(product?.imageData ?? product?.imageUrl ?? product?.image ?? product?.photo ?? '').trim();
+            if (!product || typeof product !== 'object') return '';
+            return String(product.imageData || product.imageUrl || product.image || product.photo || '').trim();
+        }
+
+        function cashierProductImageCandidates(product) {
+            const raw = cashierProductImageUrl(product);
+            if (!raw) return [];
+            if (/^data:image\//i.test(raw) || /^blob:/i.test(raw)) return [raw];
+            const candidates = [raw];
+            try {
+                const normalized = raw.replace(/\s+/g, '').trim();
+                if (/^https?:\/\//i.test(normalized)) {
+                    candidates.push(`https://images.weserv.nl/?url=${encodeURIComponent(normalized)}&output=jpg`);
+                }
+            } catch (_) {}
+            return [...new Set(candidates)];
         }
 
         function normalizeCashierProductImage(product) {
-            if (!product || typeof product !== 'object') return '';
             return cashierProductImageUrl(product);
         }
 
+        function cashierImageFallback(img) {
+            if (!img || img.dataset.fallbackTried === '1') {
+                if (img) { img.style.display = 'none'; if (img.nextElementSibling) img.nextElementSibling.style.display = 'inline-flex'; }
+                return;
+            }
+            const fallback = String(img.dataset.fallback || '').trim();
+            if (!fallback) {
+                img.style.display = 'none';
+                if (img.nextElementSibling) img.nextElementSibling.style.display = 'inline-flex';
+                return;
+            }
+            img.dataset.fallbackTried = '1';
+            img.src = fallback;
+            img.style.display = 'block';
+        }
+
         function cashierProductVisualHtml(product, className='basket-product-image') {
-            const url = normalizeCashierProductImage(product);
-            if (!url) return `<div class="${className}"><i class="fa-solid fa-box"></i></div>`;
-            const safe = url.replace(/"/g,'&quot;');
-            return `<div class="${className}"><img src="${safe}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';"><i class="fa-solid fa-box" style="display:none;"></i></div>`;
+            const candidates = cashierProductImageCandidates(product);
+            if (!candidates.length) return `<div class="${className}"><i class="fa-solid fa-box"></i></div>`;
+            const esc = value => String(value || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            const first = esc(candidates[0]);
+            const fallback = esc(candidates[1] || '');
+            const alt = esc(product?.name || 'صنف');
+            return `<div class="${className}"><img src="${first}" data-fallback="${fallback}" alt="${alt}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="cashierImageFallback(this)"><i class="fa-solid fa-box" style="display:none;"></i></div>`;
         }
 
         function getEffectiveProductPrice(product, unit = 'piece') {
