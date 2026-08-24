@@ -432,7 +432,7 @@
                 <div class="form-row voucher-payment-relation-row">
                     <div class="form-group">
                         <label for="vAccountInput">طريقة الدفع / الصندوق</label>
-                        <select class="form-control" id="vAccountInput" required onchange="handleVoucherAccountSelect()">
+                        <select class="form-control" id="vAccountInput" required onchange="handleVoucherAccountSelect(this)">
                             <option value="">اختر طريقة الدفع أو الصندوق...</option>
                         </select>
                         <input type="hidden" id="vAccountId" value="">
@@ -704,13 +704,7 @@
         window.addEventListener('cashtop:data-changed', function(e) {
             if (e.detail?.key === 'cashtop_funds_db') refreshVoucherFundsNow();
         });
-        document.addEventListener('pointerdown', function(e) {
-            if (e.target?.closest?.('#vAccountInput, #accountDropdownList, #accountOptionsContainer')) refreshVoucherFundsNow();
-        }, true);
-        document.addEventListener('focusin', function(e) {
-            if (e.target?.id === 'vAccountInput') refreshVoucherFundsNow();
-        });
-
+        // لا نعيد بناء قائمة الحسابات أثناء الضغط أو التركيز حتى لا نستبدل عنصر select أثناء الاختيار.
         /* ========================================================== */
         /*   تعبئة القوائم المنسدلة الذكية                            */
         /* ========================================================== */
@@ -764,8 +758,8 @@
             initCustomSelects(); 
         }
 
-        function handleVoucherAccountSelect() {
-            const select = document.getElementById('vAccountInput');
+        function handleVoucherAccountSelect(selectArg) {
+            const select = selectArg || document.getElementById('vAccountInput');
             const hidden = document.getElementById('vAccountId');
             const value = String(select?.value || '');
             if (value === VOUCHER_MULTI_PAYMENT_VALUE) {
@@ -1030,7 +1024,8 @@
             const isEdit = Boolean(editId);
             const type = document.getElementById('vType').value;
             const date = document.getElementById('vDate').value;
-            const accountId = document.getElementById('vAccountId').value;
+            const accountId = String(document.getElementById('vAccountInput')?.value || document.getElementById('vAccountId').value || '');
+            document.getElementById('vAccountId').value = accountId;
             const relType = document.getElementById('relationType').value;
             const cfg = voucherCurrencyConfig();
             const currencyId = cfg.enabled ? voucherCurrencyId() : cfg.baseCurrencyId;
@@ -1354,6 +1349,7 @@
 
 <script type="application/json" id="ctEmbeddedShellMarker">{"embedded":true,"page":"sands.html"}</script>
 <script src="cashtop-export.js"></script>
+<script>window.CASHTOP_SANDS_FIX_R145={version:"R145",accountSelection:"fixed",posting:"selected account receives receipts and is debited for payments"};</script>
 </body>
 
 </html>
