@@ -2529,6 +2529,72 @@
 
   // كتابة مجموعة الشركة الكاملة دون إسقاطها على فرع الجلسة الحالية.
   // تستخدمها العمليات العابرة للفروع (مثل النقل من مخزن في فرع إلى مخزن في فرع آخر).
+  // كتابة مباشرة لمجموعة مدارة مع تجاوز merge الخاص بالمجموعات ذات
+  // السلوك المتخصص. تستخدم للحذف الفعلي لسجل واحد حتى لا تعيده طبقة الدمج.
+  function replaceManagedDatasetRaw(key, value, options = {}) {
+    const canonical = canonicalKey(key);
+    if (!isManagedKey(canonical)) throw new Error('مجموعة البيانات غير مدارة');
+    assertFinancialGroupWritable(canonical);
+    const ns = namespaceKey(canonical);
+    const oldValue = rawGet(ns);
+    const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
+    if (oldValue === stringValue) return { changed:false, operationId:null };
+    rawSet(ns, stringValue);
+    const managedChange = describeManagedChange(oldValue, stringValue);
+    const previousMeta = safeJson(rawGet(metaKey(canonical)), {}) || {};
+    rawSet(metaKey(canonical), JSON.stringify({
+      ...previousMeta,
+      updatedAt: Date.now(),
+      revision: Number(previousMeta.revision || 0) + 1,
+      deviceId: getDeviceId(),
+      page: FILE,
+      recordTombstones: LOSSLESS_RECORD_DATASETS.has(canonical)
+        ? mergeRecordTombstones(previousMeta.recordTombstones, managedChange)
+        : previousMeta.recordTombstones
+    }));
+    if (options.audit !== false) {
+      try { appendAudit(canonical, oldValue, stringValue, options.action); } catch (_) {}
+    }
+    const operationId = options.enqueue === false ? null : enqueueSyncOperation(canonical, {
+      ...managedChange,
+      deletedDataset: false,
+      forceReplace: options.forceReplace === true
+    });
+    emitDataChange(canonical, oldValue, stringValue, options.source || 'local-direct', operationId);
+    const deleted = (managedChange.deletedIds || []).length > 0 || Object.values(managedChange.nestedArrayChanges || {}).some(x => (x?.deletedIds || []).length);
+    if (deleted) window.dispatchEvent(new CustomEvent('cashtop:sync-now', { detail:{ reason: options.action || 'delete-record', key: canonical, operationId } }));
+    return { changed:true, operationId, change:managedChange };
+  }
+
+  function deleteManagedRecord(key, recordId, options = {}) {
+    const canonical = canonicalKey(key);
+    const ns = namespaceKey(canonical);
+    const oldValue = safeJson(rawGet(ns), null);
+    const id = String(recordId ?? '').trim();
+    if (!id) return { changed:false, operationId:null };
+    if (canonical === 'cashtop_products') {
+      const rows = Array.isArray(oldValue) ? oldValue : [];
+      const next = rows.filter(row => String(row?.id ?? '') !== id);
+      if (next.length === rows.length) return { changed:false, operationId:null };
+      return replaceManagedDatasetRaw(canonical, next, { ...options, action: options.action || 'delete-product' });
+    }
+    if (canonical === 'cashtop_funds_db') {
+      const db = oldValue && typeof oldValue === 'object' && !Array.isArray(oldValue) ? oldValue : {};
+      const branch = branchIdFromSession();
+      const accounts = Array.isArray(db.accounts) ? db.accounts : [];
+      const logs = Array.isArray(db.accountLogs) ? db.accountLogs : [];
+      const removed = accounts.find(a => String(a?.id ?? '') === id && sameBranch(a, branch));
+      if (!removed) return { changed:false, operationId:null };
+      const next = {
+        ...db,
+        accounts: accounts.filter(a => !(String(a?.id ?? '') === id && sameBranch(a, branch))),
+        accountLogs: logs.filter(l => !(String(l?.accountId ?? '') === id && sameBranch(l, branch)))
+      };
+      return replaceManagedDatasetRaw(canonical, next, { ...options, action: options.action || 'delete-account' });
+    }
+    return { changed:false, operationId:null };
+  }
+
   function setRawCompanyDataset(key, value, options = {}) {
     const canonical = canonicalKey(key);
     if (!isManagedKey(canonical)) throw new Error('مجموعة البيانات غير مدارة');
@@ -6622,7 +6688,7 @@
     rawGet,
     rawSet,
     getRawCompanyDataset,
-    setRawCompanyDataset,
+    setRawCompanyDataset, replaceManagedDatasetRaw, deleteManagedRecord,
     ensureSystemDefaults,
     DEFAULT_MAIN_BRANCH_NAME,
     DEFAULT_CASH_ACCOUNT_NAME,

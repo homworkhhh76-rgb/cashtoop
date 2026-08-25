@@ -1626,6 +1626,15 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     }
 
     if (LOSSLESS_OBJECT_KEYS.has(key) && localValue && remoteValue && typeof localValue === 'object' && typeof remoteValue === 'object' && !Array.isArray(localValue) && !Array.isArray(remoteValue)) {
+      if (pending?.nestedArrayChanges && typeof pending.nestedArrayChanges === 'object') {
+        const merged = { ...remoteValue, ...localValue };
+        for (const field of ['accounts','accountLogs']) {
+          const nested = pending.nestedArrayChanges[field];
+          if (!nested || !Array.isArray(localValue[field]) || !Array.isArray(remoteValue[field])) continue;
+          merged[field] = mergeArrayByDelta(localValue[field], remoteValue[field], nested.touchedIds || [], nested.deletedIds || []);
+        }
+        return { ...localPayload, value: JSON.stringify(merged), deleted: false };
+      }
       return { ...localPayload, value: JSON.stringify(mergeLosslessObjectPending(key, localValue, remoteValue)), deleted: false };
     }
 
@@ -2465,7 +2474,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     else flushAuditTrailPending({ limit: 120 }).catch(() => null);
   });
   window.addEventListener('cashtop:sync-now', () => {
-    if (core.getSyncQueue().length) scheduleSync(80);
+    if (core.getSyncQueue().length) scheduleSync(15);
     else checkRemoteAndPull(true).catch(() => null);
   });
   window.addEventListener('cashtop:sync-queue-restored', () => { if (core.FILE !== 'sync.html') scheduleSync(250); });

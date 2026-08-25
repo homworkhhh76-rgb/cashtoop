@@ -470,8 +470,8 @@
                 هل أنت متأكد من رغبتك بحذف حساب: <strong id="deleteAccNameText" style="color: #dd4b39;"></strong>؟
             </p>
             <div style="display: flex; justify-content: center; gap: 10px;">
-                <button type="button" class="btn-cancel" onclick="closeModal('deleteModal')">إلغاء وتراجع</button>
-                <button type="button" class="btn-red-submit" id="deleteAccountConfirmBtn" onclick="executeDelete()"><i class="fa-solid fa-trash-can"></i> تأكيد</button>
+                <button type="button" class="btn-cancel" onclick="closeModal('deleteModal')" style="border-radius:12px;padding:12px 16px;font-weight:800;">لا، تراجع</button>
+                <button type="button" class="btn-red-submit" id="deleteAccountConfirmBtn" onclick="executeDelete()" style="border-radius:12px;padding:12px 16px;font-weight:800;"><i class="fa-solid fa-trash-can"></i> نعم، احذف</button>
             </div>
         </div>
     </div>
@@ -762,7 +762,7 @@
                         <button class="action-btn btn-excel" title="تصدير السجل إلى Excel" onclick="exportAccountExcel(${item.id})"><i class="fa-solid fa-file-excel"></i></button>
                         <button class="action-btn btn-edit" title="تعديل الحساب" onclick="editAccount(${item.id})"><i class="fa-solid fa-pen-to-square"></i></button>
                         <button class="action-btn" style="color:${isDropdownPreferred ? '#f59e0b' : '#64748b'}" title="${isDropdownPreferred ? 'الصندوق الافتراضي حالياً' : 'تعيين كصندوق افتراضي في القوائم'}" onclick="setDropdownDefaultAccount(${item.id})"><i class="fa-${isDropdownPreferred ? 'solid' : 'regular'} fa-star"></i></button>
-                        ${(item.isDefaultCash === true || item.locked === true) ? '<span title="صندوق الكاش افتراضي ولا يمكن تعطيله أو حذفه" style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;color:#16a34a;"><i class="fa-solid fa-lock"></i></span>' : `<button class="action-btn" style="color:${isAccountActive(item)?'#f59e0b':'#16a34a'}" title="${isAccountActive(item)?'إيقاف الحساب':'تفعيل الحساب'}" onclick="toggleAccountStatus(${item.id})"><i class="fa-solid ${isAccountActive(item)?'fa-pause':'fa-play'}"></i></button><button class="action-btn btn-delete" title="حذف إذا لم توجد عليه حركات" onclick="confirmDeleteAccount(${item.id})"><i class="fa-solid fa-trash-can"></i></button>`}
+                        <button class="action-btn" style="color:${isAccountActive(item)?'#f59e0b':'#16a34a'}" title="${isAccountActive(item)?'إيقاف الحساب':'تفعيل الحساب'}" onclick="toggleAccountStatus(${item.id})"><i class="fa-solid ${isAccountActive(item)?'fa-pause':'fa-play'}"></i></button><button class="action-btn btn-delete" title="حذف الصندوق" onclick="confirmDeleteAccount(${item.id})"><i class="fa-solid fa-trash-can"></i></button>
                     </div></td>`;
                 return tr;
             };
@@ -891,7 +891,7 @@
 
                 if (isDefaultCash) { select.value = 'كاش'; select.disabled = true; } else { select.disabled = false; }
                 document.getElementById('accBalance').value = acc.balance;
-                document.getElementById('accBalance').disabled = true; // منع التلاعب بالرصيد أثناء التعديل
+                document.getElementById('accBalance').disabled = false; // السماح بتعديل الرصيد مباشرة
                 populateAccountCurrencySelect(acc.currencyId || getCurrencyConfig().baseCurrencyId);
                 document.getElementById('accCurrency').disabled = Math.abs(Number(acc.balance || 0)) > 0;
                 document.getElementById('accNotes').value = acc.notes || '';
@@ -938,13 +938,26 @@
             if (isEditMode) {
                 let acc = cashtop_funds_db.accounts.find(a => a.id.toString() === editIdStr);
                 if (acc) {
+                    const oldBalance = Number(acc.balance || 0);
+                    const newBalance = parseFloat(document.getElementById('accBalance').value);
+                    if (!Number.isFinite(newBalance)) { showToast('أدخل رصيداً صحيحاً.', 'error'); return; }
                     acc.name = usernameToSave;
                     acc.type = finalType;
+                    acc.balance = newBalance;
                     if (!document.getElementById('accCurrency').disabled) acc.currencyId = document.getElementById('accCurrency').value || getCurrencyConfig().baseCurrencyId;
                     acc.notes = notes;
                     if (makeDropdownDefault) cashtop_funds_db.accounts.forEach(item => { item.isDropdownDefault = String(item.id) === String(acc.id); });
                     else acc.isDropdownDefault = false;
-                    showToast('تم تعديل بيانات الحساب بنجاح.', 'success');
+                    const delta = newBalance - oldBalance;
+                    if (Math.abs(delta) > 0.0000001) {
+                        cashtop_funds_db.accountLogs.push({
+                            id:`MANUAL_BAL_${acc.id}_${Date.now()}`, sourceType:'manualBalanceAdjustment', sourceId:String(acc.id),
+                            accountId:acc.id, date:new Date().toISOString(), type:delta >= 0 ? 'إيداع' : 'سحب', amount:Math.abs(delta),
+                            baseAmount:Math.abs(delta), currencyId:acc.currencyId || getCurrencyConfig().baseCurrencyId,
+                            notes:'تعديل رصيد الحساب يدوياً'
+                        });
+                    }
+                    showToast('تم تعديل بيانات الحساب والرصيد بنجاح.', 'success');
                 }
             } else {
                 const balance = parseFloat(document.getElementById('accBalance').value) || 0;
@@ -968,14 +981,11 @@
             if (window.Cashtop?.isFinancialGroupReadOnly?.()) { showToast('المجموعة المغلقة مؤرشفة ولا يمكن تعديل حساباتها.', 'error'); return; }
             const acc = cashtop_funds_db.accounts.find(a => String(a.id) === String(id));
             if (!acc) return;
-            if (acc.isDefaultCash === true || acc.locked === true) { showToast('صندوق الكاش افتراضي ولا يمكن حذفه أو تعطيله.', 'error'); return; }
-            const blockReason = accountDeleteBlockReason(acc);
-            if (blockReason) { showToast(blockReason, 'warning'); return; }
             currentDeleteId = acc.id;
-            document.getElementById('deleteAccNameText').innerText = acc.name;
-            document.getElementById('deleteAccountModalTitle').innerText = 'تأكيد حذف الحساب';
-            document.getElementById('deleteAccountModalText').innerHTML = `الحساب <strong style="color:#dd4b39;">${String(acc.name || '')}</strong> رصيده صفر ولا توجد عملية حالية مرتبطة به.<br>سيتم حذف الصندوق وتنظيف حركاته التاريخية المحلية من كشف الحساب. هل تريد المتابعة؟`;
-            document.getElementById('deleteAccountConfirmBtn').innerHTML = '<i class="fa-solid fa-trash-can"></i> حذف الحساب';
+            document.getElementById('deleteAccNameText').innerText = acc.name || 'الصندوق';
+            document.getElementById('deleteAccountModalTitle').innerText = 'تأكيد حذف الصندوق';
+            document.getElementById('deleteAccountModalText').innerHTML = `هل أنت متأكد من حذف الصندوق <strong style="color:#dc2626;">${String(acc.name || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</strong>؟<br><span style="font-size:12px;color:#64748b;">سيُحذف محلياً فوراً وتتم مزامنته مباشرة مع بقية الأجهزة، بما في ذلك الرصيد والحركات المرتبطة به.</span>`;
+            document.getElementById('deleteAccountConfirmBtn').innerHTML = '<i class="fa-solid fa-trash-can"></i> نعم، احذف';
             openModal('deleteModal');
         }
 
@@ -984,16 +994,21 @@
             if (currentDeleteId === null) return;
             const target = cashtop_funds_db.accounts.find(a => String(a.id) === String(currentDeleteId));
             if (!target) { closeModal('deleteModal'); currentDeleteId = null; return; }
-            if (target.isDefaultCash === true || target.locked === true) { closeModal('deleteModal'); currentDeleteId = null; showToast('لا يمكن حذف صندوق الكاش الافتراضي.', 'error'); return; }
-            const blockReason = accountDeleteBlockReason(target);
-            if (blockReason) { closeModal('deleteModal'); currentDeleteId = null; showToast(blockReason, 'warning'); return; }
-            cashtop_funds_db.accounts = cashtop_funds_db.accounts.filter(a => String(a.id) !== String(currentDeleteId));
-            cashtop_funds_db.accountLogs = (cashtop_funds_db.accountLogs || []).filter(l => String(l.accountId) !== String(currentDeleteId));
-            localStorage.setItem('cashtop_funds_db_v4', JSON.stringify(cashtop_funds_db));
-            initLayout();
-            closeModal('deleteModal');
-            showToast('تم حذف الصندوق بعد التأكد من أن رصيده صفر ولا توجد حركة حالية مرتبطة به.', 'success');
-            currentDeleteId = null;
+            try {
+                const result = window.Cashtop?.deleteManagedRecord?.('cashtop_funds_db', currentDeleteId, { action:'delete-account' });
+                if (!result?.changed) throw new Error('تعذر حفظ حذف الصندوق محلياً');
+                cashtop_funds_db.accounts = cashtop_funds_db.accounts.filter(a => String(a.id) !== String(currentDeleteId));
+                cashtop_funds_db.accountLogs = (cashtop_funds_db.accountLogs || []).filter(l => String(l.accountId) !== String(currentDeleteId));
+                initLayout();
+                closeModal('deleteModal');
+                showToast('تم حذف الصندوق محلياً وسيتم مزامنته فوراً.', 'success');
+                window.dispatchEvent(new CustomEvent('cashtop:sync-now', { detail:{ reason:'delete-account', key:'cashtop_funds_db', operationId:result.operationId } }));
+            } catch (error) {
+                console.error(error);
+                showToast(error?.message || 'تعذر حذف الصندوق.', 'error');
+            } finally {
+                currentDeleteId = null;
+            }
         }
 
         /* ========================================================== */
