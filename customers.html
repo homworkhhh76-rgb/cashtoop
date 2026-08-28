@@ -1582,11 +1582,11 @@
         }
 
         function normalizeWhatsAppPhone(phone) {
-            let digits = String(phone || '').replace(/\D/g, '');
+            // استخدم الرقم كما أدخله المستخدم؛ لا تضف 972 تلقائياً.
+            let digits = String(phone || '').trim().replace(/[^0-9+]/g, '');
+            if (digits.startsWith('+')) digits = digits.slice(1);
             if (digits.startsWith('00')) digits = digits.slice(2);
-            if (digits.startsWith('972')) return digits;
-            if (digits.startsWith('0')) digits = digits.slice(1);
-            return `972${digits}`;
+            return digits;
         }
 
         function sendMsg(phone, name, balance, type) {

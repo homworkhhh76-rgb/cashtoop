@@ -446,7 +446,7 @@
   async function renderInvoiceCanvas(invoice, options = {}) {
     const created = await createReceiptElement(invoice, options);
     try {
-      const source = await window.html2canvas(created.receipt, { scale: 3, backgroundColor: '#ffffff', useCORS: true, logging: false });
+      const source = await window.html2canvas(created.receipt, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false });
       const targetWidth = dotsForType(created.type);
       const targetHeight = Math.max(1, Math.round(source.height * targetWidth / source.width));
       const canvas = document.createElement('canvas');
@@ -532,7 +532,14 @@
       bluetoothDeviceId: device.id || '',
       bluetoothDeviceName: device.name || 'Bluetooth Printer'
     });
-    device.addEventListener?.('gattserverdisconnected', () => { bleCharacteristic = null; });
+    device.addEventListener?.('gattserverdisconnected', () => {
+      bleCharacteristic = null;
+      // احتفظ بالطابعة المحفوظة وحاول إعادة الاتصال بالخلفية بدون فتح نافذة اختيار.
+      const settings = getPrinterSettings();
+      if (settings.bluetoothEnabled === true && settings.bluetoothTransport === 'ble') {
+        setTimeout(() => autoReconnectBluetooth(2).catch(() => null), 350);
+      }
+    });
     return { id: device.id || '', name: device.name || 'Bluetooth Printer', connected: true, transport: 'ble' };
   }
 
@@ -694,10 +701,23 @@
     const data = canvasToEscPosRaster(canvas);
     const copies = Math.min(10, Math.max(1, parseInt(printer.printCopies, 10) || 1));
     for (let copy = 0; copy < copies; copy += 1) {
-      const bleChunkSize = Math.max(20, Math.min(64, Number(printer.bluetoothChunkSize) || 20));
+      // معظم طابعات BLE تدعم MTU أكبر من 20 بايت. الإرسال بـ 180 بايت مع
+      // writeWithoutResponse أسرع بكثير من الانتظار 6-12ms لكل قطعة صغيرة.
+      const supportsFastWrite = Boolean(characteristic.properties?.writeWithoutResponse && characteristic.writeValueWithoutResponse);
+      const bleChunkSize = Math.max(20, Math.min(180, Number(printer.bluetoothChunkSize) || (supportsFastWrite ? 180 : 64)));
       for (let offset = 0; offset < data.length; offset += bleChunkSize) {
-        await writeBleChunk(characteristic, data.slice(offset, Math.min(offset + bleChunkSize, data.length)));
-        await sleep(characteristic.properties?.writeWithoutResponse ? 12 : 6);
+        const chunk = data.slice(offset, Math.min(offset + bleChunkSize, data.length));
+        try {
+          await writeBleChunk(characteristic, chunk);
+        } catch (error) {
+          // بعض الطابعات ترفض القطع الكبيرة؛ ارجع تلقائياً للحجم الآمن.
+          if (bleChunkSize > 64) {
+            for (let small = offset; small < Math.min(offset + bleChunkSize, data.length); small += 64) {
+              await writeBleChunk(characteristic, data.slice(small, Math.min(small + 64, data.length)));
+            }
+          } else throw error;
+        }
+        if (!supportsFastWrite) await sleep(2);
       }
     }
     return { ok: true, mode: 'bluetooth', copies };
@@ -849,22 +869,55 @@
 
     if (printer.bluetoothEnabled === true) {
       try {
-        // First reconnect silently to the previously authorised printer. If the browser
-        // cannot restore it, ask once for the printer instead of silently skipping Bluetooth.
+        // عند تفعيل الطابعة المباشرة لا نرجع إلى طباعة النظام/PDF؛ فهذا هو سبب
+        // التحول أحياناً إلى "Save as PDF" أو تطبيق طباعة آخر.
         try { return await printBluetooth(invoice, { ...options, printer, prompt: false }); }
         catch (_) { return await printBluetooth(invoice, { ...options, printer, prompt: true }); }
       } catch (error) {
         console.warn('[CASH TOP] Bluetooth printer unavailable:', error);
-        if (options.bluetoothFallback === false) throw error;
+        throw new Error(error?.message || 'الطابعة غير متصلة. أعد تشغيل الطابعة أو اربطها من إعدادات الطابعة.');
       }
     }
     return systemPrint(invoice, { ...options, printer });
   }
 
 
+  let reconnectPromise = null;
+  async function autoReconnectBluetooth(retries = 1) {
+    const settings = getPrinterSettings();
+    if (settings.bluetoothEnabled !== true || settings.bluetoothTransport !== 'ble') return false;
+    if (bleDevice?.gatt?.connected && bleCharacteristic) return true;
+    if (!navigator.bluetooth || typeof navigator.bluetooth.getDevices !== 'function' || !settings.bluetoothDeviceId) return false;
+    if (reconnectPromise) return reconnectPromise;
+    reconnectPromise = (async () => {
+      for (let attempt = 0; attempt <= Math.max(0, retries); attempt += 1) {
+        try {
+          const devices = await navigator.bluetooth.getDevices();
+          const remembered = devices.find(device => String(device.id) === String(settings.bluetoothDeviceId));
+          if (remembered) {
+            await connectSelectedDevice(remembered);
+            return true;
+          }
+        } catch (_) {}
+        if (attempt < retries) await sleep(250);
+      }
+      return false;
+    })().finally(() => { reconnectPromise = null; });
+    return reconnectPromise;
+  }
+
+  function initPrinterConnectionWatch() {
+    const run = () => autoReconnectBluetooth(1).catch(() => false);
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run, { once: true });
+    else setTimeout(run, 120);
+    window.addEventListener('pageshow', run, { passive: true });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) run(); }, { passive: true });
+  }
   async function printReceiptData(invoice, options = {}) {
     return printInvoice(invoice, options);
   }
+
+  initPrinterConnectionWatch();
 
   window.CashtopPrinter = {
     DEFAULTS,
@@ -881,6 +934,7 @@
     connectBluetooth,
     connectSerialBluetooth,
     disconnectBluetooth,
+    autoReconnectBluetooth,
     getBluetoothState: () => ({
       connected: Boolean((bleDevice?.gatt?.connected && bleCharacteristic) || serialPort?.writable),
       transport: bleDevice?.gatt?.connected && bleCharacteristic ? 'ble' : (serialPort?.writable ? 'serial' : getPrinterSettings().bluetoothTransport || ''),

@@ -335,7 +335,7 @@
     <script src="multi-system.js?v=100"></script>
     <script src="turso-config.js?v=100"></script><script src="turso-rtdb.js?v=100"></script>
     <script src="accounting-engine.js?v=100"></script>
-    <script src="cashtop-printer.js?v=49"></script>
+    <script src="cashtop-printer.js?v=50"></script>
     <script src="turso-sync.js?v=126"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
@@ -1030,7 +1030,7 @@
                     if (!value) {
                         selectedCustomer = null;
                         recalculateBasketPrices();
-                        renderProductsGrid();
+                        refreshCashierProductPrices();
                         return;
                     }
                     const exact = customersData.find(c => normalizeCustomerText(c.name) === value || normalizeCustomerText(c.phone) === value);
@@ -1038,7 +1038,7 @@
                     else if (selectedCustomer && normalizeCustomerText(selectedCustomer.name) !== value) {
                         selectedCustomer = null;
                         recalculateBasketPrices();
-                        renderProductsGrid();
+                        refreshCashierProductPrices();
                     } else {
                         showCustomerSuggestions();
                     }
@@ -1072,7 +1072,10 @@
             }
             if (!key || key === 'cashtop_materials') materialsData = readArray('cashtop_materials');
             if (!key || key === 'cashtop_manufacturing_recipes') manufacturingRecipesData = readArray('cashtop_manufacturing_recipes');
-            if (!key || key === 'cashtop_customers') customersData = readArray('cashtop_customers');
+            if (!key || key === 'cashtop_customers') {
+                customersData = readArray('cashtop_customers');
+                if (selectedCustomer) selectedCustomer = customersData.find(c => String(c?.id) === String(selectedCustomer.id)) || null;
+            }
             if (!key || key === 'cashtop_customer_groups') customerGroupsData = readArray('cashtop_customer_groups');
             if (!key || key === 'cashtop_branches') branchesData = readArray('cashtop_branches');
             if (!key || key === 'cashtop_sales_agents') { agentsData = readArray('cashtop_sales_agents'); syncCashierRepresentative(); populateCashierOptions(); }
@@ -1084,6 +1087,11 @@
                 if (!Array.isArray(fundsDB.accounts)) fundsDB.accounts = [];
                 if (!Array.isArray(fundsDB.accountLogs)) fundsDB.accountLogs = [];
                 populateAccountsSelect();
+            }
+            if (key === 'cashtop_customer_groups' || key === 'cashtop_customers') {
+                runCashierStep('refresh prices', recalculateBasketPrices);
+                refreshCashierProductPrices();
+                return;
             }
             runCashierStep('refresh basket', renderBasket);
             runCashierStep('refresh products', renderProductsGrid);
@@ -1830,7 +1838,7 @@
                 box.style.display = 'none';
                 selectedCustomer = null;
                 recalculateBasketPrices();
-                renderProductsGrid();
+                refreshCashierProductPrices();
                 return;
             }
             const exact = customersData.find(c => normalizeCustomerText(c.name) === inputVal || normalizeCustomerText(c.phone) === inputVal);
@@ -1860,6 +1868,16 @@
             }
         }
 
+        function refreshCashierProductPrices() {
+            document.querySelectorAll('.product-item-card[data-product-id]').forEach(card => {
+                const prod = productsData.find(item => String(item?.id) === String(card.dataset.productId || ''));
+                if (!prod) return;
+                const unitId = cashierUseLargestSaleUnit() ? cashierUnitChainForProduct(prod).slice(-1)[0]?.id : 'piece';
+                const priceNode = card.querySelector('.product-item-price');
+                if (priceNode) priceNode.textContent = `${cashierBaseSymbol()} ${moneyDisplay(getEffectiveProductPrice(prod, unitId || 'piece'))}`;
+            });
+        }
+
         function selectCustomer(customer, notify = true) {
             try {
                 const freshGroups = JSON.parse(localStorage.getItem('cashtop_customer_groups') || '[]');
@@ -1875,9 +1893,8 @@
             document.getElementById('customerPhoneInput').value = customer.phone || '';
             document.getElementById('customerSuggestions').style.display = 'none';
             recalculateBasketPrices();
-            // تحديث أسعار بطاقات الكاشير نفسها فور اختيار العميل، وليس السلة فقط.
-            // هذا يجعل سعر مجموعة العميل ظاهرًا قبل إضافة الصنف للسلة.
-            renderProductsGrid();
+            // حدّث الأسعار داخل البطاقات الحالية فقط حتى لا تتحرك قائمة المنتجات.
+            refreshCashierProductPrices();
             const group = getCustomerGroup(customer);
             if (notify) showToast(group ? `تم تطبيق أسعار مجموعة [${group.name}] للعميل ${customer.name}` : `تم اختيار العميل ${customer.name} بالسعر العادي`, 'success');
         }
@@ -3476,11 +3493,13 @@
             }
         }
 
-        window.addEventListener('cashtop:remote-applied', event => refreshCashierDatasets(event.detail?.key));
+        // R147: لا نركّب مستمعاً ثانياً للمنتجات/العملاء/مجموعات الأسعار؛
+        // المستمع الموحد أعلاه يكفي ويمنع إعادة رسم الكاشير مرتين لكل تحديث مزامنة.
+        window.addEventListener('cashtop:remote-applied', event => {
+            if (event.detail?.key === 'cashtop_sales_offers') refreshCashierDatasets('cashtop_sales_offers');
+        });
         window.addEventListener('storage', event => {
-            if (['cashtop_products', 'cashtop_customers', 'cashtop_customer_groups', 'cashtop_sales_offers', 'cashtop_funds_db'].includes(event.key)) {
-                refreshCashierDatasets(event.key);
-            }
+            if (event.key === 'cashtop_sales_offers') refreshCashierDatasets('cashtop_sales_offers');
         });
         window.addEventListener('pageshow', () => {
             window.Cashtop?.closeTransientUi?.();
