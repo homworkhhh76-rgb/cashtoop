@@ -1998,12 +1998,19 @@
       });
       return clone;
     }
-    clone.stockPieces = Math.max(0, Number(product.branchStocks?.[branch] || 0));
+    const branchStockKeyExists = Object.prototype.hasOwnProperty.call(product.branchStocks || {}, branch);
+    const branchStockDirect = Math.max(0, Number(product.branchStocks?.[branch] || 0));
+    const scopedStoreStock = [...scopedStores].reduce((sum, storeId) => sum + Math.max(0, Number(product.storeStocks?.[storeId] || 0)), 0);
+    // المنتجات التي أُضيفت مباشرة إلى مخزن فرعي قد لا تحتوي branchStocks بعد؛
+    // في هذه الحالة يكون storeStocks هو الرصيد الحقيقي للفرع وليس صفراً.
+    clone.stockPieces = branchStockKeyExists ? branchStockDirect : scopedStoreStock;
     clone.inventoryLots = deepClone(product.branchInventoryLots?.[branch] || normalizeArrayValue(product.inventoryLots || [], []).filter(lot => recordBranchId(lot) === branch)) || [];
     if (Array.isArray(clone.variants)) {
       clone.variants.forEach((variant, index) => {
         const original = product.variants?.[index] || variant;
-        variant.qty = Math.max(0, Number(original.branchStocks?.[branch] || 0));
+        const variantBranchKeyExists = Object.prototype.hasOwnProperty.call(original.branchStocks || {}, branch);
+        const variantStoreStock = [...scopedStores].reduce((sum, storeId) => sum + Math.max(0, Number(original.storeStocks?.[storeId] || 0)), 0);
+        variant.qty = variantBranchKeyExists ? Math.max(0, Number(original.branchStocks?.[branch] || 0)) : variantStoreStock;
         variant.storeStocks = filterStockMapForStores(original.storeStocks, scopedStores);
       });
     }

@@ -2204,7 +2204,10 @@
 
         function displayStockForProduct(product) {
             const composite = compositeProductStockInfo(product);
-            return composite ? composite.available : (parseFloat(product?.stockPieces) || parseFloat(product?.stock) || 0);
+            if (composite) return composite.available;
+            const direct = Math.max(0, Number(product?.stockPieces ?? product?.stock ?? 0));
+            const storeStock = Object.values(product?.storeStocks || {}).reduce((sum, qty) => sum + Math.max(0, Number(qty || 0)), 0);
+            return direct + storeStock;
         }
 
         function toggleCashierVisibility(productId) {

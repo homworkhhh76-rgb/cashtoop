@@ -111,14 +111,19 @@
       .ct-print-receipt .info-value{font-weight:700;text-align:right;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .ct-print-receipt .receipt-table{
         width:100%;border-collapse:collapse;margin:0;font-weight:700;
-        font-size:9.5px;table-layout:fixed
+        font-size:9.5px;table-layout:fixed;direction:rtl
       }
-      .ct-print-receipt .receipt-table th{padding:3px 0}
-      .ct-print-receipt .receipt-table td{padding:2px 0;font-weight:600;overflow:hidden;text-overflow:ellipsis}
-      .ct-print-receipt .receipt-table th,.ct-print-receipt .receipt-table td{text-align:center;line-height:1.2}
+      .ct-print-receipt .receipt-table th{padding:3px 1px}
+      .ct-print-receipt .receipt-table td{padding:2px 1px;font-weight:600;overflow:hidden;text-overflow:clip;vertical-align:middle;min-width:0}
+      .ct-print-receipt .receipt-table th,.ct-print-receipt .receipt-table td{text-align:center;line-height:1.2;word-break:break-word;overflow-wrap:anywhere}
       .ct-print-receipt .receipt-table th:first-child,.ct-print-receipt .receipt-table td:first-child{text-align:right}
       .ct-print-receipt .receipt-table th:last-child,.ct-print-receipt .receipt-table td:last-child{text-align:left}
-      .ct-print-receipt .receipt-table .item-name{white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;max-width:0}
+      .ct-print-receipt .receipt-table .item-name{white-space:normal!important;overflow:hidden!important;text-overflow:clip!important;max-width:none!important;word-break:break-word!important;overflow-wrap:anywhere!important}
+      .ct-print-receipt .receipt-table col.item-col-name{width:35%}
+      .ct-print-receipt .receipt-table col.item-col-unit{width:15%}
+      .ct-print-receipt .receipt-table col.item-col-qty{width:15%}
+      .ct-print-receipt .receipt-table col.item-col-price{width:17%}
+      .ct-print-receipt .receipt-table col.item-col-total{width:18%}
       .ct-print-receipt .totals-horizontal-box{
         display:flex;justify-content:space-between;border:1.5px solid #000;border-radius:5px;
         padding:4px 2px;margin:6px 0;background:#fff
@@ -175,9 +180,14 @@
       .ct-custom-receipt .type-line .content{border-bottom:2px solid #000!important;height:0!important;min-height:0!important;padding:0;margin-top:10px}
       .ct-custom-receipt .type-box .content{border:2px solid #000!important}
       .ct-custom-receipt .type-circle .content{border:2px solid #000!important;border-radius:50%}
-      .ct-custom-receipt .receipt-table{width:100%;border-collapse:collapse;font-size:inherit;text-align:center;table-layout:fixed}
-      .ct-custom-receipt .receipt-table th,.ct-custom-receipt .receipt-table td{border-bottom:1px dashed #000;padding:4px 2px;min-width:20px;overflow-wrap:anywhere;background:transparent!important;color:inherit!important}
-      .ct-custom-receipt .receipt-table th:first-child,.ct-custom-receipt .receipt-table td:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .ct-custom-receipt .receipt-table{width:100%;border-collapse:collapse;font-size:inherit;text-align:center;table-layout:fixed;direction:rtl}
+      .ct-custom-receipt .receipt-table th,.ct-custom-receipt .receipt-table td{border-bottom:1px dashed #000;padding:4px 2px;min-width:0;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;vertical-align:middle;background:transparent!important;color:inherit!important}
+      .ct-custom-receipt .receipt-table th:first-child,.ct-custom-receipt .receipt-table td:first-child{white-space:normal;overflow:hidden;text-overflow:clip;word-break:break-word;overflow-wrap:anywhere}
+      .ct-custom-receipt .receipt-table col.item-col-name{width:35%!important}
+      .ct-custom-receipt .receipt-table col.item-col-unit{width:15%!important}
+      .ct-custom-receipt .receipt-table col.item-col-qty{width:15%!important}
+      .ct-custom-receipt .receipt-table col.item-col-price{width:17%!important}
+      .ct-custom-receipt .receipt-table col.item-col-total{width:18%!important}
       .ct-custom-receipt .resizer,.ct-custom-receipt .delete-btn{display:none!important}
       .ct-custom-receipt img{max-width:100%;object-fit:contain}
       .ct-custom-receipt .ct-custom-auto-adjustments{position:absolute;right:5%;left:5%;border-top:1px dashed #000;border-bottom:1px dashed #000;padding:5px 2px;font-size:10px;font-weight:800;line-height:1.6}
@@ -252,8 +262,13 @@
       if (tbody) {
         tbody.innerHTML = `<tr><th>الصنف</th><th>الوحدة</th><th>الكمية</th><th>السعر</th><th>الاجمالي</th></tr>` + (items.map(item => {
           const qty = number(item.qty), price = number(item.price);
-          return `<tr><td>${escapeHtml(item.name || 'صنف')}</td><td>${escapeHtml(itemUnit(item))}</td><td>${escapeHtml(Number(qty.toFixed(6)))}</td><td>${money(price)}</td><td>${money(qty * price)}</td></tr>`;
+          return `<tr><td class="item-name">${escapeHtml(item.name || 'صنف')}</td><td>${escapeHtml(itemUnit(item))}</td><td>${escapeHtml(Number(qty.toFixed(6)))}</td><td>${money(price)}</td><td>${money(qty * price)}</td></tr>`;
         }).join('') || '<tr><td colspan="5">لا توجد أصناف</td></tr>');
+        const colgroup = tableEl.querySelector('colgroup');
+        if (colgroup) colgroup.remove();
+        const cg = document.createElement('colgroup');
+        ['item-col-name','item-col-unit','item-col-qty','item-col-price','item-col-total'].forEach(cls => { const col = document.createElement('col'); col.className = cls; cg.appendChild(col); });
+        tableEl.insertBefore(cg, tableEl.firstChild);
       }
       const newRows = Math.max(1, items.length);
       extraHeight = Math.max(0, newRows - oldRows) * 27;
@@ -327,7 +342,7 @@
     const rows = items.map(item => {
       const qty = number(item.qty);
       const price = number(item.price);
-      return `<tr><td class="item-name" title="${escapeHtml(item.name || 'صنف')}" style="width:35%">${escapeHtml(item.name || 'صنف')}</td><td style="width:15%">${escapeHtml(itemUnit(item))}</td><td style="width:15%">${escapeHtml(Number(qty.toFixed(6)))}</td><td style="width:17%">${money(price)}</td><td style="width:18%">${money(qty * price)}</td></tr>`;
+      return `<tr><td class="item-name" title="${escapeHtml(item.name || 'صنف')}">${escapeHtml(item.name || 'صنف')}</td><td>${escapeHtml(itemUnit(item))}</td><td>${escapeHtml(Number(qty.toFixed(6)))}</td><td>${money(price)}</td><td>${money(qty * price)}</td></tr>`;
     }).join('') || '<tr><td colspan="5">لا توجد أصناف</td></tr>';
     const barcode = printer.showBarcode !== false
       ? `<div class="barcode-container"><svg class="ct-invoice-barcode" data-code="${escapeHtml(invoiceNumber(invoice))}"></svg></div>`
@@ -347,7 +362,7 @@
           <span class="info-label">الجوال:</span><span class="info-value">${escapeHtml(invoice?.phone || '-')}</span><span></span><span></span>
         </div>
         <div class="dashed-line"></div>
-        <table class="receipt-table"><thead><tr><th>الصنف</th><th>الوحدة</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead><tbody>${rows}</tbody></table>
+        <table class="receipt-table"><colgroup><col class="item-col-name"><col class="item-col-unit"><col class="item-col-qty"><col class="item-col-price"><col class="item-col-total"></colgroup><thead><tr><th>الصنف</th><th>الوحدة</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead><tbody>${rows}</tbody></table>
         <div class="dashed-line"></div>
         ${(discount > 0 || tax > 0 || shipping > 0) ? `<div class="adjustments">${discount > 0 ? `<div class="adjustment-row"><span>الخصم</span><strong>- ${money(discount)} ${escapeHtml(currency)}</strong></div>` : ''}${tax > 0 ? `<div class="adjustment-row"><span>${invoice?.taxName ? `الضريبة - ${escapeHtml(invoice.taxName)}` : 'الضريبة'}</span><strong>+ ${money(tax)} ${escapeHtml(currency)}</strong></div>` : ''}${shipping > 0 ? `<div class="adjustment-row"><span>الشحن</span><strong>+ ${money(shipping)} ${escapeHtml(currency)}</strong></div>` : ''}</div>` : ''}
         ${(invoice?.shippingAddress || invoice?.shippingNote) ? `<div class="shipping-info">${invoice?.shippingAddress ? `<div><strong>عنوان الشحن:</strong> ${escapeHtml(invoice.shippingAddress)}</div>` : ''}${invoice?.shippingNote ? `<div><strong>ملاحظة الشحن:</strong> ${escapeHtml(invoice.shippingNote)}</div>` : ''}</div>` : ''}

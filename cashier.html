@@ -335,7 +335,7 @@
     <script src="multi-system.js?v=100"></script>
     <script src="turso-config.js?v=100"></script><script src="turso-rtdb.js?v=100"></script>
     <script src="accounting-engine.js?v=100"></script>
-    <script src="cashtop-printer.js?v=48"></script>
+    <script src="cashtop-printer.js?v=49"></script>
     <script src="turso-sync.js?v=126"></script>
 <script src="cashtop-download-fix.js"></script>
 </head>
@@ -1427,7 +1427,9 @@
             if (product.untrackedStock === true) return Number.POSITIVE_INFINITY;
             // cashtop-core يعيد المنتج مُسقطاً على الفرع النشط، لذلك stockPieces
             // هو الرصيد الحقيقي للفرع الحالي سواء كان MAIN أو فرعاً فرعياً.
-            const baseStock = Math.max(0, Number(product.stockPieces || 0));
+            const directStock = Math.max(0, Number(product.stockPieces || 0));
+            const storeStock = Object.values(product.storeStocks || {}).reduce((sum, qty) => sum + Math.max(0, Number(qty || 0)), 0);
+            const baseStock = directStock + storeStock;
             const lots = getTrackedLotState(product, branchId);
             // عندما تغطي الدفعات كامل الرصيد، لا نعرض الكمية المنتهية للبيع.
             if (lots.tracked + 0.001 >= baseStock) return Math.max(0, baseStock - lots.expired);
