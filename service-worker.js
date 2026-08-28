@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v131-printer-fast-invoice-stability';
+const CACHE_VERSION = 'v150-offline-first-laptop-cache';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = 'cash-top-2-remote-static-persistent-v1';
 
@@ -314,12 +314,17 @@ self.addEventListener('activate', event => {
     if (self.registration.navigationPreload) {
       try { await self.registration.navigationPreload.disable(); } catch (_) {}
     }
+
+    // Claim the existing laptop/PWA tab immediately. The browser must not wait
+    // for remote fonts or the verification pass before the SW can serve cached
+    // HTML during a network outage.
     await self.clients.claim();
 
-    // أكمل حزمة الصفحات أولاً، وسخّن المكتبات الخارجية قبل تنظيف الكاش القديم.
-    // لو تعذر ملف في هذا الإصدار نحافظ على كاش الإصدار السابق ليكون fallback.
-    const shell = await ensureLocalShell().catch(() => ({ complete: false, missing: ['unknown'] }));
-    await warmRemoteStaticAssetsOnce().catch(() => null);
+    const shellPromise = ensureLocalShell().catch(() => ({ complete: false, missing: ['unknown'] }));
+    const remotePromise = warmRemoteStaticAssetsOnce().catch(() => null);
+    const shell = await shellPromise;
+    await remotePromise;
+
     if (shell?.complete === true) {
       const keep = new Set([APP_CACHE, REMOTE_STATIC_CACHE, NOTIFICATION_META_CACHE]);
       const names = await caches.keys();

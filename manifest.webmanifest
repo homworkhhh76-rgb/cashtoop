@@ -4,7 +4,7 @@
   "description": "كاش توب 2: نظام محاسبة ومبيعات ومخزون يعمل متصلاً وبدون اتصال",
   "lang": "ar",
   "dir": "rtl",
-  "start_url": "./",
+  "start_url": "./صفحة تسجيل الدخول.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
