@@ -32,10 +32,10 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   ]);
   const LOSSLESS_OBJECT_KEYS = new Set(['cashtop_funds_db']);
   const usagePolicy = settings.usagePolicy || {};
-  const AUTO_REMOTE_CHECK_MS = Math.max(7000, Number(usagePolicy.remoteCheckMs || 10000));
-  const NAV_REMOTE_CHECK_MS = Math.max(3000, Number(usagePolicy.navigationCheckMs || 5000));
+  const AUTO_REMOTE_CHECK_MS = Math.max(500, Number(usagePolicy.remoteCheckMs || 650));
+  const NAV_REMOTE_CHECK_MS = Math.max(250, Number(usagePolicy.navigationCheckMs || 350));
   const FULL_REFRESH_MS = Math.max(3600000, Number(usagePolicy.fullRefreshMs || 43200000));
-  const WRITE_DEBOUNCE_MS = Math.max(500, Number(usagePolicy.writeDebounceMs || 1800));
+  const WRITE_DEBOUNCE_MS = Math.max(0, Number(usagePolicy.writeDebounceMs ?? 25));
   const AUDIT_CLOUD_ENABLED = usagePolicy.cloudAudit === true;
   const rawStorage = {
     get: key => Storage.prototype.getItem.call(localStorage, key),
@@ -1094,9 +1094,24 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     return true;
   }
 
+  function hasNewRemoteTombstone(payload, localMeta) {
+    const incoming = payload?.recordTombstones && typeof payload.recordTombstones === 'object'
+      ? payload.recordTombstones : {};
+    const existing = localMeta?.recordTombstones && typeof localMeta.recordTombstones === 'object'
+      ? localMeta.recordTombstones : {};
+    return Object.entries(incoming).some(([id, stamp]) => {
+      if (!id || !stamp) return false;
+      return Number(stamp || 0) > Number(existing[id] || 0);
+    });
+  }
+
   function canApplyRemote(key, payload, allowEqual = true) {
     if (pendingForKey(key)) return false;
     const localMeta = localMetaFor(key);
+    // حذف سجل محدد يجب أن يتغلب على اختلاف ساعات الأجهزة. نعتمد على
+    // tombstone جديد بدلاً من updatedAt فقط، وإلا قد يبقى السجل ظاهراً على
+    // جهاز ساعته متقدمة ثم يعود عند فتح الصفحة.
+    if (hasNewRemoteTombstone(payload, localMeta)) return true;
     const localTime = Number(localMeta.updatedAt || 0);
     if (localMeta.seeded === true || localTime <= 0) return true;
     const remoteTime = Number(payload.updatedAt || 0);
@@ -1906,6 +1921,31 @@ if (settings.enabled && core && settings.config?.databaseURL) {
           const desired = mergePendingPayload(key, sourceLocalPayload, remote, pending);
           await writeDatasetLocation(location, key, token, desired);
 
+          // الحذف لا يُعتبر ناجحاً بمجرد انتهاء طلب الكتابة. نتحقق من النسخة
+          // الفعلية الموجودة في السحابة، وبالأخص tombstones، ثم نعيد المحاولة
+          // بسرعة عند وجود قراءة قديمة أو تعارض من جهاز آخر. هذا يمنع رجوع
+          // السجل بعد فتح صفحة أخرى. التحقق الإضافي يقتصر على العمليات التي
+          // تحتوي حذفاً حتى لا نزيد قراءات المزامنة العادية.
+          const hasDeletion = pending.deletedDataset === true ||
+            (pending.deletedIds?.length || 0) > 0 ||
+            (pending.deletedFields?.length || 0) > 0 ||
+            Object.values(pending.nestedArrayChanges || {}).some(delta => (delta?.deletedIds?.length || 0) > 0);
+          if (hasDeletion) {
+            let verified = false;
+            let latestRemote = desired;
+            for (let verifyAttempt = 0; verifyAttempt < 3 && !verified; verifyAttempt += 1) {
+              const verifiedRaw = await readDatasetLocation(location, key, token, { fresh: true });
+              const verifiedPayload = verifiedRaw == null ? null : normalizeRemotePayload(verifiedRaw);
+              latestRemote = verifiedPayload || desired;
+              verified = pendingChangesPresent(verifiedRaw, desired, pending);
+              if (!verified) {
+                await writeDatasetLocation(location, key, token, desired);
+                if (verifyAttempt < 2) await new Promise(resolve => setTimeout(resolve, 35 * (verifyAttempt + 1)));
+              }
+            }
+            if (!verified) throw new Error(`تعذر تثبيت حذف ${key} على السحابة بعد عدة محاولات.`);
+          }
+
           const currentRaw = core.getRawCompanyDataset ? core.getRawCompanyDataset(key) : localStorage.getItem(key);
           const currentMeta = localMetaFor(key);
           const localUnchanged = currentRaw === (sourceLocalPayload.deleted ? null : sourceLocalPayload.value) &&
@@ -2258,11 +2298,11 @@ if (settings.enabled && core && settings.config?.databaseURL) {
         .then(() => syncAll({ manual: false, forceCheck: false }));
       job.then(result => {
         if (core.getSyncQueue().length) {
-          scheduleSync(result?.networkDeferred ? 8000 : 4500);
+          scheduleSync(result?.networkDeferred ? 2500 : (result?.failed > 0 ? 1200 : 700));
         }
       }).catch(error => {
         console.warn('[CASH TOP 2] scheduled database sync:', error);
-        if (core.getSyncQueue().length) scheduleSync(9000);
+        if (core.getSyncQueue().length) scheduleSync(2500);
       });
     }, Math.max(0, Number(delay) || WRITE_DEBOUNCE_MS));
   }
@@ -2468,7 +2508,15 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     })
   };
 
-  window.addEventListener('cashtop:data-changed', () => scheduleSync(WRITE_DEBOUNCE_MS));
+  window.addEventListener('cashtop:data-changed', event => {
+    const detail = event?.detail || {};
+    // كل تعديل محلي يذهب للطابور فوراً. عمليات الحذف تحديداً لا تنتظر debounce
+    // حتى لا تعود الفاتورة/السجل عند الانتقال بين الصفحات أو الأجهزة.
+    const oldValue = detail.oldValue;
+    const newValue = detail.value;
+    const looksLikeDelete = newValue == null || (Array.isArray(oldValue) && Array.isArray(newValue) && newValue.length < oldValue.length);
+    scheduleSync(looksLikeDelete ? 0 : WRITE_DEBOUNCE_MS);
+  });
   window.addEventListener('cashtop:audit-pending', () => {
     if (AUDIT_CLOUD_ENABLED) setTimeout(() => flushAuditTrailPending().catch(() => null), 1200);
     else flushAuditTrailPending({ limit: 120 }).catch(() => null);
@@ -2486,7 +2534,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
     if (core.getSyncQueue().length) recoverConnectivityAndSync('visible').catch(() => null);
-    else checkRemoteAndPull(false).catch(() => null);
+    else checkRemoteAndPull(true).catch(() => null);
   });
 
   // R106 connectivity recovery: some Android/WebView builds do not reliably fire
@@ -2499,7 +2547,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     const reason = event?.type || 'resume';
     if (core.getSyncQueue().length) recoverConnectivityAndSync(reason).catch(() => null);
     else if (reason === 'change') recoverConnectivityAndSync('connection-change', { forceFullPull: true }).catch(() => null);
-    else checkRemoteAndPull(false).catch(() => null);
+    else checkRemoteAndPull(true).catch(() => null);
   };
   pollTimer = setInterval(() => {
     if (document.hidden) return;
@@ -2522,7 +2570,7 @@ if (settings.enabled && core && settings.config?.databaseURL) {
     } else {
       checkRemoteAndPull(false).catch(() => null);
     }
-  }, Math.min(AUTO_REMOTE_CHECK_MS, 5000));
+  }, Math.min(AUTO_REMOTE_CHECK_MS, 750));
   window.addEventListener('focus', resumeSyncRuntime, { passive:true });
   window.addEventListener('pageshow', resumeSyncRuntime, { passive:true });
   navigator.connection?.addEventListener?.('change', resumeSyncRuntime);

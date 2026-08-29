@@ -22,10 +22,10 @@
     adminRootPath: 'cashTopExchange/cashTopAdmin',
     legacyRootPaths: Object.freeze(['cashTopPOS/v6']),
     usagePolicy: Object.freeze({
-      remoteCheckMs: 15000,
-      navigationCheckMs: 5000,
+      remoteCheckMs: 1800,
+      navigationCheckMs: 700,
       fullRefreshMs: 86400000,
-      writeDebounceMs: 1800,
+      writeDebounceMs: 25,
       cloudAudit: false
     }),
     config: Object.freeze({

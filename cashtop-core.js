@@ -3570,6 +3570,19 @@
       });
       rawRemove(txKey);
       entries.forEach(entry => emitDataChange(entry.key, entry.oldValue, entry.newValue, 'local-transaction', operationIds[entry.key]));
+      const deletedKeys = entries.filter(entry => {
+        const change = describeManagedChange(entry.oldValue, entry.newValue);
+        return (change.deletedIds || []).length > 0 ||
+          (change.deletedFields || []).length > 0 ||
+          Object.values(change.nestedArrayChanges || {}).some(delta => (delta?.deletedIds || []).length > 0);
+      }).map(entry => entry.key);
+      if (deletedKeys.length) {
+        // الحذف لا ينتظر دورة debounce عادية: ابدأ الرفع فوراً مع بقاء
+        // الطابور الدائم كشبكة أمان للعمل Offline أو عند انقطاع الاتصال.
+        window.dispatchEvent(new CustomEvent('cashtop:sync-now', {
+          detail: { reason: 'delete-transaction', keys: deletedKeys, transactionId }
+        }));
+      }
       window.dispatchEvent(new CustomEvent('cashtop:transaction-committed', { detail: { transactionId, keys: entries.map(entry => entry.key), label: journal.label } }));
       return { changed: true, transactionId, keys: entries.map(entry => entry.key) };
     } catch (error) {

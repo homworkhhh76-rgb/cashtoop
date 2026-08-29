@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'v150-offline-first-laptop-cache';
+const CACHE_VERSION = 'v151-offline-first-laptop-cache';
 const APP_CACHE = `cash-top-2-app-${CACHE_VERSION}`;
 const REMOTE_STATIC_CACHE = 'cash-top-2-remote-static-persistent-v1';
 
