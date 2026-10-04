@@ -1,5 +1,5 @@
-import { getBrandLogoDataUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { code128Geometry } from './utils__code128.js?v=7.9.4.89-cashtop3-purple-category-save';
+import { getBrandLogoDataUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.90-cashtop3-search-logo';
+import { code128Geometry } from './utils__code128.js?v=7.9.4.90-cashtop3-search-logo';
 
 const imageCache = new Map();
 const num = v => { const n=Number(v); return Number.isFinite(n)?n:0; };

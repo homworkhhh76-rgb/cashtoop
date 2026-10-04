@@ -1,4 +1,4 @@
-import { renderElementTableCanvas, resolveExportElement } from './utils__canvasRenderer.js?v=7.9.4.89-cashtop3-purple-category-save';
+import { renderElementTableCanvas, resolveExportElement } from './utils__canvasRenderer.js?v=7.9.4.90-cashtop3-search-logo';
 
 const safe=v=>String(v||'export').replace(/[\\/:*?"<>|]+/g,'-').trim()||'export';
 const withExt=(name,ext)=>safe(name).toLowerCase().endsWith(ext)?safe(name):safe(name)+ext;

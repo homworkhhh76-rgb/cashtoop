@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<script src="./oscar-activation-runtime.js?v=7.9.4.89-cashtop3-purple-category-save"></script>
+<script src="./oscar-activation-runtime.js?v=7.9.4.90-cashtop3-search-logo"></script>
 <script>
 (function(){
   document.documentElement.classList.add('auth-pending');
@@ -1485,8 +1485,8 @@
 
         function exportExcel(){if(typeof XLSX==='undefined'){toast('مكتبة Excel غير متاحة حالياً','error');return;}const people=buildBalances(currentDebtTab),summary=people.map(p=>({'الاسم':p.name,'أخذت':p.debit,'أعطيت':p.credit,'الرصيد':p.net,'الهاتف':getContact(p.name,p.type).phone||''})),transactions=records.filter(r=>r.type===currentDebtTab&&getDebtAmount(r)>0).map(r=>({'الاسم':r.name,'النوع':Number(r.debit)>0?'أخذت':'أعطيت','المبلغ':getDebtAmount(r),'الملاحظة':r.note||'','التاريخ':formatDateTime(r.timestamp)}));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(summary),'الحسابات');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(transactions),'المعاملات');XLSX.writeFile(wb,`Oscar_Ledger_${currentDebtTab}_${new Date().toISOString().slice(0,10)}.xlsx`);toast('تم تجهيز ملف Excel');}
     </script>
-    <script src="./oscar-ledger-cloud.js?v=7.9.4.89-cashtop3-purple-category-save"></script>
-    <script src="./oscar-ledger-sync.js?v=7.9.4.89-cashtop3-purple-category-save"></script>
+    <script src="./oscar-ledger-cloud.js?v=7.9.4.90-cashtop3-search-logo"></script>
+    <script src="./oscar-ledger-sync.js?v=7.9.4.90-cashtop3-search-logo"></script>
 
 <script id="v8-behavior">
 (function(){

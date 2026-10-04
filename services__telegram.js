@@ -1,5 +1,5 @@
-import { getAllFromStore, getFromStore, putInStore } from './services__db.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { renderInvoiceCanvas, renderVoucherCanvas, renderTableCanvas } from './utils__canvasRenderer.js?v=7.9.4.89-cashtop3-purple-category-save';
+import { getAllFromStore, getFromStore, putInStore } from './services__db.js?v=7.9.4.90-cashtop3-search-logo';
+import { renderInvoiceCanvas, renderVoucherCanvas, renderTableCanvas } from './utils__canvasRenderer.js?v=7.9.4.90-cashtop3-search-logo';
 
 // Telegram integration for Cash Top 3.
 // The owner explicitly requested embedding this token in the app build.

@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.89-cashtop3-purple-category-save';
+import { useApp } from './context__AppContext.js?v=7.9.4.90-cashtop3-search-logo';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.90-cashtop3-search-logo';
 import { ArrowLeftRight, Plus, Trash2 } from 'lucide-react';
-import { formatStockBreakdown } from './utils__unitTree.js?v=7.9.4.89-cashtop3-purple-category-save';
+import { formatStockBreakdown } from './utils__unitTree.js?v=7.9.4.90-cashtop3-search-logo';
 
 const h = React.createElement;
 const makeRow = (products = []) => {

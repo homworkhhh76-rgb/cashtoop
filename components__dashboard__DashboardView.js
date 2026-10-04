@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.89-cashtop3-purple-category-save';
+import { useApp } from './context__AppContext.js?v=7.9.4.90-cashtop3-search-logo';
 import { BarChart3, Wallet, Users, Package, ShoppingCart, PackagePlus, ClipboardList, Receipt, ArrowLeft, CalendarDays, TrendingUp, CircleDot } from 'lucide-react';
 
 const h = React.createElement;

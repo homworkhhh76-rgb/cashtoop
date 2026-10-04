@@ -1,16 +1,16 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import React, { useState, useEffect } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { usePWAInstall } from './hooks__usePWAInstall.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { db } from './services__db.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { smartPrinter } from './services__printer.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { TELEGRAM_BOT_URL, normalizeTelegramRecipients, testTelegramRecipient, testAllTelegramRecipients, sendFullTelegramReport } from './services__telegram.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { saveTelegramConfig } from './services__telegramReports.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { materializeLogoSource, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { BrandLogoImage } from './components__common__BrandLogoImage.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { uploadProductImageToTelegram } from './services__productImages.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { TelegramQuickGuide } from './components__settings__TelegramQuickGuide.js?v=7.9.4.89-cashtop3-purple-category-save';
+import { useApp } from './context__AppContext.js?v=7.9.4.90-cashtop3-search-logo';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.90-cashtop3-search-logo';
+import { usePWAInstall } from './hooks__usePWAInstall.js?v=7.9.4.90-cashtop3-search-logo';
+import { db } from './services__db.js?v=7.9.4.90-cashtop3-search-logo';
+import { smartPrinter } from './services__printer.js?v=7.9.4.90-cashtop3-search-logo';
+import { TELEGRAM_BOT_URL, normalizeTelegramRecipients, testTelegramRecipient, testAllTelegramRecipients, sendFullTelegramReport } from './services__telegram.js?v=7.9.4.90-cashtop3-search-logo';
+import { saveTelegramConfig } from './services__telegramReports.js?v=7.9.4.90-cashtop3-search-logo';
+import { materializeLogoSource, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.90-cashtop3-search-logo';
+import { BrandLogoImage } from './components__common__BrandLogoImage.js?v=7.9.4.90-cashtop3-search-logo';
+import { uploadProductImageToTelegram } from './services__productImages.js?v=7.9.4.90-cashtop3-search-logo';
+import { TelegramQuickGuide } from './components__settings__TelegramQuickGuide.js?v=7.9.4.90-cashtop3-search-logo';
 import { Store, Printer, ShieldCheck, Building2, Database, Download, Upload, RefreshCw, Trash2, Save, Edit2, X, Bluetooth, Cable, Bot, Send, ExternalLink, UserPlus, MessageCircle, CreditCard, WalletCards, Landmark, ArrowLeftRight, SlidersHorizontal, Warehouse, Settings2 } from 'lucide-react';
 const P2P_ICON_OPTIONS = [
     ['palpay','PalPay'],['jawwal-pay','Jawwal Pay'],['bank-palestine','بنك فلسطين'],

@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useApp } from './context__AppContext.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { Pagination, usePagination } from './components__common__Pagination.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { exportToCSV, printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { downloadProfessionalTablePDF, downloadProfessionalTableImage, downloadProfessionalVoucherPDF, downloadProfessionalVoucherImage } from './utils__professionalExport.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { getBrandLogoDataUrl, getBrandLogoDisplayUrl } from './brand__logo.js?v=7.9.4.89-cashtop3-purple-category-save';
+import { useApp } from './context__AppContext.js?v=7.9.4.90-cashtop3-search-logo';
+import { Pagination, usePagination } from './components__common__Pagination.js?v=7.9.4.90-cashtop3-search-logo';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.90-cashtop3-search-logo';
+import { exportToCSV, printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.90-cashtop3-search-logo';
+import { downloadProfessionalTablePDF, downloadProfessionalTableImage, downloadProfessionalVoucherPDF, downloadProfessionalVoucherImage } from './utils__professionalExport.js?v=7.9.4.90-cashtop3-search-logo';
+import { getBrandLogoDataUrl, getBrandLogoDisplayUrl } from './brand__logo.js?v=7.9.4.90-cashtop3-search-logo';
 import { FileSpreadsheet, ArrowDownLeft, ArrowUpRight, Search, Trash2, Printer, Download, Image as ImageIcon, FileText, CreditCard, User, Building2, AlertCircle, Eye, X } from 'lucide-react';
 
 const h = React.createElement;

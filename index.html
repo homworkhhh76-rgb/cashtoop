@@ -9,13 +9,13 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="كاش توب 3" />
   <title>كاش توب 3</title>
-  <link rel="icon" type="image/png" href="./app-icon.png" />
-  <link rel="apple-touch-icon" href="./icon-192.png" />
+  <link rel="icon" type="image/png" href="./app-icon.png?v=7.9.4.90-cashtop3-search-logo" />
+  <link rel="apple-touch-icon" href="./icon-192.png?v=7.9.4.90-cashtop3-search-logo" />
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./app.css?v=7.9.4.89-cashtop3-purple-category-save" />
+  <link rel="stylesheet" href="./app.css?v=7.9.4.90-cashtop3-search-logo" />
   <script type="importmap">
   {
     "imports": {
@@ -29,7 +29,7 @@
     }
   }
   </script>
-  <script src="./oscar-activation-runtime.js?v=7.9.4.89-cashtop3-purple-category-save"></script>
+  <script src="./oscar-activation-runtime.js?v=7.9.4.90-cashtop3-search-logo"></script>
   <script>
     try {
       const rt = window.OscarActivation?.readRuntime?.();
@@ -37,13 +37,13 @@
       if (companyTitle) document.title = companyTitle;
     } catch (_) {}
   </script>
-  <script src="./oscar-cloud-sync.js?v=7.9.4.89-cashtop3-purple-category-save"></script>
+  <script src="./oscar-cloud-sync.js?v=7.9.4.90-cashtop3-search-logo"></script>
 </head>
 <body>
   <script>document.documentElement.classList.remove('dark');</script>
   <div id="root"></div>
   <script type="module">
-    const OSCAR_BUILD = '7.9.4.89-cashtop3-purple-category-save';
+    const OSCAR_BUILD = '7.9.4.90-cashtop3-search-logo';
     const isLocal = ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
 
     const clearCodeCaches = async () => {
@@ -106,7 +106,7 @@
       } catch (_) {}
 
       try {
-        await import('./main.js?v=7.9.4.89-cashtop3-purple-category-save');
+        await import('./main.js?v=7.9.4.90-cashtop3-search-logo');
         sessionStorage.removeItem('oscar-rootfix-retry');
       } catch (error) {
         try { console.error('OSCAR_BOOT_RECOVERY', error); } catch (_) {}
@@ -127,7 +127,7 @@
   </script>
   <script>
     if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !['localhost','127.0.0.1','::1'].includes(location.hostname)) {
-      addEventListener('load', () => navigator.serviceWorker.register('./sw.js?v=7.9.4.89-cashtop3-purple-category-save', { updateViaCache: 'none' }).then((registration) => registration.update()).catch(() => {}));
+      addEventListener('load', () => navigator.serviceWorker.register('./sw.js?v=7.9.4.90-cashtop3-search-logo', { updateViaCache: 'none' }).then((registration) => registration.update()).catch(() => {}));
     }
   </script>
 </body>

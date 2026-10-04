@@ -1,5 +1,5 @@
 import React from 'react';
-import { useApp } from './restaurant__context__AppContext.js?v=7.9.4.89-cashtop3-purple-category-save';
+import { useApp } from './restaurant__context__AppContext.js?v=7.9.4.90-cashtop3-search-logo';
 import { UtensilsCrossed, Volume2, Save } from 'lucide-react';
 const h=React.createElement;
 const row=(title,desc,control)=>h('div',{className:'flex items-center justify-between gap-3 p-3 border rounded-xl bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700'},h('div',{className:'min-w-0'},h('span',{className:'text-xs font-bold block'},title),desc?h('span',{className:'text-[10px] text-slate-400 block mt-0.5'},desc):null),control);

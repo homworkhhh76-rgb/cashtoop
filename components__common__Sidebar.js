@@ -1,8 +1,8 @@
 import React from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { BrandLogoImage } from './components__common__BrandLogoImage.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { canAccessTab, canAccessPermission, firstAllowedTab } from './utils__permissions.js?v=7.9.4.89-cashtop3-purple-category-save';
+import { useApp } from './context__AppContext.js?v=7.9.4.90-cashtop3-search-logo';
+import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.90-cashtop3-search-logo';
+import { BrandLogoImage } from './components__common__BrandLogoImage.js?v=7.9.4.90-cashtop3-search-logo';
+import { canAccessTab, canAccessPermission, firstAllowedTab } from './utils__permissions.js?v=7.9.4.90-cashtop3-search-logo';
 import {
   LayoutDashboard, ShoppingCart, ReceiptText, Truck, Package, Boxes, Warehouse,
   Users, Building2, Wallet, Receipt, FileSpreadsheet, UserCheck, Barcode, BarChart3,

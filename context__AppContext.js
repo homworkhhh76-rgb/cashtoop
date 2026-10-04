@@ -1,11 +1,11 @@
 import { jsx as _jsx } from "react/jsx-runtime";
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { getAllFromStore, getFromStore, putInStore, deleteFromStore, clearStore, bulkPut, commitLocalBatch, initializeDatabase, seedDatabaseDefaults, cleanupLegacyDemoSeedIfPristine, ensurePrimaryShowroomWarehouse, resetDatabase, exportDatabaseBackup, importDatabaseBackup, syncChannel, DEFAULT_SETTINGS, CASH_CUSTOMER, DEFAULT_CATEGORIES, DEFAULT_WAREHOUSES, DEFAULT_ACCOUNTS, DEFAULT_SUPPLIERS, getDemoProducts, getDemoStock, DEFAULT_EMPLOYEES, } from './services__db.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { calculateUnitConversions, findUnitByBarcode, toBaseQuantity } from './utils__unitTree.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { playBeepSound, playSuccessSound, playErrorSound } from './services__audio.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { notifyTelegramInvoice } from './services__telegram.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { normalizeEmployeePermissions, canAccessTab, firstAllowedTab } from './utils__permissions.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { isTrialAccount, TRIAL_LIMITS } from './trial__config.js?v=7.9.4.89-cashtop3-purple-category-save';
+import { getAllFromStore, getFromStore, putInStore, deleteFromStore, clearStore, bulkPut, commitLocalBatch, initializeDatabase, seedDatabaseDefaults, cleanupLegacyDemoSeedIfPristine, ensurePrimaryShowroomWarehouse, resetDatabase, exportDatabaseBackup, importDatabaseBackup, syncChannel, DEFAULT_SETTINGS, CASH_CUSTOMER, DEFAULT_CATEGORIES, DEFAULT_WAREHOUSES, DEFAULT_ACCOUNTS, DEFAULT_SUPPLIERS, getDemoProducts, getDemoStock, DEFAULT_EMPLOYEES, } from './services__db.js?v=7.9.4.90-cashtop3-search-logo';
+import { calculateUnitConversions, findUnitByBarcode, toBaseQuantity } from './utils__unitTree.js?v=7.9.4.90-cashtop3-search-logo';
+import { playBeepSound, playSuccessSound, playErrorSound } from './services__audio.js?v=7.9.4.90-cashtop3-search-logo';
+import { notifyTelegramInvoice } from './services__telegram.js?v=7.9.4.90-cashtop3-search-logo';
+import { normalizeEmployeePermissions, canAccessTab, firstAllowedTab } from './utils__permissions.js?v=7.9.4.90-cashtop3-search-logo';
+import { isTrialAccount, TRIAL_LIMITS } from './trial__config.js?v=7.9.4.90-cashtop3-search-logo';
 const AppContext = createContext(null);
 const recordTime = (item = {}) => {
     const fields = ['createdAt', 'date', 'timestamp', 'startTime', 'updatedAt'];

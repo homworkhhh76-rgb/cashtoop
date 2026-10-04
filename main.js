@@ -1,7 +1,7 @@
 import { jsx as _jsx } from "react/jsx-runtime";
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App.js?v=7.9.4.89-cashtop3-purple-category-save';
+import App from './App.js?v=7.9.4.90-cashtop3-search-logo';
 
 class OscarErrorBoundary extends React.Component {
   constructor(props) {
@@ -16,7 +16,7 @@ class OscarErrorBoundary extends React.Component {
     // A stale Service Worker can mix module versions on localhost/PWA upgrades.
     // Heal code caches once without touching IndexedDB/company data.
     try {
-      const build = '7.9.4.89-cashtop3-purple-category-save';
+      const build = '7.9.4.90-cashtop3-search-logo';
       const key = 'oscar-render-heal-' + build;
       if (sessionStorage.getItem(key) !== '1') {
         sessionStorage.setItem(key, '1');

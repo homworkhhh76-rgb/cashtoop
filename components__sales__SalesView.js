@@ -1,11 +1,11 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import React, { useState, useRef, useEffect } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { Pagination, usePagination } from './components__common__Pagination.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { MessageActionButtons } from './components__common__MessageActionButtons.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { downloadProfessionalTablePDF, downloadProfessionalTableImage, downloadProfessionalTableExcel, downloadProfessionalInvoicePDF, downloadProfessionalInvoiceImage, downloadProfessionalInvoiceExcel } from './utils__professionalExport.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.89-cashtop3-purple-category-save';
+import { useApp } from './context__AppContext.js?v=7.9.4.90-cashtop3-search-logo';
+import { Pagination, usePagination } from './components__common__Pagination.js?v=7.9.4.90-cashtop3-search-logo';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.90-cashtop3-search-logo';
+import { MessageActionButtons } from './components__common__MessageActionButtons.js?v=7.9.4.90-cashtop3-search-logo';
+import { downloadProfessionalTablePDF, downloadProfessionalTableImage, downloadProfessionalTableExcel, downloadProfessionalInvoicePDF, downloadProfessionalInvoiceImage, downloadProfessionalInvoiceExcel } from './utils__professionalExport.js?v=7.9.4.90-cashtop3-search-logo';
+import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.90-cashtop3-search-logo';
 import { Search, Printer, RotateCcw, Download, Eye, X, AlertCircle, Trash2, Pencil, Image as ImageIcon, FileSpreadsheet, } from 'lucide-react';
 export const SalesView = () => {
     const { invoices, accounts, settings, currentUser, deleteInvoice, beginEditSaleInvoice, setShowThermalModal, createReturnInvoice, showToast, } = useApp();

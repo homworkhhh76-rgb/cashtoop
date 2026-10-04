@@ -1,13 +1,13 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { PWAInstallButton } from './components__common__PWAInstallButton.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { BrandLogoImage } from './components__common__BrandLogoImage.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { uploadProductImageToTelegram } from './services__productImages.js?v=7.9.4.89-cashtop3-purple-category-save';
+import { useApp } from './context__AppContext.js?v=7.9.4.90-cashtop3-search-logo';
+import { PWAInstallButton } from './components__common__PWAInstallButton.js?v=7.9.4.90-cashtop3-search-logo';
+import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.90-cashtop3-search-logo';
+import { BrandLogoImage } from './components__common__BrandLogoImage.js?v=7.9.4.90-cashtop3-search-logo';
+import { uploadProductImageToTelegram } from './services__productImages.js?v=7.9.4.90-cashtop3-search-logo';
 import { Wifi, WifiOff, RefreshCw, Maximize2, Minimize2, Clock, Store, Camera, Menu, LogOut, Building2, Bell } from 'lucide-react';
-import { NotificationsModal, buildSystemNotifications } from './components__common__NotificationsModal.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { canAccessTab, canAccessPermission, firstAllowedTab } from './utils__permissions.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { saveTelegramConfig, uploadTelegramSnapshot } from './services__telegramReports.js?v=7.9.4.89-cashtop3-purple-category-save';
+import { NotificationsModal, buildSystemNotifications } from './components__common__NotificationsModal.js?v=7.9.4.90-cashtop3-search-logo';
+import { canAccessTab, canAccessPermission, firstAllowedTab } from './utils__permissions.js?v=7.9.4.90-cashtop3-search-logo';
+import { saveTelegramConfig, uploadTelegramSnapshot } from './services__telegramReports.js?v=7.9.4.90-cashtop3-search-logo';
 
 const h = React.createElement;
 

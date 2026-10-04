@@ -1,15 +1,15 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import React, { useState, useRef } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { Pagination, usePagination } from './components__common__Pagination.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { formatStockBreakdown } from './utils__unitTree.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { downloadElementAsPDF } from './utils__pdfExport.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { downloadElementAsImage } from './utils__imageExport.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { downloadProfessionalTablePDF, downloadProfessionalTableExcel, downloadProfessionalTableImage } from './utils__professionalExport.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { TransferForm } from './components__inventory__TransferForm.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { BarcodeCameraModal } from './components__pos__CameraScannerModal.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { playBeepSound } from './services__audio.js?v=7.9.4.89-cashtop3-purple-category-save';
+import { useApp } from './context__AppContext.js?v=7.9.4.90-cashtop3-search-logo';
+import { Pagination, usePagination } from './components__common__Pagination.js?v=7.9.4.90-cashtop3-search-logo';
+import { formatStockBreakdown } from './utils__unitTree.js?v=7.9.4.90-cashtop3-search-logo';
+import { downloadElementAsPDF } from './utils__pdfExport.js?v=7.9.4.90-cashtop3-search-logo';
+import { downloadElementAsImage } from './utils__imageExport.js?v=7.9.4.90-cashtop3-search-logo';
+import { downloadProfessionalTablePDF, downloadProfessionalTableExcel, downloadProfessionalTableImage } from './utils__professionalExport.js?v=7.9.4.90-cashtop3-search-logo';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.90-cashtop3-search-logo';
+import { TransferForm } from './components__inventory__TransferForm.js?v=7.9.4.90-cashtop3-search-logo';
+import { BarcodeCameraModal } from './components__pos__CameraScannerModal.js?v=7.9.4.90-cashtop3-search-logo';
+import { playBeepSound } from './services__audio.js?v=7.9.4.90-cashtop3-search-logo';
 import { ArrowLeftRight, Building2, Download, Search, Image as ImageIcon, FileSpreadsheet, Trash2, Camera, X, } from 'lucide-react';
 export const InventoryView = () => {
     const { products, warehouses, settings, getProductStock, adjustStockCount, transferStock, recordDamagedStock, showToast, } = useApp();

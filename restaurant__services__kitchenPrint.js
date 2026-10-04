@@ -1,4 +1,4 @@
-import { printElementOnly } from './utils__export.js?v=7.9.4.89-cashtop3-purple-category-save';
+import { printElementOnly } from './utils__export.js?v=7.9.4.90-cashtop3-search-logo';
 
 const esc = (value) => String(value ?? '')
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')

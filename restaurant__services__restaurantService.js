@@ -1,4 +1,4 @@
-import { getAllFromStore, getFromStore, saveToStore } from './restaurant__services__db.js?v=7.9.4.89-cashtop3-purple-category-save';
+import { getAllFromStore, getFromStore, saveToStore } from './restaurant__services__db.js?v=7.9.4.90-cashtop3-search-logo';
 // Default Sections
 export const DEFAULT_RESTAURANT_SECTIONS = [
     { id: 'sec-indoor', name: 'الصالة الداخلية', displayOrder: 1 },

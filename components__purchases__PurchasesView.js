@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { Pagination, usePagination } from './components__common__Pagination.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { getBrandLogoDataUrl, getBrandLogoDisplayUrl } from './brand__logo.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { downloadProfessionalPurchaseInvoicePDF, downloadProfessionalPurchaseInvoiceImage, downloadProfessionalTableExcel } from './utils__professionalExport.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { PurchaseAIScanModal } from './components__purchases__PurchaseAIScanModal.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { isTrialAccount } from './trial__config.js?v=7.9.4.89-cashtop3-purple-category-save';
+import { useApp } from './context__AppContext.js?v=7.9.4.90-cashtop3-search-logo';
+import { Pagination, usePagination } from './components__common__Pagination.js?v=7.9.4.90-cashtop3-search-logo';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.90-cashtop3-search-logo';
+import { getBrandLogoDataUrl, getBrandLogoDisplayUrl } from './brand__logo.js?v=7.9.4.90-cashtop3-search-logo';
+import { printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.90-cashtop3-search-logo';
+import { downloadProfessionalPurchaseInvoicePDF, downloadProfessionalPurchaseInvoiceImage, downloadProfessionalTableExcel } from './utils__professionalExport.js?v=7.9.4.90-cashtop3-search-logo';
+import { PurchaseAIScanModal } from './components__purchases__PurchaseAIScanModal.js?v=7.9.4.90-cashtop3-search-logo';
+import { isTrialAccount } from './trial__config.js?v=7.9.4.90-cashtop3-search-logo';
 import { Plus, Trash2, Building2, Eye, X, Pencil, Image as ImageIcon, FileDown, FileSpreadsheet, Printer, AlertTriangle, ReceiptText, Sparkles, ScanLine } from 'lucide-react';
 
 const h = React.createElement;

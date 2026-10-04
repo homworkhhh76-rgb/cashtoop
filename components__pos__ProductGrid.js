@@ -1,7 +1,7 @@
 import React from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.89-cashtop3-purple-category-save';
+import { useApp } from './context__AppContext.js?v=7.9.4.90-cashtop3-search-logo';
 import { Layers } from 'lucide-react';
-import { ProductImage } from './components__common__ProductImage.js?v=7.9.4.89-cashtop3-purple-category-save';
+import { ProductImage } from './components__common__ProductImage.js?v=7.9.4.90-cashtop3-search-logo';
 
 const h = React.createElement;
 

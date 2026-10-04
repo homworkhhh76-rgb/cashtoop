@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { canAccessTab, canAccessPermission } from './utils__permissions.js?v=7.9.4.89-cashtop3-purple-category-save';
+import { useApp } from './context__AppContext.js?v=7.9.4.90-cashtop3-search-logo';
+import { canAccessTab, canAccessPermission } from './utils__permissions.js?v=7.9.4.90-cashtop3-search-logo';
 import {
   ShoppingCart, ReceiptText, Package, Warehouse, Menu, X, LayoutDashboard, Truck,
   Boxes, Users, Building2, Wallet, Receipt, Barcode, BarChart3, Trash2, Settings,

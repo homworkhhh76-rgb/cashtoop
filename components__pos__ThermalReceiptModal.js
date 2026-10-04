@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { downloadProfessionalInvoicePDF, downloadProfessionalInvoiceImage, downloadProfessionalInvoiceExcel, warmProfessionalExportLibraries } from './utils__professionalExport.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { renderInvoiceCanvas } from './utils__canvasRenderer.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { smartPrinter } from './services__printer.js?v=7.9.4.89-cashtop3-purple-category-save';
-import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.89-cashtop3-purple-category-save';
+import { useApp } from './context__AppContext.js?v=7.9.4.90-cashtop3-search-logo';
+import { printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.90-cashtop3-search-logo';
+import { downloadProfessionalInvoicePDF, downloadProfessionalInvoiceImage, downloadProfessionalInvoiceExcel, warmProfessionalExportLibraries } from './utils__professionalExport.js?v=7.9.4.90-cashtop3-search-logo';
+import { renderInvoiceCanvas } from './utils__canvasRenderer.js?v=7.9.4.90-cashtop3-search-logo';
+import { smartPrinter } from './services__printer.js?v=7.9.4.90-cashtop3-search-logo';
+import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.90-cashtop3-search-logo';
 import { Printer, X, Download, Image as ImageIcon, FileSpreadsheet, Bluetooth } from 'lucide-react';
 import JsBarcode from 'jsbarcode';
 
