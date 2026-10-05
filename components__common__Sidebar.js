@@ -1,8 +1,9 @@
+import { createPortal } from 'react-dom';
 import React from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.90-cashtop3-search-logo';
-import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.90-cashtop3-search-logo';
-import { BrandLogoImage } from './components__common__BrandLogoImage.js?v=7.9.4.90-cashtop3-search-logo';
-import { canAccessTab, canAccessPermission, firstAllowedTab } from './utils__permissions.js?v=7.9.4.90-cashtop3-search-logo';
+import { useApp } from './context__AppContext.js?v=7.9.4.134-invoice-filters';
+import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.134-invoice-filters';
+import { BrandLogoImage } from './components__common__BrandLogoImage.js?v=7.9.4.134-invoice-filters';
+import { canAccessTab, canAccessPermission, firstAllowedTab } from './utils__permissions.js?v=7.9.4.134-invoice-filters';
 import {
   LayoutDashboard, ShoppingCart, ReceiptText, Truck, Package, Boxes, Warehouse,
   Users, Building2, Wallet, Receipt, FileSpreadsheet, UserCheck, Barcode, BarChart3,
@@ -10,6 +11,7 @@ import {
 } from 'lucide-react';
 
 const h = React.createElement;
+const SidebarLayer=props=>createPortal(h('div',{...props,id:'ct-mobile-sidebar-overlay',role:'dialog','aria-modal':true},props.children),document.body);
 
 export const Sidebar = () => {
   const {
@@ -101,13 +103,13 @@ export const Sidebar = () => {
       brandSettings
         ? h(BrandLogoImage, {
             settings:brandSettings,
-            className:'w-10 h-10 object-cover rounded-xl border border-emerald-100 bg-white shrink-0',
+            className:'w-10 h-10 object-cover rounded-xl border border-violet-100 bg-white shrink-0',
             alt:brandName
           })
         : h('span',{className:'w-10 h-10 rounded-xl border border-slate-200 bg-slate-50 text-slate-300 shrink-0 grid place-items-center'},h(Building2,{className:'w-5 h-5'})),
       h('div', { className:'min-w-0 flex-1' },
         h('div', { className:'text-[13px] font-black text-slate-900 truncate min-h-[19px]' }, brandName || ''),
-        h('div', { className:'text-[10px] font-bold text-emerald-600 truncate min-h-[15px]' }, isLoaded ? (settings.subtitle || 'إدارة ذكية') : '')
+        h('div', { className:'text-[10px] font-bold text-violet-600 truncate min-h-[15px]' }, isLoaded ? (settings.subtitle || 'إدارة ذكية') : '')
       )
     )
   );
@@ -120,25 +122,21 @@ export const Sidebar = () => {
         id:mobile ? undefined : `nav-${item.id}`,
         onClick:()=>go(item.id),
         className:`w-full flex items-center justify-between px-3 ${mobile?'py-2.5':'py-2'} rounded-xl text-[11px] font-semibold transition-all ${active
-          ? (item.restaurant ? 'bg-amber-500 text-white shadow-sm' : 'bg-emerald-600 text-white shadow-sm')
+          ? (item.restaurant ? 'bg-amber-500 text-white shadow-sm' : 'bg-violet-600 text-white shadow-sm')
           : 'text-slate-600 hover:bg-slate-100'}`
       },
         h('span', { className:'flex items-center gap-2 min-w-0' },
           h(item.icon, { className:`w-4 h-4 shrink-0 ${active?'text-white':'text-slate-400'}` }),
           h('span', { className:'truncate' }, item.label)
         ),
-        item.badge !== undefined ? h('span', { className:`px-1.5 py-0.5 text-[9px] rounded-full font-black shrink-0 ${active?'bg-white text-emerald-700':'bg-emerald-100 text-emerald-700'}` }, item.badge) : null
+        item.badge !== undefined ? h('span', { className:`px-1.5 py-0.5 text-[9px] rounded-full font-black shrink-0 ${active?'bg-white text-violet-700':'bg-violet-100 text-violet-700'}` }, item.badge) : null
       );
     })
   );
 
   return h(React.Fragment, null,
-    h('aside', { id:'desktop-sidebar', className:'hidden lg:flex flex-col w-48 xl:w-48 shrink-0 h-full min-h-0 bg-white border-l border-slate-200 select-none text-right overflow-hidden' },
-      brand(), nav(false),
-      h('div', { className:'p-2.5 border-t border-slate-100 text-[9px] text-slate-400 text-center shrink-0' }, 'Cash Top 3 POS')
-    ),
-    mobileSidebarOpen ? h('div', { className:'fixed inset-0 z-50 lg:hidden flex justify-start' },
-      h('div', { className:'fixed inset-0 bg-black/60 backdrop-blur-[1px]', onClick:()=>setMobileSidebarOpen(false) }),
+    mobileSidebarOpen ? h(SidebarLayer, { className: 'fixed inset-0 z-50 lg:hidden flex justify-start' },
+      h('div', { className: 'fixed inset-0 bg-black/60 backdrop-blur-[1px]', onClick:()=>setMobileSidebarOpen(false) }),
       h('aside', { dir:'rtl', className:'mobile-sidebar-panel relative w-72 max-w-[85vw] h-full min-h-0 bg-white border-l border-slate-200 shadow-2xl flex flex-col z-10 text-right overflow-hidden' },
         h('div', { className:'relative' }, brand(true)),
         nav(true),

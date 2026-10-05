@@ -54,6 +54,7 @@ export const SearchableDropdown = ({
     return()=>document.removeEventListener('pointerdown',outside,true);
   },[]);
 
+  useEffect(()=>{if(!isOpen)return;const esc=e=>{if(e.key==='Escape'){e.preventDefault();setIsOpen(false);buttonRef.current?.focus()}};document.addEventListener('keydown',esc);return()=>document.removeEventListener('keydown',esc)},[isOpen]);
   useEffect(()=>{if(disabled){setIsOpen(false);setSearchOpen(false);setSearch('');}},[disabled]);
   useEffect(()=>{if(searchOpen){const t=setTimeout(()=>searchRef.current?.focus(),0);return()=>clearTimeout(t);}},[searchOpen]);
 
@@ -67,28 +68,29 @@ export const SearchableDropdown = ({
   };
 
   return h('div',{id:`dropdown-wrapper-${id}`,className:`searchable-dropdown-root ${className}`,ref:containerRef},
-    label&&h('label',{className:'block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1'},label),
-    h('button',{ref:buttonRef,type:'button',id,disabled,onClick:toggleOpen,className:`w-full flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-xl border transition-all text-right ${isOpen?'border-emerald-500 ring-2 ring-emerald-500/15 bg-white dark:bg-slate-900':'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-emerald-300'} ${disabled?'opacity-60 cursor-not-allowed':'cursor-pointer'}`},
+
+    h('button',{ref:buttonRef,type:'button',id,disabled,'aria-label':label||placeholder,'aria-expanded':isOpen,onClick:toggleOpen,className:`w-full flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-xl border transition-all text-right ${isOpen?'border-violet-500 ring-2 ring-violet-500/15 bg-white dark:bg-slate-900':'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-violet-300'} ${disabled?'opacity-60 cursor-not-allowed':'cursor-pointer'}`},
+      label&&h('span',{className:'ct-dropdown-label'},label),
       h('div',{className:'flex items-center gap-2 truncate min-w-0'},
         icon&&h('span',{className:'text-slate-400 shrink-0'},icon),
-        selectedOption?h('span',{className:'font-semibold text-slate-900 dark:text-slate-100 truncate'},selectedOption.label,selectedOption.badge&&h('span',{className:'mr-2 px-1.5 py-0.5 text-[9px] rounded-full bg-emerald-50 text-emerald-700'},selectedOption.badge)):h('span',{className:'text-slate-400 truncate'},placeholder)
+        selectedOption?h('span',{className:'font-semibold text-slate-900 dark:text-slate-100 truncate'},selectedOption.label,selectedOption.badge&&h('span',{className:'mr-2 px-1.5 py-0.5 text-[9px] rounded-full bg-violet-50 text-violet-700'},selectedOption.badge)):h('span',{className:'text-slate-400 truncate'},placeholder)
       ),
-      h(ChevronDown,{className:`w-4 h-4 shrink-0 transition-transform ${isOpen?'rotate-180 text-emerald-600':'text-slate-400'}`})
+      h(ChevronDown,{className:`w-4 h-4 shrink-0 transition-transform ${isOpen?'rotate-180 text-violet-600':'text-slate-400'}`})
     ),
     isOpen&&typeof document!=='undefined'&&createPortal(h('div',{ref:panelRef,id:`dropdown-menu-${id}`,className:'searchable-dropdown-panel flex flex-col overflow-hidden text-right',style:{...panelStyle,zIndex:2147483000},onPointerDown:e=>e.stopPropagation()},
       searchOpen
         ? h('div',{className:'relative mb-1 shrink-0'},
             h(Search,{className:'absolute right-2.5 top-2.5 w-4 h-4 text-slate-400 pointer-events-none'}),
-            h('input',{ref:searchRef,type:'text',id:`dropdown-search-${id}`,value:search,onChange:e=>setSearch(e.target.value),placeholder:'اكتب للبحث...',className:'w-full pr-8 pl-8 py-2 text-xs rounded-lg border border-emerald-300 dark:border-emerald-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/15'}),
+            h('input',{ref:searchRef,type:'text',id:`dropdown-search-${id}`,value:search,onChange:e=>setSearch(e.target.value),placeholder:'اكتب للبحث...',className:'w-full pr-8 pl-8 py-2 text-xs rounded-lg border border-violet-300 dark:border-violet-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500/15'}),
             h('button',{type:'button',onClick:()=>{setSearch('');setSearchOpen(false);},className:'absolute left-2 top-2 p-0.5 rounded text-slate-400 hover:text-slate-700',title:'إغلاق البحث'},h(X,{className:'w-4 h-4'}))
           )
         : h('button',{type:'button',onClick:()=>setSearchOpen(true),className:'mb-1 shrink-0 w-full flex items-center justify-center gap-1.5 px-2 py-2 text-[11px] font-semibold text-slate-500 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/70 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800'},h(Search,{className:'w-3.5 h-3.5'}),'بحث في القائمة'),
-      onQuickAdd&&h('button',{type:'button',id:`dropdown-quick-add-${id}`,onClick:()=>{setIsOpen(false);setSearchOpen(false);setSearch('');onQuickAdd();},className:'shrink-0 w-full flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 mb-1'},h(Plus,{className:'w-3.5 h-3.5'}),quickAddLabel),
+      onQuickAdd&&h('button',{type:'button',id:`dropdown-quick-add-${id}`,onClick:()=>{setIsOpen(false);setSearchOpen(false);setSearch('');onQuickAdd();},className:'shrink-0 w-full flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-semibold text-violet-700 bg-violet-50 rounded-lg hover:bg-violet-100 mb-1'},h(Plus,{className:'w-3.5 h-3.5'}),quickAddLabel),
       h('div',{className:'min-h-0 flex-1 overflow-y-auto space-y-0.5 custom-scrollbar'},
         ...(filteredOptions.length===0
           ? [h('div',{className:'p-4 text-center text-xs text-slate-400'},'لا توجد نتائج مطابقة')]
-          : filteredOptions.map(opt=>{const selected=String(opt.id)===String(selectedId);return h('button',{key:opt.id,type:'button',id:`dropdown-opt-${id}-${opt.id}`,onClick:()=>{onSelect(opt.id);setIsOpen(false);setSearchOpen(false);setSearch('');},className:`w-full flex items-center justify-between gap-2 px-2.5 py-2 text-xs rounded-lg transition text-right ${selected?'bg-emerald-600 text-white font-bold':'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'}`},
-            h('div',{className:'min-w-0 truncate'},h('div',{className:'truncate'},opt.label),opt.subLabel&&h('div',{className:`text-[9px] truncate ${selected?'text-emerald-100':'text-slate-400'}`},opt.subLabel)),
+          : filteredOptions.map(opt=>{const selected=String(opt.id)===String(selectedId);return h('button',{key:opt.id,type:'button',id:`dropdown-opt-${id}-${opt.id}`,onClick:()=>{onSelect(opt.id);setIsOpen(false);setSearchOpen(false);setSearch('');},className:`w-full flex items-center justify-between gap-2 px-2.5 py-2 text-xs rounded-lg transition text-right ${selected?'bg-violet-600 text-white font-bold':'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'}`},
+            h('div',{className:'min-w-0 truncate'},h('div',{className:'truncate'},opt.label),opt.subLabel&&h('div',{className:`text-[9px] truncate ${selected?'text-violet-100':'text-slate-400'}`},opt.subLabel)),
             selected&&h(Check,{className:'w-3.5 h-3.5 shrink-0'})
           );}))
       )
