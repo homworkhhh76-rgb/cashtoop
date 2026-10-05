@@ -1,10 +1,11 @@
+import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.134-invoice-filters';
 import React, { useEffect, useRef, useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.90-cashtop3-search-logo';
-import { printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.90-cashtop3-search-logo';
-import { downloadProfessionalInvoicePDF, downloadProfessionalInvoiceImage, downloadProfessionalInvoiceExcel, warmProfessionalExportLibraries } from './utils__professionalExport.js?v=7.9.4.90-cashtop3-search-logo';
-import { renderInvoiceCanvas } from './utils__canvasRenderer.js?v=7.9.4.90-cashtop3-search-logo';
-import { smartPrinter } from './services__printer.js?v=7.9.4.90-cashtop3-search-logo';
-import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.90-cashtop3-search-logo';
+import { useApp } from './context__AppContext.js?v=7.9.4.134-invoice-filters';
+import { printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.134-invoice-filters';
+import { downloadProfessionalInvoicePDF, downloadProfessionalInvoiceImage, downloadProfessionalInvoiceExcel, warmProfessionalExportLibraries } from './utils__professionalExport.js?v=7.9.4.134-invoice-filters';
+import { renderInvoiceCanvas } from './utils__canvasRenderer.js?v=7.9.4.134-invoice-filters';
+import { smartPrinter } from './services__printer.js?v=7.9.4.134-invoice-filters';
+import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.134-invoice-filters';
 import { Printer, X, Download, Image as ImageIcon, FileSpreadsheet, Bluetooth } from 'lucide-react';
 import JsBarcode from 'jsbarcode';
 
@@ -131,7 +132,7 @@ export const ThermalReceiptModal = () => {
 
     const paperButton = (key, label) => h('button', {
         onClick: () => setPaperWidth(key),
-        className: `px-2.5 py-1 rounded-md text-xs font-bold transition ${paperWidth === key ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-700 dark:text-slate-300 hover:text-slate-900'}`
+        className: `px-2.5 py-1 rounded-md text-xs font-bold transition ${paperWidth === key ? 'bg-violet-600 text-white shadow-xs' : 'text-slate-700 dark:text-slate-300 hover:text-slate-900'}`
     }, label);
 
     const exportButton = (id, onClick, Icon, text, iconClass, title) => h('button', {
@@ -155,7 +156,7 @@ export const ThermalReceiptModal = () => {
         h('span', { className: 'font-mono' }, `${money(value)} ${settings.currencySymbol}`)
     );
 
-    return h('div', {
+    return h(ModalLayer, {
         id: 'modal-receipt-backdrop',
         className: 'fixed inset-x-0 oscar-bounded-modal z-[80] flex items-stretch sm:items-center justify-center bg-black/70 p-1.5 sm:p-3 overflow-hidden animate-in fade-in'
     }, h('div', {
@@ -169,16 +170,15 @@ export const ThermalReceiptModal = () => {
                 paperButton('a4', 'A4')
             ),
             h('div', { className: 'flex items-center gap-1.5 flex-wrap justify-end' },
-                exportButton('btn-download-receipt-excel', handleDownloadExcel, FileSpreadsheet, 'Excel احترافي', 'text-emerald-600', 'تنزيل الفاتورة كملف Excel احترافي'),
+                exportButton('btn-download-receipt-excel', handleDownloadExcel, FileSpreadsheet, 'Excel احترافي', 'text-violet-600', 'تنزيل الفاتورة كملف Excel احترافي'),
                 exportButton('btn-download-receipt-pdf', handleDownloadPDF, Download, 'PDF احترافي', 'text-rose-600', 'تنزيل الفاتورة كملف PDF احترافي'),
                 exportButton('btn-download-receipt-image', handleDownloadImage, ImageIcon, 'صورة', 'text-blue-600', 'تنزيل الفاتورة كصورة'),
-                h('button', { id: 'btn-bluetooth-print', onClick: handleBluetoothPrint, disabled: isExporting, className: `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-bold shadow-xs transition disabled:opacity-50 ${printerState.ready ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700'}`, title: printerState.connected ? `متصل: ${printerState.name || 'طابعة'}` : printerState.systemMode ? 'طباعة عبر نظام الجهاز' : 'اختيار الطابعة والطباعة' },
+                h('button', { id: 'btn-bluetooth-print', onClick: handleBluetoothPrint, disabled: isExporting, className: `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-bold shadow-xs transition disabled:opacity-50 ${printerState.ready ? 'bg-violet-600 hover:bg-violet-700' : 'bg-blue-600 hover:bg-blue-700'}`, title: printerState.connected ? `متصل: ${printerState.name || 'طابعة'}` : printerState.systemMode ? 'طباعة عبر نظام الجهاز' : 'اختيار الطابعة والطباعة' },
                     h(Bluetooth, { className: 'w-4 h-4' }), h('span', null, printerState.connected ? 'طباعة Bluetooth' : printerState.systemMode ? (printerState.isIOS ? 'طباعة iPhone' : 'طباعة النظام') : (printerState.bluetoothSupported ? 'ربط وطباعة Bluetooth' : (printerState.isIOS ? 'طباعة iPhone' : 'طباعة النظام')))
                 ),
-                h('button', { id: 'btn-trigger-print', onClick: handlePrint, className: 'flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition' },
+                h('button', { id: 'btn-trigger-print', onClick: handlePrint, className: 'flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold shadow-xs transition' },
                     h(Printer, { className: 'w-4 h-4' }), h('span', null, 'طباعة الفاتورة فقط')
-                ),
-                h('button', { onClick: () => setShowThermalModal(null), className: 'p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200' }, h(X, { className: 'w-5 h-5' }))
+                )
             )
         ),
         h('div', { className: 'receipt-preview-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-2 sm:p-4 bg-slate-100 dark:bg-slate-950/80 flex items-start justify-center custom-scrollbar overscroll-contain' },
@@ -233,6 +233,7 @@ export const ThermalReceiptModal = () => {
                     totalRow('المجموع الإجمالي:', invoice.subtotal),
                     Number(invoice.discountTotal) > 0 ? totalRow('إجمالي الخصم:', -Number(invoice.discountTotal), 'receipt-total-discount') : null,
                     Number(invoice.taxTotal) > 0 ? totalRow(`ضريبة القيمة المضافة (${settings.taxRate}%):`, invoice.taxTotal) : null,
+                    Number(invoice.additionalCharges)>0 ? totalRow('كلفة إضافية / شحن:',invoice.additionalCharges) : null,
                     totalRow('الصافي المطلوب:', invoice.grandTotal, 'receipt-total-grand'),
                     totalRow('المبلغ المدفوع:', invoice.paidAmount),
                     Number(invoice.changeAmount) > 0 ? totalRow('الفكة للزبون:', invoice.changeAmount, 'receipt-total-change') : null,
@@ -244,6 +245,7 @@ export const ThermalReceiptModal = () => {
                     h('div', { className: 'receipt-system-mark' }, 'نظام كاش توب 3 - POS')
                 )
             )
-        )
+        ),
+        h('div',{className:'no-print ct-receipt-footer'},h('button',{type:'button',onClick:()=>setShowThermalModal(null)},'إغلاق العرض'))
     ));
 };

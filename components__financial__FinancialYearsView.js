@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.90-cashtop3-search-logo';
-import { getAllFromStore } from './services__db.js?v=7.9.4.90-cashtop3-search-logo';
+import { useApp } from './context__AppContext.js?v=7.9.4.134-invoice-filters';
+import { getAllFromStore } from './services__db.js?v=7.9.4.134-invoice-filters';
 import {
   CalendarRange, Archive, LockKeyhole, PlayCircle, ReceiptText, Truck, FileSpreadsheet,
   Receipt, ArrowLeftRight, PackageSearch, WalletCards, Users, Building2, Boxes, Eye,
@@ -16,7 +16,7 @@ const dateOnly=v=>{if(!v)return '-';const d=new Date(v);return Number.isFinite(d
 const Metric=({icon:Icon,label,value,sub,tone='emerald'})=>h('div',{className:'rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs'},
   h('div',{className:'flex items-start justify-between gap-3'},
     h('div',{className:'min-w-0'},h('div',{className:'text-[10px] font-bold text-slate-500'},label),h('div',{className:'mt-1 text-lg font-black text-slate-900 dark:text-white font-mono'},value),sub?h('div',{className:'text-[9px] text-slate-400 mt-1'},sub):null),
-    h('div',{className:`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${tone==='indigo'?'bg-indigo-50 text-indigo-600':tone==='amber'?'bg-amber-50 text-amber-600':tone==='blue'?'bg-blue-50 text-blue-600':'bg-emerald-50 text-emerald-600'}`},h(Icon,{className:'w-4 h-4'}))));
+    h('div',{className:`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${tone==='indigo'?'bg-indigo-50 text-indigo-600':tone==='amber'?'bg-amber-50 text-amber-600':tone==='blue'?'bg-blue-50 text-blue-600':'bg-violet-50 text-violet-600'}`},h(Icon,{className:'w-4 h-4'}))));
 
 export const FinancialYearsView=()=>{
   const { settings, openNewFinancialYear, showToast, accounts, stock, products, customers, suppliers }=useApp();
@@ -106,7 +106,7 @@ export const FinancialYearsView=()=>{
   return h('div',{className:'p-4 sm:p-6 space-y-5 max-w-7xl mx-auto text-right'},
     h('div',{className:'flex flex-col lg:flex-row lg:items-center justify-between gap-4'},
       h('div',{className:'flex items-start gap-3'},h('div',{className:'w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center'},h(CalendarRange,{className:'w-6 h-6'})),h('div',null,h('h2',{className:'text-xl font-black text-slate-900 dark:text-white'},'السنة المالية والأرشيف'),h('p',{className:'text-xs text-slate-500 mt-1'},'كل سنة مستقلة بحركاتها. عند فتح سنة جديدة تُؤرشف الحركات القديمة وتستمر الثوابت والأرصدة والمخزون كما هي.'))),
-      h('div',{className:'px-4 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-black'},`السنة المفتوحة: ${active?.name||'الحالية'}`)),
+      h('div',{className:'px-4 py-2 rounded-xl bg-violet-50 border border-violet-200 text-violet-800 text-xs font-black'},`السنة المفتوحة: ${active?.name||'الحالية'}`)),
 
     h('div',{className:'grid grid-cols-2 lg:grid-cols-4 gap-3'},
       h(Metric,{icon:WalletCards,label:'أرصدة الحسابات المرحلة',value:`${money(staticBalances.accountBalance)} ${settings.currencySymbol||''}`,sub:'تبقى مستمرة بين السنوات',tone:'blue'}),
@@ -120,7 +120,7 @@ export const FinancialYearsView=()=>{
         h('label',{className:'text-[11px] font-bold'},'اسم السنة الجديدة',h('input',{value:name,onChange:e=>setName(e.target.value),placeholder:'مثال: السنة المالية 2027',className:'block w-full mt-1 px-3 py-2.5 rounded-xl border bg-white dark:bg-slate-800 text-xs'})),
         h('label',{className:'text-[11px] font-bold'},'تاريخ البداية',h('input',{type:'date',value:startDate,onChange:e=>setStartDate(e.target.value),className:'block w-full mt-1 px-3 py-2.5 rounded-xl border bg-white dark:bg-slate-800 text-xs'})),
         h('button',{type:'submit',disabled:busy,className:'h-[42px] px-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black disabled:opacity-50'},busy?'جاري الأرشفة...':'إغلاق وفتح الجديدة')),
-      h('div',{className:'mt-3 flex items-start gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 text-[10px] leading-5 text-slate-600 dark:text-slate-300'},h(ShieldCheck,{className:'w-4 h-4 text-emerald-600 shrink-0 mt-0.5'}),h('span',null,'يتم أرشفة فواتير البيع والمرتجعات والمشتريات والسندات والمصروفات وحركات المخزون والتحويلات والورديات وسجل العمليات. تبقى الأصناف والكميات والحسابات والعملاء والموردون وأرصدتهم والإعدادات والمخازن مستخدمة في السنة الجديدة.'))),
+      h('div',{className:'mt-3 flex items-start gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 text-[10px] leading-5 text-slate-600 dark:text-slate-300'},h(ShieldCheck,{className:'w-4 h-4 text-violet-600 shrink-0 mt-0.5'}),h('span',null,'يتم أرشفة فواتير البيع والمرتجعات والمشتريات والسندات والمصروفات وحركات المخزون والتحويلات والورديات وسجل العمليات. تبقى الأصناف والكميات والحسابات والعملاء والموردون وأرصدتهم والإعدادات والمخازن مستخدمة في السنة الجديدة.'))),
 
     h('section',{className:'space-y-3'},
       h('div',{className:'flex items-center gap-2'},h(Archive,{className:'w-5 h-5 text-slate-500'}),h('h3',{className:'font-black text-sm'},'السنوات المالية')),
@@ -128,12 +128,12 @@ export const FinancialYearsView=()=>{
         const current=year.id===activeId;
         const counts={sales:(archive.invoices||[]).filter(r=>belongs(r,year.id)&&r.type==='sale').length,purchases:(archive.purchases||[]).filter(r=>belongs(r,year.id)).length,vouchers:(archive.vouchers||[]).filter(r=>belongs(r,year.id)).length};
         return h('button',{key:year.id,type:'button',onClick:()=>setSelectedId(year.id),className:`text-right p-4 rounded-2xl border transition ${selectedId===year.id?'border-indigo-500 ring-2 ring-indigo-100 bg-indigo-50/40':'border-slate-200 bg-white hover:border-indigo-300'} dark:bg-slate-900`},
-          h('div',{className:'flex items-start justify-between gap-2'},h('div',null,h('div',{className:'font-black text-sm'},year.name||'سنة مالية'),h('div',{className:'text-[10px] text-slate-500 mt-1'},`${dateOnly(year.startDate)} ← ${current?'مفتوحة':dateOnly(year.endDate)}`)),h('span',{className:`px-2 py-1 rounded-full text-[9px] font-black ${current?'bg-emerald-100 text-emerald-700':'bg-slate-100 text-slate-600'}`},current?'مفتوحة':'مؤرشفة')),
+          h('div',{className:'flex items-start justify-between gap-2'},h('div',null,h('div',{className:'font-black text-sm'},year.name||'سنة مالية'),h('div',{className:'text-[10px] text-slate-500 mt-1'},`${dateOnly(year.startDate)} ← ${current?'مفتوحة':dateOnly(year.endDate)}`)),h('span',{className:`px-2 py-1 rounded-full text-[9px] font-black ${current?'bg-violet-100 text-violet-700':'bg-slate-100 text-slate-600'}`},current?'مفتوحة':'مؤرشفة')),
           h('div',{className:'grid grid-cols-3 gap-1 mt-3 text-center'},h('div',{className:'rounded-lg bg-slate-50 p-2'},h('b',{className:'block text-xs'},counts.sales),h('span',{className:'text-[8px] text-slate-500'},'مبيعات')),h('div',{className:'rounded-lg bg-slate-50 p-2'},h('b',{className:'block text-xs'},counts.purchases),h('span',{className:'text-[8px] text-slate-500'},'مشتريات')),h('div',{className:'rounded-lg bg-slate-50 p-2'},h('b',{className:'block text-xs'},counts.vouchers),h('span',{className:'text-[8px] text-slate-500'},'سندات'))));
       }))),
 
     selected?h('section',{className:'rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5 space-y-4'},
-      h('div',{className:'flex flex-col sm:flex-row sm:items-center justify-between gap-3'},h('div',{className:'flex items-center gap-2'},selected.id===activeId?h(Clock3,{className:'w-5 h-5 text-emerald-600'}):h(LockKeyhole,{className:'w-5 h-5 text-slate-500'}),h('div',null,h('div',{className:'font-black text-base'},selected.name),h('div',{className:'text-[10px] text-slate-500'},selected.id===activeId?'السنة الحالية — قابلة لإضافة الحركات':'سنة مؤرشفة — عرض وقراءة فقط'))),loading?h('span',{className:'text-[10px] text-slate-400'},'جاري تحميل الأرشيف...'):null),
+      h('div',{className:'flex flex-col sm:flex-row sm:items-center justify-between gap-3'},h('div',{className:'flex items-center gap-2'},selected.id===activeId?h(Clock3,{className:'w-5 h-5 text-violet-600'}):h(LockKeyhole,{className:'w-5 h-5 text-slate-500'}),h('div',null,h('div',{className:'font-black text-base'},selected.name),h('div',{className:'text-[10px] text-slate-500'},selected.id===activeId?'السنة الحالية — قابلة لإضافة الحركات':'سنة مؤرشفة — عرض وقراءة فقط'))),loading?h('span',{className:'text-[10px] text-slate-400'},'جاري تحميل الأرشيف...'):null),
       h('div',{className:'grid grid-cols-2 md:grid-cols-4 gap-3'},
         h(Metric,{icon:ReceiptText,label:'صافي المبيعات',value:`${money(selectedData.salesTotal-selectedData.returnsTotal)} ${settings.currencySymbol||''}`,sub:`${selectedData.sales.length} بيع • ${selectedData.returns.length} مرتجع`}),
         h(Metric,{icon:Truck,label:'المشتريات',value:`${money(selectedData.purchaseTotal)} ${settings.currencySymbol||''}`,sub:`${selectedData.purchases.length} فاتورة`,tone:'blue'}),

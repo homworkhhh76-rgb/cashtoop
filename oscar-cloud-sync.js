@@ -3,6 +3,7 @@
 const VERSION='OscarSyncV3-RestaurantRealtime';
 const STORES=new Set(['products','categories','warehouses','stock','stock_movements','invoices','purchases','customers','suppliers','partner_statements','accounts','transfers','expenses','shifts','audit_logs','held_invoices','settings','vouchers','employees','restaurant_tables','restaurant_sections','restaurant_orders','kitchen_sections','table_reservations','recipes','waste_records']);
 const REALTIME_STORES=new Set(['restaurant_tables','restaurant_sections','restaurant_orders','kitchen_sections','table_reservations','recipes','waste_records']);
+const PAGED_HISTORY_STORES=new Set(['invoices','purchases','stock_movements','expenses','vouchers','transfers','audit_logs','partner_statements','held_invoices']);
 const META_PREFIX='oscar_sync_meta_v2::', LEGACY_PENDING_PREFIX='oscar_sync_pending_v1::', DEVICE_KEY='oscar_sync_device_v1', RT_SEEN_PREFIX='oscar_rt_seen_v3::';
 let bridge=null, initialized=false, busy=false, suppress=false, syncTimer=null, probeTimer=null, bc=null, schemaTenant='', seq=0, lastProbe=0, lastRealtimePull=0, realtimePullBusy=false, rerunRequested=false;
 let pendingCache=null, pendingHydrated=false, hydratePromise=null;
@@ -73,8 +74,8 @@ async function removePendingOp(id,rev=0){
   if(bridge)await bridge.deleteFromStore('sync_queue',id,false).catch(()=>{});
   emitStatus();return true;
 }
-async function captureStoreChange(store,value,{deleted=false,key}={}){
-  if(suppress||!STORES.has(store)||!tenant())return false;
+async function captureStoreChange(store,value,{deleted=false,key,localUserWrite=false}={}){
+  if((suppress&&!localUserWrite)||!STORES.has(store)||!tenant())return false;
   const k=keyString(store,value,key);if(!k)return false;
   let outgoing=deleted?null:clone(value);
   // Product photos selected while offline stay only in IndexedDB until Telegram upload succeeds.
@@ -149,7 +150,10 @@ async function prepareRemoteValue(store,key,value,remoteRev,{deleted=false,lates
   // Legacy cloud rows had no updatedAt. A zero/delete is accepted only when the latest
   // stock movement agrees with it; otherwise preserve the verified local balance and repair cloud.
   if(localQty>0&&remoteQty===0&&!remotePayloadTs){
-    const latest=latestMovementMap?.get(movementKey(local.productId,local.warehouseId));
+    let latest=latestMovementMap?.get(movementKey(local.productId,local.warehouseId));
+    if(!latest&&!latestMovementMap&&bridge?.getLatestStockMovementLocal){
+      try{latest=await bridge.getLatestStockMovementLocal(local.productId,local.warehouseId)}catch(_){latest=null}
+    }
     const latestBalance=Number(latest?.newBaseBalance);
     if(Number.isFinite(latestBalance)){
       if(Math.abs(latestBalance-localQty)<0.000001){if(repairs)repairs.push(local);return{skip:true,value:local}}
@@ -231,18 +235,6 @@ async function applyRows(rows,batch){
       if(localPending&&Number(localPending.rev||0)>remoteRev)continue;
       const deleted=Number(row.deleted)===1||env?.deleted===true;
       const rawValue=env&&Object.prototype.hasOwnProperty.call(env,'v')?env.v:env;
-      if(parsed.store==='stock'&&!latestMovementMap){
-        latestMovementMap=new Map();
-        try{
-          const movements=await bridge.getAllFromStore('stock_movements');
-          for(const mov of movements||[]){
-            if(!mov?.productId||!mov?.warehouseId)continue;
-            const k=movementKey(mov.productId,mov.warehouseId),t=isoMs(mov.date||mov.createdAt);
-            const prev=latestMovementMap.get(k),pt=isoMs(prev?.date||prev?.createdAt);
-            if(!prev||t>=pt)latestMovementMap.set(k,mov);
-          }
-        }catch(_){latestMovementMap=new Map()}
-      }
       const prepared=await prepareRemoteValue(parsed.store,parsed.key,rawValue,remoteRev,{deleted,latestMovementMap,repairs});
       if(prepared.skip)continue;
       if(deleted)await bridge.deleteFromStore(parsed.store,actualKey(parsed.store,parsed.key),false);
@@ -261,7 +253,49 @@ async function applyRows(rows,batch){
   if(repairs.length)requestSync(40);
   return{applied,changedStores:[...touched]}
 }
-async function pullChanges({force=false}={}){const s=await ensureSchema(),m=readMeta(),remote=await remoteBatch(s),last=Number(m.remoteBatch||0),pre=prefix(),hi=pre+'\uffff';if(!force&&m.batchInitialized&&remote<=last)return{applied:0,remoteBatch:remote,remoteRows:0};let r;if(!m.batchInitialized||(force&&last===0)){[r]=await s.d.pipeline(s.c,[{sql:`SELECT path,payload,deleted,updated_at,sync_batch FROM ${s.table} WHERE path>=? AND path<? ORDER BY path`,args:[pre,hi]}],60000)}else{[r]=await s.d.pipeline(s.c,[{sql:`SELECT path,payload,deleted,updated_at,sync_batch FROM ${s.table} WHERE path>=? AND path<? AND sync_batch>? ORDER BY sync_batch,path`,args:[pre,hi,last]}],60000)}const rows=s.d.rows(r);const out=await applyRows(rows,remote);if(!rows.length){m.remoteBatch=remote;m.batchInitialized=true;m.lastPullAt=Date.now();writeMeta(m)}return{...out,remoteBatch:remote,remoteRows:rows.length}}
+async function pullChanges({force=false}={}){const s=await ensureSchema(),m=readMeta(),remote=await remoteBatch(s),last=Number(m.remoteBatch||0),pre=prefix(),hi=pre+'\uffff';if(!force&&m.batchInitialized&&remote<=last)return{applied:0,remoteBatch:remote,remoteRows:0};let r;if(!m.batchInitialized||(force&&last===0)){const where=['path>=?','path<?'],args=[pre,hi];for(const store of PAGED_HISTORY_STORES){const lo=pre+encodeURIComponent(store)+'/',up=lo+'\uffff';where.push('NOT (path>=? AND path<?)');args.push(lo,up)}[r]=await s.d.pipeline(s.c,[{sql:`SELECT path,payload,deleted,updated_at,sync_batch FROM ${s.table} WHERE ${where.join(' AND ')} ORDER BY path`,args}],60000)}else{[r]=await s.d.pipeline(s.c,[{sql:`SELECT path,payload,deleted,updated_at,sync_batch FROM ${s.table} WHERE path>=? AND path<? AND sync_batch>? ORDER BY sync_batch,path`,args:[pre,hi,last]}],60000)}const rows=s.d.rows(r);const out=await applyRows(rows,remote);if(!rows.length){m.remoteBatch=remote;m.batchInitialized=true;m.lastPullAt=Date.now();writeMeta(m)}return{...out,remoteBatch:remote,remoteRows:rows.length}}
+
+const PAGE_SORT_FIELD={invoices:'date',purchases:'date',stock_movements:'date',expenses:'date',vouchers:'date',transfers:'date',audit_logs:'date',partner_statements:'date',held_invoices:'date',customers:'createdAt',suppliers:'createdAt'};
+const SAFE_FIELD=/^[A-Za-z_][A-Za-z0-9_]*$/;
+function jsonValueExpr(field){if(!SAFE_FIELD.test(String(field||'')))throw Error('حقل فلترة غير صالح');return `COALESCE(json_extract(payload,'$.v.${field}'),json_extract(payload,'$.${field}'))`}
+function normalizeInvoiceSearch(value){return String(value??'').toLowerCase().replace(/[٠-٩]/g,c=>String(c.charCodeAt(0)-1632)).replace(/[۰-۹]/g,c=>String(c.charCodeAt(0)-1776)).replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/[\u064B-\u065F\u0670ـ]/g,'').trim();}
+function pendingValueMatches(value,opts={}){
+  if(!value||typeof value!=='object')return false;const filters=opts.filters&&typeof opts.filters==='object'?opts.filters:{};
+  for(const [field,wanted] of Object.entries(filters)){if(wanted===undefined||wanted===''||wanted==='all')continue;let actual=value?.[field];if(field==='financialYearId'&&(actual===undefined||actual===null||actual===''))actual=opts.legacyFinancialYearId||'';if(Array.isArray(wanted)){if(!wanted.map(String).includes(String(actual??'')))return false}else if(wanted===null){if(!(actual===undefined||actual===null||actual===''))return false}else if(String(actual??'')!==String(wanted))return false}
+  const deletedMode=opts.deletedMode||'exclude';if(deletedMode==='exclude'&&value.deletedAt)return false;if(deletedMode==='only'&&!value.deletedAt)return false;
+  const dateField=opts.dateField||PAGE_SORT_FIELD[opts.storeName]||'date',raw=value?.[dateField]||value?.date||value?.createdAt||value?.timestamp||'',t=raw?new Date(raw).getTime():0;
+  if(opts.dateFrom){const f=new Date(opts.dateFrom).getTime();if(Number.isFinite(f)&&(!Number.isFinite(t)||t<f))return false}if(opts.dateTo){const z=new Date(opts.dateTo).getTime();if(Number.isFinite(z)&&(!Number.isFinite(t)||t>z))return false}
+  for(const [f,x] of Object.entries(opts.numericGt||{}))if(!(Number(value?.[f])>Number(x)))return false;for(const [f,x] of Object.entries(opts.numericGte||{}))if(!(Number(value?.[f])>=Number(x)))return false;for(const [f,x] of Object.entries(opts.numericLt||{}))if(!(Number(value?.[f])<Number(x)))return false;for(const [f,x] of Object.entries(opts.numericLte||{}))if(!(Number(value?.[f])<=Number(x)))return false;
+  const tokens=normalizeInvoiceSearch(opts.search).split(/\s+/).filter(Boolean);if(tokens.length){let blob='';try{blob=normalizeInvoiceSearch(JSON.stringify(value))}catch{}if(!tokens.every(token=>blob.includes(token)))return false}return true
+}
+function buildPagedWhere(store,opts={},s){
+  if(!STORES.has(store))throw Error('جدول غير صالح');const p=prefix()+encodeURIComponent(store)+'/',hi=p+'\uffff',where=['path>=?','path<?','deleted=0'],args=[p,hi];
+  const filters=opts.filters&&typeof opts.filters==='object'?opts.filters:{};
+  for(const [field,wanted] of Object.entries(filters)){if(wanted===undefined||wanted===''||wanted==='all')continue;const expr=jsonValueExpr(field);if(field==='financialYearId'&&opts.legacyFinancialYearId){if(Array.isArray(wanted)){const qs=wanted.map(()=>'?').join(',');where.push(`COALESCE(${expr},?) IN (${qs})`);args.push(opts.legacyFinancialYearId,...wanted)}else{where.push(`COALESCE(${expr},?)=?`);args.push(opts.legacyFinancialYearId,wanted)}continue}if(Array.isArray(wanted)){if(!wanted.length)continue;where.push(`${expr} IN (${wanted.map(()=>'?').join(',')})`);args.push(...wanted)}else if(wanted===null){where.push(`(${expr} IS NULL OR ${expr}='')`)}else{where.push(`${expr}=?`);args.push(wanted)}}
+  const deletedMode=opts.deletedMode||'exclude',delExpr=jsonValueExpr('deletedAt');if(deletedMode==='exclude')where.push(`(${delExpr} IS NULL OR ${delExpr}='')`);else if(deletedMode==='only')where.push(`(${delExpr} IS NOT NULL AND ${delExpr}<>'')`);
+  const dateField=opts.dateField||PAGE_SORT_FIELD[store]||'date',dateExpr=jsonValueExpr(dateField);if(opts.dateFrom){where.push(`${dateExpr}>=?`);args.push(String(opts.dateFrom))}if(opts.dateTo){where.push(`${dateExpr}<=?`);args.push(String(opts.dateTo))}
+  for(const [field,threshold] of Object.entries(opts.numericGt||{})){where.push(`CAST(COALESCE(${jsonValueExpr(field)},0) AS REAL)>?`);args.push(Number(threshold))}for(const [field,threshold] of Object.entries(opts.numericGte||{})){where.push(`CAST(COALESCE(${jsonValueExpr(field)},0) AS REAL)>=?`);args.push(Number(threshold))}for(const [field,threshold] of Object.entries(opts.numericLt||{})){where.push(`CAST(COALESCE(${jsonValueExpr(field)},0) AS REAL)<?`);args.push(Number(threshold))}for(const [field,threshold] of Object.entries(opts.numericLte||{})){where.push(`CAST(COALESCE(${jsonValueExpr(field)},0) AS REAL)<=?`);args.push(Number(threshold))}
+  const tokens=normalizeInvoiceSearch(opts.search).split(/\s+/).filter(Boolean);
+  if(tokens.length){
+    let expr="lower(CAST(search_value.atom AS TEXT))";
+    for(const [from,to] of [...'٠١٢٣٤٥٦٧٨٩'].map((x,i)=>[x,String(i)]).concat([...'۰۱۲۳۴۵۶۷۸۹'].map((x,i)=>[x,String(i)]),[['أ','ا'],['إ','ا'],['آ','ا'],['ى','ي'],['ـ',''],...[...'ًٌٍَُِّْٰ'].map(x=>[x,''])]))expr=`replace(${expr},'${from}','${to}')`;
+    for(const token of tokens){where.push(`EXISTS (SELECT 1 FROM json_tree(CASE WHEN json_valid(payload) THEN payload ELSE '{}' END) AS search_value WHERE search_value.atom IS NOT NULL AND instr(${expr},?)>0)`);args.push(token)}
+  }
+  return{where:where.join(' AND '),args,dateExpr};
+}
+async function queryStorePage(store,opts={}){
+  const s=await ensureSchema(),page=Math.max(1,Number(opts.page||1)),pageSize=Math.min(250,Math.max(1,Number(opts.pageSize||50))),offset=(page-1)*pageSize,b=buildPagedWhere(store,{...opts,storeName:store},s),sortField=opts.sortField||PAGE_SORT_FIELD[store]||'date',sortExpr=`COALESCE(${jsonValueExpr(sortField)},${jsonValueExpr('createdAt')},${jsonValueExpr('date')},updated_at)`,dir=String(opts.sortDirection||'desc').toLowerCase()==='asc'?'ASC':'DESC';
+  const [countR,listR]=await s.d.pipeline(s.c,[{sql:`SELECT COUNT(*) AS cnt FROM ${s.table} WHERE ${b.where}`,args:b.args},{sql:`SELECT path,payload,deleted,updated_at FROM ${s.table} WHERE ${b.where} ORDER BY ${sortExpr} ${dir},path ${dir} LIMIT ? OFFSET ?`,args:[...b.args,pageSize,offset]}],45000);
+  let total=Number(s.d.rows(countR)[0]?.cnt||0),items=[];const keys=[];for(const row of s.d.rows(listR)){const parsed=parsePath(row.path);if(!parsed)continue;let env=null;try{env=typeof row.payload==='string'?JSON.parse(row.payload):row.payload}catch(_){env=null}const value=env&&Object.prototype.hasOwnProperty.call(env,'v')?env.v:env;if(value!=null){items.push(value);keys.push(parsed.key)}}
+  // Overlay durable local pending operations so a just-saved invoice appears instantly before upload completes.
+  const pending=Object.values(readPending()).filter(o=>o?.store===store);if(pending.length){const byId=new Map(items.map((x,i)=>[String(x?.id??keys[i]??''),x]));let added=0;for(const op of pending){const id=String(op?.value?.id??actualKey(store,op?.key)??'');if(op.deleted){if(byId.delete(id))total=Math.max(0,total-1);continue}if(!pendingValueMatches(op.value,{...opts,storeName:store}))continue;if(byId.has(id))byId.set(id,op.value);else if(page===1){byId.set(id,op.value);added++;total++}}items=[...byId.values()];if(added||pending.length){const f=sortField;items.sort((a,b)=>{const av=a?.[f]||a?.createdAt||a?.date||'',bv=b?.[f]||b?.createdAt||b?.date||'';return dir==='ASC'?String(av).localeCompare(String(bv)):String(bv).localeCompare(String(av))});items=items.slice(0,pageSize)}}
+  return{items,total,page,pageSize,totalPages:Math.max(1,Math.ceil(total/pageSize)),source:'cloud'};
+}
+async function queryStoreStats(store,opts={}){
+  const s=await ensureSchema(),base=buildPagedWhere(store,{...opts,dateFrom:null,dateTo:null,storeName:store},s),sumFields=(Array.isArray(opts.sumFields)?opts.sumFields:[]).filter(x=>SAFE_FIELD.test(String(x))),ranges=Array.isArray(opts.ranges)&&opts.ranges.length?opts.ranges:[{key:'all',from:opts.dateFrom||null,to:opts.dateTo||null}],dateField=opts.dateField||PAGE_SORT_FIELD[store]||'date',dateExpr=jsonValueExpr(dateField),statements=[];
+  for(const range of ranges){let where=base.where,args=[...base.args];if(range.from){where+=` AND ${dateExpr}>=?`;args.push(String(range.from))}if(range.to){where+=` AND ${dateExpr}<=?`;args.push(String(range.to))}const sums=sumFields.map(f=>`,COALESCE(SUM(CAST(COALESCE(${jsonValueExpr(f)},0) AS REAL)),0) AS sum_${f}`).join('');statements.push({sql:`SELECT COUNT(*) AS cnt${sums} FROM ${s.table} WHERE ${where}`,args})}
+  const rs=await s.d.pipeline(s.c,statements,45000),out={};ranges.forEach((range,i)=>{const row=s.d.rows(rs[i])[0]||{},sums={};for(const f of sumFields)sums[f]=Number(row[`sum_${f}`]||0);out[range.key||'all']={count:Number(row.cnt||0),sums}});return{ranges:out,source:'cloud'};
+}
 async function syncNow({manual=false,force=false}={}){await hydratePending().catch(()=>{});if(busy){rerunRequested=true;return{busy:true,remaining:pendingCount()}}if(!tenant())return{unavailable:true};if(navigator.onLine===false){emitStatus({state:'offline'});return{offline:true,remaining:pendingCount()}}busy=true;emitStatus({state:'syncing'});try{const pushed=pendingCount()?await pushPending():{uploaded:0,remaining:0};const pulled=await pullChanges({force:!!force});const rt=await pullRealtimeSnapshot({force:!!force});const changedStores=[...new Set([...(pulled.changedStores||[]),...(rt.changedStores||[])])];const result={...pushed,...pulled,realtimeApplied:Number(rt.applied||0),changedStores,remaining:pendingCount(),success:true};emitStatus({state:'success',lastSuccessAt:Date.now(),result});return result}catch(e){console.error('[OscarSync]',e);emitStatus({state:'error',message:String(e?.message||e)});return{error:true,message:String(e?.message||e),remaining:pendingCount()}}finally{busy=false;emitStatus();if(rerunRequested||pendingCount()){rerunRequested=false;requestSync(25)}}}
 function requestSync(delay=120){if(!tenant()||navigator.onLine===false)return;clearTimeout(syncTimer);syncTimer=setTimeout(()=>syncNow({force:false}).catch(()=>{}),Math.max(60,delay))}
 async function checkRemote({force=false}={}){if(busy||!tenant()||navigator.onLine===false||document.visibilityState==='hidden')return;const now=Date.now();if(!force&&now-lastProbe<350)return;lastProbe=now;if(pendingCount())return syncNow({force:false});try{const s=await ensureSchema(),r=await remoteBatch(s),m=readMeta();if(!m.batchInitialized||r>Number(m.remoteBatch||0))return syncNow({force:false});return pullRealtimeSnapshot({force:!!force})}catch(e){emitStatus({state:'error',message:String(e?.message||e)})}}
@@ -273,5 +307,5 @@ window.addEventListener('online',()=>{emitStatus({state:'online'});pendingCount(
 window.addEventListener('offline',()=>emitStatus({state:'offline'}));
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(()=>checkRemote({force:true}),100)});
 window.addEventListener('focus',()=>checkRemote({force:true}));
-window.OscarCloudSync={version:VERSION,initialize,syncNow,checkRemote,pullRealtimeNow:(opts={})=>pullRealtimeSnapshot({force:true,...opts}),requestSync,pendingCount,pendingItems,captureStoreChange,resetForTenant,get busy(){return busy},get suppress(){return suppress}};
+window.OscarCloudSync={version:VERSION,initialize,syncNow,checkRemote,pullRealtimeNow:(opts={})=>pullRealtimeSnapshot({force:true,...opts}),queryStorePage,queryStoreStats,requestSync,pendingCount,pendingItems,captureStoreChange,resetForTenant,get busy(){return busy},get suppress(){return suppress}};
 })();

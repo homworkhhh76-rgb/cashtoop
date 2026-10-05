@@ -1,5 +1,5 @@
-import { encodeCustomerPortalAccess } from './customer-portal-codec.js?v=7.9.4.90-cashtop3-search-logo';
-import { TRIAL_DATABASE } from './trial__config.js?v=7.9.4.90-cashtop3-search-logo';
+import { encodeCustomerPortalAccess } from './customer-portal-codec.js?v=7.9.4.134-invoice-filters';
+import { TRIAL_DATABASE } from './trial__config.js?v=7.9.4.134-invoice-filters';
 
 const ALPHABET='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const clean=v=>String(v??'').trim();

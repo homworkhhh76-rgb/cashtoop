@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.90-cashtop3-search-logo';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.90-cashtop3-search-logo';
+import { useApp } from './context__AppContext.js?v=7.9.4.134-invoice-filters';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.134-invoice-filters';
 import { ArrowLeftRight, Plus, Trash2 } from 'lucide-react';
-import { formatStockBreakdown } from './utils__unitTree.js?v=7.9.4.90-cashtop3-search-logo';
+import { formatStockBreakdown } from './utils__unitTree.js?v=7.9.4.134-invoice-filters';
 
 const h = React.createElement;
 const makeRow = (products = []) => {
@@ -53,13 +53,13 @@ export const TransferForm = () => {
   return h('form', { onSubmit: submit, className: 'rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs max-w-3xl mx-auto space-y-4' },
     h('div', { className: 'border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between gap-3' },
       h('div', { className: 'flex items-center gap-2 min-w-0' },
-        h(ArrowLeftRight, { className: 'w-5 h-5 text-emerald-600 shrink-0' }),
+        h(ArrowLeftRight, { className: 'w-5 h-5 text-violet-600 shrink-0' }),
         h('div', { className: 'min-w-0' },
           h('h3', { className: 'text-sm font-black text-slate-900 dark:text-white' }, 'تحويل أصناف بين المخازن'),
           h('p', { className: 'text-[11px] text-slate-500 mt-0.5' }, 'يمكن إضافة أكثر من صنف في نفس عملية التحويل')
         )
       ),
-      h('button', { type: 'button', onClick: addRow, className: 'shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 text-white text-xs font-black hover:bg-emerald-700' },
+      h('button', { type: 'button', onClick: addRow, className: 'shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-violet-600 text-white text-xs font-black hover:bg-violet-700' },
         h(Plus, { className: 'w-4 h-4' }), h('span', null, 'إضافة صنف')
       )
     ),
@@ -115,8 +115,8 @@ export const TransferForm = () => {
       h('input', { type: 'text', value: notes, onChange: (e) => setNotes(e.target.value), placeholder: 'ملاحظات اختيارية...', className: 'w-full px-3 py-2 text-xs border rounded-xl bg-white dark:bg-slate-900' })
     ),
     h('div', { className: 'flex items-center justify-between gap-3 pt-1' },
-      h('button', { type: 'button', onClick: addRow, className: 'inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-emerald-200 text-emerald-700 text-xs font-black hover:bg-emerald-50' }, h(Plus, { className: 'w-4 h-4' }), h('span', null, 'إضافة صنف آخر')),
-      h('button', { type: 'submit', disabled: busy, className: 'px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-black shadow-md' }, busy ? 'جاري التحويل...' : `تأكيد التحويل (${rows.length})`)
+      h('button', { type: 'button', onClick: addRow, className: 'inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-violet-200 text-violet-700 text-xs font-black hover:bg-violet-50' }, h(Plus, { className: 'w-4 h-4' }), h('span', null, 'إضافة صنف آخر')),
+      h('button', { type: 'submit', disabled: busy, className: 'px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white text-xs font-black shadow-md' }, busy ? 'جاري التحويل...' : `تأكيد التحويل (${rows.length})`)
     )
   );
 };

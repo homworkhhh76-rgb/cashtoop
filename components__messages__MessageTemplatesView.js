@@ -1,6 +1,6 @@
 import React,{useMemo,useState} from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.90-cashtop3-search-logo';
-import { createCustomerPortalLinks } from './services__customerPortalLinks.js?v=7.9.4.90-cashtop3-search-logo';
+import { useApp } from './context__AppContext.js?v=7.9.4.134-invoice-filters';
+import { createCustomerPortalLinks } from './services__customerPortalLinks.js?v=7.9.4.134-invoice-filters';
 import { Save, Send, UserRound, ReceiptText, Link2, Copy, MessageSquareText } from 'lucide-react';
 
 const h=React.createElement;
@@ -108,25 +108,25 @@ export const MessageTemplatesView=()=>{
     }catch(error){showToast(error?.message||'تعذر نسخ الرسالة','error');}
   };
   const editor=(kind,title,vars,recordSelect)=>h('section',{className:'rounded-3xl bg-white border border-slate-200 shadow-sm p-4 sm:p-5 space-y-4'},
-    h('div',{className:'flex items-center gap-3 border-b pb-3'},h('div',{className:'w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 grid place-items-center'},kind==='invoice'?h(ReceiptText,{className:'w-5 h-5'}):h(UserRound,{className:'w-5 h-5'})),h('div',null,h('h3',{className:'font-black text-slate-900'},title),h('p',{className:'text-[11px] text-slate-500 mt-0.5'},'غيّر النص كما تريد، والمتغيرات تُستبدل تلقائياً عند الإرسال.'))),
+    h('div',{className:'flex items-center gap-3 border-b pb-3'},h('div',{className:'w-10 h-10 rounded-2xl bg-violet-50 text-violet-700 grid place-items-center'},kind==='invoice'?h(ReceiptText,{className:'w-5 h-5'}):h(UserRound,{className:'w-5 h-5'})),h('div',null,h('h3',{className:'font-black text-slate-900'},title),h('p',{className:'text-[11px] text-slate-500 mt-0.5'},'غيّر النص كما تريد، والمتغيرات تُستبدل تلقائياً عند الإرسال.'))),
     recordSelect,
-    h('div',{className:'rounded-2xl bg-slate-50 border p-3'},h('div',{className:'text-[11px] font-black text-slate-600 mb-2'},'المتغيرات المتاحة'),h('div',{className:'flex flex-wrap gap-1.5'},...vars.map(v=>h('button',{type:'button',key:v.token,onClick:()=>addVar(v.token),title:v.token,className:'px-2.5 py-1.5 rounded-lg bg-white border text-[10px] font-black text-emerald-700 hover:bg-emerald-50'},v.label)))),
+    h('div',{className:'rounded-2xl bg-slate-50 border p-3'},h('div',{className:'text-[11px] font-black text-slate-600 mb-2'},'المتغيرات المتاحة'),h('div',{className:'flex flex-wrap gap-1.5'},...vars.map(v=>h('button',{type:'button',key:v.token,onClick:()=>addVar(v.token),title:v.token,className:'px-2.5 py-1.5 rounded-lg bg-white border text-[10px] font-black text-violet-700 hover:bg-violet-50'},v.label)))),
     ...['WhatsApp','Sms'].map(channel=>{
       const key=`${kind}${channel}`;const isWa=channel==='WhatsApp';
       return h('div',{key,className:'rounded-2xl border border-slate-200 overflow-hidden'},
-        h('div',{className:`px-3 py-2 flex items-center justify-between ${isWa?'bg-emerald-50 text-emerald-800':'bg-blue-50 text-blue-800'}`},h('div',{className:'flex items-center gap-2 font-black text-xs'},isWa?h(WhatsAppSvg):h(SmsSvg),isWa?'قالب WhatsApp':'قالب SMS'),h('span',{className:'text-[9px] font-bold opacity-70'},'قابل للتعديل')),
+        h('div',{className:`px-3 py-2 flex items-center justify-between ${isWa?'bg-violet-50 text-violet-800':'bg-blue-50 text-blue-800'}`},h('div',{className:'flex items-center gap-2 font-black text-xs'},isWa?h(WhatsAppSvg):h(SmsSvg),isWa?'قالب WhatsApp':'قالب SMS'),h('span',{className:'text-[9px] font-bold opacity-70'},'قابل للتعديل')),
         h('textarea',{value:draft[key]||'',onFocus:()=>setActiveField(key),onChange:e=>setDraft({...draft,[key]:e.target.value}),rows:isWa?7:4,className:'w-full p-3 text-xs leading-6 bg-white resize-y outline-none',dir:'rtl'}),
         h('div',{className:'p-2.5 border-t flex flex-wrap gap-2 justify-end'},
           h('button',{type:'button',onClick:()=>copyPreview(kind,isWa?'whatsapp':'sms'),className:'inline-flex items-center gap-1 px-3 py-2 rounded-xl border text-[10px] font-black text-slate-600'},h(Copy,{className:'w-3.5 h-3.5'}),'نسخ المعاينة'),
-          h('button',{type:'button',disabled:!!busy,onClick:()=>send(kind,isWa?'whatsapp':'sms'),className:`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-white text-[10px] font-black disabled:opacity-50 ${isWa?'bg-emerald-600':'bg-blue-600'}`},busy===key?h('span',{className:'w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin'}):h(Send,{className:'w-3.5 h-3.5'}),isWa?'فتح WhatsApp':'فتح الرسائل')
+          h('button',{type:'button',disabled:!!busy,onClick:()=>send(kind,isWa?'whatsapp':'sms'),className:`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-white text-[10px] font-black disabled:opacity-50 ${isWa?'bg-violet-600':'bg-blue-600'}`},busy===key?h('span',{className:'w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin'}):h(Send,{className:'w-3.5 h-3.5'}),isWa?'فتح WhatsApp':'فتح الرسائل')
         )
       );
     })
   );
 
   return h('div',{className:'p-4 sm:p-6 max-w-5xl mx-auto space-y-5 text-right'},
-    h('div',{className:'flex flex-col sm:flex-row sm:items-center justify-between gap-3'},h('div',null,h('div',{className:'flex items-center gap-2'},h(MessageSquareText,{className:'w-6 h-6 text-emerald-600'}),h('h2',{className:'text-xl font-black'},'قوالب الرسائل')),h('p',{className:'text-xs text-slate-500 mt-1'},'قوالب جاهزة للفواتير والعملاء مع رابط سداد مختصر ومباشر.')),h('button',{type:'button',onClick:saveTemplates,className:'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-black'},h(Save,{className:'w-4 h-4'}),'حفظ القوالب')),
-    h('div',{className:'rounded-2xl border border-emerald-100 bg-emerald-50/50 p-3 text-[11px] text-emerald-900 leading-6'},h('div',{className:'font-black flex items-center gap-1.5'},h(Link2,{className:'w-4 h-4'}),'رابط الدفع المختصر'),h('div',null,'عند الإرسال ينشئ كاش توب 3 كود شركة من 5 خانات وكود عميل من 5 خانات، ويضع رابط السداد القصير داخل الرسالة تلقائياً.')),
+    h('div',{className:'flex flex-col sm:flex-row sm:items-center justify-between gap-3'},h('div',null,h('div',{className:'flex items-center gap-2'},h(MessageSquareText,{className:'w-6 h-6 text-violet-600'}),h('h2',{className:'text-xl font-black'},'قوالب الرسائل')),h('p',{className:'text-xs text-slate-500 mt-1'},'قوالب جاهزة للفواتير والعملاء مع رابط سداد مختصر ومباشر.')),h('button',{type:'button',onClick:saveTemplates,className:'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-violet-600 text-white text-xs font-black'},h(Save,{className:'w-4 h-4'}),'حفظ القوالب')),
+    h('div',{className:'rounded-2xl border border-violet-100 bg-violet-50/50 p-3 text-[11px] text-violet-900 leading-6'},h('div',{className:'font-black flex items-center gap-1.5'},h(Link2,{className:'w-4 h-4'}),'رابط الدفع المختصر'),h('div',null,'عند الإرسال ينشئ كاش توب 3 كود شركة من 5 خانات وكود عميل من 5 خانات، ويضع رابط السداد القصير داخل الرسالة تلقائياً.')),
     editor('invoice','قوالب رسائل الفواتير',INVOICE_VARS,h('select',{value:invoiceId,onChange:e=>setInvoiceId(e.target.value),className:'w-full px-3 py-2.5 rounded-xl border bg-white text-xs'},h('option',{value:''},'اختر فاتورة للإرسال...'),...sales.map(inv=>h('option',{key:inv.id,value:inv.id},`#${inv.invoiceNumber||inv.id} — ${inv.customerName||liveCustomers.find(c=>String(c.id)===String(inv.customerId))?.name||'عميل'} — ${money(inv.grandTotal)} ${settings.currencySymbol||'₪'}`)))),
     editor('customer','قوالب رسائل العملاء',CUSTOMER_VARS,h('select',{value:customerId,onChange:e=>setCustomerId(e.target.value),className:'w-full px-3 py-2.5 rounded-xl border bg-white text-xs'},h('option',{value:''},'اختر عميلاً للإرسال...'),...liveCustomers.map(c=>h('option',{key:c.id,value:c.id},`${c.name} — ${c.phone||'بدون هاتف'} — ${money(c.balance)} ${settings.currencySymbol||'₪'}`))))
   );

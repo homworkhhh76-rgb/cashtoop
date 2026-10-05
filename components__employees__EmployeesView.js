@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.90-cashtop3-search-logo';
-import { Pagination, usePagination } from './components__common__Pagination.js?v=7.9.4.90-cashtop3-search-logo';
-import { GENERAL_PAGE_PERMISSIONS, RESTAURANT_PAGE_PERMISSIONS, normalizeEmployeePermissions } from './utils__permissions.js?v=7.9.4.90-cashtop3-search-logo';
-import { isTrialAccount } from './trial__config.js?v=7.9.4.90-cashtop3-search-logo';
+import { useApp } from './context__AppContext.js?v=7.9.4.134-invoice-filters';
+import { Pagination, usePagination } from './components__common__Pagination.js?v=7.9.4.134-invoice-filters';
+import { GENERAL_PAGE_PERMISSIONS, RESTAURANT_PAGE_PERMISSIONS, normalizeEmployeePermissions } from './utils__permissions.js?v=7.9.4.134-invoice-filters';
+import { isTrialAccount } from './trial__config.js?v=7.9.4.134-invoice-filters';
 import {
   Users, UserPlus, ShieldCheck, Trash2, Edit2, UserCheck, Download,
   UtensilsCrossed, ChefHat, LayoutGrid, Scale, X
@@ -147,7 +147,7 @@ export const EmployeesView = () => {
     key,
     className: 'flex items-center gap-2 p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer'
   },
-    h('input', { type: 'checkbox', checked: !!permissions[key], onChange: () => togglePermission(key), className: 'rounded accent-emerald-600' }),
+    h('input', { type: 'checkbox', checked: !!permissions[key], onChange: () => togglePermission(key), className: 'rounded accent-violet-600' }),
     icon ? h(icon, { className: `w-4 h-4 text-${tone}-600 shrink-0` }) : null,
     h('span', { className: 'text-slate-700 font-bold text-[11px]' }, label)
   );
@@ -169,18 +169,18 @@ export const EmployeesView = () => {
     h('div', { className: 'flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm' },
       h('div', null,
         h('div', { className: 'flex items-center gap-2' },
-          h('div', { className: 'p-2 rounded-xl bg-emerald-50 text-emerald-600' }, h(Users, { className: 'w-5 h-5' })),
+          h('div', { className: 'p-2 rounded-xl bg-violet-50 text-violet-600' }, h(Users, { className: 'w-5 h-5' })),
           h('h1', { className: 'text-lg font-black text-slate-900' }, 'إدارة الموظفين والصلاحيات')
         ),
         h('p', { className: 'text-xs text-slate-500 mt-1' }, 'حدد الصفحات التي يستطيع الموظف دخولها وصلاحيات العمليات داخل كل صفحة.')
       ),
-      !employeeCreationLocked && h('button', { onClick: openAdd, className: 'flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-sm' }, h(UserPlus, { className: 'w-4 h-4' }), 'إضافة موظف جديد')
+      !employeeCreationLocked && h('button', { onClick: openAdd, className: 'flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-black shadow-sm' }, h(UserPlus, { className: 'w-4 h-4' }), 'إضافة موظف جديد')
     ),
 
-    activeEmployee && h('div', { className: 'p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3' },
+    activeEmployee && h('div', { className: 'p-3.5 rounded-2xl bg-violet-50 border border-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3' },
       h('div', { className: 'flex items-center gap-3' },
-        h('div', { className: 'w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center' }, h(UserCheck, { className: 'w-5 h-5' })),
-        h('div', null, h('div', { className: 'text-[10px] text-emerald-700 font-black' }, 'المستخدم النشط'), h('div', { className: 'font-black text-slate-900 text-sm' }, activeEmployee.name), h('div', { className: 'text-[10px] text-slate-500' }, activeEmployee.roleName))
+        h('div', { className: 'w-10 h-10 rounded-xl bg-violet-600 text-white flex items-center justify-center' }, h(UserCheck, { className: 'w-5 h-5' })),
+        h('div', null, h('div', { className: 'text-[10px] text-violet-700 font-black' }, 'المستخدم النشط'), h('div', { className: 'font-black text-slate-900 text-sm' }, activeEmployee.name), h('div', { className: 'text-[10px] text-slate-500' }, activeEmployee.roleName))
       )
     ),
 
@@ -192,22 +192,22 @@ export const EmployeesView = () => {
           ...RESTAURANT_PAGE_PERMISSIONS.filter(([key]) => perms[key]).map(([, , label]) => label),
         ];
         const isCurrent = activeEmployee?.id === emp.id;
-        return h('div', { key: emp.id, className: `rounded-2xl border bg-white p-4 shadow-sm ${isCurrent ? 'border-emerald-400 ring-1 ring-emerald-100' : 'border-slate-200'}` },
+        return h('div', { key: emp.id, className: `rounded-2xl border bg-white p-4 shadow-sm ${isCurrent ? 'border-violet-400 ring-1 ring-violet-100' : 'border-slate-200'}` },
           h('div', { className: 'flex items-start justify-between gap-3' },
             h('div', { className: 'min-w-0' },
               h('div', { className: 'font-black text-sm text-slate-900 truncate' }, emp.name),
               h('div', { className: 'text-[10px] text-slate-500 mt-0.5' }, `${emp.roleName || 'موظف'}${emp.phone ? ' • ' + emp.phone : ''}`)
             ),
-            h('span', { className: `shrink-0 px-2 py-1 rounded-lg text-[10px] font-black ${emp.active === false ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-700'}` }, emp.active === false ? 'موقوف' : 'نشط')
+            h('span', { className: `shrink-0 px-2 py-1 rounded-lg text-[10px] font-black ${emp.active === false ? 'bg-rose-50 text-rose-700' : 'bg-violet-50 text-violet-700'}` }, emp.active === false ? 'موقوف' : 'نشط')
           ),
           h('div', { className: 'mt-3 min-h-10 flex flex-wrap gap-1' },
             allowedPages.length
-              ? allowedPages.slice(0, 6).map(label => h('span', { key: label, className: 'px-2 py-1 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-800 text-[9px] font-black' }, label))
+              ? allowedPages.slice(0, 6).map(label => h('span', { key: label, className: 'px-2 py-1 rounded-lg bg-violet-50 border border-violet-100 text-violet-800 text-[9px] font-black' }, label))
               : h('span', { className: 'text-[10px] text-slate-400' }, 'لا توجد صفحات مسموحة'),
             allowedPages.length > 6 ? h('span', { className: 'px-2 py-1 rounded-lg bg-slate-100 text-slate-600 text-[9px] font-black' }, `+${allowedPages.length - 6}`) : null
           ),
           h('div', { className: 'mt-3 pt-3 border-t border-slate-100 flex flex-wrap gap-1.5' },
-            h('button', { onClick: () => switchEmployee(emp), className: `px-2.5 py-1.5 rounded-lg text-[10px] font-black ${isCurrent ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'}` }, isCurrent ? 'الحساب الحالي' : 'تبديل للحساب'),
+            h('button', { onClick: () => switchEmployee(emp), className: `px-2.5 py-1.5 rounded-lg text-[10px] font-black ${isCurrent ? 'bg-violet-100 text-violet-800' : 'bg-slate-100 text-slate-700'}` }, isCurrent ? 'الحساب الحالي' : 'تبديل للحساب'),
             h('button', { onClick: () => openEdit(emp), className: 'p-1.5 rounded-lg border border-slate-200 text-slate-600', title: 'تعديل' }, h(Edit2, { className: 'w-4 h-4' })),
             h('button', { onClick: () => downloadLoginFile(emp), className: 'p-1.5 rounded-lg border border-blue-200 text-blue-600', title: 'تنزيل ملف الدخول' }, h(Download, { className: 'w-4 h-4' })),
             h('button', { onClick: () => removeEmployee(emp), className: 'p-1.5 rounded-lg border border-rose-200 text-rose-600', title: 'حذف' }, h(Trash2, { className: 'w-4 h-4' }))
@@ -220,13 +220,13 @@ export const EmployeesView = () => {
     isModalOpen && h('div', { className: 'oscar-employee-modal-overlay fixed z-[120] bg-black/55 flex justify-center' },
       h('div', { className: 'oscar-employee-modal-panel w-full max-w-2xl bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col' },
         h('div', { className: 'p-4 border-b border-slate-100 flex items-center justify-between shrink-0' },
-          h('div', { className: 'flex items-center gap-2' }, h(ShieldCheck, { className: 'w-5 h-5 text-emerald-600' }), h('div', null, h('div', { className: 'font-black text-slate-900 text-sm' }, editingEmployee ? 'تعديل الموظف والصلاحيات' : 'إضافة موظف جديد'), h('div', { className: 'text-[10px] text-slate-500' }, 'حدد صلاحية كل صفحة من صفحات المطعم بشكل مستقل'))),
+          h('div', { className: 'flex items-center gap-2' }, h(ShieldCheck, { className: 'w-5 h-5 text-violet-600' }), h('div', null, h('div', { className: 'font-black text-slate-900 text-sm' }, editingEmployee ? 'تعديل الموظف والصلاحيات' : 'إضافة موظف جديد'), h('div', { className: 'text-[10px] text-slate-500' }, 'حدد صلاحية كل صفحة من صفحات المطعم بشكل مستقل'))),
           h('button', { type: 'button', onClick: () => setIsModalOpen(false), className: 'w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500' }, h(X, { className: 'w-4 h-4' }))
         ),
         h('form', { onSubmit: submit, className: 'flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4 space-y-4' },
           h('div', { className: 'oscar-mobile-form-grid grid grid-cols-2 gap-2.5 sm:gap-3' },
-            h('div', null, h('label', { className: 'block text-[11px] font-black text-slate-700 mb-1' }, 'اسم الموظف *'), h('input', { required: true, value: name, onChange: e => setName(e.target.value), className: 'w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm outline-none focus:border-emerald-500' })),
-            h('div', null, h('label', { className: 'block text-[11px] font-black text-slate-700 mb-1' }, 'رقم الهاتف'), h('input', { value: phone, onChange: e => setPhone(e.target.value), className: 'w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm outline-none focus:border-emerald-500' })),
+            h('div', null, h('label', { className: 'block text-[11px] font-black text-slate-700 mb-1' }, 'اسم الموظف *'), h('input', { required: true, value: name, onChange: e => setName(e.target.value), className: 'w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm outline-none focus:border-violet-500' })),
+            h('div', null, h('label', { className: 'block text-[11px] font-black text-slate-700 mb-1' }, 'رقم الهاتف'), h('input', { value: phone, onChange: e => setPhone(e.target.value), className: 'w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm outline-none focus:border-violet-500' })),
             h('div', null, h('label', { className: 'block text-[11px] font-black text-slate-700 mb-1' }, 'الدور / القالب الجاهز'), h('select', { value: role, onChange: e => changeRole(e.target.value), className: 'w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold outline-none' },
               h('option', { value: 'cashier' }, 'كاشير'),
               h('option', { value: 'waiter' }, 'جرسون'),
@@ -240,9 +240,9 @@ export const EmployeesView = () => {
             h('div', { className: 'min-w-0' }, h('label', { className: 'block text-[11px] font-black text-slate-700 mb-1' }, 'المسمى الوظيفي'), h('input', { value: roleName, onChange: e => setRoleName(e.target.value), className: 'w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm outline-none' }))
           ),
 
-          h('section', { className: 'p-3 rounded-2xl border border-emerald-200 bg-emerald-50/40' },
-            h('div', { className: 'font-black text-xs text-emerald-900' }, 'صلاحيات دخول الصفحات'),
-            h('div', { className: 'text-[10px] text-emerald-700 mt-0.5 mb-2' }, 'أي صفحة غير محددة لن تظهر للموظف ولن يستطيع فتحها حتى لو حاول الوصول إليها مباشرة.'),
+          h('section', { className: 'p-3 rounded-2xl border border-violet-200 bg-violet-50/40' },
+            h('div', { className: 'font-black text-xs text-violet-900' }, 'صلاحيات دخول الصفحات'),
+            h('div', { className: 'text-[10px] text-violet-700 mt-0.5 mb-2' }, 'أي صفحة غير محددة لن تظهر للموظف ولن يستطيع فتحها حتى لو حاول الوصول إليها مباشرة.'),
             h('div', { className: 'grid grid-cols-1 sm:grid-cols-2 gap-2' }, pagePermissions.map(([key,,label]) => permissionRow(key, label)))
           ),
 
@@ -263,13 +263,13 @@ export const EmployeesView = () => {
           ),
 
           h('label', { className: 'flex items-center gap-2 p-3 rounded-xl border border-slate-200 bg-white cursor-pointer' },
-            h('input', { type: 'checkbox', checked: active, onChange: e => setActive(e.target.checked), className: 'accent-emerald-600' }),
+            h('input', { type: 'checkbox', checked: active, onChange: e => setActive(e.target.checked), className: 'accent-violet-600' }),
             h('span', { className: 'text-xs font-black text-slate-700' }, 'حساب الموظف نشط ويمكنه تسجيل الدخول')
           ),
 
           h('div', { className: 'sticky bottom-0 -mx-4 -mb-4 px-4 py-3 bg-white border-t border-slate-100 flex items-center justify-end gap-2' },
             h('button', { type: 'button', onClick: () => setIsModalOpen(false), className: 'px-4 py-2 rounded-xl border border-slate-200 text-xs font-black text-slate-600' }, 'إلغاء'),
-            h('button', { type: 'submit', className: 'px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-sm' }, 'حفظ الموظف والصلاحيات')
+            h('button', { type: 'submit', className: 'px-5 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-black shadow-sm' }, 'حفظ الموظف والصلاحيات')
           )
         )
       )

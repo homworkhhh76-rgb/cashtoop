@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.90-cashtop3-search-logo';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useApp } from './context__AppContext.js?v=7.9.4.134-invoice-filters';
+import { peekCachedStoreStats } from './services__db.js?v=7.9.4.134-invoice-filters';
 import { BarChart3, Wallet, Users, Package, ShoppingCart, PackagePlus, ClipboardList, Receipt, ArrowLeft, CalendarDays, TrendingUp, CircleDot } from 'lucide-react';
 
 const h = React.createElement;
@@ -67,7 +68,7 @@ const Chart=({values,labels})=>{
 };
 
 export const DashboardView=()=>{
-  const {invoices,products,customers,accounts,settings,setActiveTab,getProductStock}=useApp();
+  const {products,customers,accounts,settings,setActiveTab,getProductStock,queryStoreStats,queryStorePage}=useApp();
   const [period,setPeriod]=useState('today');
   const [customFrom,setCustomFrom]=useState(localDateKey(new Date()));
   const [customTo,setCustomTo]=useState(localDateKey(new Date()));
@@ -75,21 +76,76 @@ export const DashboardView=()=>{
   const years=Array.isArray(settings.financialYears)?settings.financialYears:[];
   const activeFY=settings.activeFinancialYearId||years.find(y=>y?.status==='open')?.id||'fy-initial';
   const legacyFY=years[0]?.id||activeFY;
-  const currentInvoices=useMemo(()=>invoices.filter(inv=>String(inv?.financialYearId||legacyFY)===String(activeFY)),[invoices,legacyFY,activeFY]);
-  const sales=useMemo(()=>currentInvoices.filter(inv=>inv?.type==='sale'&&!inv?.deletedAt),[currentInvoices]);
-  const filteredSales=useMemo(()=>sales.filter(inv=>inRange(inv,range)).sort((a,b)=>invoiceTime(b)-invoiceTime(a)),[sales,range.start?.getTime(),range.end?.getTime()]);
-  const salesTotal=filteredSales.reduce((s,i)=>s+(Number(i.grandTotal)||0),0);
-  const previous=previousRange(range);const previousTotal=previous?sales.filter(inv=>inRange(inv,previous)).reduce((s,i)=>s+(Number(i.grandTotal)||0),0):0;
+  const previous=previousRange(range);
+  const buckets=useMemo(()=>makeBuckets(period,range),[period,range.start?.getTime(),range.end?.getTime()]);
+  const toIso=d=>d?d.toISOString():null;
+  const dashboardStatsOptions=useMemo(()=>{
+    const ranges=[{key:'current',from:toIso(range.start),to:toIso(range.end)}];
+    if(previous) ranges.push({key:'previous',from:toIso(previous.start),to:toIso(previous.end)});
+    buckets.forEach((b,i)=>ranges.push({key:`bucket_${i}`,from:toIso(b.start),to:toIso(b.end)}));
+    return {filters:{financialYearId:activeFY,type:'sale'},legacyFinancialYearId:legacyFY,deletedMode:'exclude',dateField:'date',ranges,sumFields:['grandTotal','paidAmount']};
+  },[activeFY,legacyFY,range.start?.getTime(),range.end?.getTime(),previous?.start?.getTime(),previous?.end?.getTime(),buckets]);
+  const [salesMetrics,setSalesMetrics]=useState(()=>{
+    const cached=peekCachedStoreStats('invoices',dashboardStatsOptions);
+    const current=cached?.ranges?.current;
+    const prev=cached?.ranges?.previous;
+    return {
+      count:Number(current?.count||0),
+      total:Number(current?.sums?.grandTotal||0),
+      paid:Number(current?.sums?.paidAmount||0),
+      previousTotal:Number(prev?.sums?.grandTotal||0),
+      chartValues:buckets.map((_,i)=>Number(cached?.ranges?.[`bucket_${i}`]?.sums?.grandTotal||0)),
+      recent:[],loading:true,hasSnapshot:!!current
+    };
+  });
+  useEffect(()=>{
+    if(typeof queryStoreStats!=='function'||typeof queryStorePage!=='function') return undefined;
+    let cancelled=false;
+    const cached=peekCachedStoreStats('invoices',dashboardStatsOptions);
+    if(cached?.ranges?.current){
+      const current=cached.ranges.current; const prev=cached.ranges.previous;
+      setSalesMetrics(old=>({
+        ...old,count:Number(current.count||0),total:Number(current.sums?.grandTotal||0),paid:Number(current.sums?.paidAmount||0),
+        previousTotal:Number(prev?.sums?.grandTotal||0),chartValues:buckets.map((_,i)=>Number(cached.ranges?.[`bucket_${i}`]?.sums?.grandTotal||0)),
+        loading:true,hasSnapshot:true
+      }));
+    } else setSalesMetrics(old=>({...old,loading:true}));
+    Promise.all([
+      queryStoreStats('invoices',dashboardStatsOptions),
+      queryStorePage('invoices',{
+        page:1,pageSize:7,filters:{financialYearId:activeFY,type:'sale'},legacyFinancialYearId:legacyFY,deletedMode:'exclude',sortField:'date',sortDirection:'desc',dateFrom:toIso(range.start),dateTo:toIso(range.end)
+      })
+    ]).then(([stats,page])=>{
+      if(cancelled)return;
+      const current=stats?.ranges?.current||{count:0,sums:{}};
+      const prev=stats?.ranges?.previous||{count:0,sums:{}};
+      setSalesMetrics({
+        count:Number(current.count||0),
+        total:Number(current.sums?.grandTotal||0),
+        paid:Number(current.sums?.paidAmount||0),
+        previousTotal:Number(prev.sums?.grandTotal||0),
+        chartValues:buckets.map((_,i)=>Number(stats?.ranges?.[`bucket_${i}`]?.sums?.grandTotal||0)),
+        recent:Array.isArray(page?.items)?page.items:[],
+        loading:false,hasSnapshot:true,
+      });
+    }).catch(err=>{console.warn('Dashboard aggregate load failed',err);if(!cancelled)setSalesMetrics(prev=>({...prev,loading:false}));});
+    return()=>{cancelled=true;};
+  },[queryStoreStats,queryStorePage,dashboardStatsOptions,activeFY,legacyFY,period,customFrom,customTo,buckets]);
+  const salesTotal=salesMetrics.total;
+  const previousTotal=salesMetrics.previousTotal;
   const trend=previous&&previousTotal>0?((salesTotal-previousTotal)/previousTotal*100):(previous&&salesTotal>0?100:0);
   const accountBalance=accounts.reduce((s,a)=>s+(Number(a?.balance)||0),0);
   const debtors=customers.filter(c=>!c?.deletedAt&&(Number(c?.balance)||0)>0);
   const debt=debtors.reduce((s,c)=>s+(Number(c.balance)||0),0);
   const lowStock=products.filter(p=>!p?.deletedAt&&p?.status!=='archived'&&p?.reorderPoint!==undefined&&getProductStock(p.id,settings.activeWarehouseId)<=Number(p.reorderPoint||0));
-  const paid=filteredSales.reduce((s,i)=>s+Math.min(Number(i.paidAmount)||0,Number(i.grandTotal)||0),0);
+  const paid=salesMetrics.paid;
   const collectionRate=salesTotal>0?Math.round(paid/salesTotal*100):0;
-  const buckets=useMemo(()=>makeBuckets(period,range),[period,range.start?.getTime(),range.end?.getTime()]);
-  const chartValues=buckets.map(b=>sales.filter(inv=>inRange(inv,b)).reduce((s,i)=>s+(Number(i.grandTotal)||0),0));
-  const recent=filteredSales.slice(0,7);
+  const chartValues=salesMetrics.chartValues.length===buckets.length?salesMetrics.chartValues:buckets.map(()=>0);
+  const recent=salesMetrics.recent;
+  const filteredSalesCount=salesMetrics.count;
+  const showSalesSnapshot=salesMetrics.hasSnapshot||!salesMetrics.loading;
+  const salesTotalLabel=showSalesSnapshot?nf.format(salesTotal):'…';
+  const salesCountLabel=showSalesSnapshot?String(filteredSalesCount):'…';
   const symbol=settings.currencySymbol||'₪';
   const periodLabel={today:'اليوم',week:'آخر 7 أيام',month:'هذا الشهر',all:'جميع الفترات',custom:'فترة مخصصة'}[period];
   const quick=[
@@ -102,14 +158,14 @@ export const DashboardView=()=>{
   return h('div',{className:'osd-root'},
     h('section',{className:'osd-period card'},h('div',{className:'osd-period-label'},h(CalendarDays,{className:'osd-mini-icon'}),h('span',null,'الفترة'),h('small',null,periodLabel)),h('div',{className:'osd-segments'},...['today','week','month','all','custom'].map(id=>h('button',{key:id,type:'button',className:`osd-segment ${period===id?'active':''}`,onClick:()=>setPeriod(id)},({today:'اليوم',week:'الأسبوع',month:'الشهر',all:'الكل',custom:'مخصص'})[id]))),period==='custom'?h('div',{className:'osd-custom'},h('label',null,h('span',null,'من'),h('input',{type:'date',value:customFrom,onChange:e=>setCustomFrom(e.target.value)})),h('label',null,h('span',null,'إلى'),h('input',{type:'date',value:customTo,onChange:e=>setCustomTo(e.target.value)}))):null),
     h('section',{className:'osd-kpi-grid'},
-      h('article',{className:'osd-kpi card'},h('div',{className:'osd-kpi-top'},h('h2',null,'إجمالي المبيعات'),h('div',{className:'osd-icon-tile'},h(BarChart3,null))),h('div',{className:'osd-kpi-value'},h('span',{dir:'ltr'},nf.format(salesTotal)),h('small',null,symbol)),h('div',{className:'osd-kpi-bottom'},period==='all'?h('span',null,`${filteredSales.length} فاتورة`):h(React.Fragment,null,h('span',{className:`osd-trend ${trend<0?'down':''}`},`${trend>=0?'+':''}${trend.toFixed(1)}%`),h('span',null,'عن الفترة السابقة')))),
+      h('article',{className:'osd-kpi card'},h('div',{className:'osd-kpi-top'},h('h2',null,'إجمالي المبيعات'),h('div',{className:'osd-icon-tile'},h(BarChart3,null))),h('div',{className:'osd-kpi-value'},h('span',{dir:'ltr'},salesTotalLabel),h('small',null,symbol)),h('div',{className:'osd-kpi-bottom'},period==='all'?h('span',null,`${salesCountLabel} فاتورة`):h(React.Fragment,null,h('span',{className:`osd-trend ${trend<0?'down':''}`},`${trend>=0?'+':''}${trend.toFixed(1)}%`),h('span',null,'عن الفترة السابقة')))),
       h('article',{className:'osd-kpi card'},h('div',{className:'osd-kpi-top'},h('h2',null,'أرصدة الحسابات'),h('div',{className:'osd-icon-tile'},h(Wallet,null))),h('div',{className:'osd-kpi-value'},h('span',{dir:'ltr'},nf.format(accountBalance)),h('small',null,symbol)),h('div',{className:'osd-kpi-bottom'},h('span',{className:'osd-dot'}),h('span',null,'النقدي والبنك والمحافظ'))),
       h('article',{className:'osd-kpi card debt'},h('div',{className:'osd-kpi-top'},h('h2',null,'إجمالي ديون العملاء'),h('div',{className:'osd-icon-tile'},h(Users,null))),h('div',{className:'osd-kpi-value'},h('span',{dir:'ltr'},nf.format(debt)),h('small',null,symbol)),h('div',{className:'osd-kpi-bottom'},h('span',null,`${debtors.length} عميل`),h('span',null,'لديهم رصيد مستحق'))),
       h('article',{className:'osd-kpi card stock'},h('div',{className:'osd-kpi-top'},h('h2',null,'تنبيهات المخزون'),h('div',{className:'osd-icon-tile'},h(Package,null))),h('div',{className:'osd-kpi-value'},h('span',{dir:'ltr'},lowStock.length),h('small',null,'أصناف')),h('div',{className:'osd-kpi-bottom'},h('span',null,'وصلت إلى حد إعادة الطلب')))
     ),
     h('section',{className:'osd-overview'},
       h('article',{className:'osd-sales-chart card'},h('div',{className:'osd-card-head'},h('div',null,h('h2',null,'حركة المبيعات'),h('p',null,`إيرادات ${periodLabel}`)),h('span',{className:'osd-legend'},h('span',{className:'osd-dot'}),'المبيعات')),h(Chart,{values:chartValues,labels:buckets.map(x=>x.label)})),
-      h('article',{className:'osd-insight card'},h('div',{className:'osd-insight-top'},h(TrendingUp,null),'نظرة على أعمالك'),h('div',null,h('h3',null,'الأرقام الواضحة،',h('br'),'بداية القرار الصحيح.'),h('p',null,filteredSales.length?`سجلت ${filteredSales.length} فاتورة خلال ${periodLabel}.`:'ابدأ بتسجيل مبيعاتك لتظهر المؤشرات هنا.')),h('div',{className:'osd-insight-foot'},h('span',null,'نسبة التحصيل'),h('strong',null,`${collectionRate}%`)))
+      h('article',{className:'osd-insight card'},h('div',{className:'osd-insight-top'},h(TrendingUp,null),'نظرة على أعمالك'),h('div',null,h('h3',null,'الأرقام الواضحة،',h('br'),'بداية القرار الصحيح.'),h('p',null,showSalesSnapshot?(filteredSalesCount?`سجلت ${filteredSalesCount} فاتورة خلال ${periodLabel}.`:'ابدأ بتسجيل مبيعاتك لتظهر المؤشرات هنا.'):'جارٍ تحديث المؤشرات…')),h('div',{className:'osd-insight-foot'},h('span',null,'نسبة التحصيل'),h('strong',null,`${collectionRate}%`)))
     ),
     h('div',{className:'osd-section-heading'},h('div',null,h('h2',null,'دخول سريع'),h('span',null,'انتقل مباشرة إلى أقسام النظام'))),
     h('section',{className:'osd-actions'},...quick.map(item=>h('button',{key:item.id,type:'button',className:'osd-action',onClick:()=>setActiveTab(item.id)},h('div',{className:'osd-action-icon'},h(item.icon,null)),h('div',null,h('strong',null,item.title),h('small',null,item.sub)),h(ArrowLeft,{className:'osd-action-arrow'})))),
@@ -119,8 +175,7 @@ export const DashboardView=()=>{
         h('div',{className:'osd-table-wrap'},h('table',{className:'osd-table'},h('thead',null,h('tr',null,h('th',null,'رقم الفاتورة'),h('th',null,'العميل'),h('th',null,'التاريخ'),h('th',null,'الوقت'),h('th',null,'الحالة'),h('th',null,'الإجمالي'))),h('tbody',null,...recent.map(inv=>{const b=badge(inv),d=safeDate(inv.date);return h('tr',{key:inv.id},h('td',null,h('span',{className:'osd-invoice-id'},inv.invoiceNumber||inv.id)),h('td',null,inv.customerName||'زبون عام'),h('td',null,d?d.toLocaleDateString('ar-EG'):'—'),h('td',null,d?d.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}):'—'),h('td',null,h('span',{className:`osd-badge ${b[1]}`},b[0])),h('td',{className:'osd-amount'},money(inv.grandTotal,symbol)));})))),
         h('div',{className:'osd-mobile-invoices'},...recent.map(inv=>{const b=badge(inv),d=safeDate(inv.date);return h('article',{key:inv.id,className:'osd-invoice-item'},h('div',{className:'osd-invoice-top'},h('div',null,h('span',{className:'osd-invoice-id'},inv.invoiceNumber||inv.id),h('strong',null,inv.customerName||'زبون عام')),h('span',{className:`osd-badge ${b[1]}`},b[0])),h('div',{className:'osd-invoice-bottom'},h('span',null,d?`${d.toLocaleDateString('ar-EG')} • ${d.toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'})}`:'—'),h('strong',null,money(inv.grandTotal,symbol))));}))
       ),
-      h('div',{className:'osd-invoice-footer'},h('span',null,`عرض ${recent.length} من ${filteredSales.length} فاتورة`),h('span',null,`إجمالي الفترة: ${money(salesTotal,symbol)}`))
+      h('div',{className:'osd-invoice-footer'},h('span',null,`عرض ${recent.length} من ${salesCountLabel} فاتورة`),h('span',null,`إجمالي الفترة: ${money(salesTotal,symbol)}`))
     ),
-    h('footer',{className:'osd-foot'},h('span',null,'كاش توب 3'),h('span',null,h(CircleDot,{className:'osd-mini-icon'}),'البيانات معروضة من سجلات البرنامج الفعلية'))
   );
 };

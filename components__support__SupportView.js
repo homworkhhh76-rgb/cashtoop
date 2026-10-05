@@ -19,12 +19,12 @@ const contacts = [
 
 export const SupportView = ({ embedded=false }) => h('div',{dir:'rtl',className:`w-full ${embedded?'p-3 sm:p-5':'p-4 sm:p-6'} flex justify-center`},
   h('section',{className:'w-full max-w-md overflow-hidden rounded-[28px] border border-slate-100 bg-white shadow-xl'},
-    h('header',{className:'relative overflow-hidden bg-gradient-to-br from-emerald-500 to-emerald-800 px-6 py-8 text-center text-white'},
+    h('header',{className:'relative overflow-hidden bg-gradient-to-br from-violet-500 to-violet-800 px-6 py-8 text-center text-white'},
       h('span',{className:'absolute -right-12 -top-12 h-36 w-36 rounded-full bg-white/10 blur-2xl'}),
-      h('span',{className:'absolute -bottom-12 -left-10 h-32 w-32 rounded-full bg-emerald-200/10 blur-xl'}),
+      h('span',{className:'absolute -bottom-12 -left-10 h-32 w-32 rounded-full bg-violet-200/10 blur-xl'}),
       h('div',{className:'relative mx-auto mb-4 grid h-20 w-20 place-items-center rounded-2xl border border-white/20 bg-white/10 shadow-lg'},h(Headphones,{className:'h-9 w-9'})),
       h('h1',{className:'relative text-2xl font-black sm:text-3xl'},'فريق كاش توب 3 البرمجي'),
-      h('p',{className:'relative mt-1 text-xs font-bold text-emerald-100'},'مركز الدعم الفني والمساعدة')
+      h('p',{className:'relative mt-1 text-xs font-bold text-violet-100'},'مركز الدعم الفني والمساعدة')
     ),
     h('div',{className:'p-5 sm:p-6'},
       h('p',{className:'mb-6 text-center text-xs font-semibold leading-7 text-slate-500'},'أهلاً بك في مركز الدعم الفني. نحن هنا لمساعدتك والإجابة على استفساراتك. اختر وسيلة التواصل المناسبة:'),

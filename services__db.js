@@ -1,6 +1,6 @@
-import { calculateUnitConversions } from './utils__unitTree.js?v=7.9.4.90-cashtop3-search-logo';
+import { calculateUnitConversions } from './utils__unitTree.js?v=7.9.4.134-invoice-filters';
 const DB_BASE_NAME = 'Oscar_Accounting_POS_DB';
-const DB_VERSION = 6;
+const DB_VERSION = 9;
 export const getTenantId = () => String(window.OscarActivation?.readRuntime?.()?.companyId || 'local').trim() || 'local';
 const dbNameForTenant = (tenantId = getTenantId()) => `${DB_BASE_NAME}__${encodeURIComponent(String(tenantId || 'local').trim() || 'local')}`;
 let cachedTenant = '';
@@ -117,6 +117,30 @@ function openDB() {
                             else db.createObjectStore(storeName, { keyPath: 'id' });
                         }
                     });
+                    // v8: real database-side pagination. These indexes let record screens walk
+                    // only the requested page instead of materializing whole historical tables.
+                    const indexSpecs = {
+                        invoices: [['date','date'],['createdAt','createdAt'],['financialYearId','financialYearId'],['type','type'],['paymentType','paymentType'],['customerId','customerId']],
+                        purchases: [['date','date'],['createdAt','createdAt'],['financialYearId','financialYearId'],['supplierId','supplierId']],
+                        stock_movements: [['date','date'],['financialYearId','financialYearId'],['productId','productId'],['warehouseId','warehouseId'],['productWarehouseDate',['productId','warehouseId','date']]],
+                        expenses: [['date','date'],['createdAt','createdAt'],['financialYearId','financialYearId'],['category','category']],
+                        vouchers: [['date','date'],['createdAt','createdAt'],['financialYearId','financialYearId'],['type','type'],['partyId','partyId']],
+                        transfers: [['date','date'],['createdAt','createdAt'],['financialYearId','financialYearId']],
+                        audit_logs: [['date','date'],['timestamp','timestamp'],['createdAt','createdAt'],['financialYearId','financialYearId']],
+                        partner_statements: [['date','date'],['createdAt','createdAt'],['financialYearId','financialYearId'],['partnerId','partnerId'],['partyId','partyId']],
+                        held_invoices: [['date','date'],['createdAt','createdAt']],
+                        customers: [['createdAt','createdAt'],['name','name'],['phone','phone']],
+                        suppliers: [['createdAt','createdAt'],['name','name'],['phone','phone']],
+                    };
+                    for (const [storeName, specs] of Object.entries(indexSpecs)) {
+                        if (!db.objectStoreNames.contains(storeName)) continue;
+                        const os = event.target.transaction.objectStore(storeName);
+                        for (const [indexName, keyPath] of specs) {
+                            if (!os.indexNames.contains(indexName)) {
+                                try { os.createIndex(indexName, keyPath, { unique: false }); } catch (_) {}
+                            }
+                        }
+                    }
                 };
             };
             wireRequest(indexedDB.open(dbName, DB_VERSION));
@@ -205,10 +229,17 @@ export async function commitLocalBatch(operations = [], notifySync = true) {
     });
     return new Promise((resolve, reject) => {
         const tx = db.transaction(stores, 'readwrite');
-        for (const op of prepared) {
-            const store = tx.objectStore(op.storeName);
-            if (op.type === 'delete') store.delete(op.key);
-            else store.put(op.value);
+        try {
+            for (const op of prepared) {
+                const store = tx.objectStore(op.storeName);
+                if (op.type === 'delete') store.delete(op.key);
+                else store.put(op.value);
+            }
+        } catch (error) {
+            // A synchronous DataError must roll back already queued writes too.
+            try { tx.abort(); } catch {}
+            reject(error);
+            return;
         }
         tx.oncomplete = () => {
             // Resolve local save FIRST. Everything below runs later in the event loop.
@@ -218,8 +249,13 @@ export async function commitLocalBatch(operations = [], notifySync = true) {
                 const touched = new Set();
                 for (const op of prepared) {
                     touched.add(op.storeName);
-                    if (op.type === 'delete') scheduleCloudCapture(op.storeName, null, { deleted:true, key:op.key });
-                    else scheduleCloudCapture(op.storeName, op.value);
+                    if (op.type === 'delete') {
+                        adjustCachedQueryMetadata(op.storeName, op.before || null, null, 'delete');
+                        scheduleCloudCapture(op.storeName, null, { deleted:true, key:op.key });
+                    } else {
+                        adjustCachedQueryMetadata(op.storeName, op.before || null, op.value, op.actionHint || 'update');
+                        scheduleCloudCapture(op.storeName, op.value);
+                    }
                     try {
                         window.dispatchEvent(new CustomEvent('oscar:db-mutation', { detail: {
                             action: op.actionHint || (op.type === 'delete' ? 'delete' : 'update'),
@@ -261,6 +297,432 @@ export async function getAllFromStore(storeName) {
         request.onerror = () => reject(request.error);
     });
 }
+
+// ---------- Database-side pagination / search / aggregate helpers ----------
+// Historical screens use these helpers so React never needs to hold every old record.
+// Online: query Turso directly with LIMIT/OFFSET + COUNT and cache only opened pages.
+// Offline: walk IndexedDB with a cursor and keep at most the requested page in memory.
+const PAGE_SORT_FIELD = {
+    invoices: 'date', purchases: 'date', stock_movements: 'date', expenses: 'date',
+    vouchers: 'date', transfers: 'date', audit_logs: 'date', partner_statements: 'date',
+    held_invoices: 'date', customers: 'createdAt', suppliers: 'createdAt',
+};
+const PAGED_HISTORY_STORES = new Set(['invoices','purchases','stock_movements','expenses','vouchers','transfers','audit_logs','partner_statements','held_invoices']);
+export const isPagedHistoryStore = (storeName) => PAGED_HISTORY_STORES.has(String(storeName || ''));
+
+function normalizedComparable(value) {
+    if (value === undefined || value === null) return '';
+    return String(value);
+}
+function normalizeInvoiceSearch(value){return String(value??'').toLowerCase().replace(/[٠-٩]/g,c=>String(c.charCodeAt(0)-1632)).replace(/[۰-۹]/g,c=>String(c.charCodeAt(0)-1776)).replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/[\u064B-\u065F\u0670ـ]/g,'').trim();}
+function recordMatchesPageQuery(row, options = {}) {
+    if (!row || typeof row !== 'object') return false;
+    const filters = options.filters && typeof options.filters === 'object' ? options.filters : {};
+    const legacyFinancialYearId = options.legacyFinancialYearId || '';
+    for (const [field, wanted] of Object.entries(filters)) {
+        if (wanted === undefined || wanted === '' || wanted === 'all') continue;
+        let actual = row?.[field];
+        if (field === 'financialYearId' && (actual === undefined || actual === null || actual === '')) actual = legacyFinancialYearId;
+        if (Array.isArray(wanted)) {
+            if (!wanted.map(normalizedComparable).includes(normalizedComparable(actual))) return false;
+        } else if (wanted === null) {
+            if (!(actual === undefined || actual === null || actual === '')) return false;
+        } else if (normalizedComparable(actual) !== normalizedComparable(wanted)) return false;
+    }
+    const deletedMode = options.deletedMode || 'exclude';
+    if (deletedMode === 'exclude' && row.deletedAt) return false;
+    if (deletedMode === 'only' && !row.deletedAt) return false;
+    const dateField = options.dateField || PAGE_SORT_FIELD[options.storeName] || 'date';
+    const rawDate = row?.[dateField] || row?.date || row?.createdAt || row?.timestamp || '';
+    const t = rawDate ? new Date(rawDate).getTime() : 0;
+    if (options.dateFrom) {
+        const from = new Date(options.dateFrom).getTime();
+        if (Number.isFinite(from) && (!Number.isFinite(t) || t < from)) return false;
+    }
+    if (options.dateTo) {
+        const to = new Date(options.dateTo).getTime();
+        if (Number.isFinite(to) && (!Number.isFinite(t) || t > to)) return false;
+    }
+    const numericGt = options.numericGt || {};
+    for (const [field, threshold] of Object.entries(numericGt)) if (!(Number(row?.[field]) > Number(threshold))) return false;
+    const numericGte = options.numericGte || {};
+    for (const [field, threshold] of Object.entries(numericGte)) if (!(Number(row?.[field]) >= Number(threshold))) return false;
+    const numericLt = options.numericLt || {};
+    for (const [field, threshold] of Object.entries(numericLt)) if (!(Number(row?.[field]) < Number(threshold))) return false;
+    const numericLte = options.numericLte || {};
+    for (const [field, threshold] of Object.entries(numericLte)) if (!(Number(row?.[field]) <= Number(threshold))) return false;
+    const tokens=normalizeInvoiceSearch(options.search).split(/\s+/).filter(Boolean);
+    if(tokens.length){let blob='';try{blob=normalizeInvoiceSearch(JSON.stringify(row))}catch{}if(!tokens.every(token=>blob.includes(token)))return false;}
+    return true;
+}
+
+// ---------- Persistent tiny query metadata cache ----------
+// Only aggregate numbers and paging metadata are persisted here. Historical table rows
+// remain in IndexedDB/cloud. This lets offline screens keep values such as "137 invoices"
+// without forcing a scan of all historical rows.
+let queryMetaMemory = null;
+let queryMetaTenant = '';
+function stableCacheValue(value) {
+    if (value === undefined) return null;
+    if (Array.isArray(value)) return value.map(stableCacheValue);
+    if (value && typeof value === 'object') {
+        return Object.keys(value).sort().reduce((out, key) => {
+            if (key === 'page' || key === 'source' || key === 'countTotal') return out;
+            out[key] = stableCacheValue(value[key]);
+            return out;
+        }, {});
+    }
+    return value;
+}
+function queryMetaStorageKey() {
+    return `cash_top_3_query_meta_v2::${getTenantId()}`;
+}
+function readQueryMetaCache() {
+    const tenant = getTenantId();
+    if (queryMetaMemory && queryMetaTenant === tenant) return queryMetaMemory;
+    queryMetaTenant = tenant;
+    try {
+        const parsed = JSON.parse(localStorage.getItem(queryMetaStorageKey()) || 'null');
+        queryMetaMemory = parsed && typeof parsed === 'object'
+            ? { pageMeta: parsed.pageMeta || {}, stats: parsed.stats || {} }
+            : { pageMeta: {}, stats: {} };
+    } catch {
+        queryMetaMemory = { pageMeta: {}, stats: {} };
+    }
+    return queryMetaMemory;
+}
+function writeQueryMetaCache() {
+    try { localStorage.setItem(queryMetaStorageKey(), JSON.stringify(readQueryMetaCache())); } catch {}
+}
+function hashQuerySignature(text) {
+    let h = 2166136261;
+    for (let i = 0; i < text.length; i += 1) {
+        h ^= text.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+    }
+    return (h >>> 0).toString(36);
+}
+function queryMetaSignature(kind, storeName, options = {}) {
+    const normalized = stableCacheValue(options || {});
+    return `${kind}:${storeName}:${hashQuerySignature(JSON.stringify(normalized))}`;
+}
+function pruneQueryMetaBucket(bucket, max = 80) {
+    const entries = Object.entries(bucket || {});
+    if (entries.length <= max) return;
+    entries.sort((a,b) => Number(a[1]?.updatedAt || 0) - Number(b[1]?.updatedAt || 0));
+    for (let i = 0; i < entries.length - max; i += 1) delete bucket[entries[i][0]];
+}
+function cachePageMetadata(storeName, options, result) {
+    if (!result) return;
+    const cache = readQueryMetaCache();
+    const key = queryMetaSignature('page', storeName, options);
+    cache.pageMeta[key] = {
+        storeName,
+        options: stableCacheValue(options || {}),
+        total: Math.max(0, Number(result.total || 0)),
+        pageSize: Math.max(1, Number(result.pageSize || options?.pageSize || 50)),
+        updatedAt: Date.now(),
+    };
+    pruneQueryMetaBucket(cache.pageMeta, 80);
+    writeQueryMetaCache();
+}
+function getCachedPageMetadata(storeName, options) {
+    const cache = readQueryMetaCache();
+    return cache.pageMeta[queryMetaSignature('page', storeName, options)] || null;
+}
+function cacheStatsMetadata(storeName, options, result) {
+    if (!result?.ranges) return;
+    const cache = readQueryMetaCache();
+    const key = queryMetaSignature('stats', storeName, options);
+    cache.stats[key] = {
+        storeName,
+        options: stableCacheValue(options || {}),
+        result: stableCacheValue(result),
+        updatedAt: Date.now(),
+    };
+    pruneQueryMetaBucket(cache.stats, 80);
+    writeQueryMetaCache();
+}
+function getCachedStatsMetadata(storeName, options) {
+    const cache = readQueryMetaCache();
+    return cache.stats[queryMetaSignature('stats', storeName, options)]?.result || null;
+}
+export function peekCachedStoreStats(storeName, options = {}) {
+    const cached = getCachedStatsMetadata(storeName, options);
+    if (!cached?.ranges) return null;
+    return { ...cached, source:'aggregate-cache', offline: typeof navigator !== 'undefined' && navigator.onLine === false };
+}
+function rowMatchesStatRange(row, storeName, options, range) {
+    if (!row || !recordMatchesPageQuery(row, { ...options, dateFrom:null, dateTo:null, storeName })) return false;
+    const dateField = options?.dateField || PAGE_SORT_FIELD[storeName] || 'date';
+    const rawDate = row?.[dateField] || row?.date || row?.createdAt || row?.timestamp || '';
+    const t = rawDate ? new Date(rawDate).getTime() : 0;
+    if (range?.from) {
+        const from = new Date(range.from).getTime();
+        if (Number.isFinite(from) && (!Number.isFinite(t) || t < from)) return false;
+    }
+    if (range?.to) {
+        const to = new Date(range.to).getTime();
+        if (Number.isFinite(to) && (!Number.isFinite(t) || t > to)) return false;
+    }
+    return true;
+}
+function adjustCachedQueryMetadata(storeName, beforeValue, afterValue, actionHint = '') {
+    try {
+        const cache = readQueryMetaCache();
+        let anyChanged = false;
+        for (const entry of Object.values(cache.pageMeta || {})) {
+            if (entry?.storeName !== storeName) continue;
+            if (actionHint === 'update' && !beforeValue) continue;
+            const opts = entry.options || {};
+            const beforeMatch = !!beforeValue && recordMatchesPageQuery(beforeValue, { ...opts, storeName });
+            const afterMatch = !!afterValue && recordMatchesPageQuery(afterValue, { ...opts, storeName });
+            const delta = Number(afterMatch) - Number(beforeMatch);
+            if (delta) {
+                entry.total = Math.max(0, Number(entry.total || 0) + delta);
+                entry.updatedAt = Date.now();
+                anyChanged = true;
+            }
+        }
+        for (const entry of Object.values(cache.stats || {})) {
+            if (entry?.storeName !== storeName || !entry?.result?.ranges) continue;
+            if (actionHint === 'update' && !beforeValue) continue;
+            const opts = entry.options || {};
+            const ranges = Array.isArray(opts.ranges) && opts.ranges.length
+                ? opts.ranges
+                : [{ key:'all', from:opts.dateFrom || null, to:opts.dateTo || null }];
+            const sumFields = Array.isArray(opts.sumFields) ? opts.sumFields : [];
+            let entryChanged = false;
+            for (const range of ranges) {
+                const key = range.key || 'all';
+                const bucket = entry.result.ranges[key];
+                if (!bucket) continue;
+                const beforeMatch = rowMatchesStatRange(beforeValue, storeName, opts, range);
+                const afterMatch = rowMatchesStatRange(afterValue, storeName, opts, range);
+                const delta = Number(afterMatch) - Number(beforeMatch);
+                if (delta) {
+                    bucket.count = Math.max(0, Number(bucket.count || 0) + delta);
+                    entryChanged = true;
+                }
+                for (const field of sumFields) {
+                    const beforeSum = beforeMatch ? (Number(beforeValue?.[field]) || 0) : 0;
+                    const afterSum = afterMatch ? (Number(afterValue?.[field]) || 0) : 0;
+                    if (beforeSum !== afterSum) {
+                        bucket.sums = bucket.sums || {};
+                        bucket.sums[field] = Number(bucket.sums[field] || 0) + afterSum - beforeSum;
+                        entryChanged = true;
+                    }
+                }
+            }
+            if (entryChanged) {
+                entry.updatedAt = Date.now();
+                anyChanged = true;
+            }
+        }
+        if (anyChanged) writeQueryMetaCache();
+    } catch {}
+}
+
+function localSortSource(store, storeName, options = {}) {
+    const requested = String(options.sortField || PAGE_SORT_FIELD[storeName] || '');
+    if (requested && store.indexNames?.contains?.(requested)) return store.index(requested);
+    const fallback = PAGE_SORT_FIELD[storeName];
+    if (fallback && store.indexNames?.contains?.(fallback)) return store.index(fallback);
+    return store;
+}
+export async function countStoreRecords(storeName) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, 'readonly');
+        const req = tx.objectStore(storeName).count();
+        req.onsuccess = () => resolve(Number(req.result || 0));
+        req.onerror = () => reject(req.error);
+        tx.onerror = () => reject(tx.error || new Error(`تعذر عد سجلات ${storeName}`));
+    });
+}
+
+export async function getLatestStockMovementLocal(productId, warehouseId) {
+    if (productId === undefined || productId === null || warehouseId === undefined || warehouseId === null) return null;
+    const db = await openDB();
+    try {
+        const result = await new Promise((resolve, reject) => {
+            const tx = db.transaction('stock_movements', 'readonly');
+            const store = tx.objectStore('stock_movements');
+            if (!store.indexNames.contains('productWarehouseDate') || typeof IDBKeyRange === 'undefined') {
+                resolve(undefined);
+                return;
+            }
+            const idx = store.index('productWarehouseDate');
+            const range = IDBKeyRange.bound([productId, warehouseId, ''], [productId, warehouseId, '\uffff']);
+            const req = idx.openCursor(range, 'prev');
+            req.onsuccess = () => resolve(req.result?.value || null);
+            req.onerror = () => reject(req.error);
+            tx.onerror = () => reject(tx.error || new Error('تعذر قراءة آخر حركة مخزون'));
+        });
+        if (result !== undefined) return result;
+    } catch (_) {}
+    // Compatibility fallback for databases whose existing version is newer than this build
+    // and therefore could not receive the compound v9 index.
+    const page = await queryStorePageLocal('stock_movements', {
+        page: 1, pageSize: 1, source: 'local', countTotal: false, deletedMode: 'all',
+        sortField: 'date', sortDirection: 'desc', filters: { productId, warehouseId },
+    });
+    return page.items?.[0] || null;
+}
+
+export async function queryStorePageLocal(storeName, options = {}) {
+    const pageSize = Math.min(250, Math.max(1, Number(options.pageSize || 50)));
+    const page = Math.max(1, Number(options.page || 1));
+    const start = (page - 1) * pageSize;
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, 'readonly');
+        const store = tx.objectStore(storeName);
+        const source = localSortSource(store, storeName, options);
+        const direction = String(options.sortDirection || 'desc').toLowerCase() === 'asc' ? 'next' : 'prev';
+        const request = source.openCursor(null, direction);
+        const items = [];
+        let total = 0;
+        const countTotal = options.countTotal !== false;
+        request.onsuccess = () => {
+            const cursor = request.result;
+            if (!cursor) return;
+            const value = cursor.value;
+            if (recordMatchesPageQuery(value, { ...options, storeName })) {
+                if (total >= start && items.length < pageSize) items.push(value);
+                total += 1;
+                // Startup hydration only needs the requested page. Stop the IndexedDB
+                // cursor as soon as that page is full instead of walking years of history.
+                if (!countTotal && items.length >= pageSize) return;
+            }
+            cursor.continue();
+        };
+        request.onerror = () => reject(request.error);
+        tx.oncomplete = () => {
+            const effectiveTotal = countTotal ? total : (start + items.length);
+            const totalPages = countTotal ? Math.max(1, Math.ceil(total / pageSize)) : Math.max(1, page + (items.length >= pageSize ? 1 : 0));
+            resolve({ items, total: effectiveTotal, page, pageSize, totalPages, source: 'indexeddb', totalExact: countTotal });
+        };
+        tx.onerror = () => reject(tx.error || new Error(`تعذر قراءة ${storeName}`));
+    });
+}
+export async function queryStorePage(storeName, options = {}) {
+    const normalized = { page: 1, pageSize: 50, sortDirection: 'desc', ...options };
+    const online = typeof navigator === 'undefined' || navigator.onLine !== false;
+    const meta = getCachedPageMetadata(storeName, normalized);
+
+    // Explicit local reads are used to paint page 1 instantly from IndexedDB.
+    if (normalized.source === 'local') {
+        const local = await queryStorePageLocal(storeName, { ...normalized, countTotal: normalized.countTotal === true });
+        if (meta) {
+            const total = Math.max(Number(meta.total || 0), Number(local.items?.length || 0));
+            return { ...local, total, totalPages: Math.max(1, Math.ceil(total / normalized.pageSize)), totalExact:true, source:'indexeddb-cache' };
+        }
+        return local;
+    }
+
+    let remoteError = null;
+    if (online && window.OscarCloudSync?.queryStorePage) {
+        try {
+            const remote = await window.OscarCloudSync.queryStorePage(storeName, normalized);
+            if (remote && Array.isArray(remote.items)) {
+                // Cache only pages the user actually opens. No cloud capture / echo.
+                if (remote.items.length) await bulkPut(storeName, remote.items, false).catch(() => {});
+                cachePageMetadata(storeName, normalized, remote);
+                return { ...remote, source: remote.source || 'cloud' };
+            }
+        } catch (error) {
+            remoteError = error;
+            console.warn(`Paged cloud query fallback (${storeName})`, error);
+        }
+    }
+
+    // Page 2+ is intentionally network-on-demand. We never reconstruct an old page from
+    // a partial IndexedDB history because that could show the wrong 50 records.
+    if (Number(normalized.page || 1) > 1) {
+        if (online && remoteError) throw new Error('تعذر تحميل السجلات القديمة. أعد المحاولة بعد التحقق من الاتصال.');
+        if (!meta) return queryStorePageLocal(storeName, {...normalized, countTotal:true});
+        const total = Math.max(0, Number(meta?.total || 0));
+        return {
+            items: [], total, page: Number(normalized.page || 1), pageSize: normalized.pageSize,
+            totalPages: Math.max(1, Math.ceil(total / normalized.pageSize)), source:'offline-missing',
+            totalExact: !!meta, offlineUnavailable:true,
+        };
+    }
+
+    // Page 1 remains available offline. Stop as soon as the first 50 cached rows are read;
+    // use the persisted cloud count so the general statistics stay unchanged offline.
+    const local = await queryStorePageLocal(storeName, { ...normalized, source:'local', countTotal:false });
+    if (meta) {
+        const total = Math.max(Number(meta.total || 0), Number(local.items?.length || 0));
+        return { ...local, total, totalPages: Math.max(1, Math.ceil(total / normalized.pageSize)), totalExact:true, source:'indexeddb-cache' };
+    }
+    return local;
+}
+export async function queryAllStoreRecords(storeName, options = {}) {
+    const pageSize = Math.min(250, Math.max(50, Number(options.pageSize || 200)));
+    const out = [];
+    let page = 1, totalPages = 1;
+    do {
+        const result = await queryStorePage(storeName, { ...options, page, pageSize });
+        if (result.offlineUnavailable) throw new Error('بعض السجلات القديمة غير متاحة دون اتصال. اتصل بالإنترنت ثم أعد التصدير.');
+        out.push(...(result.items || []));
+        totalPages = Math.max(1, Number(result.totalPages || Math.ceil(Number(result.total || 0) / pageSize) || 1));
+        page += 1;
+    } while (page <= totalPages);
+    return out;
+}
+export async function queryStoreStatsLocal(storeName, options = {}) {
+    const ranges = Array.isArray(options.ranges) && options.ranges.length ? options.ranges : [{ key: 'all', from: options.dateFrom || null, to: options.dateTo || null }];
+    const sumFields = Array.isArray(options.sumFields) ? options.sumFields : [];
+    const result = {};
+    ranges.forEach((r) => { result[r.key || 'all'] = { count: 0, sums: Object.fromEntries(sumFields.map(f => [f, 0])) }; });
+    const db = await openDB();
+    await new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, 'readonly');
+        const store = tx.objectStore(storeName);
+        const req = store.openCursor();
+        req.onsuccess = () => {
+            const cur = req.result;
+            if (!cur) return;
+            const row = cur.value;
+            if (recordMatchesPageQuery(row, { ...options, dateFrom: null, dateTo: null, search: options.search || '', storeName })) {
+                const rawDate = row?.[options.dateField || PAGE_SORT_FIELD[storeName] || 'date'] || row?.date || row?.createdAt || row?.timestamp || '';
+                const t = rawDate ? new Date(rawDate).getTime() : 0;
+                for (const r of ranges) {
+                    const from = r.from ? new Date(r.from).getTime() : null;
+                    const to = r.to ? new Date(r.to).getTime() : null;
+                    if (from !== null && Number.isFinite(from) && (!Number.isFinite(t) || t < from)) continue;
+                    if (to !== null && Number.isFinite(to) && (!Number.isFinite(t) || t > to)) continue;
+                    const bucket = result[r.key || 'all'];
+                    bucket.count += 1;
+                    for (const field of sumFields) bucket.sums[field] += Number(row?.[field]) || 0;
+                }
+            }
+            cur.continue();
+        };
+        req.onerror = () => reject(req.error);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error || new Error(`تعذر حساب إحصائيات ${storeName}`));
+    });
+    return { ranges: result, source: 'indexeddb' };
+}
+export async function queryStoreStats(storeName, options = {}) {
+    const online = typeof navigator === 'undefined' || navigator.onLine !== false;
+    if (online && options.source !== 'local' && window.OscarCloudSync?.queryStoreStats) {
+        try {
+            const remote = await window.OscarCloudSync.queryStoreStats(storeName, options);
+            if (remote?.ranges) cacheStatsMetadata(storeName, options, remote);
+            return remote;
+        } catch (error) { console.warn(`Cloud aggregate fallback (${storeName})`, error); }
+    }
+    // Prefer the last exact aggregate obtained from the full cloud database. A local scan can
+    // contain only cached pages, so using it first would incorrectly turn e.g. 137 into 50.
+    const cached = getCachedStatsMetadata(storeName, options);
+    if (cached?.ranges) return { ...cached, source:'aggregate-cache', offline:true };
+    return queryStoreStatsLocal(storeName, options);
+}
+
 export async function getFromStore(storeName, key) {
     const db = await openDB();
     return new Promise((resolve, reject) => {
@@ -299,6 +761,7 @@ export async function putInStore(storeName, value, notifySync = true) {
         tx.oncomplete = () => {
             resolve();
             if (notifySync && changed) setTimeout(() => {
+                adjustCachedQueryMetadata(storeName, beforeValue, storedValue, action);
                 scheduleCloudCapture(storeName, storedValue);
                 broadcastStoreUpdated(storeName);
                 try {
@@ -326,6 +789,7 @@ export async function deleteFromStore(storeName, key, notifySync = true) {
         tx.oncomplete = () => {
             resolve();
             if (notifySync) setTimeout(() => {
+                adjustCachedQueryMetadata(storeName, beforeValue, null, 'delete');
                 scheduleCloudCapture(storeName, null, { deleted: true, key });
                 broadcastStoreUpdated(storeName);
                 try {
@@ -394,7 +858,7 @@ export async function bulkPut(storeName, items, notifySync = true) {
 // Initial default settings
 export const DEFAULT_SETTINGS = {
     storeName: 'كاش توب 3',
-    subtitle: 'إدارة ذكية',
+    subtitle: 'نظام محاسبة وكاشير',
     phone: '0599-123456',
     address: 'فلسطين - الشارع العام',
     taxNumber: '300987654',
@@ -411,7 +875,7 @@ export const DEFAULT_SETTINGS = {
     receiptShowBarcode: true,
     scannerBeepEnabled: true,
     expenseCategories: ['نثريات وضيافة','كهرباء ومياه','إيجار المحل','أجور ورواتب عمال','صيانة ونظافة','بضائع تالفة ومنتهية','أكياس وتغليف وطباعة','نقل وشحن','أخرى'],
-    isRestaurantModeEnabled: true,
+    isRestaurantModeEnabled: false,
     restaurantModeDefaultInitialized: true,
     autoPrintKitchenTicket: false,
     kitchenTicketWidth: '80mm',
@@ -1193,41 +1657,48 @@ export async function seedDatabaseDefaults() {
 // User-entered data is never cleared or overwritten.
 export async function cleanupLegacyDemoSeedIfPristine() {
     try {
-        const [products, customers, suppliers, invoices, purchases, movements, transfers, expenses, statements, vouchers] = await Promise.all([
-            getAllFromStore('products'), getAllFromStore('customers'), getAllFromStore('suppliers'),
-            getAllFromStore('invoices'), getAllFromStore('purchases'), getAllFromStore('stock_movements'),
-            getAllFromStore('transfers'), getAllFromStore('expenses'), getAllFromStore('partner_statements'), getAllFromStore('vouchers'),
-        ]);
-        const demoProductIds = new Set(['prod-water','prod-cola','prod-rice','prod-milk','prod-bisc','prod-ariel']);
-        const demoCustomerIds = new Set(['cust-1','cust-2','cust-3']);
-        const demoSupplierIds = new Set(['supp-1','supp-2','supp-3']);
-        const demoVoucherIds = new Set(['vouch-1','vouch-2']);
-        const hasRealActivity = [invoices,purchases,movements,transfers,expenses,statements].some(rows => Array.isArray(rows) && rows.length > 0);
-        const hasDemoProducts = Array.isArray(products) && products.some(p => demoProductIds.has(String(p?.id || '')));
-        const onlyKnownProducts = Array.isArray(products) && products.every(p => demoProductIds.has(String(p?.id || '')));
-        const onlyKnownCustomers = Array.isArray(customers) && customers.every(x => demoCustomerIds.has(String(x?.id || '')));
-        const onlyKnownSuppliers = Array.isArray(suppliers) && suppliers.every(x => demoSupplierIds.has(String(x?.id || '')));
-        const onlyKnownVouchers = Array.isArray(vouchers) && vouchers.every(x => demoVoucherIds.has(String(x?.id || '')));
-        if (hasRealActivity || !hasDemoProducts || !onlyKnownProducts || !onlyKnownCustomers || !onlyKnownSuppliers || !onlyKnownVouchers) return false;
+        const demoProductIds = ['prod-water','prod-cola','prod-rice','prod-milk','prod-bisc','prod-ariel'];
+        const demoCustomerIds = ['cust-1','cust-2','cust-3'];
+        const demoSupplierIds = ['supp-1','supp-2','supp-3'];
+        const demoVoucherIds = ['vouch-1','vouch-2'];
 
-        for (const p of products || []) if (demoProductIds.has(String(p?.id || ''))) await deleteFromStore('products', p.id);
+        // Startup safety: counts are enough to detect real activity. Never deserialize
+        // entire invoice/purchase/movement histories just to check the legacy demo seed.
+        const activityStores = ['invoices','purchases','stock_movements','transfers','expenses','partner_statements'];
+        const activityCounts = await Promise.all(activityStores.map((name) => countStoreRecords(name)));
+        if (activityCounts.some((count) => count > 0)) return false;
+
+        const [productCount, customerCount, supplierCount, voucherCount, demoProducts, demoCustomers, demoSuppliers, demoVouchers] = await Promise.all([
+            countStoreRecords('products'), countStoreRecords('customers'), countStoreRecords('suppliers'), countStoreRecords('vouchers'),
+            Promise.all(demoProductIds.map((id) => getFromStore('products', id))),
+            Promise.all(demoCustomerIds.map((id) => getFromStore('customers', id))),
+            Promise.all(demoSupplierIds.map((id) => getFromStore('suppliers', id))),
+            Promise.all(demoVoucherIds.map((id) => getFromStore('vouchers', id))),
+        ]);
+        const foundProducts = demoProducts.filter(Boolean);
+        const foundCustomers = demoCustomers.filter(Boolean);
+        const foundSuppliers = demoSuppliers.filter(Boolean);
+        const foundVouchers = demoVouchers.filter(Boolean);
+        if (!foundProducts.length || productCount !== foundProducts.length || customerCount !== foundCustomers.length || supplierCount !== foundSuppliers.length || voucherCount !== foundVouchers.length) return false;
+
+        const demoProductSet = new Set(demoProductIds);
+        for (const id of demoProductIds) if (await getFromStore('products', id)) await deleteFromStore('products', id);
         const stockRows = await getAllFromStore('stock');
-        for (const row of stockRows || []) if (demoProductIds.has(String(row?.productId || ''))) await deleteFromStore('stock', [row.productId, row.warehouseId]);
-        for (const x of customers || []) if (demoCustomerIds.has(String(x?.id || ''))) await deleteFromStore('customers', x.id);
-        for (const x of suppliers || []) if (demoSupplierIds.has(String(x?.id || ''))) await deleteFromStore('suppliers', x.id);
-        for (const x of vouchers || []) if (demoVoucherIds.has(String(x?.id || ''))) await deleteFromStore('vouchers', x.id);
+        for (const row of stockRows || []) if (demoProductSet.has(String(row?.productId || ''))) await deleteFromStore('stock', [row.productId, row.warehouseId]);
+        for (const id of demoCustomerIds) if (await getFromStore('customers', id)) await deleteFromStore('customers', id);
+        for (const id of demoSupplierIds) if (await getFromStore('suppliers', id)) await deleteFromStore('suppliers', id);
+        for (const id of demoVoucherIds) if (await getFromStore('vouchers', id)) await deleteFromStore('vouchers', id);
 
         const categories = await getAllFromStore('categories');
         const demoCategoryIds = new Set(['cat-drinks','cat-dairy','cat-food','cat-sweets','cat-cleaners','cat-frozen','cat-bakery']);
         for (const x of categories || []) if (demoCategoryIds.has(String(x?.id || ''))) await deleteFromStore('categories', x.id);
         const shifts = await getAllFromStore('shifts');
         for (const x of shifts || []) if (String(x?.id || '') === 'shift-1') await deleteFromStore('shifts', x.id);
-        const audits = await getAllFromStore('audit_logs');
-        for (const x of audits || []) if (String(x?.id || '') === 'log-init') await deleteFromStore('audit_logs', x.id);
+        const auditInit = await getFromStore('audit_logs', 'log-init');
+        if (auditInit) await deleteFromStore('audit_logs', 'log-init');
         const warehouses = await getAllFromStore('warehouses');
         for (const x of warehouses || []) if (String(x?.id || '') === 'wh-shop') await deleteFromStore('warehouses', x.id);
 
-        // Sample accounts contained fake opening balances. Replace only the untouched demo set.
         const accounts = await getAllFromStore('accounts');
         const demoAccountIds = new Set(['acc-cash','acc-bank','acc-wallet','acc-card']);
         const accountsAreDemoOnly = Array.isArray(accounts) && accounts.length > 0 && accounts.every(x => demoAccountIds.has(String(x?.id || '')));
@@ -1236,7 +1707,6 @@ export async function cleanupLegacyDemoSeedIfPristine() {
             await putInStore('accounts', { ...DEFAULT_ACCOUNTS[0], balance: 0, isDefault: true });
         }
 
-        // Remove sample employees but keep the real account embedded in the activation file.
         const rt = window.OscarActivation?.readRuntime?.() || {};
         const loginAccount = rt.account || null;
         const employees = await getAllFromStore('employees');

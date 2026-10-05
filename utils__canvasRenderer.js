@@ -1,5 +1,6 @@
-import { getBrandLogoDataUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.90-cashtop3-search-logo';
-import { code128Geometry } from './utils__code128.js?v=7.9.4.90-cashtop3-search-logo';
+import {customerStatementModel,statementHeaders} from './utils__customerStatement.js?v=7.9.4.134-invoice-filters';
+import { getBrandLogoDataUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.134-invoice-filters';
+import { code128Geometry } from './utils__code128.js?v=7.9.4.134-invoice-filters';
 
 const imageCache = new Map();
 const num = v => { const n=Number(v); return Number.isFinite(n)?n:0; };
@@ -15,7 +16,7 @@ export function resolveExportElement(target){
 
 export function documentBrandSettings(extra={}){
   const header=document.getElementById('main-header');
-  const storeName=header?.querySelector('h1')?.textContent?.trim() || extra.storeName || 'كاش توب 3';
+  const storeName=extra.storeName || 'كاش توب 3';
   const subtitle=header?.querySelector('h1 + span')?.textContent?.trim() || extra.subtitle || '';
   const logo=header?.querySelector('img')?.currentSrc || header?.querySelector('img')?.src || extra.logo;
   return {...extra,storeName,subtitle,logo};
@@ -61,20 +62,20 @@ async function drawBrand(ctx,w,settings,title,subtitle='',top=34){
 
 function columnWeights(headers){return headers.map(h=>{const s=normalize(h);if(/الصنف|البيان|الملاحظ|التفاصيل|العنوان|الاسم/.test(s))return 1.7;if(/التاريخ|الحساب|الجهة|العميل|المورد/.test(s))return 1.25;if(/^#|رقم|النوع|الوحدة|الكمية/.test(s))return .85;return 1;});}
 function tableColumnGeometry(headers,x,w){const weights=columnWeights(headers),sum=weights.reduce((a,b)=>a+b,0);const widths=weights.map(v=>w*v/sum);let cursor=x+w;const cols=[];for(let i=0;i<widths.length;i++){cols.push({right:cursor,width:widths[i],center:cursor-widths[i]/2});cursor-=widths[i];}return cols;}
-function cellLines(ctx,v,width,fontSize,header=false){return wrap(ctx,v,Math.max(20,width-16),fontSize,header?800:600,header?2:3);}
+function cellLines(ctx,v,width,fontSize,header=false){return wrap(ctx,v,Math.max(20,width-16),fontSize,header?800:600,header?2:Infinity);}
 function rowHeight(ctx,row,cols,fontSize,min=58){let maxLines=1;row.forEach((v,i)=>{maxLines=Math.max(maxLines,cellLines(ctx,v,cols[i]?.width||80,fontSize,false).length)});return Math.max(min,22+maxLines*(fontSize+8));}
 function drawTable(ctx,{x,y,w,headers,rows,fontSize=19,headH=60,alternate=true,maxRows=null}){
   const data=maxRows==null?rows:rows.slice(0,maxRows);const cols=tableColumnGeometry(headers,x,w);roundedRect(ctx,x,y,w,headH,7,'#7C3AED','#6D28D9',1.2);
   headers.forEach((h,i)=>{const ls=cellLines(ctx,h,cols[i].width,fontSize,true);const start=y+headH/2-(ls.length-1)*(fontSize+5)/2;ls.forEach((s,j)=>txt(ctx,s,cols[i].center,start+j*(fontSize+5),fontSize,900,'center','#fff'));});
   let cy=y+headH;const heights=[];data.forEach(r=>heights.push(rowHeight(ctx,r,cols,fontSize,56)));
-  data.forEach((r,ri)=>{const rh=heights[ri];ctx.fillStyle=alternate&&ri%2?'#f8fafc':'#fff';ctx.fillRect(x,cy,w,rh);line(ctx,x,cy,x+w,cy,1,'#e2e8f0');r.forEach((v,i)=>{const ls=cellLines(ctx,v,cols[i].width,fontSize,false);const start=cy+rh/2-(ls.length-1)*(fontSize+7)/2;ls.forEach((s,j)=>txt(ctx,s,cols[i].center,start+j*(fontSize+7),fontSize,600,'center','#0f172a'));});cy+=rh;});
+  data.forEach((r,ri)=>{const rh=heights[ri];ctx.fillStyle=alternate&&ri%2?'#f5f0ff':'#fff';ctx.fillRect(x,cy,w,rh);line(ctx,x,cy,x+w,cy,1,'#e2e8f0');r.forEach((v,i)=>{const ls=cellLines(ctx,v,cols[i].width,fontSize,false);const start=cy+rh/2-(ls.length-1)*(fontSize+7)/2;ls.forEach((s,j)=>txt(ctx,s,cols[i].center,start+j*(fontSize+7),fontSize,600,'center','#0f172a'));});cy+=rh;});
   line(ctx,x,cy,x+w,cy,1.2,'#cbd5e1');let edge=x+w;for(let i=0;i<cols.length;i++){line(ctx,edge,y,edge,cy,1,'#cbd5e1');edge-=cols[i].width;}line(ctx,x,y,x,cy,1,'#cbd5e1');return cy;
 }
 
 export async function renderTableCanvas({title='تقرير',subtitle='',headers=[],rows=[],settings={},orientation='landscape',pageNote=''}){
   try{await document.fonts?.ready;}catch(_){}
   settings=documentBrandSettings(settings);
-  const w=orientation==='landscape'?1600:1120;const ctxProbe=document.createElement('canvas').getContext('2d');const cols=tableColumnGeometry(headers,48,w-96);const fs=headers.length>9?16:headers.length>7?17:19;let bodyH=0;(rows||[]).forEach(r=>bodyH+=rowHeight(ctxProbe,r,cols,fs,56));const h=Math.max(900,320+bodyH+100);const {canvas,ctx}=createCanvas(w,h);let y=await drawBrand(ctx,w,settings,title,subtitle,30);
+  const w=orientation==='landscape'?1600:1120;const ctxProbe=document.createElement('canvas').getContext('2d');const cols=tableColumnGeometry(headers,48,w-96);const fs=headers.length>9?16:headers.length>7?17:19;let bodyH=0;(rows||[]).forEach(r=>bodyH+=rowHeight(ctxProbe,r,cols,fs,56));const probe=createCanvas(w,800);const brandEnd=await drawBrand(probe.ctx,w,settings,title,subtitle,30);const h=Math.max(900,brandEnd+bodyH+220);const {canvas,ctx}=createCanvas(w,h);let y=await drawBrand(ctx,w,settings,title,subtitle,30);
   roundedRect(ctx,48,y,w-96,52,10,'#f8fafc','#e2e8f0');txt(ctx,`تاريخ التقرير: ${new Date().toLocaleString('ar-EG')}`,w-68,y+26,16,600,'right','#64748b');txt(ctx,pageNote||`عدد السجلات: ${(rows||[]).length}`,68,y+26,16,700,'left','#334155');y+=70;
   y=drawTable(ctx,{x:48,y,w:w-96,headers,rows,fontSize:fs});y+=38;txt(ctx,`تم إنشاء هذا التقرير من نظام ${settings.storeName||'كاش توب 3'}`,w/2,y,14,600,'center','#94a3b8');return canvas;
 }
@@ -174,9 +175,18 @@ export function customerMovements(customer,invoices=[],vouchers=[]){const invs=i
 export function customerMovementRows(customer,invoices=[],vouchers=[]){return customerMovements(customer,invoices,vouchers).map((m,i)=>{const x=m.data;if(m.kind==='invoice')return[i+1,dateText(x.date),x.type==='return'?'مرتجع مبيعات':'فاتورة مبيعات',x.invoiceNumber||'',money(x.grandTotal),money(x.paidAmount),money(x.remainingAmount)];return[i+1,dateText(x.date),x.type==='receipt'?'سند قبض':'سند صرف',x.voucherNumber||'',money(x.amount),'',''];});}
 
 export async function renderCustomerStatementPages(customer,invoices=[],vouchers=[],settings={}){
-  settings=documentBrandSettings(settings);const pages=[];const rows=customerMovementRows(customer,invoices,vouchers);const sub=`العميل: ${customer.name} • الهاتف: ${customer.phone||'-'} • الرصيد الحالي: ${money(customer.balance)} ${settings.currencySymbol||''}`;const summary=await renderTablePages({title:'كشف حساب عميل مفصل',subtitle:sub,headers:['#','التاريخ','الحركة','المرجع','القيمة','المدفوع','المتبقي'],rows,settings,orientation:'portrait'});pages.push(...summary);
-  const invs=invoices.filter(i=>i.customerId===customer.id).sort((a,b)=>movementDate(a)-movementDate(b));for(const inv of invs){const itemRows=(inv.items||[]).map((it,i)=>[i+1,it.productName||'',it.unitName||'-',num(it.quantity),money(it.unitPrice),money(it.total)]);const chunks=[];if(!itemRows.length)chunks.push([]);else for(let i=0;i<itemRows.length;i+=16)chunks.push(itemRows.slice(i,i+16));for(let i=0;i<chunks.length;i++){pages.push(await renderTableCanvas({title:inv.type==='return'?'تفاصيل مرتجع مبيعات':'تفاصيل فاتورة مبيعات',subtitle:`العميل: ${customer.name} • فاتورة #${inv.invoiceNumber} • ${dateText(inv.date)} • الإجمالي ${money(inv.grandTotal)} ${settings.currencySymbol||''} • المدفوع ${money(inv.paidAmount)} • المتبقي ${money(inv.remainingAmount)}`,headers:['#','الصنف','الوحدة','الكمية','السعر','الإجمالي'],rows:chunks[i],settings,orientation:'portrait',pageNote:`تفاصيل الفاتورة • الصفحة ${i+1} من ${chunks.length}`}));}}
-  return pages;
+  await document.fonts?.ready;
+  settings=documentBrandSettings(settings);const model=customerStatementModel(customer,invoices,vouchers);
+  const pages=[],w=1120,h=1584,x=40,widths=[42,122,132,400,110,110,124],heads=statementHeaders;let canvas,ctx,y,page=0;
+  async function newPage(){if(canvas)pages.push(canvas);({canvas,ctx}=createCanvas(w,h));page++;y=await drawBrand(ctx,w,settings,'كشف حساب',`العميل: ${customer.name} • الهاتف: ${customer.phone||'-'}`,24);ctx.fillStyle='#7c3aed';ctx.fillRect(x,y,1040,44);let right=1080;heads.forEach((v,i)=>{txt(ctx,v,right-widths[i]/2,y+22,17,800,'center','#fff');right-=widths[i]});y+=44;txt(ctx,`صفحة ${page}`,w/2,h-28,15,600,'center','#64748b');}
+  await newPage();
+  for(let ri=0;ri<model.rows.length;ri++){
+    const row=model.rows[ri];const ls=row.map((v,i)=>String(typeof v==='number'&&i>=4?money(v):v).split('\n').flatMap(t=>wrap(ctx,t,widths[i]-16,16,600,Infinity)));let offset=0;const count=Math.max(...ls.map(a=>a.length));
+    while(offset<count){let capacity=Math.floor((h-70-y-20)/25);if(capacity<2){await newPage();capacity=Math.floor((h-70-y-20)/25);}const take=Math.min(capacity,count-offset),rh=take*25+20;ctx.fillStyle=ri%2?'#f5f0ff':'#fff';ctx.fillRect(x,y,1040,rh);let right=1080;
+      ls.forEach((lines,i)=>{lines.slice(offset,offset+take).forEach((v,j)=>txt(ctx,v,i===3?right-8:right-widths[i]/2,y+22+j*25,16,600,i===3?'right':'center'));line(ctx,right,y,right,y+rh,1,'#d8cfe6');right-=widths[i]});line(ctx,x,y,x,y+rh,1,'#d8cfe6');line(ctx,x,y+rh,1080,y+rh,1,'#d8cfe6');y+=rh;offset+=take;if(offset<count)await newPage();
+    }
+  }
+  pages.push(canvas);return pages;
 }
 
 export function combineCanvasesVertical(canvases,gap=22,maxHeight=12000){

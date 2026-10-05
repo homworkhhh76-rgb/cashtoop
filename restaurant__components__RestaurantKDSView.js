@@ -1,12 +1,13 @@
+import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.134-invoice-filters';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useRestaurant } from './restaurant__context__RestaurantContext.js?v=7.9.4.90-cashtop3-search-logo';
-import { useApp } from './restaurant__context__AppContext.js?v=7.9.4.90-cashtop3-search-logo';
+import { useRestaurant } from './restaurant__context__RestaurantContext.js?v=7.9.4.134-invoice-filters';
+import { useApp } from './restaurant__context__AppContext.js?v=7.9.4.134-invoice-filters';
 import {
   ChefHat, Flame, Clock, Printer, CheckCircle2, Volume2, VolumeX,
   Utensils, ShoppingBag, Trash2, StickyNote, TimerReset, CircleDot, X
 } from 'lucide-react';
-import { KitchenTicketModal } from './restaurant__components__KitchenTicketModal.js?v=7.9.4.90-cashtop3-search-logo';
-import { printKitchenTicketDirect } from './restaurant__services__kitchenPrint.js?v=7.9.4.90-cashtop3-search-logo';
+import { KitchenTicketModal } from './restaurant__components__KitchenTicketModal.js?v=7.9.4.134-invoice-filters';
+import { printKitchenTicketDirect } from './restaurant__services__kitchenPrint.js?v=7.9.4.134-invoice-filters';
 
 const h = React.createElement;
 const noteText = notes => typeof notes === 'string' ? notes : String(notes?.kitchenNotes || notes?.general || '');
@@ -125,7 +126,7 @@ export const RestaurantKDSView = () => {
           h('div', { className: 'rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2 text-center min-w-0' }, h('div', { className: 'text-[9px] text-slate-500 font-bold' }, 'النشطة'), h('div', { className: 'text-sm font-black text-slate-900' }, counts.active)),
           h('div', { className: 'rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-2 text-center min-w-0' }, h('div', { className: 'text-[9px] text-amber-700 font-bold' }, 'جديدة'), h('div', { className: 'text-sm font-black text-amber-700' }, counts.sent)),
           h('div', { className: 'rounded-xl border border-blue-200 bg-blue-50 px-2.5 py-2 text-center min-w-0' }, h('div', { className: 'text-[9px] text-blue-700 font-bold' }, 'تحضير'), h('div', { className: 'text-sm font-black text-blue-700' }, counts.preparing)),
-          h('div', { className: 'rounded-xl border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-center min-w-0' }, h('div', { className: 'text-[9px] text-emerald-700 font-bold' }, 'جاهزة'), h('div', { className: 'text-sm font-black text-emerald-700' }, counts.ready))
+          h('div', { className: 'rounded-xl border border-violet-200 bg-violet-50 px-2.5 py-2 text-center min-w-0' }, h('div', { className: 'text-[9px] text-violet-700 font-bold' }, 'جاهزة'), h('div', { className: 'text-sm font-black text-violet-700' }, counts.ready))
         )
       ),
       h('div', { className: 'mt-3 flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar' },
@@ -136,7 +137,7 @@ export const RestaurantKDSView = () => {
         tabButton('completed', 'المسلّمة'),
         h('button', {
           onClick: () => setSoundEnabled(v => !v),
-          className: `mr-auto shrink-0 p-2 rounded-xl border ${soundEnabled ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-slate-200 text-slate-500'}`,
+          className: `mr-auto shrink-0 p-2 rounded-xl border ${soundEnabled ? 'bg-violet-50 border-violet-200 text-violet-700' : 'bg-white border-slate-200 text-slate-500'}`,
           title: soundEnabled ? 'الصوت مفعل' : 'الصوت متوقف'
         }, soundEnabled ? h(Volume2, { className: 'w-4 h-4' }) : h(VolumeX, { className: 'w-4 h-4' }))
       )
@@ -162,11 +163,11 @@ export const RestaurantKDSView = () => {
               return h('article', {
                 key: order.id,
                 onClick: () => setDetailsModalOrder(order),
-                className: `rounded-2xl border bg-white overflow-hidden shadow-sm cursor-pointer transition hover:shadow-md ${isReady ? 'border-emerald-300' : overdue ? 'border-rose-300' : 'border-slate-200'}`
+                className: `rounded-2xl border bg-white overflow-hidden shadow-sm cursor-pointer transition hover:shadow-md ${isReady ? 'border-violet-300' : overdue ? 'border-rose-300' : 'border-slate-200'}`
               },
-                h('div', { className: `p-3 border-b ${isReady ? 'bg-emerald-50 border-emerald-200' : overdue ? 'bg-rose-50 border-rose-200' : 'bg-white border-slate-100'} flex items-center justify-between gap-2` },
+                h('div', { className: `p-3 border-b ${isReady ? 'bg-violet-50 border-violet-200' : overdue ? 'bg-rose-50 border-rose-200' : 'bg-white border-slate-100'} flex items-center justify-between gap-2` },
                   h('div', { className: 'flex items-center gap-2 min-w-0' },
-                    h('div', { className: `w-11 h-11 rounded-xl border flex flex-col items-center justify-center shrink-0 ${isReady ? 'bg-white border-emerald-200 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-700'}` },
+                    h('div', { className: `w-11 h-11 rounded-xl border flex flex-col items-center justify-center shrink-0 ${isReady ? 'bg-white border-violet-200 text-violet-700' : 'bg-slate-50 border-slate-200 text-slate-700'}` },
                       order.orderType === 'dine_in' ? h(Utensils, { className: 'w-4 h-4' }) : h(ShoppingBag, { className: 'w-4 h-4' }),
                       h('span', { className: 'text-[9px] font-black mt-0.5' }, order.tableNumber || order.queueNumber || 'سفري')
                     ),
@@ -183,7 +184,7 @@ export const RestaurantKDSView = () => {
 
                 h('div', { className: 'px-3 pt-3 flex items-center justify-between text-[10px] font-bold text-slate-500' },
                   h('span', null, `الأصناف ${items.length}`),
-                  h('span', { className: readyItems === items.length && items.length ? 'text-emerald-700' : '' }, `${readyItems}/${items.length} جاهز`)
+                  h('span', { className: readyItems === items.length && items.length ? 'text-violet-700' : '' }, `${readyItems}/${items.length} جاهز`)
                 ),
 
                 h('div', { className: 'p-3 space-y-2 max-h-80 overflow-y-auto custom-scrollbar' },
@@ -192,13 +193,13 @@ export const RestaurantKDSView = () => {
                     return h('button', {
                       key: item.id,
                       onClick: (e) => { e.stopPropagation(); toggleItemReady(order.id, item.id, item.status); },
-                      className: `w-full p-2.5 rounded-xl border text-right flex items-start justify-between gap-2 transition ${ready ? 'bg-emerald-50 text-emerald-900 border-emerald-200' : 'bg-slate-50 text-slate-900 border-slate-200 hover:bg-slate-100'}`
+                      className: `w-full p-2.5 rounded-xl border text-right flex items-start justify-between gap-2 transition ${ready ? 'bg-violet-50 text-violet-900 border-violet-200' : 'bg-slate-50 text-slate-900 border-slate-200 hover:bg-slate-100'}`
                     },
                       h('div', { className: 'min-w-0 flex-1' },
                         h('div', { className: 'font-black text-base leading-7 tracking-normal' }, `${item.quantity} × ${item.productName}`),
-                        h('div', { className: `text-[11px] leading-5 font-bold ${ready ? 'text-emerald-700' : 'text-slate-500'}` }, ready ? 'جاهز — اضغط للتراجع' : 'اضغط عند انتهاء تحضير الصنف')
+                        h('div', { className: `text-[11px] leading-5 font-bold ${ready ? 'text-violet-700' : 'text-slate-500'}` }, ready ? 'جاهز — اضغط للتراجع' : 'اضغط عند انتهاء تحضير الصنف')
                       ),
-                      ready ? h(CheckCircle2, { className: 'w-5 h-5 text-emerald-600 shrink-0 mt-0.5' }) : h(CircleDot, { className: 'w-5 h-5 text-slate-300 shrink-0 mt-0.5' })
+                      ready ? h(CheckCircle2, { className: 'w-5 h-5 text-violet-600 shrink-0 mt-0.5' }) : h(CircleDot, { className: 'w-5 h-5 text-slate-300 shrink-0 mt-0.5' })
                     );
                   }),
                   note && h('div', { className: 'p-3 rounded-xl border-2 border-amber-300 bg-amber-50 text-amber-950 text-sm font-black leading-6' },
@@ -212,14 +213,14 @@ export const RestaurantKDSView = () => {
                     h('button', { onClick: (e) => { e.stopPropagation(); remove(order); }, className: 'w-10 h-10 p-0 rounded-xl border border-rose-300 bg-white text-rose-600 hover:bg-rose-50 flex items-center justify-center shadow-sm', title: 'حذف الطلب' }, h(Trash2, { className: 'w-4 h-4' }))
                   ),
                   order.status === 'sent' && h('button', { onClick: (e) => { e.stopPropagation(); start(order.id); }, className: 'flex-1 h-10 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs shadow-sm flex items-center justify-center gap-1.5 active:scale-[.98]' }, h(Flame, { className: 'w-4 h-4' }), 'بدء التحضير'),
-                  ['preparing', 'partially_ready'].includes(order.status) && h('button', { onClick: (e) => { e.stopPropagation(); fullyReady(order.id); }, className: 'flex-1 h-10 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-sm flex items-center justify-center gap-1.5 active:scale-[.98]' }, h(CheckCircle2, { className: 'w-4 h-4' }), 'جاهز بالكامل'),
+                  ['preparing', 'partially_ready'].includes(order.status) && h('button', { onClick: (e) => { e.stopPropagation(); fullyReady(order.id); }, className: 'flex-1 h-10 px-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-black text-xs shadow-sm flex items-center justify-center gap-1.5 active:scale-[.98]' }, h(CheckCircle2, { className: 'w-4 h-4' }), 'جاهز بالكامل'),
                   order.status === 'ready' && h('button', { onClick: (e) => { e.stopPropagation(); served(order.id); }, className: 'flex-1 h-10 px-3 rounded-xl font-black text-xs shadow-sm flex items-center justify-center gap-1.5 active:scale-[.98]', style:{backgroundColor:'#0f766e',color:'#ffffff',border:'1px solid #0f766e'} }, h(TimerReset, { className: 'w-4 h-4' }), 'تم التسليم')
                 )
               );
             })
           )
     ),
-    detailsModalOrder && h('div', {
+    detailsModalOrder && h(ModalLayer, {
       className: 'fixed inset-0 flex items-center justify-center bg-black/60 p-2 sm:p-4',
       style: { zIndex: 9998 },
       onClick: () => setDetailsModalOrder(null)
@@ -243,11 +244,11 @@ export const RestaurantKDSView = () => {
         h('div', { className: 'flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-2 custom-scrollbar', style: { WebkitOverflowScrolling: 'touch' } },
           (detailsModalOrder.items || []).filter(i => i.status !== 'cancelled').map((item, idx) => h('div', {
             key: item.id || idx,
-            className: `rounded-xl border p-3 ${item.status === 'ready' ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50'}`
+            className: `rounded-xl border p-3 ${item.status === 'ready' ? 'border-violet-200 bg-violet-50' : 'border-slate-200 bg-slate-50'}`
           },
             h('div', { className: 'flex items-center justify-between gap-3' },
               h('div', { className: 'font-black text-base text-slate-900' }, `${item.quantity} × ${item.productName}`),
-              h('div', { className: `text-[10px] font-black px-2 py-1 rounded-lg ${item.status === 'ready' ? 'bg-emerald-100 text-emerald-700' : 'bg-white text-slate-500 border border-slate-200'}` }, item.status === 'ready' ? 'جاهز' : 'قيد العمل')
+              h('div', { className: `text-[10px] font-black px-2 py-1 rounded-lg ${item.status === 'ready' ? 'bg-violet-100 text-violet-700' : 'bg-white text-slate-500 border border-slate-200'}` }, item.status === 'ready' ? 'جاهز' : 'قيد العمل')
             ),
             item.unitName ? h('div', { className: 'text-[11px] text-slate-600 font-bold mt-1' }, `الوحدة: ${item.unitName}`) : null,
             item.notes ? h('div', { className: 'mt-2 text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2' }, `ملاحظة: ${item.notes}`) : null

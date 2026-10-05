@@ -1,5 +1,5 @@
 import React,{useEffect,useState} from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.90-cashtop3-search-logo';
+import { useApp } from './context__AppContext.js?v=7.9.4.134-invoice-filters';
 import { ExternalLink, Copy, RefreshCw, Bot, CreditCard, CheckCircle2 } from 'lucide-react';
 
 const h=React.createElement;
@@ -55,12 +55,12 @@ export const TelegramQuickGuide=()=>{
   ))):h('div',{className:'mt-2 text-[10px] text-slate-400'},'لا يوجد مستخدم ظاهر بعد. افتح البوت واضغط Start ثم اضغط تحديث المستخدمين.');
 
   const card=(title,username,url,rows,type)=>h('div',{className:'rounded-2xl border bg-slate-50 p-3 space-y-2'},
-    h('div',{className:'flex items-center justify-between gap-2'},h('div',{className:'flex items-center gap-2'},h('div',{className:`w-9 h-9 rounded-xl grid place-items-center ${type==='payment'?'bg-emerald-100 text-emerald-700':'bg-sky-100 text-sky-700'}`},type==='payment'?h(CreditCard,{className:'w-4 h-4'}):h(Bot,{className:'w-4 h-4'})),h('div',null,h('div',{className:'text-xs font-black'},title),h('div',{dir:'ltr',className:'text-[10px] text-slate-500 font-mono'},username?`@${String(username).replace(/^@/,'')}`:'جاري معرفة يوزر البوت...'))),
+    h('div',{className:'flex items-center justify-between gap-2'},h('div',{className:'flex items-center gap-2'},h('div',{className:`w-9 h-9 rounded-xl grid place-items-center ${type==='payment'?'bg-violet-100 text-violet-700':'bg-sky-100 text-sky-700'}`},type==='payment'?h(CreditCard,{className:'w-4 h-4'}):h(Bot,{className:'w-4 h-4'})),h('div',null,h('div',{className:'text-xs font-black'},title),h('div',{dir:'ltr',className:'text-[10px] text-slate-500 font-mono'},username?`@${String(username).replace(/^@/,'')}`:'جاري معرفة يوزر البوت...'))),
       h('button',{type:'button',disabled:!url,onClick:()=>url&&window.open(url,'_blank','noopener'),className:'inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-900 text-white text-[10px] font-black disabled:opacity-40'},h(ExternalLink,{className:'w-3.5 h-3.5'}),'Open')),
     h('div',{className:'grid grid-cols-3 gap-1.5 text-center text-[9px]'},
-      h('div',{className:'rounded-lg bg-white border p-2'},h('b',{className:'block text-emerald-700'},'1'),'Open'),
-      h('div',{className:'rounded-lg bg-white border p-2'},h('b',{className:'block text-emerald-700'},'2'),'اضغط Start'),
-      h('div',{className:'rounded-lg bg-white border p-2'},h('b',{className:'block text-emerald-700'},'3'),'انسخ ID')),
+      h('div',{className:'rounded-lg bg-white border p-2'},h('b',{className:'block text-violet-700'},'1'),'Open'),
+      h('div',{className:'rounded-lg bg-white border p-2'},h('b',{className:'block text-violet-700'},'2'),'اضغط Start'),
+      h('div',{className:'rounded-lg bg-white border p-2'},h('b',{className:'block text-violet-700'},'3'),'انسخ ID')),
     h('button',{type:'button',onClick:type==='payment'?loadPaymentUsers:loadNotifyUsers,disabled:!!busy,className:'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border text-[10px] font-black text-slate-700 disabled:opacity-50'},h(RefreshCw,{className:`w-3.5 h-3.5 ${busy===type?'animate-spin':''}`}),busy===type?'جاري التحديث...':'تحديث المستخدمين'),
     userList(rows,type==='payment')
   );
@@ -71,6 +71,6 @@ export const TelegramQuickGuide=()=>{
       card('بوت الإشعارات',NOTIFY_BOT_USERNAME,NOTIFY_BOT_URL,notifyUsers,'notify'),
       card('بوت الدفعات',paymentBot.username,paymentBot.url,paymentUsers,'payment')
     ),
-    settings.p2pPaymentChatId?h('div',{className:'text-[10px] font-bold text-emerald-700'},`معرف استقبال الدفعات الحالي: ${settings.p2pPaymentChatId}`):null
+    settings.p2pPaymentChatId?h('div',{className:'text-[10px] font-bold text-violet-700'},`معرف استقبال الدفعات الحالي: ${settings.p2pPaymentChatId}`):null
   );
 };

@@ -1,6 +1,7 @@
+import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.134-invoice-filters';
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useApp } from './context__AppContext.js?v=7.9.4.90-cashtop3-search-logo';
+import { useApp } from './context__AppContext.js?v=7.9.4.134-invoice-filters';
 import { Camera, X, AlertCircle, ScanLine } from 'lucide-react';
 
 const h = React.createElement;
@@ -135,7 +136,7 @@ export const BarcodeCameraModal = ({ open, onClose, onDetected, title = 'مسح 
   }, [open]);
 
   if (!open) return null;
-  const overlay = h('div', {
+  const overlay = h(ModalLayer, {
     className: 'barcode-camera-overlay fixed inset-0 flex items-center justify-center bg-black/80 p-3 animate-in fade-in',
     style: { zIndex: 2147483000 },
     onPointerDown: (e) => { if (e.target === e.currentTarget) onClose?.(); },
@@ -143,7 +144,7 @@ export const BarcodeCameraModal = ({ open, onClose, onDetected, title = 'مسح 
     h('div', { className: 'w-full max-w-md overflow-hidden rounded-2xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 text-right' },
       h('div', { className: 'flex items-center justify-between p-3 border-b border-slate-100 dark:border-slate-800' },
         h('div', { className: 'flex items-center gap-2' },
-          h(Camera, { className: 'w-5 h-5 text-emerald-600' }),
+          h(Camera, { className: 'w-5 h-5 text-violet-600' }),
           h('div', null,
             h('h3', { className: 'font-black text-sm text-slate-900 dark:text-white' }, title),
             h('p', { className: 'text-[10px] text-slate-400 mt-0.5' }, status || 'قراءة تلقائية بدون إدخال يدوي')
@@ -159,11 +160,11 @@ export const BarcodeCameraModal = ({ open, onClose, onDetected, title = 'مسح 
             )
           : h(React.Fragment, null,
               h('video', { ref: videoRef, className: 'w-full h-full object-cover', playsInline: true, muted: true, autoPlay: true }),
-              h('div', { className: 'absolute inset-[12%] rounded-2xl border-2 border-emerald-400/90 shadow-[0_0_0_999px_rgba(0,0,0,.22)] pointer-events-none' }),
-              h('div', { className: 'absolute left-[16%] right-[16%] top-1/2 h-0.5 bg-emerald-400 shadow-[0_0_12px_#A78BFA] animate-pulse pointer-events-none' }),
+              h('div', { className: 'absolute inset-[12%] rounded-2xl border-2 border-violet-400/90 shadow-[0_0_0_999px_rgba(0,0,0,.22)] pointer-events-none' }),
+              h('div', { className: 'absolute left-[16%] right-[16%] top-1/2 h-0.5 bg-violet-400 shadow-[0_0_12px_#A78BFA] animate-pulse pointer-events-none' }),
               h('div', { className: 'absolute bottom-3 left-0 right-0 flex justify-center pointer-events-none' },
                 h('span', { className: 'inline-flex items-center gap-1.5 rounded-full bg-black/55 text-white px-3 py-1.5 text-[10px] font-bold backdrop-blur' },
-                  h(ScanLine, { className: 'w-3.5 h-3.5 text-emerald-300' }), 'مسح متتابع — الكاميرا تبقى مفتوحة حتى تضغط إغلاق'
+                  h(ScanLine, { className: 'w-3.5 h-3.5 text-violet-300' }), 'مسح متتابع — الكاميرا تبقى مفتوحة حتى تضغط إغلاق'
                 )
               )
             )

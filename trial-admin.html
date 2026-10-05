@@ -17,9 +17,9 @@
 </main></div>
 <div id="toast" class="toast"></div>
 <div id="modal" class="modal-back"><div class="modal"><div class="modal-head"><h2 id="modalTitle">تفاصيل الطلب</h2><button id="closeModal" class="close">×</button></div><img id="proof" class="proof-img" alt="إثبات الدفع"><div id="modalDetails" class="details"></div><div id="modalActions" class="modal-actions"></div></div></div>
-<script src="./oscar-activation-runtime.js?v=7.9.4.90-cashtop3-search-logo"></script>
+<script src="./oscar-activation-runtime.js?v=7.9.4.134-invoice-filters"></script>
 <script type="module">
-import { TRIAL_DATABASE, TRIAL_LIMITS } from './trial__config.js?v=7.9.4.90-cashtop3-search-logo';
+import { TRIAL_DATABASE, TRIAL_LIMITS } from './trial__config.js?v=7.9.4.134-invoice-filters';
 const BOT_TOKEN='8901874566:AAG3TAC6xSl-YHmEnQTpvBrxZpoBwyyx6nY',FILE_ROOT=`https://api.telegram.org/file/bot${BOT_TOKEN}/`,API=`https://api.telegram.org/bot${BOT_TOKEN}`;
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let rows=[],selected=null;

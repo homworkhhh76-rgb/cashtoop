@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { X, ScanLine, Upload, AlertTriangle, CheckCircle2, LoaderCircle, Sparkles, Image as ImageIcon } from 'lucide-react';
-import { useApp } from './context__AppContext.js?v=7.9.4.90-cashtop3-search-logo';
-import { scanPurchaseInvoice } from './services__ai.js?v=7.9.4.90-cashtop3-search-logo';
-import { findBestSupplier, findBestProduct, findBestUnit } from './utils__aiMatching.js?v=7.9.4.90-cashtop3-search-logo';
+import { useApp } from './context__AppContext.js?v=7.9.4.134-invoice-filters';
+import { scanPurchaseInvoice } from './services__ai.js?v=7.9.4.134-invoice-filters';
+import { findBestSupplier, findBestProduct, findBestUnit } from './utils__aiMatching.js?v=7.9.4.134-invoice-filters';
 
 const h = React.createElement;
 const n = (v) => Number(v || 0) || 0;
@@ -168,7 +168,7 @@ export const PurchaseAIScanModal = ({ open, onClose, onApply }) => {
   const unitOptions = (product) => (product?.units || []).map((unit) => h('option', { key: unit.id, value: unit.id }, unit.name));
 
   const statusBadge = (ok) => ok
-    ? h('span', { className: 'inline-flex items-center gap-1 text-emerald-700 font-bold' }, h(CheckCircle2, { className: 'w-4 h-4' }), 'مطابق')
+    ? h('span', { className: 'inline-flex items-center gap-1 text-violet-700 font-bold' }, h(CheckCircle2, { className: 'w-4 h-4' }), 'مطابق')
     : h('span', { className: 'inline-flex items-center gap-1 text-amber-700 font-bold' }, h(AlertTriangle, { className: 'w-4 h-4' }), 'راجع');
 
   const renderMobileLine = (line, index) => {
@@ -247,15 +247,15 @@ export const PurchaseAIScanModal = ({ open, onClose, onApply }) => {
 
   if (!open) return null;
 
-  const uploadBlock = h('div', { className: 'rounded-2xl border border-emerald-200 bg-emerald-50/50 p-3 sm:p-4 space-y-3' },
-    h('div', { className: 'flex items-center gap-2' }, h(ImageIcon, { className: 'w-4 h-4 text-emerald-700' }), h('div', { className: 'font-black text-xs' }, 'أرفق صورة فاتورة المشتريات')),
+  const uploadBlock = h('div', { className: 'rounded-2xl border border-violet-200 bg-violet-50/50 p-3 sm:p-4 space-y-3' },
+    h('div', { className: 'flex items-center gap-2' }, h(ImageIcon, { className: 'w-4 h-4 text-violet-700' }), h('div', { className: 'font-black text-xs' }, 'أرفق صورة فاتورة المشتريات')),
     h('div', { className: 'text-[10px] text-slate-500 leading-5' }, 'يدعم الصور فقط. يقرأ اسم المنتج والوحدة والكمية وسعر الوحدة وإجمالي السطر، مع المورد ورقم الفاتورة والتاريخ إن كانت ظاهرة.'),
     h('div', { className: 'flex flex-col sm:flex-row sm:items-center justify-between gap-3' },
       h('div', null,
         h('div', { className: 'font-black text-xs' }, 'صورة أو عدة صور للفاتورة'),
         h('div', { className: 'text-[10px] text-slate-500 mt-1' }, 'لأفضل نتيجة: صوّر الورقة كاملة، بإضاءة جيدة، وبدون قصّ الأعمدة أو الأسعار.')
       ),
-      h('label', { className: 'cursor-pointer inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-emerald-200 text-emerald-700 text-xs font-black shadow-sm' },
+      h('label', { className: 'cursor-pointer inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-violet-200 text-violet-700 text-xs font-black shadow-sm' },
         h(Upload, { className: 'w-4 h-4' }),
         'إرفاق صورة',
         h('input', { type: 'file', accept: 'image/*', multiple: true, className: 'hidden', onChange: (event) => {
@@ -274,7 +274,7 @@ export const PurchaseAIScanModal = ({ open, onClose, onApply }) => {
         h('button', { type: 'button', onClick: () => setFiles((prev) => prev.filter((_, idx) => idx !== index)), className: 'absolute top-1 left-1 w-6 h-6 rounded-full bg-slate-900/80 text-white flex items-center justify-center', title: 'حذف الصورة' }, h(X, { className: 'w-3.5 h-3.5' }))
       )
     )) : null,
-    files.length ? h('button', { type: 'button', disabled: busy, onClick: analyze, className: 'w-full sm:w-auto px-5 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-black flex items-center justify-center gap-2 disabled:opacity-50' },
+    files.length ? h('button', { type: 'button', disabled: busy, onClick: analyze, className: 'w-full sm:w-auto px-5 py-2.5 rounded-xl bg-violet-600 text-white text-xs font-black flex items-center justify-center gap-2 disabled:opacity-50' },
       busy ? h(LoaderCircle, { className: 'w-4 h-4 animate-spin' }) : h(Sparkles, { className: 'w-4 h-4' }),
       busy ? 'جاري قراءة الصورة بدقة...' : 'قراءة الصورة وتعبئة الفاتورة'
     ) : null
@@ -315,7 +315,7 @@ export const PurchaseAIScanModal = ({ open, onClose, onApply }) => {
     h('section', { onClick: (event) => event.stopPropagation(), className: 'oscar-ai-panel oscar-purchase-ai-panel w-full max-w-5xl bg-white shadow-2xl overflow-hidden flex flex-col text-right' },
       h('header', { className: 'shrink-0 p-3 sm:p-4 border-b flex items-center justify-between gap-3' },
         h('div', { className: 'flex items-center gap-2 min-w-0' },
-          h('div', { className: 'w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0' }, h(ScanLine, { className: 'w-5 h-5' })),
+          h('div', { className: 'w-10 h-10 rounded-2xl bg-violet-100 text-violet-700 flex items-center justify-center shrink-0' }, h(ScanLine, { className: 'w-5 h-5' })),
           h('div', { className: 'min-w-0' },
             h('div', { className: 'font-black text-sm truncate' }, 'تعبئة فاتورة المشتريات بالذكاء الاصطناعي'),
             h('div', { className: 'text-[10px] text-slate-500' }, 'قراءة احترافية من صور الفواتير فقط')
@@ -332,7 +332,7 @@ export const PurchaseAIScanModal = ({ open, onClose, onApply }) => {
         h('div', { className: 'text-[10px] text-slate-400' }, raw ? `${lines.length} سطر • ${unmatched.length} بحاجة مراجعة` : 'لن يتم حفظ أي شيء قبل مراجعتك.'),
         h('div', { className: 'flex gap-2' },
           h('button', { type: 'button', onClick: onClose, className: 'px-3 sm:px-4 py-2 rounded-xl border text-xs font-bold' }, 'إلغاء'),
-          h('button', { type: 'button', disabled: !raw || busy, onClick: apply, className: 'px-4 sm:px-5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-black disabled:opacity-40' }, 'تعبئة الفاتورة')
+          h('button', { type: 'button', disabled: !raw || busy, onClick: apply, className: 'px-4 sm:px-5 py-2 rounded-xl bg-violet-600 text-white text-xs font-black disabled:opacity-40' }, 'تعبئة الفاتورة')
         )
       )
     )

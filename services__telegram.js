@@ -1,5 +1,5 @@
-import { getAllFromStore, getFromStore, putInStore } from './services__db.js?v=7.9.4.90-cashtop3-search-logo';
-import { renderInvoiceCanvas, renderVoucherCanvas, renderTableCanvas } from './utils__canvasRenderer.js?v=7.9.4.90-cashtop3-search-logo';
+import { getAllFromStore, getFromStore, putInStore } from './services__db.js?v=7.9.4.134-invoice-filters';
+import { renderInvoiceCanvas, renderVoucherCanvas, renderTableCanvas } from './utils__canvasRenderer.js?v=7.9.4.134-invoice-filters';
 
 // Telegram integration for Cash Top 3.
 // The owner explicitly requested embedding this token in the app build.
@@ -54,7 +54,7 @@ const fmtDateTime = (value) => {
   if (!Number.isFinite(d.getTime())) return String(value || '');
   try { return d.toLocaleString('ar-EG-u-nu-latn', { hour12:true }); } catch { return d.toISOString(); }
 };
-const normalizeId = (value) => String(value ?? '').trim();
+const normalizeId = (value) => String(value ?? '').trim().replace(/[٠-٩]/g,c=>String(c.charCodeAt(0)-1632)).replace(/[۰-۹]/g,c=>String(c.charCodeAt(0)-1776));
 
 const normalizeUsername = (value) => {
   const raw = String(value || '').trim().replace(/^@+/, '');
@@ -112,49 +112,15 @@ async function getStoreSettings() {
 
 function enabledRecipients(settings = {}) {
   if (settings.telegramEnabled === false) return [];
-  return normalizeTelegramRecipients(settings.telegramRecipients).filter(x => x.enabled !== false);
+  return normalizeTelegramRecipients(Array.isArray(settings.telegramRecipients)?settings.telegramRecipients:[settings.telegramChatId||settings.telegramChatID||'']).filter(x => x.enabled !== false);
 }
 
 async function botRequest(method, payload) {
-  const sameOriginPayload = { method, payload };
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 6000);
-    const response = await fetch('./api/telegram', {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json' },
-      body:JSON.stringify(sameOriginPayload),
-      cache:'no-store',
-      signal:controller.signal,
-    });
-    clearTimeout(timer);
-    if (response.ok) {
-      const data = await response.json().catch(() => null);
-      if (data?.ok) return data;
-      if (data?.error) throw new Error(data.error);
-    } else if (response.status !== 404 && response.status !== 405) {
-      const data = await response.json().catch(() => ({}));
-      throw new Error(data?.error || `Telegram proxy HTTP ${response.status}`);
-    }
-  } catch (error) {
-    // Static hosting / no local proxy: direct Bot API fallback below.
-    if (error?.name !== 'AbortError' && !/Failed to fetch|NetworkError/i.test(String(error?.message || ''))) {
-      // Keep going; Telegram direct may still work.
-    }
-  }
-
-  const response = await fetch(`${API_ROOT}/${method}`, {
-    method:'POST',
-    headers:{ 'Content-Type':'application/json' },
-    body:JSON.stringify(payload || {}),
-    cache:'no-store',
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok || data?.ok === false) {
-    const description = data?.description || data?.error || `Telegram HTTP ${response.status}`;
-    throw new Error(description);
-  }
-  return data;
+  // Same direct Bot API transport as payment and image uploads: exact configured chat_id.
+  const form=new FormData();
+  for(const [key,value] of Object.entries(payload||{})){if(value!==undefined&&value!==null)form.append(key,typeof value==='object'?JSON.stringify(value):String(value));}
+  const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),20000);
+  try{const response=await fetch(`${API_ROOT}/${method}`,{method:'POST',body:form,cache:'no-store',signal:controller.signal});const data=await response.json().catch(()=>({}));if(!response.ok||data?.ok!==true)throw new Error(data?.description||data?.error||`Telegram HTTP ${response.status}`);return data}finally{clearTimeout(timer)}
 }
 
 export async function resolveTelegramUsername(username, { linkToken = '' } = {}) {
@@ -345,37 +311,6 @@ async function sendTextToChat(chatId, text, { silent=false } = {}) {
 
 
 async function sendPhotoToChat(chatId, photoDataUrl, { caption='', filename='oskar.png', silent=false } = {}) {
-  const payload = {
-    chat_id: normalizeId(chatId),
-    caption: String(caption || '').slice(0, 1024),
-    filename: String(filename || 'oskar.png'),
-    photoDataUrl: String(photoDataUrl || ''),
-    disable_notification: !!silent,
-  };
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 12000);
-    const response = await fetch('./api/telegram', {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json' },
-      body:JSON.stringify({ method:'sendPhoto', payload }),
-      cache:'no-store',
-      signal:controller.signal,
-    });
-    clearTimeout(timer);
-    if (response.ok) {
-      const data = await response.json().catch(() => null);
-      if (data?.ok) return data;
-      if (data?.error) throw new Error(data.error);
-    } else if (response.status !== 404 && response.status !== 405) {
-      const data = await response.json().catch(() => ({}));
-      throw new Error(data?.error || `Telegram proxy HTTP ${response.status}`);
-    }
-  } catch (error) {
-    if (error?.name !== 'AbortError' && !/Failed to fetch|NetworkError/i.test(String(error?.message || ''))) {
-      // direct fallback below
-    }
-  }
   const form = new FormData();
   form.append('chat_id', normalizeId(chatId));
   if (caption) form.append('caption', String(caption).slice(0, 1024));
@@ -415,40 +350,6 @@ async function sendDocumentToChat(chatId, blob, { caption='', filename='oscar-fi
   // Telegram Bot API currently accepts large documents, but keep browser memory sane.
   if (blob.size > 49 * 1024 * 1024) throw new Error('حجم الملف أكبر من الحد المسموح للإرسال عبر البوت');
 
-  // If the Oscar Node server is running, use the same-origin proxy first.
-  try {
-    const fileDataUrl = await blobToDataUrl(blob);
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 20000);
-    const response = await fetch('./api/telegram', {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json' },
-      body:JSON.stringify({ method:'sendDocument', payload:{
-        chat_id:normalizeId(chatId),
-        caption:String(caption || '').slice(0, 1024),
-        filename:String(filename || 'oscar-file.bin'),
-        fileDataUrl,
-        disable_notification:!!silent,
-      }}),
-      cache:'no-store',
-      signal:controller.signal,
-    });
-    clearTimeout(timer);
-    if (response.ok) {
-      const data = await response.json().catch(() => null);
-      if (data?.ok) return data;
-      if (data?.error) throw new Error(data.error);
-    } else if (response.status !== 404 && response.status !== 405) {
-      const data = await response.json().catch(() => ({}));
-      throw new Error(data?.error || `Telegram proxy HTTP ${response.status}`);
-    }
-  } catch (error) {
-    if (error?.name !== 'AbortError' && !/Failed to fetch|NetworkError/i.test(String(error?.message || ''))) {
-      // Fall through to direct Bot API.
-    }
-  }
-
-  // Static hosting / HTML preview fallback: send directly with the SAME invoice bot token.
   const form = new FormData();
   form.append('chat_id', normalizeId(chatId));
   if (caption) form.append('caption', String(caption).slice(0, 1024));
@@ -801,15 +702,15 @@ export async function flushTelegramOutbox() {
     for (const item of queue) {
       if (!item?.text) continue;
       const targetRecipients = Array.isArray(item.recipients) && item.recipients.length
-        ? normalizeTelegramRecipients(item.recipients.map(chatId => ({chatId, enabled:true})))
+        ? normalizeTelegramRecipients(item.recipients.map(chatId => ({chatId, enabled:true}))).filter(r=>enabledRecipients(settings).some(active=>active.chatId===r.chatId))
         : enabledRecipients(settings);
-      let failed = false;
+      const failedIds=[];
       for (const recipient of targetRecipients) {
         try { await sendTextToChat(recipient.chatId, item.text, { silent:!!item.silent }); }
-        catch { failed = true; break; }
+        catch { failedIds.push(recipient.chatId); }
       }
-      if (failed) {
-        kept.push({ ...item, tries:asNumber(item.tries)+1, lastTryAt:Date.now() });
+      if (failedIds.length) {
+        kept.push({ ...item, recipients:failedIds, tries:asNumber(item.tries)+1, lastTryAt:Date.now() });
       } else {
         sent += 1;
         if (item.key) markSent(item.key);

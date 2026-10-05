@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.90-cashtop3-search-logo';
-import { Pagination, usePagination } from './components__common__Pagination.js?v=7.9.4.90-cashtop3-search-logo';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.90-cashtop3-search-logo';
-import { downloadProfessionalTablePDF, downloadProfessionalTableExcel } from './utils__professionalExport.js?v=7.9.4.90-cashtop3-search-logo';
+import { useApp } from './context__AppContext.js?v=7.9.4.134-invoice-filters';
+import { Pagination, usePagination, useDatabasePagination } from './components__common__Pagination.js?v=7.9.4.134-invoice-filters';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.134-invoice-filters';
+import { downloadProfessionalTablePDF, downloadProfessionalTableExcel } from './utils__professionalExport.js?v=7.9.4.134-invoice-filters';
 import { Plus, Search, Trash2, Edit2, FileSpreadsheet, FileText, Settings2, UsersRound, Receipt, WalletCards, X } from 'lucide-react';
 
 const h = React.createElement;
@@ -41,19 +41,18 @@ const paymentMethodLabel = v => ({cash:'نقدي',card:'بطاقة',bank:'تحو
 export const ExpensesView = () => {
   const {
     expenses, vouchers, invoices, accounts, settings, recordExpense, updateExpense,
-    softDeleteExpense, updateSettings, showToast, setActiveTab
+    softDeleteExpense, updateSettings, showToast, setActiveTab, queryAllStoreRecords, queryStoreStats
   } = useApp();
 
   const years = Array.isArray(settings.financialYears) ? settings.financialYears : [];
   const activeFY = settings.activeFinancialYearId || years.find(y=>y?.status==='open')?.id || 'fy-initial';
   const legacyFY = years[0]?.id || activeFY;
-  const currentExpenses = useMemo(()=> (expenses||[]).filter(e=>String(e?.financialYearId || legacyFY)===String(activeFY)), [expenses,activeFY,legacyFY]);
   const configuredCategories = useMemo(() => {
     const configured = Array.isArray(settings.expenseCategories) && settings.expenseCategories.length
       ? settings.expenseCategories : DEFAULT_EXPENSE_CATEGORIES;
     return uniq(configured);
   }, [settings.expenseCategories]);
-  const historicalCategories = useMemo(() => uniq((currentExpenses || []).filter(e => !e.deletedAt).map(e => e.category)), [currentExpenses]);
+  const historicalCategories = useMemo(() => uniq((expenses || []).filter(e => !e.deletedAt).map(e => e.category)), [expenses]);
   const filterCategories = useMemo(() => uniq([...configuredCategories, ...historicalCategories]), [configuredCategories, historicalCategories]);
 
   const [mode, setMode] = useState('expenses');
@@ -102,18 +101,54 @@ export const ExpensesView = () => {
     return true;
   };
   const q = search.trim().toLowerCase();
-  const activeExpenses = useMemo(() => (expenses || []).filter(e => !e.deletedAt), [expenses]);
-  const periodExpenses = activeExpenses.filter(e => inPeriod(e.date));
-  const filteredExpenses = periodExpenses.filter(e => {
-    if (mode === 'labor' && !isLaborCategory(e.category)) return false;
-    if (selectedCategory !== 'all' && e.category !== selectedCategory) return false;
-    if (!q) return true;
-    return String(e.category || '').toLowerCase().includes(q) || String(e.notes || '').toLowerCase().includes(q) || String(e.accountName || '').toLowerCase().includes(q);
-  });
+  const toStartIso = value => value ? new Date(`${value}T00:00:00`).toISOString() : null;
+  const toEndIso = value => value ? new Date(`${value}T23:59:59.999`).toISOString() : null;
+  const laborCategories = filterCategories.filter(isLaborCategory);
+  const expenseFilters = {
+    financialYearId: activeFY,
+    category: selectedCategory !== 'all' ? selectedCategory : (mode === 'labor' ? laborCategories : 'all'),
+  };
+  const expenseQueryOptions = {
+    search,
+    filters: expenseFilters,
+    legacyFinancialYearId: legacyFY,
+    dateFrom: toStartIso(dateFrom),
+    dateTo: toEndIso(dateTo),
+    sortField: 'date',
+    sortDirection: 'desc',
+    deletedMode: 'exclude',
+    pageSize: 50,
+  };
+  const expensePager = useDatabasePagination('expenses', expenseQueryOptions, `${mode}|${search}|${selectedCategory}|${dateFrom}|${dateTo}|${activeFY}`);
+  const filteredExpenses = expensePager.pageItems;
+  const [expenseSummary,setExpenseSummary] = useState({count:0,total:0});
+  useEffect(()=>{
+    if(mode==='receipts'||typeof queryStoreStats!=='function')return undefined;
+    let cancelled=false;
+    queryStoreStats('expenses',{...expenseQueryOptions,sumFields:['amount']}).then(r=>{
+      if(cancelled)return;
+      const a=r?.ranges?.all||{};
+      setExpenseSummary({count:Number(a.count||0),total:Number(a.sums?.amount||0)});
+    }).catch(err=>console.warn('Expense aggregate failed',err));
+    return()=>{cancelled=true;};
+  },[mode,search,selectedCategory,dateFrom,dateTo,activeFY,legacyFY,filterCategories.join('|')]);
+
+  const [receiptInvoices,setReceiptInvoices] = useState([]);
+  const [receiptVouchers,setReceiptVouchers] = useState([]);
+  useEffect(()=>{
+    if(mode!=='receipts'||typeof queryAllStoreRecords!=='function')return undefined;
+    let cancelled=false;
+    const common={legacyFinancialYearId:legacyFY,dateFrom:toStartIso(dateFrom),dateTo:toEndIso(dateTo),deletedMode:'exclude',sortField:'date',sortDirection:'desc',pageSize:200};
+    Promise.all([
+      queryAllStoreRecords('invoices',{...common,filters:{financialYearId:activeFY,type:'sale'}}),
+      queryAllStoreRecords('vouchers',{...common,filters:{financialYearId:activeFY,type:'receipt'}}),
+    ]).then(([is,vs])=>{if(!cancelled){setReceiptInvoices(is||[]);setReceiptVouchers(vs||[]);}}).catch(err=>console.warn('Receipt report load failed',err));
+    return()=>{cancelled=true;};
+  },[mode,dateFrom,dateTo,activeFY,legacyFY]);
+
   const incomingPayments = useMemo(() => {
     const rows = [];
-    for (const inv of (invoices || [])) {
-      if (inv?.deletedAt || inv?.type !== 'sale' || !inPeriod(inv.date)) continue;
+    for (const inv of receiptInvoices) {
       const breakdown = Array.isArray(inv.payments) ? inv.payments.filter(p => Number(p?.amount) > 0) : [];
       if (breakdown.length) {
         breakdown.forEach((p, idx) => {
@@ -132,8 +167,7 @@ export const ExpensesView = () => {
         });
       }
     }
-    for (const v of (vouchers || [])) {
-      if (v?.deletedAt || v?.type !== 'receipt' || !inPeriod(v.date)) continue;
+    for (const v of receiptVouchers) {
       rows.push({
         id:`voucher-${v.id}`, date:v.date, classId:partyClass(v.partyType), reference:v.voucherNumber || v.id,
         partyName:v.partyName || '-', amount:Number(v.amount)||0, accountName:v.accountName || 'حساب مالي',
@@ -141,20 +175,19 @@ export const ExpensesView = () => {
       });
     }
     return rows.sort((a,b)=>new Date(b.date).getTime()-new Date(a.date).getTime());
-  }, [invoices, vouchers, accounts, dateFrom, dateTo]);
+  }, [receiptInvoices, receiptVouchers, accounts]);
   const filteredReceipts = incomingPayments.filter(v => {
     if (selectedReceiptClass !== 'all' && v.classId !== selectedReceiptClass) return false;
     if (!q) return true;
     return String(v.partyName || '').toLowerCase().includes(q) || String(v.notes || '').toLowerCase().includes(q) || String(v.reference || '').toLowerCase().includes(q) || String(v.accountName || '').toLowerCase().includes(q) || String(v.method || '').toLowerCase().includes(q);
   });
 
-  const expensePager = usePagination(filteredExpenses, 50, `${mode}|${search}|${selectedCategory}|${dateFrom}|${dateTo}`);
   const receiptPager = usePagination(filteredReceipts, 50, `${mode}|${search}|${selectedReceiptClass}|${dateFrom}|${dateTo}`);
 
   const total = mode === 'receipts'
     ? filteredReceipts.reduce((s, v) => s + (Number(v.amount) || 0), 0)
-    : filteredExpenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
-  const count = mode === 'receipts' ? filteredReceipts.length : filteredExpenses.length;
+    : expenseSummary.total;
+  const count = mode === 'receipts' ? filteredReceipts.length : expenseSummary.count;
   const receiptSummary = useMemo(() => {
     const base = { sales:0, customer:0, supplier:0, other:0 };
     incomingPayments.forEach(v => { base[v.classId] = (base[v.classId] || 0) + (Number(v.amount) || 0); });
@@ -164,7 +197,7 @@ export const ExpensesView = () => {
   const periodLabel = dateFrom || dateTo
     ? `الفترة: ${dateFrom || 'البداية'} إلى ${dateTo || 'اليوم'}`
     : 'كافة الفترات';
-  const reportMeta = () => {
+  const reportMeta = (expenseRowsSource = filteredExpenses) => {
     if (mode === 'receipts') {
       const cls = selectedReceiptClass === 'all' ? 'كل الدفعات المدخلة' : paymentClassLabel(selectedReceiptClass);
       return {
@@ -179,12 +212,13 @@ export const ExpensesView = () => {
       title: mode === 'labor' ? `كشف العمال والأجور - ${selectedText}` : `كشف المصروفات - ${selectedText}`,
       filename: `${mode === 'labor' ? 'كشف_العمال' : 'كشف_المصروفات'}_${safePart(selectedText)}_${safePart(dateFrom || 'الكل')}_${safePart(dateTo || 'الكل')}`,
       headers: ['التاريخ','نوع المصروف','المبلغ','الحساب المسدد منه','البيان'],
-      rows: filteredExpenses.map(e => [new Date(e.date).toLocaleString('ar-EG'), e.category || '-', Number(e.amount)||0, e.accountName || '-', e.notes || '']),
+      rows: expenseRowsSource.map(e => [new Date(e.date).toLocaleString('ar-EG'), e.category || '-', Number(e.amount)||0, e.accountName || '-', e.notes || '']),
     };
   };
   const exportPDF = async () => {
     if (!count) return showToast('لا توجد بيانات ضمن الفلترة الحالية', 'warning');
-    const r = reportMeta();
+    const fullRows = mode === 'receipts' ? null : await queryAllStoreRecords?.('expenses',{...expenseQueryOptions,pageSize:200});
+    const r = reportMeta(fullRows || filteredExpenses);
     const ok = await downloadProfessionalTablePDF({
       title:r.title,
       subtitle:`${periodLabel} • عدد الحركات: ${count} • الإجمالي: ${money(total)} ${settings.currencySymbol}`,
@@ -194,7 +228,8 @@ export const ExpensesView = () => {
   };
   const exportExcel = async () => {
     if (!count) return showToast('لا توجد بيانات ضمن الفلترة الحالية', 'warning');
-    const r = reportMeta();
+    const fullRows = mode === 'receipts' ? null : await queryAllStoreRecords?.('expenses',{...expenseQueryOptions,pageSize:200});
+    const r = reportMeta(fullRows || filteredExpenses);
     const ok = await downloadProfessionalTableExcel({
       title:r.title,
       subtitle:`${periodLabel} • عدد الحركات: ${count} • الإجمالي: ${money(total)} ${settings.currencySymbol}`,
@@ -220,6 +255,16 @@ export const ExpensesView = () => {
     setAccountId(accounts.find(a=>a.isDefault)?.id || accounts[0]?.id || '');
     setShowAddModal(true);
   };
+  useEffect(()=>{
+    const eventName='cash-top:quick-add-expense';
+    const open=()=>{
+      if(window.__cashTopPendingQuickAction===eventName) window.__cashTopPendingQuickAction='';
+      openNewExpense();
+    };
+    window.addEventListener(eventName,open);
+    if(window.__cashTopPendingQuickAction===eventName) requestAnimationFrame(open);
+    return()=>window.removeEventListener(eventName,open);
+  },[mode,configuredCategories.join('|'),accounts.map(a=>a.id).join('|')]);
   const editExpense = exp => {
     setEditingExpense(exp);
     setAmount(String(exp.amount || ''));
@@ -256,7 +301,7 @@ export const ExpensesView = () => {
 
   const modeButton = (id, label, Icon) => h('button', {
     type:'button', onClick:()=>{ setMode(id); setSearch(''); setSelectedCategory('all'); setSelectedReceiptClass('all'); },
-    className:`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition ${mode===id?'bg-emerald-600 text-white border-emerald-600 shadow-sm':'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`
+    className:`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition ${mode===id?'bg-violet-600 text-white border-violet-600 shadow-sm':'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`
   }, h(Icon,{className:'w-4 h-4'}), label);
 
   const expenseRows = expensePager.pageItems.map(exp => h('tr',{key:exp.id,className:'border-b border-slate-100 hover:bg-slate-50/70'},
@@ -273,9 +318,9 @@ export const ExpensesView = () => {
   const receiptRows = receiptPager.pageItems.map(v => h('tr',{key:v.id,className:'border-b border-slate-100 hover:bg-slate-50/70'},
     h('td',{className:'p-3 font-mono font-bold'},v.reference || '-'),
     h('td',{className:'p-3 text-slate-500'},new Date(v.date).toLocaleString('ar-EG')),
-    h('td',{className:'p-3'},h('span',{className:'px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-bold'},paymentClassLabel(v.classId))),
+    h('td',{className:'p-3'},h('span',{className:'px-2 py-1 rounded-lg bg-violet-50 text-violet-700 font-bold'},paymentClassLabel(v.classId))),
     h('td',{className:'p-3 font-bold'},v.partyName || '-'),
-    h('td',{className:'p-3 font-mono font-black text-emerald-700'},`${money(v.amount)} ${settings.currencySymbol}`),
+    h('td',{className:'p-3 font-mono font-black text-violet-700'},`${money(v.amount)} ${settings.currencySymbol}`),
     h('td',{className:'p-3'},v.method || '-'),
     h('td',{className:'p-3'},v.accountName || 'حساب مالي'),
     h('td',{className:'p-3 max-w-[260px] truncate',title:v.notes||''},v.notes || '-')
@@ -288,10 +333,10 @@ export const ExpensesView = () => {
         h('p',{className:'text-xs text-slate-500 mt-1'},'كشوفات مصنفة حسب النوع والفترة والفلترة، مع تنزيل PDF وExcel احترافي')
       ),
       h('div',{className:'flex flex-wrap items-center gap-2'},
-        mode !== 'receipts' && h('button',{type:'button',onClick:openNewExpense,className:'flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold shadow-sm'},h(Plus,{className:'w-4 h-4'}),'تسجيل مصروف'),
+        mode !== 'receipts' && h('button',{type:'button',onClick:openNewExpense,className:'flex items-center gap-1.5 px-4 py-2 rounded-xl bg-violet-600 text-white text-xs font-bold shadow-sm'},h(Plus,{className:'w-4 h-4'}),'تسجيل مصروف'),
         mode === 'expenses' && h('button',{type:'button',onClick:()=>setShowTypeManager(true),className:'flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-bold'},h(Settings2,{className:'w-4 h-4'}),'أنواع المصروف'),
         h('button',{type:'button',onClick:exportPDF,className:'flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold'},h(FileText,{className:'w-4 h-4 text-rose-600'}),'PDF'),
-        h('button',{type:'button',onClick:exportExcel,className:'flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold'},h(FileSpreadsheet,{className:'w-4 h-4 text-emerald-600'}),'Excel')
+        h('button',{type:'button',onClick:exportExcel,className:'flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold'},h(FileSpreadsheet,{className:'w-4 h-4 text-violet-600'}),'Excel')
       )
     ),
 
@@ -302,7 +347,7 @@ export const ExpensesView = () => {
     ),
 
     h('div',{className:'rounded-2xl bg-white border border-slate-200 shadow-sm p-3 space-y-3'},
-      h('div',{className:'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 items-end'},
+      h('div',{className:'expense-filter-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 items-end'},
         h('div',{className:'relative lg:col-span-2'},
           h('label',{className:'block text-[10px] text-slate-500 font-bold mb-1'},'بحث داخل الكشف'),
           h(Search,{className:'absolute right-3 top-8 w-4 h-4 text-slate-400'}),
@@ -320,12 +365,12 @@ export const ExpensesView = () => {
           h('button',{type:'button',onClick:()=>setQuickRange('month'),className:'px-3 py-1.5 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600'},'هذا الشهر'),
           h('button',{type:'button',onClick:()=>setQuickRange('all'),className:'px-3 py-1.5 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600'},'كل الفترات')
         ),
-        h('div',{className:'text-xs font-bold text-slate-600'},`${periodLabel} • ${count} حركة • الإجمالي: `,h('span',{className:mode==='receipts'?'text-emerald-700 font-mono':'text-rose-600 font-mono'},`${money(total)} ${settings.currencySymbol}`))
+        h('div',{className:'text-xs font-bold text-slate-600'},`${periodLabel} • ${count} حركة • الإجمالي: `,h('span',{className:mode==='receipts'?'text-violet-700 font-mono':'text-rose-600 font-mono'},`${money(total)} ${settings.currencySymbol}`))
       )
     ),
 
     mode === 'receipts' && h('div',{className:'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3'},
-      [['sales','دفعات المبيعات'],['customer','سندات قبض العملاء'],['supplier','سندات قبض الموردين'],['other','دفعات أخرى']].map(([key,label])=>h('button',{key,onClick:()=>setSelectedReceiptClass(key),className:`text-right p-3 rounded-2xl border bg-white shadow-sm ${selectedReceiptClass===key?'border-emerald-500 ring-1 ring-emerald-100':'border-slate-200'}`},h('div',{className:'text-[11px] text-slate-500 font-bold'},label),h('div',{className:'mt-1 text-lg font-black font-mono text-emerald-700'},`${money(receiptSummary[key])} ${settings.currencySymbol}`)))
+      [['sales','دفعات المبيعات'],['customer','سندات قبض العملاء'],['supplier','سندات قبض الموردين'],['other','دفعات أخرى']].map(([key,label])=>h('button',{key,onClick:()=>setSelectedReceiptClass(key),className:`text-right p-3 rounded-2xl border bg-white shadow-sm ${selectedReceiptClass===key?'border-violet-500 ring-1 ring-violet-100':'border-slate-200'}`},h('div',{className:'text-[11px] text-slate-500 font-bold'},label),h('div',{className:'mt-1 text-lg font-black font-mono text-violet-700'},`${money(receiptSummary[key])} ${settings.currencySymbol}`)))
     ),
 
     h('div',{className:'rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden'},
@@ -344,7 +389,7 @@ export const ExpensesView = () => {
       h(Pagination,{pager:mode==='receipts'?receiptPager:expensePager})
     ),
 
-    mode === 'receipts' && h('div',{className:'flex justify-end'},h('button',{type:'button',onClick:()=>setActiveTab?.('vouchers'),className:'text-xs font-bold text-emerald-700 hover:underline'},'فتح سندات القبض والصرف ←')),
+    mode === 'receipts' && h('div',{className:'flex justify-end'},h('button',{type:'button',onClick:()=>setActiveTab?.('vouchers'),className:'text-xs font-bold text-violet-700 hover:underline'},'فتح سندات القبض والصرف ←')),
 
     showAddModal && h('div',{className:'fixed inset-0 z-[70] bg-black/60 p-3 flex items-center justify-center',onClick:()=>setShowAddModal(false)},
       h('form',{onSubmit:saveExpense,onClick:e=>e.stopPropagation(),className:'w-full max-w-md rounded-2xl bg-white shadow-2xl p-5 space-y-4 text-right max-h-[calc(100dvh-130px)] overflow-y-auto'},
@@ -353,14 +398,14 @@ export const ExpensesView = () => {
         h('div',null,h('label',{className:'text-xs font-bold block mb-1'},'نوع المصروف *'),h(SearchableDropdown,{id:'expense-category-editor',options:configuredCategories.map(c=>({id:c,label:c})),selectedId:category,onSelect:setCategory,placeholder:'اختر نوع المصروف'})),
         h('div',null,h('label',{className:'text-xs font-bold block mb-1'},'صرف من الحساب *'),h(SearchableDropdown,{id:'expense-account-editor',options:accounts.map(a=>({id:a.id,label:a.name,subLabel:`الرصيد: ${money(a.balance)} ${settings.currencySymbol}`})),selectedId:accountId,onSelect:setAccountId,placeholder:'اختر الحساب'})),
         h('div',null,h('label',{className:'text-xs font-bold block mb-1'},'البيان / الملاحظات'),h('input',{type:'text',value:notes,onChange:e=>setNotes(e.target.value),placeholder:'تفاصيل المصروف...',className:'w-full px-3 py-2 text-xs border rounded-xl'})),
-        h('div',{className:'flex justify-between pt-2 border-t'},h('button',{type:'button',onClick:()=>setShowAddModal(false),className:'px-3 py-2 text-xs text-slate-500'},'إلغاء'),h('button',{type:'submit',className:'px-5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold'},editingExpense?'حفظ التعديل':'تأكيد التسجيل'))
+        h('div',{className:'flex justify-between pt-2 border-t'},h('button',{type:'button',onClick:()=>setShowAddModal(false),className:'px-3 py-2 text-xs text-slate-500'},'إلغاء'),h('button',{type:'submit',className:'px-5 py-2 rounded-xl bg-violet-600 text-white text-xs font-bold'},editingExpense?'حفظ التعديل':'تأكيد التسجيل'))
       )
     ),
 
     showTypeManager && h('div',{className:'fixed inset-0 z-[75] bg-black/60 p-3 flex items-center justify-center',onClick:()=>setShowTypeManager(false)},
       h('div',{onClick:e=>e.stopPropagation(),className:'expense-types-modal-panel w-full max-w-md rounded-2xl bg-white shadow-2xl text-right overflow-hidden flex flex-col max-h-[calc(100dvh-130px)]'},
         h('div',{className:'shrink-0 flex justify-between items-center p-4 border-b border-slate-100 bg-white'},h('div',null,h('h3',{className:'text-sm font-black'},'إدارة أنواع المصروف'),h('p',{className:'text-[10px] text-slate-500 mt-1'},'الأنواع الجديدة تتزامن ضمن إعدادات الشركة، والحركات القديمة تبقى محفوظة.')),h('button',{type:'button',onClick:()=>setShowTypeManager(false),className:'p-1.5 rounded-lg hover:bg-slate-100'},h(X,{className:'w-4 h-4'}))),
-        h('form',{onSubmit:addExpenseType,className:'shrink-0 flex gap-2 p-4 border-b border-slate-100'},h('input',{value:newType,onChange:e=>setNewType(e.target.value),placeholder:'مثال: وقود، مواصلات، أجور يومية...',className:'flex-1 min-w-0 px-3 py-2 text-xs border rounded-xl'}),h('button',{type:'submit',className:'shrink-0 px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold'},'إضافة')),
+        h('form',{onSubmit:addExpenseType,className:'shrink-0 flex gap-2 p-4 border-b border-slate-100'},h('input',{value:newType,onChange:e=>setNewType(e.target.value),placeholder:'مثال: وقود، مواصلات، أجور يومية...',className:'flex-1 min-w-0 px-3 py-2 text-xs border rounded-xl'}),h('button',{type:'submit',className:'shrink-0 px-4 py-2 rounded-xl bg-violet-600 text-white text-xs font-bold'},'إضافة')),
         h('div',{className:'expense-types-modal-scroll flex-1 min-h-0 overflow-y-auto p-4 space-y-2 custom-scrollbar'},configuredCategories.map(name=>h('div',{key:name,className:'flex justify-between items-center p-2.5 rounded-xl border border-slate-200 bg-slate-50'},h('span',{className:'text-xs font-bold'},name),h('button',{type:'button',onClick:()=>removeExpenseType(name),className:'p-1.5 rounded-lg text-rose-600 hover:bg-rose-50',title:'حذف النوع من القائمة'},h(Trash2,{className:'w-3.5 h-3.5'})))))
       )
     )

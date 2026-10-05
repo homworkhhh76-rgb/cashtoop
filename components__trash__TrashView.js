@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.90-cashtop3-search-logo';
-import { Pagination, usePagination } from './components__common__Pagination.js?v=7.9.4.90-cashtop3-search-logo';
+import { useApp } from './context__AppContext.js?v=7.9.4.134-invoice-filters';
+import { Pagination, usePagination } from './components__common__Pagination.js?v=7.9.4.134-invoice-filters';
 import { RotateCcw, Trash2 } from 'lucide-react';
 
 const h = React.createElement;
@@ -57,7 +57,7 @@ export const TrashView = () => {
 
   const tabButton = (id, label, count) => h('button', {
     type:'button', onClick:()=>setActiveTab(id),
-    className:`px-3 py-1.5 rounded-lg transition whitespace-nowrap ${activeTab===id?'bg-white dark:bg-slate-900 text-emerald-600 shadow-xs':'text-slate-500'}`
+    className:`px-3 py-1.5 rounded-lg transition whitespace-nowrap ${activeTab===id?'bg-white dark:bg-slate-900 text-violet-600 shadow-xs':'text-slate-500'}`
   }, `${label} (${count})`);
 
   return h('div',{id:'trash-screen',className:'p-4 sm:p-6 space-y-4 max-w-5xl mx-auto text-right select-none'},
@@ -74,7 +74,7 @@ export const TrashView = () => {
         ...pager.pageItems.map(item=>h('div',{key:item.id,className:'p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3'},
           h('div',{className:'min-w-0'},h('h4',{className:'font-bold text-sm text-slate-900 dark:text-white truncate'},itemTitle(item)),h('span',{className:'text-xs text-slate-400'},itemSub(item))),
           h('div',{className:'shrink-0 flex items-center gap-2'},
-            h('button',{type:'button',disabled:busyId===item.id,onClick:()=>restore(item),className:'flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold rounded-lg transition disabled:opacity-40'},h(RotateCcw,{className:'w-3.5 h-3.5'}),restoreText),
+            h('button',{type:'button',disabled:busyId===item.id,onClick:()=>restore(item),className:'flex items-center gap-1.5 px-3 py-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs font-bold rounded-lg transition disabled:opacity-40'},h(RotateCcw,{className:'w-3.5 h-3.5'}),restoreText),
             h('button',{type:'button',disabled:busyId===item.id,onClick:()=>permanentlyDelete(item),className:'flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-lg transition disabled:opacity-40'},h(Trash2,{className:'w-3.5 h-3.5'}),busyId===item.id?'جاري الحذف...':'حذف نهائي')
           )
         ))
