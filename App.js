@@ -1,43 +1,43 @@
+import {StartupScreen} from './components__common__StartupScreen.js?v=7.9.4.134-invoice-filters';
 import React, { useEffect, useRef } from 'react';
-import { AppProvider, useApp } from './context__AppContext.js?v=7.9.4.90-cashtop3-search-logo';
-import { Header } from './components__common__Header.js?v=7.9.4.90-cashtop3-search-logo';
-import { Sidebar } from './components__common__Sidebar.js?v=7.9.4.90-cashtop3-search-logo';
-import { BottomNav } from './components__common__BottomNav.js?v=7.9.4.90-cashtop3-search-logo';
-import { Toast } from './components__common__Toast.js?v=7.9.4.90-cashtop3-search-logo';
-import { SyncModal } from './components__sync__SyncModal.js?v=7.9.4.90-cashtop3-search-logo';
-import { POSView } from './components__pos__POSView.js?v=7.9.4.90-cashtop3-search-logo';
-import { DashboardView } from './components__dashboard__DashboardView.js?v=7.9.4.90-cashtop3-search-logo';
-import { SalesView } from './components__sales__SalesView.js?v=7.9.4.90-cashtop3-search-logo';
-import { PurchasesView } from './components__purchases__PurchasesView.js?v=7.9.4.90-cashtop3-search-logo';
-import { ProductsView } from './components__products__ProductsView.js?v=7.9.4.90-cashtop3-search-logo';
-import { CategoriesView } from './components__categories__CategoriesView.js?v=7.9.4.90-cashtop3-search-logo';
-import { InventoryView } from './components__inventory__InventoryView.js?v=7.9.4.90-cashtop3-search-logo';
-import { CustomersView } from './components__customers__CustomersView.js?v=7.9.4.90-cashtop3-search-logo';
-import { SuppliersView } from './components__suppliers__SuppliersView.js?v=7.9.4.90-cashtop3-search-logo';
-import { AccountsView } from './components__accounts__AccountsView.js?v=7.9.4.90-cashtop3-search-logo';
-import { ExpensesView } from './components__expenses__ExpensesView.js?v=7.9.4.90-cashtop3-search-logo';
-import { VouchersView } from './components__vouchers__VouchersView.js?v=7.9.4.90-cashtop3-search-logo';
-import { EmployeesView } from './components__employees__EmployeesView.js?v=7.9.4.90-cashtop3-search-logo';
-import { BarcodesView } from './components__barcodes__BarcodesView.js?v=7.9.4.90-cashtop3-search-logo';
-import { ReportsView } from './components__reports__ReportsView.js?v=7.9.4.90-cashtop3-search-logo';
-import { TrashView } from './components__trash__TrashView.js?v=7.9.4.90-cashtop3-search-logo';
-import { SettingsView } from './components__settings__SettingsView.js?v=7.9.4.90-cashtop3-search-logo';
-import { FinancialYearsView } from './components__financial__FinancialYearsView.js?v=7.9.4.90-cashtop3-search-logo';
-import { ThermalReceiptModal } from './components__pos__ThermalReceiptModal.js?v=7.9.4.90-cashtop3-search-logo';
-import { LoginGate } from './components__auth__LoginGate.js?v=7.9.4.90-cashtop3-search-logo';
-import { RestaurantProvider } from './restaurant__context__RestaurantContext.js?v=7.9.4.90-cashtop3-search-logo';
-import { RestaurantTablesView } from './restaurant__components__RestaurantTablesView.js?v=7.9.4.90-cashtop3-search-logo';
-import { RestaurantWaiterView } from './restaurant__components__RestaurantWaiterView.js?v=7.9.4.90-cashtop3-search-logo';
-import { RestaurantKDSView } from './restaurant__components__RestaurantKDSView.js?v=7.9.4.90-cashtop3-search-logo';
-import { RestaurantWasteView } from './restaurant__components__RestaurantWasteView.js?v=7.9.4.90-cashtop3-search-logo';
-import { RestaurantSettingsPanel } from './restaurant__components__RestaurantSettingsPanel.js?v=7.9.4.90-cashtop3-search-logo';
-import { OscarAI } from './components__ai__OscarAI.js?v=7.9.4.90-cashtop3-search-logo';
-import { MessageTemplatesView } from './components__messages__MessageTemplatesView.js?v=7.9.4.90-cashtop3-search-logo';
-import { isTrialAccount } from './trial__config.js?v=7.9.4.90-cashtop3-search-logo';
-import { canAccessTab, firstAllowedTab } from './utils__permissions.js?v=7.9.4.90-cashtop3-search-logo';
-import { startTelegramAutomation } from './services__telegram.js?v=7.9.4.90-cashtop3-search-logo';
-import { ensureProductImageAutoSync, syncPendingProductImages } from './services__productImages.js?v=7.9.4.90-cashtop3-search-logo';
-import { startDailyBackupAutomation } from './services__telegramReports.js?v=7.9.4.90-cashtop3-search-logo';
+import { AppProvider, useApp } from './context__AppContext.js?v=7.9.4.134-invoice-filters';
+import { Header } from './components__common__Header.js?v=7.9.4.134-invoice-filters';
+import { Sidebar } from './components__common__Sidebar.js?v=7.9.4.134-invoice-filters';
+import { BottomNav } from './components__common__BottomNav.js?v=7.9.4.134-invoice-filters';
+import { Toast } from './components__common__Toast.js?v=7.9.4.134-invoice-filters';
+import { SyncModal } from './components__sync__SyncModal.js?v=7.9.4.134-invoice-filters';
+import { POSView } from './components__pos__POSView.js?v=7.9.4.134-invoice-filters';
+import { DashboardView } from './components__dashboard__DashboardView.js?v=7.9.4.134-invoice-filters';
+import { SalesView } from './components__sales__SalesView.js?v=7.9.4.134-invoice-filters';
+import { PurchasesView } from './components__purchases__PurchasesView.js?v=7.9.4.134-invoice-filters';
+import { ProductsView } from './components__products__ProductsView.js?v=7.9.4.134-invoice-filters';
+import { CategoriesView } from './components__categories__CategoriesView.js?v=7.9.4.134-invoice-filters';
+import { InventoryView } from './components__inventory__InventoryView.js?v=7.9.4.134-invoice-filters';
+import { CustomersView } from './components__customers__CustomersView.js?v=7.9.4.134-invoice-filters';
+import { SuppliersView } from './components__suppliers__SuppliersView.js?v=7.9.4.134-invoice-filters';
+import { AccountsView } from './components__accounts__AccountsView.js?v=7.9.4.134-invoice-filters';
+import { ExpensesView } from './components__expenses__ExpensesView.js?v=7.9.4.134-invoice-filters';
+import { VouchersView } from './components__vouchers__VouchersView.js?v=7.9.4.134-invoice-filters';
+import { EmployeesView } from './components__employees__EmployeesView.js?v=7.9.4.134-invoice-filters';
+import { BarcodesView } from './components__barcodes__BarcodesView.js?v=7.9.4.134-invoice-filters';
+import { ReportsView } from './components__reports__ReportsView.js?v=7.9.4.134-invoice-filters';
+import { TrashView } from './components__trash__TrashView.js?v=7.9.4.134-invoice-filters';
+import { SettingsView } from './components__settings__SettingsView.js?v=7.9.4.134-invoice-filters';
+import { FinancialYearsView } from './components__financial__FinancialYearsView.js?v=7.9.4.134-invoice-filters';
+import { ThermalReceiptModal } from './components__pos__ThermalReceiptModal.js?v=7.9.4.134-invoice-filters';
+import { LoginGate } from './components__auth__LoginGate.js?v=7.9.4.134-invoice-filters';
+import { RestaurantProvider } from './restaurant__context__RestaurantContext.js?v=7.9.4.134-invoice-filters';
+import { RestaurantTablesView } from './restaurant__components__RestaurantTablesView.js?v=7.9.4.134-invoice-filters';
+import { RestaurantWaiterView } from './restaurant__components__RestaurantWaiterView.js?v=7.9.4.134-invoice-filters';
+import { RestaurantKDSView } from './restaurant__components__RestaurantKDSView.js?v=7.9.4.134-invoice-filters';
+import { RestaurantWasteView } from './restaurant__components__RestaurantWasteView.js?v=7.9.4.134-invoice-filters';
+import { RestaurantSettingsPanel } from './restaurant__components__RestaurantSettingsPanel.js?v=7.9.4.134-invoice-filters';
+import { MessageTemplatesView } from './components__messages__MessageTemplatesView.js?v=7.9.4.134-invoice-filters';
+import { isTrialAccount } from './trial__config.js?v=7.9.4.134-invoice-filters';
+import { canAccessTab, firstAllowedTab } from './utils__permissions.js?v=7.9.4.134-invoice-filters';
+import { startTelegramAutomation } from './services__telegram.js?v=7.9.4.134-invoice-filters';
+import { ensureProductImageAutoSync, syncPendingProductImages } from './services__productImages.js?v=7.9.4.134-invoice-filters';
+import { startDailyBackupAutomation } from './services__telegramReports.js?v=7.9.4.134-invoice-filters';
 
 const h = React.createElement;
 const ScrollScreen = ({ children }) => h('div', { className:'scroll-chain-page h-full min-h-0 overflow-y-auto custom-scrollbar mobile-safe-bottom lg:pb-0' }, children);
@@ -51,7 +51,9 @@ const RESTAURANT_TAB_PERMISSIONS = {
 
 const MainLayout = () => {
   const app = useApp();
-  const { activeTab, setActiveTab, isLoaded, settings, saveSettings, currentUser, activeEmployee, cart } = app;
+  const { activeTab, setActiveTab, isLoaded, isCloudReady, settings, saveSettings, currentUser, activeEmployee, cart } = app;
+  const [startupWait,setStartupWait]=React.useState(true);
+  useEffect(()=>{const timer=setTimeout(()=>setStartupWait(false),8000);return()=>clearTimeout(timer)},[]);
   const backupAppRef = useRef(app);
   backupAppRef.current = app;
   useEffect(() => {
@@ -110,26 +112,25 @@ const MainLayout = () => {
       return false;
     };
     const onEnterExecute = (e) => {
-      if (e.key !== 'Enter' || e.defaultPrevented || e.repeat || e.isComposing || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;
-      const target = e.target;
-      if (target?.id === 'pos-barcode-input') return; // Enter here remains barcode submit.
-      if (target?.tagName === 'TEXTAREA') return; // Textareas own Enter/Shift+Enter behavior.
-
-      const form = target?.closest?.('form');
-      if (form) {
-        const submit = Array.from(form.querySelectorAll('button[type="submit"],input[type="submit"]')).find(isVisible);
-        if (submit) { e.preventDefault(); submit.click(); return; }
+      if(e.defaultPrevented||e.repeat||e.isComposing||e.shiftKey||e.ctrlKey||e.altKey||e.metaKey)return;
+      if(e.key!=='Enter'&&e.key!=='Escape')return;
+      const target=e.target;
+      const overlays=Array.from(document.querySelectorAll('[role="dialog"],.ct-modal-layer,body>.fixed')).filter(isVisible).sort((a,b)=>Number(getComputedStyle(a).zIndex||0)-Number(getComputedStyle(b).zIndex||0));
+      const scope=overlays.at(-1)||document.querySelector('.oscar-page-stage')||document;
+      if(e.key==='Escape'){
+        if(document.querySelector('.searchable-dropdown-panel,.ct-nav-menu,.ct-product-actions-menu,.cash-action-menu'))return;
+        const buttons=Array.from(scope.querySelectorAll('button')).filter(isVisible);
+        const cancel=buttons.find(b=>/^(إلغاء|الغاء|إغلاق|اغلاق|رجوع)$/.test((b.textContent||'').trim())||/^(إغلاق|إلغاء)$/.test(b.getAttribute('aria-label')||''))||buttons.find(b=>b.querySelector('svg.lucide-x'));
+        if(cancel){e.preventDefault();cancel.click()}return;
       }
-
-      const executed = clickFirstVisible([
-        '#btn-confirm-payment:not([disabled])',
-        '#waiter-send-kitchen:not([disabled])',
-        '#oscar-ai-send:not([disabled])',
-        '#btn-full-cart-payment:not([disabled])',
-        '#btn-checkout:not([disabled])',
-        '[data-enter-primary="true"]:not([disabled])'
-      ]);
-      if (executed) e.preventDefault();
+      if(target?.id==='pos-barcode-input'||target?.tagName==='TEXTAREA'||target?.closest?.('.searchable-dropdown-panel'))return;
+      if(target?.closest?.('button'))return;
+      const form=target?.closest?.('form')||(overlays.length?(scope.matches?.('form')?scope:scope.querySelector('form')):null);
+      const submit=form&&Array.from(form.querySelectorAll('button[type="submit"],input[type="submit"]')).find(isVisible);
+      if(submit){e.preventDefault();form.requestSubmit?form.requestSubmit(submit):submit.click();return}
+      const candidates=Array.from(scope.querySelectorAll('button')).filter(isVisible);
+      const save=candidates.find(b=>b.matches('[data-enter-primary="true"]'))||candidates.find(b=>/^(حفظ|تأكيد|تطبيق|بيع وحفظ|حفظ المرتجع)/.test((b.textContent||'').trim()));
+      if(save){e.preventDefault();save.click()}
     };
     window.addEventListener('keydown', onEnterExecute);
     return () => window.removeEventListener('keydown', onEnterExecute);
@@ -179,7 +180,7 @@ const MainLayout = () => {
         saveSettings({ ...settings, storeName:companyName, theme:'light' });
       }
     }
-  }, [isLoaded, settings, saveSettings]);
+  }, [isLoaded, isCloudReady, settings, saveSettings]);
 
   const accessArgs = {
     runtime: window.OscarActivation?.readRuntime?.() || null,
@@ -231,6 +232,7 @@ const MainLayout = () => {
     return h(POSView);
   })();
 
+  if(!isLoaded||(startupWait&&!isCloudReady&&navigator.onLine!==false))return h(StartupScreen,{progress:app.startupProgress});
   return h('div', {
     className:'flex w-screen bg-slate-100 text-slate-900 overflow-hidden',
     style:{ height:'var(--oscar-app-height, 100dvh)', minHeight:'var(--oscar-app-height, 100dvh)' }
@@ -245,7 +247,6 @@ const MainLayout = () => {
     ),
     h(ThermalReceiptModal),
     h(SyncModal),
-    !isTrialAccount() ? h(OscarAI) : null,
     h(Toast)
   );
 };

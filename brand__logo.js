@@ -56,7 +56,7 @@ export async function materializeLogoSource(input) {
 }
 
 export function getBrandLogoDisplayUrl(settings) {
-  const display = cleanLogoValue(settings?.logoSourceUrl) || cleanLogoValue(settings?.logoUrl);
+  const display = cleanLogoValue(settings?.logoUrl) || cleanLogoValue(settings?.logoSourceUrl);
   return SAFE_SOURCE_RE.test(display) ? display : DEFAULT_LOGO_DATA_URL;
 }
 
