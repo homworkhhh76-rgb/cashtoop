@@ -1,5 +1,6 @@
+import {t} from './services__i18n.js?v=7.9.4.136-localization';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { queryStorePage } from './services__db.js?v=7.9.4.134-invoice-filters';
+import { queryStorePage } from './services__db.js?v=7.9.4.136-localization';
 
 const h = React.createElement;
 
@@ -182,10 +183,12 @@ export function useDatabasePagination(storeName, options = {}, resetKey = '') {
       }
     };
     window.addEventListener('online', refresh);
+    window.addEventListener('ct-page-refreshed',refresh);
     window.addEventListener('oscar:db-mutation', refresh);
     window.addEventListener('oscar:sync-applied', refresh);
     return () => {
       window.removeEventListener('online', refresh);
+      window.removeEventListener('ct-page-refreshed',refresh);
       window.removeEventListener('oscar:db-mutation', refresh);
       window.removeEventListener('oscar:sync-applied', refresh);
     };
@@ -216,7 +219,7 @@ function pageTokens(page, totalPages) {
 
 export const Pagination = ({ pager, className = '' }) => {
   if (!pager) return null;
-  if (pager.error) return h('div',{role:'alert',className:'p-3 text-sm text-rose-600'},'تعذر تحميل السجلات. ',h('button',{type:'button',onClick:pager.refresh,className:'px-3 py-2 rounded-lg bg-violet-600 text-white'},'إعادة المحاولة'));
+  if (pager.error) return h('div',{role:'alert',className:'p-3 text-sm text-rose-600'},'تعذر تحميل السجلات. ',h('button',{type:'button',onClick:pager.refresh,className:'px-3 py-2 rounded-lg bg-violet-600 text-white'},t("إعادة المحاولة")));
   if (pager.totalItems <= pager.pageSize && !pager.offlineUnavailable) return null;
   const start = (pager.page - 1) * pager.pageSize + 1;
   const end = Math.min(pager.totalItems, pager.page * pager.pageSize);
@@ -227,12 +230,12 @@ export const Pagination = ({ pager, className = '' }) => {
         : `عرض ${start}–${end} من ${pager.totalItems} سجل • ${pager.pageSize} سجل لكل صفحة`
     ),
     h('div', { className:'flex items-center gap-1 flex-wrap justify-center' },
-      h('button', { type:'button', disabled:pager.page <= 1, onClick:()=>pager.setPage(Math.max(1,pager.page-1)), className:'px-3 h-8 rounded-lg border border-slate-200 text-[11px] font-black text-slate-600 bg-white disabled:opacity-35' }, 'السابق'),
+      h('button', { type:'button', disabled:pager.page <= 1, onClick:()=>pager.setPage(Math.max(1,pager.page-1)), className:'px-3 h-8 rounded-lg border border-slate-200 text-[11px] font-black text-slate-600 bg-white disabled:opacity-35' }, t("السابق")),
       ...pageTokens(pager.page,pager.totalPages).map(token => typeof token === 'string'
         ? h('span',{key:token,className:'px-1 text-slate-400'},'…')
         : h('button',{key:token,type:'button',onClick:()=>pager.setPage(token),className:`min-w-8 h-8 px-2 rounded-lg border text-[11px] font-black ${pager.page===token?'bg-violet-600 border-violet-600 text-white':'bg-white border-slate-200 text-slate-600'}`},String(token))
       ),
-      h('button', { type:'button', disabled:pager.page >= pager.totalPages, onClick:()=>pager.setPage(Math.min(pager.totalPages,pager.page+1)), className:'px-3 h-8 rounded-lg border border-slate-200 text-[11px] font-black text-slate-600 bg-white disabled:opacity-35' }, 'التالي')
+      h('button', { type:'button', disabled:pager.page >= pager.totalPages, onClick:()=>pager.setPage(Math.min(pager.totalPages,pager.page+1)), className:'px-3 h-8 rounded-lg border border-slate-200 text-[11px] font-black text-slate-600 bg-white disabled:opacity-35' }, t("التالي"))
     )
   );
 };

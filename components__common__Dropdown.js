@@ -1,3 +1,5 @@
+import {t} from './services__i18n.js?v=7.9.4.136-localization';
+import {registerLayer} from './hooks__appNavigation.js?v=7.9.4.136-localization';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, Search, Plus, Check, X } from 'lucide-react';
@@ -8,6 +10,7 @@ export const SearchableDropdown = ({
   onQuickAdd, quickAddLabel='+ إضافة سريعة', className='', disabled=false,
 }) => {
   const [isOpen,setIsOpen]=useState(false);
+  useEffect(()=>{if(isOpen)return registerLayer(()=>setIsOpen(false))},[isOpen]);
   const [search,setSearch]=useState('');
   const [searchOpen,setSearchOpen]=useState(false);
   const [panelStyle,setPanelStyle]=useState({});
@@ -81,14 +84,14 @@ export const SearchableDropdown = ({
       searchOpen
         ? h('div',{className:'relative mb-1 shrink-0'},
             h(Search,{className:'absolute right-2.5 top-2.5 w-4 h-4 text-slate-400 pointer-events-none'}),
-            h('input',{ref:searchRef,type:'text',id:`dropdown-search-${id}`,value:search,onChange:e=>setSearch(e.target.value),placeholder:'اكتب للبحث...',className:'w-full pr-8 pl-8 py-2 text-xs rounded-lg border border-violet-300 dark:border-violet-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500/15'}),
-            h('button',{type:'button',onClick:()=>{setSearch('');setSearchOpen(false);},className:'absolute left-2 top-2 p-0.5 rounded text-slate-400 hover:text-slate-700',title:'إغلاق البحث'},h(X,{className:'w-4 h-4'}))
+            h('input',{ref:searchRef,type:'text',id:`dropdown-search-${id}`,value:search,onChange:e=>setSearch(e.target.value),placeholder:t("اكتب للبحث..."),className:'w-full pr-8 pl-8 py-2 text-xs rounded-lg border border-violet-300 dark:border-violet-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500/15'}),
+            h('button',{type:'button',onClick:()=>{setSearch('');setSearchOpen(false);},className:'absolute left-2 top-2 p-0.5 rounded text-slate-400 hover:text-slate-700',title:t("إغلاق البحث")},h(X,{className:'w-4 h-4'}))
           )
-        : h('button',{type:'button',onClick:()=>setSearchOpen(true),className:'mb-1 shrink-0 w-full flex items-center justify-center gap-1.5 px-2 py-2 text-[11px] font-semibold text-slate-500 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/70 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800'},h(Search,{className:'w-3.5 h-3.5'}),'بحث في القائمة'),
+        : h('button',{type:'button',onClick:()=>setSearchOpen(true),className:'mb-1 shrink-0 w-full flex items-center justify-center gap-1.5 px-2 py-2 text-[11px] font-semibold text-slate-500 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/70 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800'},h(Search,{className:'w-3.5 h-3.5'}),t("بحث في القائمة")),
       onQuickAdd&&h('button',{type:'button',id:`dropdown-quick-add-${id}`,onClick:()=>{setIsOpen(false);setSearchOpen(false);setSearch('');onQuickAdd();},className:'shrink-0 w-full flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-semibold text-violet-700 bg-violet-50 rounded-lg hover:bg-violet-100 mb-1'},h(Plus,{className:'w-3.5 h-3.5'}),quickAddLabel),
       h('div',{className:'min-h-0 flex-1 overflow-y-auto space-y-0.5 custom-scrollbar'},
         ...(filteredOptions.length===0
-          ? [h('div',{className:'p-4 text-center text-xs text-slate-400'},'لا توجد نتائج مطابقة')]
+          ? [h('div',{className:'p-4 text-center text-xs text-slate-400'},t("لا توجد نتائج مطابقة"))]
           : filteredOptions.map(opt=>{const selected=String(opt.id)===String(selectedId);return h('button',{key:opt.id,type:'button',id:`dropdown-opt-${id}-${opt.id}`,onClick:()=>{onSelect(opt.id);setIsOpen(false);setSearchOpen(false);setSearch('');},className:`w-full flex items-center justify-between gap-2 px-2.5 py-2 text-xs rounded-lg transition text-right ${selected?'bg-violet-600 text-white font-bold':'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'}`},
             h('div',{className:'min-w-0 truncate'},h('div',{className:'truncate'},opt.label),opt.subLabel&&h('div',{className:`text-[9px] truncate ${selected?'text-violet-100':'text-slate-400'}`},opt.subLabel)),
             selected&&h(Check,{className:'w-3.5 h-3.5 shrink-0'})

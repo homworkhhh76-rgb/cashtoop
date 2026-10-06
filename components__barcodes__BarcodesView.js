@@ -1,9 +1,10 @@
+import {t} from './services__i18n.js?v=7.9.4.136-localization';
 import React, { useEffect, useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.134-invoice-filters';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.134-invoice-filters';
-import { printReceiptElement } from './utils__export.js?v=7.9.4.134-invoice-filters';
+import { useApp } from './context__AppContext.js?v=7.9.4.136-localization';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.136-localization';
+import { printReceiptElement } from './utils__export.js?v=7.9.4.136-localization';
 import { Printer, Barcode as BarcodeIcon } from 'lucide-react';
-import { code128Geometry } from './utils__code128.js?v=7.9.4.134-invoice-filters';
+import { code128Geometry } from './utils__code128.js?v=7.9.4.136-localization';
 const h = React.createElement;
 
 const BarcodeSvg = ({ value, compact = false }) => {
@@ -36,8 +37,8 @@ export const BarcodesView = () => {
   return h('div',{id:'barcodes-screen',className:'p-4 sm:p-6 space-y-4 max-w-5xl mx-auto text-right select-none'},
     h('div',{className:'flex items-center justify-end'},h('button',{onClick:printNow,className:'flex items-center gap-2 px-5 py-2.5 rounded-xl bg-violet-600 text-white text-xs font-bold shadow'},h(Printer,{className:'w-4 h-4'}),'طباعة الملصقات')),
     h('div',{className:'grid grid-cols-1 sm:grid-cols-4 gap-3 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm'},
-      h('div',{className:'sm:col-span-2'},h(SearchableDropdown,{id:'barcode-product',label:'الصنف:',options:productOptions,selectedId:selectedProductId,onSelect:(id)=>{setSelectedProductId(id); const p=activeProducts.find(x=>x.id===id);setSelectedUnitId(p?.units?.[0]?.id||'');},placeholder:'ابحث باسم الصنف أو الكود...'})),
-      h('div',{},h(SearchableDropdown,{id:'barcode-unit',label:'الوحدة:',options:unitOptions,selectedId:selectedUnitId,onSelect:setSelectedUnitId,placeholder:'ابحث عن الوحدة...'})),
+      h('div',{className:'sm:col-span-2'},h(SearchableDropdown,{id:'barcode-product',label:t("الصنف:"),options:productOptions,selectedId:selectedProductId,onSelect:(id)=>{setSelectedProductId(id); const p=activeProducts.find(x=>x.id===id);setSelectedUnitId(p?.units?.[0]?.id||'');},placeholder:'ابحث باسم الصنف أو الكود...'})),
+      h('div',{},h(SearchableDropdown,{id:'barcode-unit',label:t("الوحدة:"),options:unitOptions,selectedId:selectedUnitId,onSelect:setSelectedUnitId,placeholder:'ابحث عن الوحدة...'})),
       h('div',{},h('label',{className:'text-xs font-bold block mb-1'},'عدد النسخ:'),h('input',{type:'number',min:1,max:100,value:copies,onChange:e=>setCopies(Math.max(1,parseInt(e.target.value)||1)),className:'w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-mono font-bold text-center'}))
     ),
     h('div',{className:'flex items-center gap-2'},

@@ -6035,3 +6035,42 @@ tbody>tr>td{background-color:transparent}
 .oscar-page-stage{animation:ct-page-open 180ms ease-out!important}.osd-kpi,.ct-invoice-card,tbody>tr{animation:ct-record-enter 220ms ease-out backwards}.osd-kpi:nth-child(2),.ct-invoice-card:nth-child(2){animation-delay:30ms}.osd-kpi:nth-child(3),.ct-invoice-card:nth-child(3){animation-delay:55ms}.osd-kpi:nth-child(4),.ct-invoice-card:nth-child(4){animation-delay:75ms}@keyframes ct-record-enter{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){.oscar-page-stage,.osd-kpi,.ct-invoice-card,tbody>tr,.ct-person-face,.ct-person-eyes,.ct-person-smile{animation:none!important}}
 @media(max-width:767px){.ct-sales-toolbar{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px!important}.ct-sales-toolbar>div{min-width:0!important}.ct-sales-toolbar>div:not(.ct-sales-inline-filter){grid-column:1/-1}.ct-sales-toolbar select{width:100%}}
+/* App drawer and receipt readability */
+.ct-app-drawer{width:310px!important;max-width:88vw!important;border-radius:24px 0 0 24px;animation:ct-drawer-in .25s cubic-bezier(.2,.8,.2,1);background:#faf9ff!important}
+.ct-drawer-backdrop{animation:ct-drawer-dim .2s ease-out}
+.ct-drawer-brand>div{padding:24px 16px!important;background:linear-gradient(135deg,#f5f0ff,#fff)!important}
+.ct-drawer-close{position:absolute;inset-inline-end:10px;top:9px;width:30px;height:30px;display:grid;place-items:center;border-radius:10px;color:#7c3aed;background:#ede9fe}
+.ct-drawer-nav{flex:1;min-height:0;overflow-y:auto;padding:6px 12px 14px;overscroll-behavior:contain!important}
+.ct-drawer-nav section h3{font-size:10px;font-weight:800;color:#9b91ac;padding:15px 12px 6px}
+.ct-drawer-item{width:100%;display:flex;align-items:center;gap:10px;padding:8px 10px;margin:2px 0;border-radius:14px;color:#514764;text-align:start;font-size:12px;font-weight:700;transition:background .15s,transform .15s}
+.ct-drawer-item:active{transform:scale(.98)}.ct-drawer-item.is-active{background:#7c3aed;color:white;box-shadow:0 5px 14px #7c3aed26}
+.ct-drawer-icon{display:grid;place-items:center;width:34px;height:34px;flex-shrink:0;background:#eee8fa;color:#7c3aed;border-radius:11px}.is-active .ct-drawer-icon{background:#ffffff24;color:white}.ct-drawer-label{flex:1}.ct-drawer-item b{font-size:10px;padding:2px 7px;border-radius:8px;background:#ffffff30}
+.ct-drawer-logout{display:flex;align-items:center;gap:10px;padding:16px 22px;padding-bottom:max(16px,env(safe-area-inset-bottom));color:#dc2626;font-size:12px;font-weight:800;border-top:1px solid #eee8fa;background:white;flex-shrink:0}
+@keyframes ct-drawer-in{from{transform:translateX(100%);opacity:.5}to{transform:translateX(0);opacity:1}}@keyframes ct-drawer-dim{from{opacity:0}to{opacity:1}}
+.ct-startup-offline .ct-progress-person svg>circle:nth-child(2){transform-origin:100px 100px;animation:ct-spin .45s linear infinite;stroke-dasharray:28 100}
+.invoice-detail-actions{order:-1;flex-shrink:0;border-top:0!important;border-bottom:1px solid #ede9fe}
+.invoice-detail-actions>div{flex-wrap:wrap;gap:5px!important}.invoice-detail-actions button{min-height:34px;padding:5px 9px!important}
+.receipt-items-table thead th{background:white!important;color:#111!important;font-size:11px!important;border-bottom:1px solid #777!important;white-space:normal!important}
+.receipt-paper .receipt-cell{font-size:11px!important;line-height:1.65!important;padding:5px 2px!important;overflow-wrap:anywhere}
+.receipt-paper .receipt-brand-logo{height:98px!important;max-width:210px!important}.receipt-paper-58 .receipt-brand-logo{height:75px!important;max-width:155px!important}
+.receipt-paper .receipt-store-name{font-size:23px!important}.receipt-paper .receipt-meta,.receipt-paper .receipt-total-row{font-size:12px!important}.receipt-paper-58 .receipt-cell,.receipt-paper-58 .receipt-items-table thead th{font-size:9px!important}
+.receipt-paper .receipt-col-index{width:6%!important}.receipt-paper .receipt-col-product{width:29%!important}.receipt-paper .receipt-col-unit{width:14%!important}.receipt-paper .receipt-col-qty{width:12%!important}.receipt-paper .receipt-col-price{width:18%!important}.receipt-paper .receipt-col-total{width:21%!important}
+.receipt-paper .receipt-system-mark{text-align:left!important;font-size:9px!important;font-weight:700;color:#333!important;margin-top:12px}
+@media(prefers-reduced-motion:reduce){.ct-app-drawer,.ct-drawer-backdrop,.ct-startup-offline .ct-progress-person svg>circle:nth-child(2){animation:none!important}}
+.ct-pull-indicator{position:absolute;top:0;left:50%;z-index:30;width:40px;height:40px;border-radius:50%;background:white;box-shadow:0 3px 14px #6d28d92a;display:grid;place-items:center;color:#7c3aed;pointer-events:none;transition:opacity .18s}.ct-pull-indicator.is-refreshing svg{animation:ct-spin .6s linear infinite}
+main{overscroll-behavior-y:contain!important}.ct-financial-close-dialog{background:white;border-radius:22px;padding:22px;max-width:650px;width:100%;display:grid;gap:16px;max-height:90dvh;overflow:auto}.ct-financial-close-dialog h3{font-size:18px;font-weight:800}.ct-financial-close-dialog>label{display:grid;gap:8px}.ct-financial-close-dialog input{border:1px solid #ddd6fe;border-radius:12px;padding:10px}.ct-financial-close-button,.ct-archive-download{display:inline-flex;align-items:center;gap:8px;background:#7c3aed;color:white;padding:10px 16px;border-radius:12px;font-size:12px;font-weight:700}.ct-archive-download{margin-top:8px;background:#ede9fe;color:#6d28d9}.ct-mobile-return-toggle{display:flex;align-items:center;justify-content:center;gap:5px;padding:8px;border:1px solid #fecdd3;border-radius:12px;color:#e11d48;font-size:12px}.ct-mobile-return-toggle[aria-pressed=true]{background:#ffe4e6}
+.oscar-product-card{animation:ct-product-enter .23s ease-out backwards}@keyframes ct-product-enter{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.oscar-product-card{animation:none!important}.oscar-page-stage{transition:none!important}}
+.ct-language-backdrop{position:fixed;inset:0;z-index:110000;background:#17102226}.ct-language-panel{position:fixed;width:220px;padding:8px;background:white;color:#302342;border:1px solid #eee6f7;border-radius:17px;box-shadow:0 16px 48px #26124430;animation:ct-drawer-dim .16s ease-out}.ct-language-panel>button{display:flex;align-items:center;justify-content:space-between;width:100%;padding:11px 12px;border-radius:10px;text-align:start;font-size:14px}.ct-language-panel>button[aria-pressed=true]{background:#ede9fe;color:#6d28d9;font-weight:800}.ct-language-heading{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;font-size:12px}.ct-auth-language{position:absolute;top:16px;inset-inline-end:16px}.ct-auth-language .ct-language-button{color:#7c3aed;background:#ede9fe}
+html[dir=ltr] body,html[dir=ltr] [dir=rtl],html[dir=ltr] #ct-pos-workspace,html[dir=ltr] .ct-payment-dialog{direction:ltr!important}
+html[dir=ltr] .text-right,html[dir=ltr] input:not([type=number]),html[dir=ltr] textarea,html[dir=ltr] .auth2-view{text-align:left!important}
+html[dir=ltr] .text-left{text-align:right!important}
+html[dir=ltr] .ct-item-fields label>span,html[dir=ltr] .ct-compact-field>span,html[dir=ltr] .ct-inline-label>span,html[dir=ltr] .ct-top-item-tools label>span,html[dir=ltr] .ct-outlined-field>span,html[dir=ltr] .ct-modal-layer .ct-product-name-field>label{left:9px!important;right:auto!important}
+html[dir=ltr] .ct-dropdown-label{left:10px!important;right:auto!important}
+html[dir=ltr] #ct-mobile-sidebar-overlay>.mobile-sidebar-panel{left:0!important;right:auto!important;border-radius:0 24px 24px 0;animation-name:ct-drawer-in-ltr}
+html[dir=ltr] .ct-drawer-chevron,html[dir=ltr] button[aria-label=Back] svg{transform:rotate(180deg)}
+@keyframes ct-drawer-in-ltr{from{transform:translateX(-100%);opacity:.5}to{transform:translateX(0);opacity:1}}
+/* Printed rows must never inherit the record-entry fade animation. */
+.receipt-paper tbody tr,.receipt-paper td{animation:none!important;opacity:1!important;transform:none!important;color:#111!important}
+.ct-more-products{display:block;margin:14px auto;padding:10px 24px;border:1px solid #ddd6fe;border-radius:12px;color:#6d28d9;background:#f5f0ff;font-weight:700;font-size:12px}
+@media print{tbody tr,.oscar-page-stage{animation:none!important;opacity:1!important;transform:none!important}}
