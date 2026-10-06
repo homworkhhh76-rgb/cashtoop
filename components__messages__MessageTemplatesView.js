@@ -1,6 +1,7 @@
+import {t} from './services__i18n.js?v=7.9.4.136-localization';
 import React,{useMemo,useState} from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.134-invoice-filters';
-import { createCustomerPortalLinks } from './services__customerPortalLinks.js?v=7.9.4.134-invoice-filters';
+import { useApp } from './context__AppContext.js?v=7.9.4.136-localization';
+import { createCustomerPortalLinks } from './services__customerPortalLinks.js?v=7.9.4.136-localization';
 import { Save, Send, UserRound, ReceiptText, Link2, Copy, MessageSquareText } from 'lucide-react';
 
 const h=React.createElement;
@@ -11,14 +12,14 @@ const DEFAULTS={
   customerSms:`{store_name}: رصيدك الحالي {balance} {currency}. للسداد: {payment_link}`,
 };
 const INVOICE_VARS=[
- {label:'اسم المتجر',token:'{store_name}'},{label:'اسم العميل',token:'{customer_name}'},{label:'رقم هاتف العميل',token:'{customer_phone}'},
- {label:'رقم الفاتورة',token:'{invoice_no}'},{label:'تاريخ الفاتورة',token:'{invoice_date}'},{label:'إجمالي الفاتورة',token:'{invoice_total}'},
- {label:'المبلغ المدفوع',token:'{paid_amount}'},{label:'المبلغ المتبقي',token:'{remaining_amount}'},{label:'العملة',token:'{currency}'},
+ {label:'اسم المتجر',token:'{store_name}'},{label:t("اسم العميل"),token:'{customer_name}'},{label:'رقم هاتف العميل',token:'{customer_phone}'},
+ {label:t("رقم الفاتورة"),token:'{invoice_no}'},{label:'تاريخ الفاتورة',token:'{invoice_date}'},{label:'إجمالي الفاتورة',token:'{invoice_total}'},
+ {label:t("المبلغ المدفوع"),token:'{paid_amount}'},{label:'المبلغ المتبقي',token:'{remaining_amount}'},{label:t("العملة"),token:'{currency}'},
  {label:'رابط السداد',token:'{payment_link}'},{label:'رابط صفحة العميل',token:'{customer_link}'}
 ];
 const CUSTOMER_VARS=[
- {label:'اسم المتجر',token:'{store_name}'},{label:'اسم العميل',token:'{customer_name}'},{label:'رقم هاتف العميل',token:'{customer_phone}'},
- {label:'رصيد العميل',token:'{balance}'},{label:'العملة',token:'{currency}'},{label:'رابط السداد',token:'{payment_link}'},
+ {label:'اسم المتجر',token:'{store_name}'},{label:t("اسم العميل"),token:'{customer_name}'},{label:'رقم هاتف العميل',token:'{customer_phone}'},
+ {label:'رصيد العميل',token:'{balance}'},{label:t("العملة"),token:'{currency}'},{label:'رابط السداد',token:'{payment_link}'},
  {label:'رابط صفحة العميل',token:'{customer_link}'},{label:'كود العميل',token:'{customer_code}'}
 ];
 const money=v=>Number(v||0).toFixed(2);
@@ -125,7 +126,7 @@ export const MessageTemplatesView=()=>{
   );
 
   return h('div',{className:'p-4 sm:p-6 max-w-5xl mx-auto space-y-5 text-right'},
-    h('div',{className:'flex flex-col sm:flex-row sm:items-center justify-between gap-3'},h('div',null,h('div',{className:'flex items-center gap-2'},h(MessageSquareText,{className:'w-6 h-6 text-violet-600'}),h('h2',{className:'text-xl font-black'},'قوالب الرسائل')),h('p',{className:'text-xs text-slate-500 mt-1'},'قوالب جاهزة للفواتير والعملاء مع رابط سداد مختصر ومباشر.')),h('button',{type:'button',onClick:saveTemplates,className:'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-violet-600 text-white text-xs font-black'},h(Save,{className:'w-4 h-4'}),'حفظ القوالب')),
+    h('div',{className:'flex flex-col sm:flex-row sm:items-center justify-between gap-3'},h('div',null,h('div',{className:'flex items-center gap-2'},h(MessageSquareText,{className:'w-6 h-6 text-violet-600'}),h('h2',{className:'text-xl font-black'},t("قوالب الرسائل"))),h('p',{className:'text-xs text-slate-500 mt-1'},'قوالب جاهزة للفواتير والعملاء مع رابط سداد مختصر ومباشر.')),h('button',{type:'button',onClick:saveTemplates,className:'inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-violet-600 text-white text-xs font-black'},h(Save,{className:'w-4 h-4'}),'حفظ القوالب')),
     h('div',{className:'rounded-2xl border border-violet-100 bg-violet-50/50 p-3 text-[11px] text-violet-900 leading-6'},h('div',{className:'font-black flex items-center gap-1.5'},h(Link2,{className:'w-4 h-4'}),'رابط الدفع المختصر'),h('div',null,'عند الإرسال ينشئ كاش توب 3 كود شركة من 5 خانات وكود عميل من 5 خانات، ويضع رابط السداد القصير داخل الرسالة تلقائياً.')),
     editor('invoice','قوالب رسائل الفواتير',INVOICE_VARS,h('select',{value:invoiceId,onChange:e=>setInvoiceId(e.target.value),className:'w-full px-3 py-2.5 rounded-xl border bg-white text-xs'},h('option',{value:''},'اختر فاتورة للإرسال...'),...sales.map(inv=>h('option',{key:inv.id,value:inv.id},`#${inv.invoiceNumber||inv.id} — ${inv.customerName||liveCustomers.find(c=>String(c.id)===String(inv.customerId))?.name||'عميل'} — ${money(inv.grandTotal)} ${settings.currencySymbol||'₪'}`)))),
     editor('customer','قوالب رسائل العملاء',CUSTOMER_VARS,h('select',{value:customerId,onChange:e=>setCustomerId(e.target.value),className:'w-full px-3 py-2.5 rounded-xl border bg-white text-xs'},h('option',{value:''},'اختر عميلاً للإرسال...'),...liveCustomers.map(c=>h('option',{key:c.id,value:c.id},`${c.name} — ${c.phone||'بدون هاتف'} — ${money(c.balance)} ${settings.currencySymbol||'₪'}`))))

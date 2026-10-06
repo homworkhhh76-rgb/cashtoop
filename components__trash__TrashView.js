@@ -1,6 +1,7 @@
+import {t} from './services__i18n.js?v=7.9.4.136-localization';
 import React, { useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.134-invoice-filters';
-import { Pagination, usePagination } from './components__common__Pagination.js?v=7.9.4.134-invoice-filters';
+import { useApp } from './context__AppContext.js?v=7.9.4.136-localization';
+import { Pagination, usePagination } from './components__common__Pagination.js?v=7.9.4.136-localization';
 import { RotateCcw, Trash2 } from 'lucide-react';
 
 const h = React.createElement;
@@ -62,7 +63,7 @@ export const TrashView = () => {
 
   return h('div',{id:'trash-screen',className:'p-4 sm:p-6 space-y-4 max-w-5xl mx-auto text-right select-none'},
     h('div',{className:'flex flex-col sm:flex-row sm:items-center justify-between gap-4'},
-      h('div',null,h('h2',{className:'text-xl font-black text-slate-900 dark:text-white'},'سلة المحذوفات'),h('p',{className:'text-xs text-slate-500 mt-0.5'},'استرجع العنصر أو احذفه نهائياً من قاعدة البيانات. الحذف النهائي لا يمكن التراجع عنه.')),
+      h('div',null,h('h2',{className:'text-xl font-black text-slate-900 dark:text-white'},t("سلة المحذوفات")),h('p',{className:'text-xs text-slate-500 mt-0.5'},'استرجع العنصر أو احذفه نهائياً من قاعدة البيانات. الحذف النهائي لا يمكن التراجع عنه.')),
       h('div',{className:'flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-bold overflow-x-auto'},
         tabButton('products','الأصناف',deletedProducts.length), tabButton('customers','العملاء',deletedCustomers.length),
         tabButton('suppliers','الموردون',deletedSuppliers.length), tabButton('expenses','المصروفات',deletedExpenses.length)

@@ -1,5 +1,5 @@
-import { getAllFromStore, getFromStore, putInStore } from './services__db.js?v=7.9.4.134-invoice-filters';
-import { renderInvoiceCanvas, renderVoucherCanvas, renderTableCanvas } from './utils__canvasRenderer.js?v=7.9.4.134-invoice-filters';
+import { getAllFromStore, getFromStore, putInStore } from './services__db.js?v=7.9.4.136-localization';
+import { renderInvoiceCanvas, renderVoucherCanvas, renderTableCanvas } from './utils__canvasRenderer.js?v=7.9.4.136-localization';
 
 // Telegram integration for Cash Top 3.
 // The owner explicitly requested embedding this token in the app build.

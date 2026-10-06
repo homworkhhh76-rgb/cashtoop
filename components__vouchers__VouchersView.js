@@ -1,11 +1,12 @@
+import {t} from './services__i18n.js?v=7.9.4.136-localization';
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useApp } from './context__AppContext.js?v=7.9.4.134-invoice-filters';
-import { Pagination, useDatabasePagination } from './components__common__Pagination.js?v=7.9.4.134-invoice-filters';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.134-invoice-filters';
-import { exportToCSV, printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.134-invoice-filters';
-import { downloadProfessionalTablePDF, downloadProfessionalTableImage, downloadProfessionalVoucherPDF, downloadProfessionalVoucherImage } from './utils__professionalExport.js?v=7.9.4.134-invoice-filters';
-import { getBrandLogoDataUrl, getBrandLogoDisplayUrl } from './brand__logo.js?v=7.9.4.134-invoice-filters';
+import { useApp } from './context__AppContext.js?v=7.9.4.136-localization';
+import { Pagination, useDatabasePagination } from './components__common__Pagination.js?v=7.9.4.136-localization';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.136-localization';
+import { exportToCSV, printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.136-localization';
+import { downloadProfessionalTablePDF, downloadProfessionalTableImage, downloadProfessionalVoucherPDF, downloadProfessionalVoucherImage } from './utils__professionalExport.js?v=7.9.4.136-localization';
+import { getBrandLogoDataUrl, getBrandLogoDisplayUrl } from './brand__logo.js?v=7.9.4.136-localization';
 import { FileSpreadsheet, ArrowDownLeft, ArrowUpRight, Search, Trash2, Printer, Download, Image as ImageIcon, FileText, CreditCard, User, Building2, AlertCircle, Eye, X } from 'lucide-react';
 
 const h = React.createElement;
@@ -151,7 +152,7 @@ export const VouchersView = () => {
     h('div',{className:'py-3 space-y-2 border-b border-dashed border-gray-300 text-[11px]'},
       h('div',{className:'flex justify-between gap-3'},h('span',{className:'text-gray-500'},viewingVoucher.type==='receipt'?'استلمنا من:':'صرفنا إلى:'),h('span',{className:'font-black text-gray-900 text-left'},viewingVoucher.partyName || '-')),
       h('div',{className:'flex justify-between gap-3'},h('span',{className:'text-gray-500'},viewingVoucher.type==='receipt'?'في حساب:':'من حساب:'),h('span',{className:'font-bold text-gray-800 text-left'},viewingVoucher.sourceType==='account'?(viewingVoucher.accountName || 'حساب مالي'):'بدون حساب')),
-      h('div',{className:'flex justify-between items-center gap-3 bg-slate-50 p-2.5 rounded-lg border border-gray-200'},h('span',{className:'font-black text-gray-700'},'المبلغ:'),h('span',{className:'text-lg font-black text-violet-700 font-mono',dir:'ltr'},`${money(viewingVoucher.amount)} ${settings.currencySymbol || ''}`)),
+      h('div',{className:'flex justify-between items-center gap-3 bg-slate-50 p-2.5 rounded-lg border border-gray-200'},h('span',{className:'font-black text-gray-700'},t("المبلغ:")),h('span',{className:'text-lg font-black text-violet-700 font-mono',dir:'ltr'},`${money(viewingVoucher.amount)} ${settings.currencySymbol || ''}`)),
       viewingVoucher.notes ? h('div',{className:'pt-1'},h('span',{className:'text-gray-500 block text-[9px]'},'البيان:'),h('div',{className:'text-[10px] font-semibold bg-gray-50 p-2 rounded border border-gray-100'},viewingVoucher.notes)) : null
     ),
     h('div',{className:'pt-4 grid grid-cols-2 text-center text-[9px] text-gray-500 gap-3'},
@@ -163,7 +164,7 @@ export const VouchersView = () => {
 
   return h('div',{id:'vouchers-view-container',className:'p-3 sm:p-5 space-y-4 max-w-7xl mx-auto select-none min-h-full'},
     h('div',{className:'flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800'},
-      h('div',null,h('div',{className:'flex items-center gap-2'},h(FileSpreadsheet,{className:'w-5 h-5 text-violet-600'}),h('h2',{className:'text-lg font-black'},'سندات القبض والصرف'))),
+      h('div',null,h('div',{className:'flex items-center gap-2'},h(FileSpreadsheet,{className:'w-5 h-5 text-violet-600'}),h('h2',{className:'text-lg font-black'},t("سندات القبض والصرف")))),
       h('div',{id:'voucher-create-actions',className:'flex gap-2 flex-wrap'},
         h('button',{type:'button',disabled:!canManageVouchers,onClick:()=>openNew('receipt'),className:'px-3 py-2 rounded-xl bg-violet-600 text-white text-xs font-black flex items-center gap-1.5'},h(ArrowDownLeft,{className:'w-4 h-4'}),'سند قبض'),
         h('button',{type:'button',disabled:!canManageVouchers,onClick:()=>openNew('payment'),className:'px-3 py-2 rounded-xl bg-amber-600 text-white text-xs font-black flex items-center gap-1.5'},h(ArrowUpRight,{className:'w-4 h-4'}),'سند صرف')
@@ -177,7 +178,7 @@ export const VouchersView = () => {
     h('div',{className:'flex flex-wrap items-center gap-2'},
       ...[['all','الكل'],['receipt','قبض'],['payment','صرف']].map(([id,label])=>h('button',{key:id,type:'button',onClick:()=>setActiveTabFilter(id),className:`px-3 py-1.5 rounded-lg text-xs font-bold ${activeTabFilter===id?'bg-slate-900 text-white':'bg-white border text-slate-600'}`},label)),
       h('div',{className:'relative flex-1 min-w-[180px]'},h(Search,{className:'absolute right-2.5 top-2.5 w-4 h-4 text-slate-400'}),h('input',{value:searchTerm,onChange:e=>setSearchTerm(e.target.value),placeholder:'بحث في السندات...',className:'w-full pr-8 pl-3 py-2 text-xs border rounded-xl bg-white'})),
-      h('button',{type:'button',onClick:exportTableImage,className:'p-2 rounded-lg bg-white border',title:'صورة'},h(ImageIcon,{className:'w-4 h-4 text-blue-600'})),
+      h('button',{type:'button',onClick:exportTableImage,className:'p-2 rounded-lg bg-white border',title:t("صورة")},h(ImageIcon,{className:'w-4 h-4 text-blue-600'})),
       h('button',{type:'button',onClick:exportTablePDF,className:'p-2 rounded-lg bg-white border',title:'PDF'},h(Download,{className:'w-4 h-4 text-rose-600'})),
       h('button',{type:'button',onClick:exportCSV,className:'p-2 rounded-lg bg-white border',title:'Excel/CSV'},h(FileSpreadsheet,{className:'w-4 h-4 text-violet-600'}))
     ),
@@ -203,14 +204,14 @@ export const VouchersView = () => {
         h('div',{className:'flex items-center justify-between'},h('h3',{className:'font-black'},formType==='receipt'?'إضافة سند قبض':'إضافة سند صرف'),h('button',{type:'button',onClick:()=>setIsModalOpen(false),className:'p-1 text-slate-400'},h(X,{className:'w-5 h-5'}))),
         h('div',{className:'grid grid-cols-2 gap-3'},
           h('div',null,h(SearchableDropdown,{id:'voucher-party-type',label:'نوع الجهة',options:[{id:'customer',label:'عميل'},{id:'supplier',label:'مورد'},{id:'other',label:'جهة أخرى'}],selectedId:formPartyType,onSelect:(id)=>{setFormPartyType(id);setFormPartyId(id==='customer'?(customers[0]?.id||''):id==='supplier'?(suppliers[0]?.id||''):'');},placeholder:'اختر الجهة'})),
-          h('div',null,h('label',{className:'text-xs font-bold block mb-1'},'التاريخ'),h('input',{type:'date',value:formDate,onChange:e=>setFormDate(e.target.value),className:'w-full px-3 py-2 text-xs border rounded-xl'}))
+          h('div',null,h('label',{className:'text-xs font-bold block mb-1'},t("التاريخ")),h('input',{type:'date',value:formDate,onChange:e=>setFormDate(e.target.value),className:'w-full px-3 py-2 text-xs border rounded-xl'}))
         ),
-        formPartyType==='customer' ? h(SearchableDropdown,{id:'voucher-customer',label:'العميل',options:customers.map(c=>({id:c.id,label:c.name,subLabel:c.phone||''})),selectedId:formPartyId,onSelect:setFormPartyId,placeholder:'اختر العميل'}) : formPartyType==='supplier' ? h(SearchableDropdown,{id:'voucher-supplier',label:'المورد',options:suppliers.map(s=>({id:s.id,label:s.name,subLabel:s.phone||''})),selectedId:formPartyId,onSelect:setFormPartyId,placeholder:'اختر المورد'}) : h('div',null,h('label',{className:'text-xs font-bold block mb-1'},'اسم الجهة'),h('input',{value:formPartyCustomName,onChange:e=>setFormPartyCustomName(e.target.value),className:'w-full px-3 py-2 text-xs border rounded-xl'})),
-        h('div',null,h('label',{className:'text-xs font-bold block mb-1'},'المبلغ'),h('input',{type:'number',inputMode:'decimal',step:'any',min:'0.01',required:true,value:formAmount,onChange:e=>setFormAmount(e.target.value),className:'w-full px-3 py-2 text-sm font-mono font-black border rounded-xl'})),
+        formPartyType==='customer' ? h(SearchableDropdown,{id:'voucher-customer',label:t("العميل"),options:customers.map(c=>({id:c.id,label:c.name,subLabel:c.phone||''})),selectedId:formPartyId,onSelect:setFormPartyId,placeholder:'اختر العميل'}) : formPartyType==='supplier' ? h(SearchableDropdown,{id:'voucher-supplier',label:t("المورد"),options:suppliers.map(s=>({id:s.id,label:s.name,subLabel:s.phone||''})),selectedId:formPartyId,onSelect:setFormPartyId,placeholder:'اختر المورد'}) : h('div',null,h('label',{className:'text-xs font-bold block mb-1'},'اسم الجهة'),h('input',{value:formPartyCustomName,onChange:e=>setFormPartyCustomName(e.target.value),className:'w-full px-3 py-2 text-xs border rounded-xl'})),
+        h('div',null,h('label',{className:'text-xs font-bold block mb-1'},t("المبلغ")),h('input',{type:'number',inputMode:'decimal',step:'any',min:'0.01',required:true,value:formAmount,onChange:e=>setFormAmount(e.target.value),className:'w-full px-3 py-2 text-sm font-mono font-black border rounded-xl'})),
         formType==='payment' ? h('div',null,h('label',{className:'text-xs font-bold block mb-1'},'طريقة الصرف'),h(SearchableDropdown,{id:'voucher-source-type',options:[{id:'account',label:'من حساب'},{id:'debt_without_account',label:'بدون حساب'}],selectedId:formSourceType,onSelect:setFormSourceType,placeholder:'اختر طريقة الصرف'})) : null,
-        (formType==='receipt'||formSourceType==='account') ? h(SearchableDropdown,{id:'voucher-account',label:formType==='receipt'?'في حساب':'من حساب',options:accounts.map(a=>({id:a.id,label:a.name,subLabel:`الرصيد: ${money(a.balance)} ${settings.currencySymbol}`})),selectedId:formAccountId,onSelect:setFormAccountId,placeholder:'اختر الحساب'}) : null,
+        (formType==='receipt'||formSourceType==='account') ? h(SearchableDropdown,{id:'voucher-account',label:formType==='receipt'?'في حساب':'من حساب',options:accounts.map(a=>({id:a.id,label:a.name,subLabel:`الرصيد: ${money(a.balance)} ${settings.currencySymbol}`})),selectedId:formAccountId,onSelect:setFormAccountId,placeholder:t("اختر الحساب")}) : null,
         h('div',null,h('label',{className:'text-xs font-bold block mb-1'},'البيان / ملاحظات'),h('textarea',{rows:2,value:formNotes,onChange:e=>setFormNotes(e.target.value),className:'w-full px-3 py-2 text-xs border rounded-xl'})),
-        h('div',{className:'flex justify-end gap-2 pt-2 border-t'},h('button',{type:'button',onClick:()=>setIsModalOpen(false),className:'px-4 py-2 text-xs font-bold text-slate-500'},'إلغاء'),h('button',{type:'submit',className:`px-5 py-2 rounded-xl text-white text-xs font-black ${formType==='receipt'?'bg-violet-600':'bg-amber-600'}`},formType==='receipt'?'حفظ سند القبض':'حفظ سند الصرف'))
+        h('div',{className:'flex justify-end gap-2 pt-2 border-t'},h('button',{type:'button',onClick:()=>setIsModalOpen(false),className:'px-4 py-2 text-xs font-bold text-slate-500'},t("إلغاء")),h('button',{type:'submit',className:`px-5 py-2 rounded-xl text-white text-xs font-black ${formType==='receipt'?'bg-violet-600':'bg-amber-600'}`},formType==='receipt'?'حفظ سند القبض':'حفظ سند الصرف'))
       ))
     ), document.body) : null,
     viewingVoucher ? createPortal(h('div',{className:'fixed inset-x-0 oscar-bounded-modal z-[120] bg-black/70 backdrop-blur-[2px] p-2 sm:p-3 flex items-stretch justify-center overflow-hidden'},
@@ -218,7 +219,7 @@ export const VouchersView = () => {
         h('div',{className:'no-print flex flex-wrap items-center justify-between gap-2 bg-white rounded-xl p-2 border mb-2 shrink-0'},
           h('div',{className:'flex items-center gap-1'},...['80mm','58mm','a4'].map(id=>h('button',{key:id,type:'button',onClick:()=>setVoucherPaperSize(id),className:`px-2.5 py-1.5 rounded-lg text-[11px] font-black ${voucherPaperSize===id?'bg-violet-600 text-white':'bg-slate-100 text-slate-600'}`},id==='80mm'?'80 ملم':id==='58mm'?'58 ملم':'A4'))),
           h('div',{className:'flex items-center gap-1'},
-            h('button',{type:'button',onClick:async()=>{const ok=await printElementOnly(voucherPrintRef.current,voucherPaperSize,`سند ${viewingVoucher.voucherNumber}`);if(!ok)showToast('تعذر تجهيز الطباعة','error');},className:'px-2.5 py-1.5 rounded-lg bg-violet-600 text-white text-[11px] font-black flex items-center gap-1'},h(Printer,{className:'w-3.5 h-3.5'}),'طباعة'),
+            h('button',{type:'button',onClick:async()=>{const ok=await printElementOnly(voucherPrintRef.current,voucherPaperSize,`سند ${viewingVoucher.voucherNumber}`);if(!ok)showToast('تعذر تجهيز الطباعة','error');},className:'px-2.5 py-1.5 rounded-lg bg-violet-600 text-white text-[11px] font-black flex items-center gap-1'},h(Printer,{className:'w-3.5 h-3.5'}),t("طباعة")),
             h('button',{type:'button',onClick:async()=>{const ok=await downloadProfessionalVoucherImage(viewingVoucher,settings,`سند-${viewingVoucher.voucherNumber}.png`,voucherPaperSize);if(!ok)showToast('تعذر حفظ صورة السند','error');else showToast('تم تجهيز صورة السند','success');},className:'p-2 rounded-lg bg-white border',title:'حفظ صورة'},h(ImageIcon,{className:'w-4 h-4 text-blue-600'})),
             h('button',{type:'button',onClick:async()=>{const ok=await downloadProfessionalVoucherPDF(viewingVoucher,settings,`سند-${viewingVoucher.voucherNumber}.pdf`,voucherPaperSize);if(!ok)showToast('تعذر حفظ PDF','error');else showToast('تم تجهيز PDF','success');},className:'p-2 rounded-lg bg-white border',title:'PDF'},h(Download,{className:'w-4 h-4 text-rose-600'})),
             h('button',{type:'button',onClick:()=>setViewingVoucher(null),className:'p-2 rounded-lg bg-slate-100 text-slate-500'},h(X,{className:'w-4 h-4'}))
@@ -227,6 +228,6 @@ export const VouchersView = () => {
         h('div',{className:'flex-1 min-h-0 overflow-y-auto overflow-x-auto overscroll-contain touch-pan-y custom-scrollbar flex justify-center items-start p-2'},voucherPaper)
       )
     ), document.body) : null,
-    deleteConfirmId ? h('div',{className:'fixed inset-0 z-[130] bg-black/60 p-4 flex items-center justify-center'},h('div',{className:'w-full max-w-sm bg-white rounded-2xl p-5 text-right'},h('div',{className:'flex items-center gap-2 text-rose-600 mb-2'},h(AlertCircle,{className:'w-5 h-5'}),h('h3',{className:'font-black'},'حذف السند؟')),h('p',{className:'text-xs text-slate-500'},'سيتم حذف السند وإلغاء أثره المالي.'),h('div',{className:'flex justify-end gap-2 mt-4'},h('button',{type:'button',onClick:()=>setDeleteConfirmId(null),className:'px-3 py-2 text-xs font-bold'},'تراجع'),h('button',{type:'button',onClick:async()=>{await deleteVoucher(deleteConfirmId);setDeleteConfirmId(null);},className:'px-4 py-2 bg-rose-600 text-white text-xs font-black rounded-xl'},'حذف')))) : null
+    deleteConfirmId ? h('div',{className:'fixed inset-0 z-[130] bg-black/60 p-4 flex items-center justify-center'},h('div',{className:'w-full max-w-sm bg-white rounded-2xl p-5 text-right'},h('div',{className:'flex items-center gap-2 text-rose-600 mb-2'},h(AlertCircle,{className:'w-5 h-5'}),h('h3',{className:'font-black'},'حذف السند؟')),h('p',{className:'text-xs text-slate-500'},'سيتم حذف السند وإلغاء أثره المالي.'),h('div',{className:'flex justify-end gap-2 mt-4'},h('button',{type:'button',onClick:()=>setDeleteConfirmId(null),className:'px-3 py-2 text-xs font-bold'},'تراجع'),h('button',{type:'button',onClick:async()=>{await deleteVoucher(deleteConfirmId);setDeleteConfirmId(null);},className:'px-4 py-2 bg-rose-600 text-white text-xs font-black rounded-xl'},t("حذف"))))) : null
   );
 };

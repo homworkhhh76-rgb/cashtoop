@@ -1,8 +1,9 @@
-import {downloadProfessionalTablePDF,downloadProfessionalTableImage} from './utils__professionalExport.js?v=7.9.4.134-invoice-filters';
+import {t} from './services__i18n.js?v=7.9.4.136-localization';
+import {downloadProfessionalTablePDF,downloadProfessionalTableImage} from './utils__professionalExport.js?v=7.9.4.136-localization';
 import React, { useEffect, useMemo, useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.134-invoice-filters';
-import { exportToCSV, downloadBlob } from './utils__export.js?v=7.9.4.134-invoice-filters';
-import { getAllFromStore } from './services__db.js?v=7.9.4.134-invoice-filters';
+import { useApp } from './context__AppContext.js?v=7.9.4.136-localization';
+import { exportToCSV, downloadBlob } from './utils__export.js?v=7.9.4.136-localization';
+import { getAllFromStore } from './services__db.js?v=7.9.4.136-localization';
 import { Download, ReceiptText, Package, Users, Truck, WalletCards, CalendarDays, CircleDollarSign, FileText, Image as ImageIcon, TrendingUp } from 'lucide-react';
 
 const h = React.createElement;
@@ -72,6 +73,7 @@ export const ReportsView = () => {
     if (period === 'today') return [startOfDay(now), endOfDay(now)];
     if (period === 'week') return [startOfDay(new Date(now.getTime() - 6 * 86400000)), endOfDay(now)];
     if (period === 'month') return [new Date(now.getFullYear(), now.getMonth(), 1, 0,0,0,0), endOfDay(now)];
+    if (period === 'year') return [new Date(now.getFullYear(),0,1),endOfDay(now)];
     if (period === 'custom') {
       const from = fromDate ? startOfDay(new Date(`${fromDate}T00:00:00`)) : null;
       const to = toDate ? endOfDay(new Date(`${toDate}T00:00:00`)) : null;
@@ -176,7 +178,7 @@ export const ReportsView = () => {
     return acc;
   }, {})).sort((a,b) => b.amount - a.amount);
 
-  const periodLabel = period === 'today' ? 'اليوم' : period === 'week' ? 'آخر 7 أيام' : period === 'month' ? 'هذا الشهر' : period === 'all' ? 'كل الفترات' : `${fromDate || 'البداية'} إلى ${toDate || 'اليوم'}`;
+  const periodLabel = period === 'today' ? 'اليوم' : period === 'week' ? 'آخر 7 أيام' : period === 'month' ? 'هذا الشهر' : period === 'year' ? 'هذا العام' : period === 'all' ? 'كل الفترات' : `${fromDate || 'البداية'} إلى ${toDate || 'اليوم'}`;
 
   const summaryData = () => {
     const headers = ['القسم', 'المؤشر', 'القيمة'];
@@ -211,9 +213,9 @@ export const ReportsView = () => {
 
   const exportSummary=()=>{const {headers,rows}=summaryData();exportToCSV('تقرير_'+periodLabel,headers,rows)};
   const periodButtons = [
-    ['today','اليوم'], ['week','أسبوع'], ['month','شهر'], ['all','الكل']
+    ['today','اليوم'], ['week','أسبوع'], ['month','شهر'], ['year','سنة'], ['custom','من / إلى'], ['all','الكل']
   ];
-  const exportReport=async(kind)=>{try{const fn=kind==='pdf'?downloadProfessionalTablePDF:downloadProfessionalTableImage;const ok=await fn({...summaryData(),title:'التقارير الشاملة',subtitle:periodLabel,settings,filename:'تقرير_'+periodLabel+'.'+(kind==='pdf'?'pdf':'png'),orientation:'portrait'});if(ok===false)throw Error('تعذر إنشاء الملف');app.showToast?.('تم تنزيل التقرير','success')}catch(e){app.showToast?.(e.message,'error')}};
+  const exportReport=async(kind)=>{try{const fn=kind==='pdf'?downloadProfessionalTablePDF:downloadProfessionalTableImage;const ok=await fn({...summaryData(),title:t("التقارير الشاملة"),subtitle:periodLabel,settings,filename:'تقرير_'+periodLabel+'.'+(kind==='pdf'?'pdf':'png'),orientation:'portrait'});if(ok===false)throw Error('تعذر إنشاء الملف');app.showToast?.('تم تنزيل التقرير','success')}catch(e){app.showToast?.(e.message,'error')}};
   const exportProfessionalPdf=()=>exportReport('pdf');
   const exportProfessionalImage=()=>exportReport('image');
 
@@ -221,15 +223,15 @@ export const ReportsView = () => {
   return h('div', { id:'reports-screen', className:'p-3 sm:p-6 space-y-5 max-w-7xl mx-auto text-right select-none' },
     h('div', { className:'flex flex-col xl:flex-row xl:items-end justify-between gap-4' },
       h('div', null,
-        h('h2', { className:'text-xl font-black text-slate-900 dark:text-white' }, 'التقارير الشاملة'),
+        h('h2', { className:'text-xl font-black text-slate-900 dark:text-white' }, t("التقارير الشاملة")),
         h('p', { className:'text-xs text-slate-500 mt-1' }, `تقارير الفواتير والمخازن والعملاء والموردين والمصروفات — الفترة: ${periodLabel}`)
       ),
       h('div', { className:'flex flex-wrap items-end gap-2' },
         h('div', { className:'flex gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800' }, ...periodButtons.map(([id,label]) => h('button', {
           key:id, type:'button', onClick:()=>setPeriod(id), className:`px-3 py-2 rounded-lg text-[11px] font-black ${period===id?'bg-white dark:bg-slate-900 text-violet-600 shadow-sm':'text-slate-500'}`
-        }, label))),
-        h('label', { className:'text-[10px] font-bold text-slate-500' }, 'من تاريخ', h('input', { type:'date', value:fromDate, onChange:(e)=>{setFromDate(e.target.value);setPeriod('custom');}, className:'block mt-1 px-2 py-1.5 rounded-lg border bg-white dark:bg-slate-900 dark:border-slate-700 text-xs' })),
-        h('label', { className:'text-[10px] font-bold text-slate-500' }, 'إلى تاريخ', h('input', { type:'date', value:toDate, onChange:(e)=>{setToDate(e.target.value);setPeriod('custom');}, className:'block mt-1 px-2 py-1.5 rounded-lg border bg-white dark:bg-slate-900 dark:border-slate-700 text-xs' })),
+        }, t(label)))),
+        h('label', { className:'text-[10px] font-bold text-slate-500' }, t("من تاريخ"), h('input', { type:'date', value:fromDate, onChange:(e)=>{setFromDate(e.target.value);setPeriod('custom');}, className:'block mt-1 px-2 py-1.5 rounded-lg border bg-white dark:bg-slate-900 dark:border-slate-700 text-xs' })),
+        h('label', { className:'text-[10px] font-bold text-slate-500' }, t("إلى تاريخ"), h('input', { type:'date', value:toDate, onChange:(e)=>{setToDate(e.target.value);setPeriod('custom');}, className:'block mt-1 px-2 py-1.5 rounded-lg border bg-white dark:bg-slate-900 dark:border-slate-700 text-xs' })),
         h('button', { type:'button', onClick:exportSummary, className:'inline-flex items-center gap-2 px-3 py-2 rounded-xl border bg-white dark:bg-slate-900 dark:border-slate-700 text-xs font-bold' }, h(Download,{className:'w-4 h-4 text-violet-600'}),'Excel'),
         h('button', { type:'button', onClick:exportProfessionalPdf, className:'inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-violet-600 text-white text-xs font-black shadow-sm' }, h(FileText,{className:'w-4 h-4'}),'PDF احترافي'),
         h('button', { type:'button', onClick:exportProfessionalImage, className:'inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-black shadow-sm' }, h(ImageIcon,{className:'w-4 h-4'}),'صورة التقرير')
@@ -265,7 +267,7 @@ export const ReportsView = () => {
       ),
       h('div',{className:'overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900'},
         h('table',{className:'w-full text-xs'},
-          h('thead',{className:'bg-slate-50 dark:bg-slate-800/60 text-slate-500'},h('tr',null,h('th',{className:'p-3 text-right'},'المخزن'),h('th',{className:'p-3 text-center'},'عدد الأصناف'),h('th',{className:'p-3 text-center'},'إجمالي الكمية'),h('th',{className:'p-3 text-left'},'تكلفة المخزون'))),
+          h('thead',{className:'bg-slate-50 dark:bg-slate-800/60 text-slate-500'},h('tr',null,h('th',{className:'p-3 text-right'},t("المخزن")),h('th',{className:'p-3 text-center'},'عدد الأصناف'),h('th',{className:'p-3 text-center'},'إجمالي الكمية'),h('th',{className:'p-3 text-left'},'تكلفة المخزون'))),
           h('tbody',null,...inventoryByWarehouse.map((w)=>h('tr',{key:w.id,className:'border-t border-slate-100 dark:border-slate-800'},h('td',{className:'p-3 font-bold'},w.name),h('td',{className:'p-3 text-center font-mono'},w.skuCount),h('td',{className:'p-3 text-center font-mono'},money(w.quantity)),h('td',{className:'p-3 text-left font-mono font-black text-violet-700'},`${money(w.costValue)} ${currency}`))) )
         )
       )

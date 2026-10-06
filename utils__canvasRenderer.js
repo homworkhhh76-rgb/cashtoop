@@ -1,6 +1,6 @@
-import {customerStatementModel,statementHeaders} from './utils__customerStatement.js?v=7.9.4.134-invoice-filters';
-import { getBrandLogoDataUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.134-invoice-filters';
-import { code128Geometry } from './utils__code128.js?v=7.9.4.134-invoice-filters';
+import {customerStatementModel,statementHeaders} from './utils__customerStatement.js?v=7.9.4.136-localization';
+import { getBrandLogoDataUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.136-localization';
+import { code128Geometry } from './utils__code128.js?v=7.9.4.136-localization';
 
 const imageCache = new Map();
 const num = v => { const n=Number(v); return Number.isFinite(n)?n:0; };
@@ -38,8 +38,12 @@ function roundedRect(ctx,x,y,w,h,r=12,fill='#fff',stroke='#e2e8f0',lw=1){
   const rr=Math.min(r,w/2,h/2);ctx.beginPath();ctx.moveTo(x+rr,y);ctx.arcTo(x+w,y,x+w,y+h,rr);ctx.arcTo(x+w,y+h,x,y+h,rr);ctx.arcTo(x,y+h,x,y,rr);ctx.arcTo(x,y,x+w,y,rr);ctx.closePath();if(fill){ctx.fillStyle=fill;ctx.fill();}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw;ctx.stroke();}
 }
 function wrap(ctx,value,maxWidth,size=22,weight=600,maxLines=3){
-  setFont(ctx,size,weight);const words=normalize(value).split(' ').filter(Boolean);if(!words.length)return ['-'];const lines=[];let cur='';for(const word of words){const next=cur?`${cur} ${word}`:word;if(ctx.measureText(next).width<=maxWidth||!cur)cur=next;else{lines.push(cur);cur=word;if(lines.length>=maxLines-1)break;}}if(cur&&lines.length<maxLines)lines.push(cur);return lines;
+ setFont(ctx,size,weight);const words=normalize(value).split(' ').filter(Boolean);if(!words.length)return ['-'];const lines=[];let cur='';
+ for(const word of words){let parts=[];let part='';for(const char of word){if(part&&ctx.measureText(part+char).width>maxWidth){parts.push(part);part=char}else part+=char}if(part)parts.push(part);
+ for(const piece of parts){const next=cur?cur+' '+piece:piece;if(cur&&ctx.measureText(next).width>maxWidth){lines.push(cur);cur=piece}else cur=next;if(lines.length>=maxLines)return lines.slice(0,maxLines)}}
+ if(cur&&lines.length<maxLines)lines.push(cur);return lines;
 }
+
 function wrapped(ctx,value,x,y,maxWidth,size=22,weight=600,align='right',color='#0f172a',lineH=30,maxLines=3){
   const lines=wrap(ctx,value,maxWidth,size,weight,maxLines);lines.forEach((s,i)=>txt(ctx,s,x,y+i*lineH,size,weight,align,color));return lines.length;
 }
@@ -49,7 +53,7 @@ async function drawBrand(ctx,w,settings,title,subtitle='',top=34){
   let y=top; let logoSrc='';
   try{ logoSrc=getBrandLogoDataUrl(settings||{}); }catch(_){ logoSrc=settings?.logo||DEFAULT_LOGO_DATA_URL; }
   const logo=await loadImage(logoSrc||settings?.logo||DEFAULT_LOGO_DATA_URL);
-  if(logo){const maxW=Math.min(170,w*.22),maxH=92,ratio=Math.min(maxW/logo.width,maxH/logo.height);const dw=Math.max(45,logo.width*ratio),dh=Math.max(35,logo.height*ratio);ctx.drawImage(logo,(w-dw)/2,y,dw,dh);y+=dh+14;}
+  if(logo){const maxW=Math.min(settings.invoiceBrand?240:170,w*.28),maxH=settings.invoiceBrand?130:92,ratio=Math.min(maxW/logo.width,maxH/logo.height);const dw=Math.max(45,logo.width*ratio),dh=Math.max(35,logo.height*ratio);ctx.drawImage(logo,(w-dw)/2,y,dw,dh);y+=dh+14;}
   txt(ctx,settings?.storeName||'كاش توب 3',w/2,y+19,34,900,'center');y+=52;
   if(settings?.subtitle){txt(ctx,settings.subtitle,w/2,y,17,700,'center','#7C3AED');y+=30;}
   const details=[settings?.address,settings?.phone?`هاتف: ${settings.phone}`:'',settings?.taxNumber?`الرقم الضريبي: ${settings.taxNumber}`:''].filter(Boolean).join(' • ');
@@ -64,9 +68,9 @@ function columnWeights(headers){return headers.map(h=>{const s=normalize(h);if(/
 function tableColumnGeometry(headers,x,w){const weights=columnWeights(headers),sum=weights.reduce((a,b)=>a+b,0);const widths=weights.map(v=>w*v/sum);let cursor=x+w;const cols=[];for(let i=0;i<widths.length;i++){cols.push({right:cursor,width:widths[i],center:cursor-widths[i]/2});cursor-=widths[i];}return cols;}
 function cellLines(ctx,v,width,fontSize,header=false){return wrap(ctx,v,Math.max(20,width-16),fontSize,header?800:600,header?2:Infinity);}
 function rowHeight(ctx,row,cols,fontSize,min=58){let maxLines=1;row.forEach((v,i)=>{maxLines=Math.max(maxLines,cellLines(ctx,v,cols[i]?.width||80,fontSize,false).length)});return Math.max(min,22+maxLines*(fontSize+8));}
-function drawTable(ctx,{x,y,w,headers,rows,fontSize=19,headH=60,alternate=true,maxRows=null}){
-  const data=maxRows==null?rows:rows.slice(0,maxRows);const cols=tableColumnGeometry(headers,x,w);roundedRect(ctx,x,y,w,headH,7,'#7C3AED','#6D28D9',1.2);
-  headers.forEach((h,i)=>{const ls=cellLines(ctx,h,cols[i].width,fontSize,true);const start=y+headH/2-(ls.length-1)*(fontSize+5)/2;ls.forEach((s,j)=>txt(ctx,s,cols[i].center,start+j*(fontSize+5),fontSize,900,'center','#fff'));});
+function drawTable(ctx,{x,y,w,headers,rows,fontSize=19,headH=60,alternate=true,maxRows=null,plainHeader=false}){
+  const data=maxRows==null?rows:rows.slice(0,maxRows);const cols=tableColumnGeometry(headers,x,w);roundedRect(ctx,x,y,w,headH,7,plainHeader?'#fff':'#7C3AED',plainHeader?'#cbd5e1':'#6D28D9',1.2);
+  headers.forEach((h,i)=>{const ls=cellLines(ctx,h,cols[i].width,fontSize,true);const start=y+headH/2-(ls.length-1)*(fontSize+5)/2;ls.forEach((s,j)=>txt(ctx,s,cols[i].center,start+j*(fontSize+5),fontSize,900,'center',plainHeader?'#111':'#fff'));});
   let cy=y+headH;const heights=[];data.forEach(r=>heights.push(rowHeight(ctx,r,cols,fontSize,56)));
   data.forEach((r,ri)=>{const rh=heights[ri];ctx.fillStyle=alternate&&ri%2?'#f5f0ff':'#fff';ctx.fillRect(x,cy,w,rh);line(ctx,x,cy,x+w,cy,1,'#e2e8f0');r.forEach((v,i)=>{const ls=cellLines(ctx,v,cols[i].width,fontSize,false);const start=cy+rh/2-(ls.length-1)*(fontSize+7)/2;ls.forEach((s,j)=>txt(ctx,s,cols[i].center,start+j*(fontSize+7),fontSize,600,'center','#0f172a'));});cy+=rh;});
   line(ctx,x,cy,x+w,cy,1.2,'#cbd5e1');let edge=x+w;for(let i=0;i<cols.length;i++){line(ctx,edge,y,edge,cy,1,'#cbd5e1');edge-=cols[i].width;}line(ctx,x,y,x,cy,1,'#cbd5e1');return cy;
@@ -147,17 +151,17 @@ function drawPair(ctx,label,value,w,y,margin,font=19){txt(ctx,label,w-margin,y,f
 function drawBarcode(ctx,value,x,y,w,h){const g=code128Geometry(String(value||''));const unit=w/g.width;ctx.fillStyle='#000';g.rects.forEach(r=>ctx.fillRect(x+r.x*unit,y,r.width*unit,h));txt(ctx,g.text,x+w/2,y+h+18,14,600,'center','#111');}
 
 export async function renderInvoiceCanvas(invoice,settings={},options={}){
-  try{await document.fonts?.ready;}catch(_){}settings=documentBrandSettings(settings);
-  const paper=options.paperSize||settings.printerWidth||'80mm';const w=paper==='58mm'?720:paper==='a4'?1240:940;const margin=paper==='58mm'?28:paper==='a4'?62:40;const items=invoice?.items||[];const rowH=paper==='58mm'?74:70;const est=720+items.length*rowH;const {canvas,ctx}=createCanvas(w,Math.max(paper==='a4'?1500:1180,est));
+  try{await document.fonts?.ready;}catch(_){}settings={...documentBrandSettings(settings),subtitle:"",invoiceBrand:true};
+  const paper=options.paperSize||settings.printerWidth||'80mm';const w=paper==='58mm'?720:paper==='a4'?1240:940;const margin=paper==='58mm'?28:paper==='a4'?62:40;const items=invoice?.items||[];const fs=paper==='a4'?25:28;const headers=['#','الصنف','الوحدة','الكمية','السعر','الإجمالي'];const rows=items.map((it,i)=>[i+1,it.productName||'صنف',it.unitName||'-',num(it.quantity),money(it.unitPrice),money(it.total)]);const probe=document.createElement('canvas').getContext('2d');const cols=tableColumnGeometry(headers,margin,w-margin*2);const est=1350+rows.reduce((sum,row)=>sum+rowHeight(probe,row,cols,fs,56),0);const {canvas,ctx}=createCanvas(w,Math.max(paper==='a4'?1500:1180,est));
   let y=await drawBrand(ctx,w,settings,options.title||(options.kind==='purchase'?'فاتورة مشتريات':invoice?.type==='return'?'فاتورة مرتجع مبيعات':'فاتورة مبيعات'),'',28);
   const party=options.kind==='purchase'?(invoice?.supplierName||'مورد'):(invoice?.customerName||'زبون عام');
   roundedRect(ctx,margin,y,w-margin*2,150,12,'#f8fafc','#e2e8f0');y+=30;txt(ctx,`رقم الفاتورة: #${invoice?.invoiceNumber||'-'}`,w-margin-16,y,20,900,'right');txt(ctx,dateText(invoice?.date),margin+16,y,17,600,'left','#475569');y+=42;txt(ctx,options.kind==='purchase'?`المورد: ${party}`:`العميل: ${party}`,w-margin-16,y,19,800,'right');txt(ctx,options.kind==='purchase'?`المخزن: ${invoice?.warehouseName||'-'}`:`الكاشير: ${invoice?.cashierName||'-'}`,margin+16,y,17,700,'left');y+=63;
-  const headers=['الصنف','الوحدة','الكمية','السعر','الإجمالي'];const rows=items.map(it=>[it.productName||'صنف',it.unitName||'-',num(it.quantity),money(it.unitPrice),money(it.total)]);y=drawTable(ctx,{x:margin,y,w:w-margin*2,headers,rows,fontSize:paper==='58mm'?17:19,headH:58});y+=28;
+  y=drawTable(ctx,{x:margin,y,w:w-margin*2,headers,rows,fontSize:fs,headH:70,plainHeader:true});y+=28;
   const totals=[['المجموع',invoice?.subtotal],...(num(invoice?.discountTotal)>0?[['الخصم',-num(invoice.discountTotal)]]:[]),...(num(invoice?.taxTotal)>0?[['الضريبة',invoice.taxTotal]]:[]),['الصافي المطلوب',invoice?.grandTotal],['المدفوع',invoice?.paidAmount],...(num(invoice?.remainingAmount)>0?[['المتبقي',invoice.remainingAmount]]:[])];
   totals.forEach(([k,v],i)=>{roundedRect(ctx,w-margin-430,y,430,42,8,i===totals.length-3?'#ecfdf5':'#fff','#e2e8f0');txt(ctx,`${k}:`,w-margin-18,y+21,18,i===totals.length-3?900:700,'right','#334155');txt(ctx,`${money(v)} ${settings.currencySymbol||''}`,w-margin-410,y+21,19,900,'left',num(v)<0?'#dc2626':'#0f172a');y+=48;});
   if(invoice?.notes){y+=10;roundedRect(ctx,margin,y,w-margin*2,80,10,'#f8fafc','#e2e8f0');txt(ctx,'ملاحظات:',w-margin-16,y+24,16,800,'right','#64748b');wrapped(ctx,invoice.notes,w-margin-16,y+52,w-margin*2-32,16,600,'right','#334155',23,2);y+=96;}
   if(settings?.receiptShowBarcode!==false){const bw=Math.min(520,w-margin*2-80);drawBarcode(ctx,invoice?.invoiceNumber||'',(w-bw)/2,y+14,bw,58);y+=112;}
-  txt(ctx,settings?.receiptFooterMessage||'شكراً لتعاملكم معنا',w/2,y+16,17,700,'center','#475569');y+=40;txt(ctx,`نظام ${settings.storeName||'كاش توب 3'} - POS`,w/2,y,13,600,'center','#94a3b8');
+  txt(ctx,settings?.receiptFooterMessage||'شكراً لتعاملكم معنا',w/2,y+16,17,700,'center','#475569');y+=40;wrapped(ctx,'برنامج كاش توب المحاسبي جوال 0597603119',margin,y,w-margin*2,20,700,'left','#475569',28,2);y+=38;
   const finalH=Math.min(canvas.height,Math.ceil(y+45));if(finalH<canvas.height){const out=createCanvas(w,finalH);out.ctx.drawImage(canvas,0,0,w,finalH,0,0,w,finalH);return out.canvas;}return canvas;
 }
 

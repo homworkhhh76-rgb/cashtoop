@@ -1,11 +1,12 @@
-import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.134-invoice-filters';
+import {t} from './services__i18n.js?v=7.9.4.136-localization';
+import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.136-localization';
 import React, { useEffect, useRef, useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.134-invoice-filters';
-import { Pagination, useDatabasePagination } from './components__common__Pagination.js?v=7.9.4.134-invoice-filters';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.134-invoice-filters';
-import { getBrandLogoDataUrl, getBrandLogoDisplayUrl } from './brand__logo.js?v=7.9.4.134-invoice-filters';
-import { printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.134-invoice-filters';
-import { downloadProfessionalPurchaseInvoicePDF, downloadProfessionalPurchaseInvoiceImage, downloadProfessionalTableExcel } from './utils__professionalExport.js?v=7.9.4.134-invoice-filters';
+import { useApp } from './context__AppContext.js?v=7.9.4.136-localization';
+import { Pagination, useDatabasePagination } from './components__common__Pagination.js?v=7.9.4.136-localization';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.136-localization';
+import { getBrandLogoDataUrl, getBrandLogoDisplayUrl } from './brand__logo.js?v=7.9.4.136-localization';
+import { printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.136-localization';
+import { downloadProfessionalPurchaseInvoicePDF, downloadProfessionalPurchaseInvoiceImage, downloadProfessionalTableExcel } from './utils__professionalExport.js?v=7.9.4.136-localization';
 import { Plus, Trash2, Building2, Eye, X, Pencil, Image as ImageIcon, FileDown, FileSpreadsheet, Printer, AlertTriangle, ReceiptText } from 'lucide-react';
 
 const h = React.createElement;
@@ -253,7 +254,7 @@ export const PurchasesView = () => {
 
   const form = h('div', { className: 'rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-sm space-y-4' },
     h('div', { className: 'grid grid-cols-1 sm:grid-cols-3 gap-3' },
-      h(SearchableDropdown, { id: 'purchase-supplier', label: 'المورد:', options: supplierOpts, selectedId: supplierId, onSelect: setSupplierId, onQuickAdd: () => setShowQuickSupp(true), quickAddLabel: '+ مورد جديد', icon: h(Building2, { className: 'w-4 h-4' }) }),
+      h(SearchableDropdown, { id: 'purchase-supplier', label: t("المورد:"), options: supplierOpts, selectedId: supplierId, onSelect: setSupplierId, onQuickAdd: () => setShowQuickSupp(true), quickAddLabel: '+ مورد جديد', icon: h(Building2, { className: 'w-4 h-4' }) }),
       h(SearchableDropdown, { id: 'purchase-warehouse', label: 'المخزن المستلم:', options: whOpts, selectedId: warehouseId, onSelect: setWarehouseId, onQuickAdd: () => setShowQuickWarehouse(true), quickAddLabel: '+ إضافة مخزن', placeholder: 'ابحث عن مخزن...' }),
       h(SearchableDropdown, { id: 'purchase-account', label: paidSafe > 0 ? 'حساب دفع المبلغ المدفوع:' : 'الحساب (يستخدم عند الدفع):', options: accountOpts, selectedId: accountId, onSelect: setAccountId, placeholder: 'ابحث عن حساب...' })
     ),
@@ -284,19 +285,19 @@ export const PurchasesView = () => {
         )
       )
     ),
-    h('button', { type: 'button', onClick: () => setRows((r) => [...r, makeRow()]), className: 'flex items-center gap-1 text-xs font-bold text-violet-700' }, h(Plus, { className: 'w-4 h-4' }), 'إضافة صنف'),
+    h('button', { type: 'button', onClick: () => setRows((r) => [...r, makeRow()]), className: 'flex items-center gap-1 text-xs font-bold text-violet-700' }, h(Plus, { className: 'w-4 h-4' }), t("إضافة صنف")),
     h('div', { className: 'grid grid-cols-1 sm:grid-cols-5 gap-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-3' },
-      h('div', null, h('label', { className: 'text-[11px] font-bold block mb-1' }, 'نوع الخصم'), h('div', { className: 'flex gap-1' },
+      h('div', null, h('label', { className: 'text-[11px] font-bold block mb-1' }, t("نوع الخصم")), h('div', { className: 'flex gap-1' },
         h('button', { type: 'button', onClick: () => setDiscountType('fixed'), className: `flex-1 py-2 rounded-lg text-xs font-bold border ${discountType === 'fixed' ? 'bg-violet-600 text-white' : 'bg-white text-slate-700'}` }, 'مبلغ'),
         h('button', { type: 'button', onClick: () => setDiscountType('percent'), className: `flex-1 py-2 rounded-lg text-xs font-bold border ${discountType === 'percent' ? 'bg-violet-600 text-white' : 'bg-white text-slate-700'}` }, '%')
       )),
-      h('div', null, h('label', { className: 'text-[11px] font-bold block mb-1' }, 'قيمة الخصم'), h('input', { type: 'text', inputMode: 'decimal', dir: 'ltr', value: discountValue, onFocus: (e) => e.currentTarget.select(), onChange: (e) => setDiscountValue(cleanNumber(e.target.value)), placeholder: discountType === 'percent' ? '0 - 100' : '0.00', className: 'w-full px-3 py-2 border rounded-lg font-mono bg-white dark:bg-slate-900 dark:border-slate-700 focus:outline-none focus:border-violet-500' })),
-      h('div', null, h('label', { className: 'text-[11px] font-bold block mb-1' }, 'المبلغ المدفوع'), h('input', { type: 'text', inputMode: 'decimal', dir: 'ltr', value: paid, onFocus: (e) => e.currentTarget.select(), onChange: (e) => setPaid(cleanNumber(e.target.value)), placeholder: '0.00', className: 'w-full px-3 py-2 border rounded-lg font-mono font-bold text-violet-700 bg-white dark:bg-slate-900 dark:border-slate-700 focus:outline-none focus:border-violet-500' })),
+      h('div', null, h('label', { className: 'text-[11px] font-bold block mb-1' }, t("قيمة الخصم")), h('input', { type: 'text', inputMode: 'decimal', dir: 'ltr', value: discountValue, onFocus: (e) => e.currentTarget.select(), onChange: (e) => setDiscountValue(cleanNumber(e.target.value)), placeholder: discountType === 'percent' ? '0 - 100' : '0.00', className: 'w-full px-3 py-2 border rounded-lg font-mono bg-white dark:bg-slate-900 dark:border-slate-700 focus:outline-none focus:border-violet-500' })),
+      h('div', null, h('label', { className: 'text-[11px] font-bold block mb-1' }, t("المبلغ المدفوع")), h('input', { type: 'text', inputMode: 'decimal', dir: 'ltr', value: paid, onFocus: (e) => e.currentTarget.select(), onChange: (e) => setPaid(cleanNumber(e.target.value)), placeholder: '0.00', className: 'w-full px-3 py-2 border rounded-lg font-mono font-bold text-violet-700 bg-white dark:bg-slate-900 dark:border-slate-700 focus:outline-none focus:border-violet-500' })),
       h('div', { className: 'rounded-lg bg-white dark:bg-slate-900 border dark:border-slate-700 p-2' }, h('div', { className: 'text-[10px] text-slate-500' }, 'الباقي دين'), h('div', { className: 'font-mono font-black text-rose-600 text-lg' }, `${money(debt)} ${settings.currencySymbol || ''}`)),
       h('div', { className: 'rounded-lg bg-white dark:bg-slate-900 border dark:border-slate-700 p-2' }, h('div', { className: 'text-[10px] text-slate-500' }, 'الصافي بعد الخصم'), h('div', { className: 'font-mono font-black text-violet-700 text-lg' }, `${money(total)} ${settings.currencySymbol || ''}`))
     ),
     h('input', { value: notes, onChange: (e) => setNotes(e.target.value), placeholder: 'ملاحظات فاتورة الشراء...', className: 'w-full px-3 py-2 border rounded-xl text-xs bg-white dark:bg-slate-900 dark:border-slate-700' }),
-    h('div', { className: 'flex justify-end gap-2' }, h('button', { type: 'button', onClick: () => { setMode('list'); setEditingId(null); }, className: 'px-4 py-2 border rounded-xl text-xs font-bold' }, 'إلغاء'), h('button', { type: 'button', onClick: submit, disabled: isSaving, className: 'px-6 py-2.5 rounded-xl bg-violet-600 text-white text-xs font-black disabled:opacity-60' }, isSaving ? 'جاري الحفظ محلياً...' : (editingId ? 'حفظ تعديل الفاتورة' : 'حفظ فاتورة الشراء')))
+    h('div', { className: 'flex justify-end gap-2' }, h('button', { type: 'button', onClick: () => { setMode('list'); setEditingId(null); }, className: 'px-4 py-2 border rounded-xl text-xs font-bold' }, t("إلغاء")), h('button', { type: 'button', onClick: submit, disabled: isSaving, className: 'px-6 py-2.5 rounded-xl bg-violet-600 text-white text-xs font-black disabled:opacity-60' }, isSaving ? 'جاري الحفظ محلياً...' : (editingId ? 'حفظ تعديل الفاتورة' : 'حفظ فاتورة الشراء')))
   );
 
 
@@ -353,7 +354,7 @@ export const PurchasesView = () => {
             h('td', { className: 'p-3 font-mono' }, `${money(p.grandTotal)} ${settings.currencySymbol || ''}`),
             h('td', { className: 'p-3 font-mono text-violet-700' }, money(p.paidAmount)),
             h('td', { className: 'p-3 font-mono text-rose-600' }, money(p.remainingAmount)),
-            h('td', { className: 'p-3 flex gap-1' }, h('button', { type: 'button', onClick: () => { warmExportLibraries(); setViewing(p); }, className: 'p-2 rounded-lg border dark:border-slate-700', title:'عرض' }, h(Eye, { className: 'w-4 h-4' })), ((p.financialYearId || activeFinancialYearId) === activeFinancialYearId ? h('button', { type:'button', onClick:()=>startEditPurchase(p), className:'p-2 rounded-lg border dark:border-slate-700 text-blue-600', title:'تعديل مع قيد عكسي' }, h(Pencil,{className:'w-4 h-4'})) : null), (canDelete && (p.financialYearId || activeFinancialYearId) === activeFinancialYearId) ? h('button', { type: 'button', onClick: () => setDeleting(p.id), className: 'p-2 rounded-lg border dark:border-slate-700 text-rose-600' }, h(Trash2, { className: 'w-4 h-4' })) : null)
+            h('td', { className: 'p-3 flex gap-1' }, h('button', { type: 'button', onClick: () => { warmExportLibraries(); setViewing(p); }, className: 'p-2 rounded-lg border dark:border-slate-700', title:t("عرض") }, h(Eye, { className: 'w-4 h-4' })), ((p.financialYearId || activeFinancialYearId) === activeFinancialYearId ? h('button', { type:'button', onClick:()=>startEditPurchase(p), className:'p-2 rounded-lg border dark:border-slate-700 text-blue-600', title:'تعديل مع قيد عكسي' }, h(Pencil,{className:'w-4 h-4'})) : null), (canDelete && (p.financialYearId || activeFinancialYearId) === activeFinancialYearId) ? h('button', { type: 'button', onClick: () => setDeleting(p.id), className: 'p-2 rounded-lg border dark:border-slate-700 text-rose-600' }, h(Trash2, { className: 'w-4 h-4' })) : null)
           )))
         ),
         h(Pagination,{pager:purchasesPager})
@@ -365,8 +366,8 @@ export const PurchasesView = () => {
       h('div',{className:'no-print shrink-0 p-3 bg-white border-b flex flex-col sm:flex-row sm:items-center justify-between gap-2'},
         h('div',null,h('div',{className:'font-black text-sm'},'كشف المشتريات والتوريد'),h('div',{className:'text-[10px] text-slate-500'},'حدد الفترة ثم اطبع الكشف أو احفظه PDF من نافذة الطباعة')),
         h('div',{className:'flex flex-wrap gap-2 items-end'},
-          h('label',{className:'text-[10px] font-bold'},'من',h('input',{type:'date',value:statementFrom,onChange:e=>setStatementFrom(e.target.value),className:'block mt-1 px-2 py-1.5 border rounded-lg text-xs'})),
-          h('label',{className:'text-[10px] font-bold'},'إلى',h('input',{type:'date',value:statementTo,onChange:e=>setStatementTo(e.target.value),className:'block mt-1 px-2 py-1.5 border rounded-lg text-xs'})),
+          h('label',{className:'text-[10px] font-bold'},t("من"),h('input',{type:'date',value:statementFrom,onChange:e=>setStatementFrom(e.target.value),className:'block mt-1 px-2 py-1.5 border rounded-lg text-xs'})),
+          h('label',{className:'text-[10px] font-bold'},t("إلى"),h('input',{type:'date',value:statementTo,onChange:e=>setStatementTo(e.target.value),className:'block mt-1 px-2 py-1.5 border rounded-lg text-xs'})),
           h('button',{type:'button',disabled:statementLoading,onClick:async()=>{if(statementRef.current){const ok=await printElementOnly(statementRef.current,'a4',`كشف مشتريات ${statementFrom} إلى ${statementTo}`);if(!ok)showToast?.('تعذر تجهيز كشف المشتريات للطباعة','error');}},className:'px-3 py-2 rounded-xl bg-violet-600 disabled:opacity-50 text-white text-xs font-black flex items-center gap-1.5'},h(Printer,{className:'w-4 h-4'}),statementLoading?'جارٍ التحميل...':'طباعة / PDF'),
           h('button',{type:'button',onClick:()=>setShowPurchaseStatement(false),className:'p-2 rounded-xl border bg-white'},h(X,{className:'w-4 h-4'}))
         )
@@ -382,9 +383,9 @@ export const PurchasesView = () => {
           ),
           h('div',{className:'grid grid-cols-2 sm:grid-cols-4 gap-2 my-4'},
             h('div',{className:'border rounded-lg p-2 text-center'},h('div',{className:'text-[10px] text-slate-500'},'عدد الفواتير'),h('div',{className:'font-black'},String(statementRows.length))),
-            h('div',{className:'border rounded-lg p-2 text-center'},h('div',{className:'text-[10px] text-slate-500'},'الإجمالي'),h('div',{className:'font-black'},`${money(statementTotals.total)} ${settings.currencySymbol||''}`)),
-            h('div',{className:'border rounded-lg p-2 text-center'},h('div',{className:'text-[10px] text-slate-500'},'المدفوع'),h('div',{className:'font-black text-violet-700'},`${money(statementTotals.paid)} ${settings.currencySymbol||''}`)),
-            h('div',{className:'border rounded-lg p-2 text-center'},h('div',{className:'text-[10px] text-slate-500'},'المتبقي'),h('div',{className:'font-black text-rose-700'},`${money(statementTotals.debt)} ${settings.currencySymbol||''}`))
+            h('div',{className:'border rounded-lg p-2 text-center'},h('div',{className:'text-[10px] text-slate-500'},t("الإجمالي")),h('div',{className:'font-black'},`${money(statementTotals.total)} ${settings.currencySymbol||''}`)),
+            h('div',{className:'border rounded-lg p-2 text-center'},h('div',{className:'text-[10px] text-slate-500'},t("المدفوع")),h('div',{className:'font-black text-violet-700'},`${money(statementTotals.paid)} ${settings.currencySymbol||''}`)),
+            h('div',{className:'border rounded-lg p-2 text-center'},h('div',{className:'text-[10px] text-slate-500'},t("المتبقي")),h('div',{className:'font-black text-rose-700'},`${money(statementTotals.debt)} ${settings.currencySymbol||''}`))
           ),
           h('table',{className:'w-full text-[11px] border-collapse'},
             h('thead',null,h('tr',{className:'bg-violet-600 text-white'},...['#','التاريخ','رقم الفاتورة','المورد','الإجمالي','المدفوع','المتبقي'].map((x,i)=>h('th',{key:i,className:'border border-violet-500 p-2 text-right'},x)))),
@@ -400,10 +401,7 @@ export const PurchasesView = () => {
   return h('div', { id: 'purchases-screen', className: 'p-4 sm:p-6 space-y-4 max-w-7xl mx-auto text-right min-h-full' },
     h('div', { className: 'flex flex-wrap items-center justify-between gap-2' },
       h('div',{className:'flex items-center gap-2 flex-wrap'},
-        h('select',{value:financialYearFilter,onChange:e=>setFinancialYearFilter(e.target.value),className:'px-3 py-2 rounded-xl border bg-white dark:bg-slate-900 text-xs font-bold'},
-          h('option',{value:'all'},'كل السنوات المالية'),
-          ...financialYears.map(y=>h('option',{key:y.id,value:y.id},`${y.name || 'سنة مالية'}${y.id===activeFinancialYearId?' — الحالية':' — أرشيف'}`))
-        ),
+        h(SearchableDropdown,{id:'purchases-financial-group',label:t('المجموعة المالية'),selectedId:financialYearFilter,onSelect:setFinancialYearFilter,options:[{id:'all',label:t('كل المجموعات المالية')},...financialYears.map(y=>({id:y.id,label:y.name,subLabel:y.id===activeFinancialYearId?t('الحالية'):t('أرشيف')}))]}),
         h('button',{type:'button',onClick:()=>setShowPurchaseStatement(true),className:'px-3 py-2 rounded-xl border border-violet-200 bg-violet-50 text-violet-700 text-xs font-black flex items-center gap-1.5'},h(Printer,{className:'w-4 h-4'}),'كشف مشتريات من تاريخ إلى تاريخ')
       ),
       h('button', { type: 'button', onClick: () => { setEditingId(null); setMode(mode === 'list' ? 'new' : 'list'); }, className: 'px-4 py-2 rounded-xl bg-violet-600 text-white text-xs font-bold shadow-sm' }, mode === 'new' ? 'عرض السجل' : 'فاتورة شراء جديدة')
@@ -428,16 +426,16 @@ export const PurchasesView = () => {
               )
             ),
             h('section',{className:'grid grid-cols-2 gap-x-5 gap-y-2 p-4 sm:p-5 text-[11px] border-b border-slate-200 bg-slate-50/70'},
-              h('div',null,h('span',{className:'text-slate-400'},'رقم الفاتورة: '),h('b',{className:'font-mono'},viewing.invoiceNumber || '-')),
-              h('div',null,h('span',{className:'text-slate-400'},'التاريخ: '),h('b',null,safeDate(viewing.date).toLocaleString('ar-EG'))),
+              h('div',null,h('span',{className:'text-slate-400'},t("رقم الفاتورة: ")),h('b',{className:'font-mono'},viewing.invoiceNumber || '-')),
+              h('div',null,h('span',{className:'text-slate-400'},t("التاريخ: ")),h('b',null,safeDate(viewing.date).toLocaleString('ar-EG'))),
               viewing.supplierInvoiceNumber ? h('div',null,h('span',{className:'text-slate-400'},'فاتورة المورد: '),h('b',{className:'font-mono'},viewing.supplierInvoiceNumber)) : null,
-              h('div',null,h('span',{className:'text-slate-400'},'المورد: '),h('b',null,viewing.supplierName || 'مورد')),
-              h('div',null,h('span',{className:'text-slate-400'},'المخزن: '),h('b',null,warehouses.find((w)=>w.id===viewing.warehouseId)?.name || '-'))
+              h('div',null,h('span',{className:'text-slate-400'},t("المورد: ")),h('b',null,viewing.supplierName || 'مورد')),
+              h('div',null,h('span',{className:'text-slate-400'},t("المخزن: ")),h('b',null,warehouses.find((w)=>w.id===viewing.warehouseId)?.name || '-'))
             ),
             h('div',{className:'p-3 sm:p-5'},
               h('table',{className:'w-full text-[10px] sm:text-[11px] border-collapse'},
                 h('thead',null,h('tr',{className:'bg-slate-100 border-y border-slate-200'},
-                  h('th',{className:'p-2 text-right'},'الصنف'),h('th',{className:'p-2 text-center'},'الوحدة'),h('th',{className:'p-2 text-center'},'الكمية'),h('th',{className:'p-2 text-center'},'السعر'),h('th',{className:'p-2 text-left'},'الإجمالي')
+                  h('th',{className:'p-2 text-right'},t("الصنف")),h('th',{className:'p-2 text-center'},t("الوحدة")),h('th',{className:'p-2 text-center'},t("الكمية")),h('th',{className:'p-2 text-center'},t("السعر")),h('th',{className:'p-2 text-left'},t("الإجمالي"))
                 )),
                 h('tbody',null,...(Array.isArray(viewing.items)?viewing.items:[]).map((it,i)=>h('tr',{key:it?.id||`${it?.productId||'p'}-${i}`,className:'border-b border-slate-100'},
                   h('td',{className:'p-2 font-bold'},it?.productName||'صنف'),h('td',{className:'p-2 text-center'},it?.unitName||'-'),h('td',{className:'p-2 text-center font-mono'},num(it?.quantity)),h('td',{className:'p-2 text-center font-mono'},money(it?.unitPrice)),h('td',{className:'p-2 text-left font-mono font-bold'},money(it?.total))
@@ -445,26 +443,26 @@ export const PurchasesView = () => {
               ),
               h('div',{className:'mt-4 mr-auto w-full sm:w-72 text-[11px] space-y-2'},
                 h('div',{className:'flex justify-between'},h('span',{className:'text-slate-500'},'الإجمالي قبل الخصم'),h('b',{className:'font-mono'},`${money(viewing.subtotal)} ${settings.currencySymbol||''}`)),
-                h('div',{className:'flex justify-between'},h('span',{className:'text-slate-500'},'الخصم'),h('b',{className:'font-mono text-rose-600'},`${money(viewing.discountTotal ?? viewing.discountAmount)} ${settings.currencySymbol||''}`)),
+                h('div',{className:'flex justify-between'},h('span',{className:'text-slate-500'},t("الخصم")),h('b',{className:'font-mono text-rose-600'},`${money(viewing.discountTotal ?? viewing.discountAmount)} ${settings.currencySymbol||''}`)),
                 h('div',{className:'flex justify-between border-t pt-2 text-sm'},h('span',{className:'font-black'},'صافي الفاتورة'),h('b',{className:'font-mono text-violet-700'},`${money(viewing.grandTotal)} ${settings.currencySymbol||''}`)),
-                h('div',{className:'flex justify-between'},h('span',{className:'text-slate-500'},'المبلغ المدفوع'),h('b',{className:'font-mono text-violet-700'},`${money(viewing.paidAmount)} ${settings.currencySymbol||''}`)),
+                h('div',{className:'flex justify-between'},h('span',{className:'text-slate-500'},t("المبلغ المدفوع")),h('b',{className:'font-mono text-violet-700'},`${money(viewing.paidAmount)} ${settings.currencySymbol||''}`)),
                 h('div',{className:'flex justify-between'},h('span',{className:'text-slate-500'},'الباقي دين'),h('b',{className:'font-mono text-rose-600'},`${money(viewing.remainingAmount)} ${settings.currencySymbol||''}`))
               ),
-              viewing.notes ? h('div',{className:'mt-4 p-3 rounded-lg bg-slate-50 border border-slate-100 text-[10px]'},h('b',null,'ملاحظات: '),viewing.notes) : null
+              viewing.notes ? h('div',{className:'mt-4 p-3 rounded-lg bg-slate-50 border border-slate-100 text-[10px]'},h('b',null,t("ملاحظات: ")),viewing.notes) : null
             ),
             h('footer',{className:'px-5 py-4 text-center text-[9px] text-slate-400 border-t border-slate-200'},settings.receiptFooterMessage || 'شكراً لتعاملكم معنا')
           )
         ),
         h('div',{className:'no-print shrink-0 p-3 bg-white dark:bg-slate-900 border-t dark:border-slate-800 flex flex-wrap items-center justify-center gap-2'},
           h('button',{type:'button',disabled:!!exporting,onClick:()=>exportPurchase('pdf'),className:'min-w-[92px] inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-xs font-bold disabled:opacity-50'},h(FileDown,{className:'w-4 h-4'}),exporting==='pdf'?'جاري...':'PDF'),
-          h('button',{type:'button',disabled:!!exporting,onClick:()=>exportPurchase('image'),className:'min-w-[92px] inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 text-xs font-bold disabled:opacity-50'},h(ImageIcon,{className:'w-4 h-4'}),exporting==='image'?'جاري...':'صورة'),
+          h('button',{type:'button',disabled:!!exporting,onClick:()=>exportPurchase('image'),className:'min-w-[92px] inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 text-xs font-bold disabled:opacity-50'},h(ImageIcon,{className:'w-4 h-4'}),exporting==='image'?'جاري...':t("صورة")),
           h('button',{type:'button',disabled:!!exporting,onClick:()=>exportPurchase('excel'),className:'min-w-[92px] inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-violet-200 bg-violet-50 text-violet-700 text-xs font-bold disabled:opacity-50'},h(FileSpreadsheet,{className:'w-4 h-4'}),exporting==='excel'?'جاري...':'Excel'),
-          h('button',{type:'button',onClick:async()=>{if(singleRef.current){const ok=await printElementOnly(singleRef.current,settings.printerWidth||'80mm',`فاتورة مشتريات ${viewing.invoiceNumber||''}`);if(!ok)showToast?.('تعذر تجهيز الطباعة','error');}},className:'min-w-[92px] inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-violet-600 text-white text-xs font-bold'},h(Printer,{className:'w-4 h-4'}),'طباعة')
+          h('button',{type:'button',onClick:async()=>{if(singleRef.current){const ok=await printElementOnly(singleRef.current,settings.printerWidth||'80mm',`فاتورة مشتريات ${viewing.invoiceNumber||''}`);if(!ok)showToast?.('تعذر تجهيز الطباعة','error');}},className:'min-w-[92px] inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-violet-600 text-white text-xs font-bold'},h(Printer,{className:'w-4 h-4'}),t("طباعة"))
         )
       )
     ) : null,
-    deleting ? h(ModalLayer, { className: 'fixed inset-0 z-[60] bg-black/60 p-4 flex items-center justify-center' }, h('div', { className: 'w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl p-5 text-center space-y-3' }, h(AlertTriangle, { className: 'w-9 h-9 text-rose-600 mx-auto' }), h('div', { className: 'font-black' }, 'حذف فاتورة المشتريات؟'), h('div', { className: 'flex gap-2' }, h('button', { type: 'button', onClick: () => setDeleting(null), className: 'flex-1 py-2 border rounded-xl' }, 'إلغاء'), h('button', { type: 'button', onClick: async () => { if (await deletePurchase?.(deleting)) { setDeleting(null); setViewing(null); } }, className: 'flex-1 py-2 bg-rose-600 text-white rounded-xl' }, 'حذف')))) : null,
-    showQuickSupp ? h(ModalLayer, { className: 'fixed inset-0 z-[70] bg-black/60 p-4 flex items-center justify-center' }, h('form', { onSubmit: addSupplier, className: 'w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl p-4 space-y-3' }, h('div', { className: 'font-black' }, 'مورد جديد'), h('input', { required: true, value: quickName, onChange: (e) => setQuickName(e.target.value), placeholder: 'اسم المورد', className: 'w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700' }), h('input', { value: quickPhone, onChange: (e) => setQuickPhone(e.target.value), placeholder: 'الهاتف', className: 'w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700' }), h('div', { className: 'flex gap-2' }, h('button', { type: 'button', onClick: () => setShowQuickSupp(false), className: 'flex-1 p-2 border rounded-lg' }, 'إلغاء'), h('button', { type: 'submit', className: 'flex-1 p-2 bg-violet-600 text-white rounded-lg' }, 'حفظ')))) : null,
-    showQuickWarehouse ? h(ModalLayer, { className: 'fixed inset-0 z-[72] bg-black/60 p-4 flex items-center justify-center' }, h('form', { onSubmit: addWarehouse, className: 'w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl p-4 space-y-3 shadow-2xl' }, h('div', { className: 'font-black' }, 'إضافة مخزن جديد'), h('input', { required: true, value: quickWarehouseName, onChange: (e) => setQuickWarehouseName(e.target.value), placeholder: 'اسم المخزن', className: 'w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700' }), h('input', { value: quickWarehouseCode, onChange: (e) => setQuickWarehouseCode(e.target.value), placeholder: 'الكود (اختياري)', className: 'w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700' }), h('div', { className: 'flex gap-2' }, h('button', { type: 'button', onClick: () => setShowQuickWarehouse(false), className: 'flex-1 p-2 border rounded-lg' }, 'إلغاء'), h('button', { type: 'submit', className: 'flex-1 p-2 bg-violet-600 text-white rounded-lg font-bold' }, 'حفظ واختيار')))) : null
+    deleting ? h(ModalLayer, { className: 'fixed inset-0 z-[60] bg-black/60 p-4 flex items-center justify-center' }, h('div', { className: 'w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl p-5 text-center space-y-3' }, h(AlertTriangle, { className: 'w-9 h-9 text-rose-600 mx-auto' }), h('div', { className: 'font-black' }, 'حذف فاتورة المشتريات؟'), h('div', { className: 'flex gap-2' }, h('button', { type: 'button', onClick: () => setDeleting(null), className: 'flex-1 py-2 border rounded-xl' }, t("إلغاء")), h('button', { type: 'button', onClick: async () => { if (await deletePurchase?.(deleting)) { setDeleting(null); setViewing(null); } }, className: 'flex-1 py-2 bg-rose-600 text-white rounded-xl' }, t("حذف"))))) : null,
+    showQuickSupp ? h(ModalLayer, { className: 'fixed inset-0 z-[70] bg-black/60 p-4 flex items-center justify-center' }, h('form', { onSubmit: addSupplier, className: 'w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl p-4 space-y-3' }, h('div', { className: 'font-black' }, 'مورد جديد'), h('input', { required: true, value: quickName, onChange: (e) => setQuickName(e.target.value), placeholder: 'اسم المورد', className: 'w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700' }), h('input', { value: quickPhone, onChange: (e) => setQuickPhone(e.target.value), placeholder: 'الهاتف', className: 'w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700' }), h('div', { className: 'flex gap-2' }, h('button', { type: 'button', onClick: () => setShowQuickSupp(false), className: 'flex-1 p-2 border rounded-lg' }, t("إلغاء")), h('button', { type: 'submit', className: 'flex-1 p-2 bg-violet-600 text-white rounded-lg' }, t("حفظ"))))) : null,
+    showQuickWarehouse ? h(ModalLayer, { className: 'fixed inset-0 z-[72] bg-black/60 p-4 flex items-center justify-center' }, h('form', { onSubmit: addWarehouse, className: 'w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl p-4 space-y-3 shadow-2xl' }, h('div', { className: 'font-black' }, 'إضافة مخزن جديد'), h('input', { required: true, value: quickWarehouseName, onChange: (e) => setQuickWarehouseName(e.target.value), placeholder: 'اسم المخزن', className: 'w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700' }), h('input', { value: quickWarehouseCode, onChange: (e) => setQuickWarehouseCode(e.target.value), placeholder: 'الكود (اختياري)', className: 'w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700' }), h('div', { className: 'flex gap-2' }, h('button', { type: 'button', onClick: () => setShowQuickWarehouse(false), className: 'flex-1 p-2 border rounded-lg' }, t("إلغاء")), h('button', { type: 'submit', className: 'flex-1 p-2 bg-violet-600 text-white rounded-lg font-bold' }, 'حفظ واختيار')))) : null
   );
 };

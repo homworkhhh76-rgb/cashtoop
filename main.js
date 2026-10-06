@@ -1,8 +1,8 @@
-import './utils__overlayGuard.js?v=7.9.4.134-invoice-filters';
+import './utils__overlayGuard.js?v=7.9.4.136-localization';
 import { jsx as _jsx } from "react/jsx-runtime";
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App.js?v=7.9.4.134-invoice-filters';
+import App from './App.js?v=7.9.4.136-localization';
 
 class OscarErrorBoundary extends React.Component {
   constructor(props) {
@@ -17,7 +17,7 @@ class OscarErrorBoundary extends React.Component {
     // A stale Service Worker can mix module versions on localhost/PWA upgrades.
     // Heal code caches once without touching IndexedDB/company data.
     try {
-      const build = '7.9.4.134-invoice-filters';
+      const build = '7.9.4.136-localization';
       const key = 'oscar-render-heal-' + build;
       if (sessionStorage.getItem(key) !== '1') {
         sessionStorage.setItem(key, '1');

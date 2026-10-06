@@ -1,8 +1,9 @@
-import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.134-invoice-filters';
+import {t} from './services__i18n.js?v=7.9.4.136-localization';
+import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.136-localization';
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { useApp } from './context__AppContext.js?v=7.9.4.134-invoice-filters';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.134-invoice-filters';
+import { useApp } from './context__AppContext.js?v=7.9.4.136-localization';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.136-localization';
 import { Trash2, Plus, Minus, PauseCircle, CreditCard, User, UserPlus, Tag, ChevronDown, Clock, X } from 'lucide-react';
 
 const h = React.createElement;
@@ -17,7 +18,7 @@ const EditablePrice = ({ value, onCommit, currency, scaleMode=false }) => {
     else setText(String(Number(value || 0).toFixed(2)));
   };
   return h('label', { className: 'flex items-center gap-1 text-[10px] text-slate-500 font-bold' },
-    h('span', null, scaleMode ? 'المبلغ' : 'السعر'),
+    h('span', null, scaleMode ? t("المبلغ") : t("السعر")),
     h('input', {
       type: 'text', inputMode: 'decimal', dir: 'ltr', value: text,
       onFocus: (e) => e.currentTarget.select(),
@@ -70,7 +71,7 @@ const CartPanelImpl = ({ onOpenPayment }) => {
   const customerOptions = useMemo(() => {
     const hasSelectedCustomerInList = !!selectedCustomer?.id && (selectedCustomer.id === 'cust-walkin' || customers.some((c) => String(c.id) === String(selectedCustomer.id)));
     return [
-      { id: 'cust-walkin', label: 'عميل نقدي', subLabel: 'الافتراضي للبيع النقدي المباشر' },
+      { id: 'cust-walkin', label: t("عميل نقدي"), subLabel: 'الافتراضي للبيع النقدي المباشر' },
       ...(!hasSelectedCustomerInList && selectedCustomer?.name ? [{ id:selectedCustomer.id, label:selectedCustomer.name, subLabel:'عميل طلب المطعم' }] : []),
       ...[...customers]
         .filter((c) => c && c.id !== 'cust-walkin' && !c.deletedAt)
@@ -135,7 +136,7 @@ const CartPanelImpl = ({ onOpenPayment }) => {
     ),
     h('div', { className: 'cart-checkout-dock p-2.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/95 dark:bg-slate-800/95 space-y-2 shrink-0' },
       h('div', { className: 'flex items-center gap-1.5 flex-wrap rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-1.5' },
-        h('span', { className: 'text-[10px] font-bold text-slate-500' }, 'خصم الفاتورة'),
+        h('span', { className: 'text-[10px] font-bold text-slate-500' }, t("خصم الفاتورة")),
         h('div', { className: 'inline-flex rounded-lg overflow-hidden border border-slate-200' },
           h('button', { type: 'button', onClick: () => setInvoiceDiscountType('fixed'), className: `px-2 py-1 text-[10px] font-bold ${invoiceDiscountType === 'fixed' ? 'bg-violet-600 text-white' : 'bg-white text-slate-600'}` }, 'مبلغ'),
           h('button', { type: 'button', onClick: () => setInvoiceDiscountType('percent'), className: `px-2 py-1 text-[10px] font-bold ${invoiceDiscountType === 'percent' ? 'bg-violet-600 text-white' : 'bg-white text-slate-600'}` }, '%')
@@ -144,16 +145,16 @@ const CartPanelImpl = ({ onOpenPayment }) => {
         h('span', { className: 'text-[10px] font-bold text-rose-600' }, `-${invoiceDiscountAmount.toFixed(2)} ${settings.currencySymbol}`)
       ),
       h('div', { className: 'space-y-1 text-xs' },
-        h('div', { className: 'flex justify-between text-slate-600 dark:text-slate-400' }, h('span', null, 'المجموع:'), h('span', { className: 'font-mono font-bold' }, `${subtotal.toFixed(2)} ${settings.currencySymbol}`)),
+        h('div', { className: 'flex justify-between text-slate-600 dark:text-slate-400' }, h('span', null, t("المجموع:")), h('span', { className: 'font-mono font-bold' }, `${subtotal.toFixed(2)} ${settings.currencySymbol}`)),
         h('div', { className: 'flex justify-between text-base font-black pt-1 border-t border-slate-200 dark:border-slate-700' }, h('span', null, settings.scaleModeEnabled ? 'الصافي المقرب:' : 'الصافي:'), h('span', { className: 'text-violet-600 font-mono' }, `${grandTotal.toFixed(2)} ${settings.currencySymbol}`))
       ),
       h('button', { id: 'btn-checkout', 'data-enter-primary':'true', disabled: cart.length === 0, onClick: onOpenPayment, className: 'w-full py-2.5 px-4 rounded-xl bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white font-black text-sm flex items-center justify-center gap-2 shadow-md' },
         h(CreditCard, { className: 'w-5 h-5' }), h('span', null, 'الدفع الفوري [F9]')
       ),
       h('div', { className: 'grid grid-cols-3 gap-1.5' },
-        h('button', { disabled: cart.length === 0, onClick: () => holdCurrentInvoice(), className: 'py-1.5 px-2 rounded-lg bg-slate-200 text-[11px] font-bold disabled:opacity-40 inline-flex items-center justify-center gap-1.5 whitespace-nowrap min-w-0' }, h(PauseCircle, { className: 'w-3.5 h-3.5 shrink-0 text-amber-500' }), h('span', { className: 'leading-none' }, 'تعليق')),
-        h('button', { onClick: () => setShowHoldInvoicesModal(true), className: 'relative py-1.5 px-2 rounded-lg bg-slate-200 text-[11px] font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap min-w-0' }, h(Clock, { className: 'w-3.5 h-3.5 shrink-0 text-slate-500' }), h('span', { className: 'leading-none' }, 'المعلقة'), heldInvoices.length > 0 ? h('span', { className: 'mr-1 px-1.5 rounded-full bg-amber-500 text-white text-[9px]' }, heldInvoices.length) : null),
-        h('button', { disabled: cart.length === 0, onClick: clearCart, className: 'py-1.5 px-2 rounded-lg bg-rose-100 text-rose-700 text-[11px] font-bold disabled:opacity-40 inline-flex items-center justify-center gap-1.5 whitespace-nowrap min-w-0' }, h(Trash2, { className: 'w-3.5 h-3.5 shrink-0' }), h('span', { className: 'leading-none' }, 'تفريغ'))
+        h('button', { disabled: cart.length === 0, onClick: () => holdCurrentInvoice(), className: 'py-1.5 px-2 rounded-lg bg-slate-200 text-[11px] font-bold disabled:opacity-40 inline-flex items-center justify-center gap-1.5 whitespace-nowrap min-w-0' }, h(PauseCircle, { className: 'w-3.5 h-3.5 shrink-0 text-amber-500' }), h('span', { className: 'leading-none' }, t("تعليق"))),
+        h('button', { onClick: () => setShowHoldInvoicesModal(true), className: 'relative py-1.5 px-2 rounded-lg bg-slate-200 text-[11px] font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap min-w-0' }, h(Clock, { className: 'w-3.5 h-3.5 shrink-0 text-slate-500' }), h('span', { className: 'leading-none' }, t("المعلقة")), heldInvoices.length > 0 ? h('span', { className: 'mr-1 px-1.5 rounded-full bg-amber-500 text-white text-[9px]' }, heldInvoices.length) : null),
+        h('button', { disabled: cart.length === 0, onClick: clearCart, className: 'py-1.5 px-2 rounded-lg bg-rose-100 text-rose-700 text-[11px] font-bold disabled:opacity-40 inline-flex items-center justify-center gap-1.5 whitespace-nowrap min-w-0' }, h(Trash2, { className: 'w-3.5 h-3.5 shrink-0' }), h('span', { className: 'leading-none' }, t("تفريغ")))
       )
     )
   );
@@ -167,8 +168,8 @@ const CartPanelImpl = ({ onOpenPayment }) => {
     h(ModalLayer, { className: 'fixed inset-0 p-4 flex items-center justify-center',style:{zIndex:2147483500,background:'rgba(15,23,42,.55)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)'}, onPointerDown:(e)=>{if(e.target===e.currentTarget)setShowQuickCustomer(false);} },
       h('form', { onSubmit:addQuickCustomer, className:'w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-4 space-y-3 text-right' },
         h('div',{className:'flex items-center justify-between'},h('h3',{className:'font-black text-sm'},'إضافة عميل سريع'),h('button',{type:'button',onClick:()=>setShowQuickCustomer(false),className:'p-1 text-slate-400'},h(X,{className:'w-5 h-5'}))),
-        h('input',{required:true,value:quickName,onChange:(e)=>setQuickName(e.target.value),placeholder:'اسم العميل *',autoFocus:false,className:'w-full px-3 py-2 text-xs border rounded-xl bg-white dark:bg-slate-800'}),
-        h('input',{value:quickPhone,onChange:(e)=>setQuickPhone(e.target.value),placeholder:'رقم الهاتف',autoFocus:false,className:'w-full px-3 py-2 text-xs border rounded-xl bg-white dark:bg-slate-800'}),
+        h('input',{required:true,value:quickName,onChange:(e)=>setQuickName(e.target.value),placeholder:t("اسم العميل *"),autoFocus:false,className:'w-full px-3 py-2 text-xs border rounded-xl bg-white dark:bg-slate-800'}),
+        h('input',{value:quickPhone,onChange:(e)=>setQuickPhone(e.target.value),placeholder:t("رقم الهاتف"),autoFocus:false,className:'w-full px-3 py-2 text-xs border rounded-xl bg-white dark:bg-slate-800'}),
         h('button',{type:'submit',className:'w-full py-2.5 rounded-xl bg-violet-600 text-white text-xs font-black'},'حفظ واختيار العميل')
       )
     ),document.body) : null;

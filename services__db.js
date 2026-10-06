@@ -1,4 +1,4 @@
-import { calculateUnitConversions } from './utils__unitTree.js?v=7.9.4.134-invoice-filters';
+import { calculateUnitConversions } from './utils__unitTree.js?v=7.9.4.136-localization';
 const DB_BASE_NAME = 'Oscar_Accounting_POS_DB';
 const DB_VERSION = 9;
 export const getTenantId = () => String(window.OscarActivation?.readRuntime?.()?.companyId || 'local').trim() || 'local';
@@ -214,9 +214,10 @@ function broadcastStoreUpdated(storeName) {
 // Commit many local records atomically in ONE IndexedDB transaction.
 // The promise resolves as soon as the local transaction is durable; cloud capture is
 // deliberately scheduled afterwards so the UI never waits for network/sync work.
-export async function commitLocalBatch(operations = [], notifySync = true) {
+export async function commitLocalBatch(operations = [], notifySync = true, options = {}) {
     const ops = (Array.isArray(operations) ? operations : []).filter(op => op?.storeName && (op.type === 'put' || op.type === 'delete'));
     if (!ops.length) return { committed: 0, stores: [] };
+    if(notifySync&&!options.fiscalClose)for(const op of ops)if(FISCAL_LOCKED_STORES.has(op.storeName))await assertOpenFinancialRecord(await getFromStore(op.storeName,op.type==='delete'?op.key:recordKey(op.storeName,op.value))||op.value);
     const db = await openDB();
     const stores = [...new Set(ops.map(op => op.storeName))];
     const stamp = new Date().toISOString();
@@ -637,6 +638,8 @@ export async function queryStorePage(storeName, options = {}) {
         }
     }
 
+    if(normalized.requireRemote&&(!online||remoteError||!window.OscarCloudSync?.queryStorePage))throw new Error('تعذر التحقق من اكتمال الأرشيف على الخادم. أعد المحاولة عند توفر الاتصال.');
+
     // Page 2+ is intentionally network-on-demand. We never reconstruct an old page from
     // a partial IndexedDB history because that could show the wrong 50 records.
     if (Number(normalized.page || 1) > 1) {
@@ -734,6 +737,7 @@ export async function getFromStore(storeName, key) {
     });
 }
 export async function putInStore(storeName, value, notifySync = true) {
+    if(notifySync&&FISCAL_LOCKED_STORES.has(storeName))await assertOpenFinancialRecord(await getFromStore(storeName,recordKey(storeName,value))||value);
     const db = await openDB();
     const key = recordKey(storeName, value);
     const stockStamp = new Date().toISOString();
@@ -776,6 +780,7 @@ export async function putInStore(storeName, value, notifySync = true) {
     });
 }
 export async function deleteFromStore(storeName, key, notifySync = true) {
+    if(notifySync&&FISCAL_LOCKED_STORES.has(storeName))await assertOpenFinancialRecord(await getFromStore(storeName,key));
     const db = await openDB();
     let beforeValue = null;
     return new Promise((resolve, reject) => {
@@ -822,6 +827,7 @@ export async function clearStore(storeName, notifySync = true) {
 }
 // Bulk put items
 export async function bulkPut(storeName, items, notifySync = true) {
+    if(notifySync&&FISCAL_LOCKED_STORES.has(storeName))for(const item of items||[])await assertOpenFinancialRecord(await getFromStore(storeName,recordKey(storeName,item))||item);
     const rows = Array.isArray(items) ? items.filter(Boolean) : [];
     if (!rows.length) return;
     const db = await openDB();
@@ -1866,3 +1872,12 @@ export const db = {
         await resetDatabase();
     },
 };
+
+export async function assertOpenFinancialRecord(row){
+ if(!row)return;
+ const config=await getFromStore('settings','store_config')||{};
+ const years=config.financialYears||[];const yearId=row.financialYearId||years[0]?.id||config.activeFinancialYearId;
+ if(row.financialYearArchivedAt||years.some(y=>y.id===yearId&&y.status==='closed'))throw Error('المجموعة المالية مؤرشفة: السجل للقراءة فقط');
+}
+
+const FISCAL_LOCKED_STORES=new Set(['invoices','purchases','vouchers','expenses','stock_movements','transfers','audit_logs','partner_statements','shifts','held_invoices','waste_records','restaurant_orders']);

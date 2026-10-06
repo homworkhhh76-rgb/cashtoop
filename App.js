@@ -1,43 +1,46 @@
-import {StartupScreen} from './components__common__StartupScreen.js?v=7.9.4.134-invoice-filters';
+import {useLanguage,toSourceText} from './services__i18n.js?v=7.9.4.136-localization';
+import {t} from './services__i18n.js?v=7.9.4.136-localization';
+import {useAppNavigation,usePullRefresh} from './hooks__appNavigation.js?v=7.9.4.136-localization';
+import {StartupScreen} from './components__common__StartupScreen.js?v=7.9.4.136-localization';
 import React, { useEffect, useRef } from 'react';
-import { AppProvider, useApp } from './context__AppContext.js?v=7.9.4.134-invoice-filters';
-import { Header } from './components__common__Header.js?v=7.9.4.134-invoice-filters';
-import { Sidebar } from './components__common__Sidebar.js?v=7.9.4.134-invoice-filters';
-import { BottomNav } from './components__common__BottomNav.js?v=7.9.4.134-invoice-filters';
-import { Toast } from './components__common__Toast.js?v=7.9.4.134-invoice-filters';
-import { SyncModal } from './components__sync__SyncModal.js?v=7.9.4.134-invoice-filters';
-import { POSView } from './components__pos__POSView.js?v=7.9.4.134-invoice-filters';
-import { DashboardView } from './components__dashboard__DashboardView.js?v=7.9.4.134-invoice-filters';
-import { SalesView } from './components__sales__SalesView.js?v=7.9.4.134-invoice-filters';
-import { PurchasesView } from './components__purchases__PurchasesView.js?v=7.9.4.134-invoice-filters';
-import { ProductsView } from './components__products__ProductsView.js?v=7.9.4.134-invoice-filters';
-import { CategoriesView } from './components__categories__CategoriesView.js?v=7.9.4.134-invoice-filters';
-import { InventoryView } from './components__inventory__InventoryView.js?v=7.9.4.134-invoice-filters';
-import { CustomersView } from './components__customers__CustomersView.js?v=7.9.4.134-invoice-filters';
-import { SuppliersView } from './components__suppliers__SuppliersView.js?v=7.9.4.134-invoice-filters';
-import { AccountsView } from './components__accounts__AccountsView.js?v=7.9.4.134-invoice-filters';
-import { ExpensesView } from './components__expenses__ExpensesView.js?v=7.9.4.134-invoice-filters';
-import { VouchersView } from './components__vouchers__VouchersView.js?v=7.9.4.134-invoice-filters';
-import { EmployeesView } from './components__employees__EmployeesView.js?v=7.9.4.134-invoice-filters';
-import { BarcodesView } from './components__barcodes__BarcodesView.js?v=7.9.4.134-invoice-filters';
-import { ReportsView } from './components__reports__ReportsView.js?v=7.9.4.134-invoice-filters';
-import { TrashView } from './components__trash__TrashView.js?v=7.9.4.134-invoice-filters';
-import { SettingsView } from './components__settings__SettingsView.js?v=7.9.4.134-invoice-filters';
-import { FinancialYearsView } from './components__financial__FinancialYearsView.js?v=7.9.4.134-invoice-filters';
-import { ThermalReceiptModal } from './components__pos__ThermalReceiptModal.js?v=7.9.4.134-invoice-filters';
-import { LoginGate } from './components__auth__LoginGate.js?v=7.9.4.134-invoice-filters';
-import { RestaurantProvider } from './restaurant__context__RestaurantContext.js?v=7.9.4.134-invoice-filters';
-import { RestaurantTablesView } from './restaurant__components__RestaurantTablesView.js?v=7.9.4.134-invoice-filters';
-import { RestaurantWaiterView } from './restaurant__components__RestaurantWaiterView.js?v=7.9.4.134-invoice-filters';
-import { RestaurantKDSView } from './restaurant__components__RestaurantKDSView.js?v=7.9.4.134-invoice-filters';
-import { RestaurantWasteView } from './restaurant__components__RestaurantWasteView.js?v=7.9.4.134-invoice-filters';
-import { RestaurantSettingsPanel } from './restaurant__components__RestaurantSettingsPanel.js?v=7.9.4.134-invoice-filters';
-import { MessageTemplatesView } from './components__messages__MessageTemplatesView.js?v=7.9.4.134-invoice-filters';
-import { isTrialAccount } from './trial__config.js?v=7.9.4.134-invoice-filters';
-import { canAccessTab, firstAllowedTab } from './utils__permissions.js?v=7.9.4.134-invoice-filters';
-import { startTelegramAutomation } from './services__telegram.js?v=7.9.4.134-invoice-filters';
-import { ensureProductImageAutoSync, syncPendingProductImages } from './services__productImages.js?v=7.9.4.134-invoice-filters';
-import { startDailyBackupAutomation } from './services__telegramReports.js?v=7.9.4.134-invoice-filters';
+import { AppProvider, useApp } from './context__AppContext.js?v=7.9.4.136-localization';
+import { Header } from './components__common__Header.js?v=7.9.4.136-localization';
+import { Sidebar } from './components__common__Sidebar.js?v=7.9.4.136-localization';
+import { BottomNav } from './components__common__BottomNav.js?v=7.9.4.136-localization';
+import { Toast } from './components__common__Toast.js?v=7.9.4.136-localization';
+import { SyncModal } from './components__sync__SyncModal.js?v=7.9.4.136-localization';
+import { POSView } from './components__pos__POSView.js?v=7.9.4.136-localization';
+import { DashboardView } from './components__dashboard__DashboardView.js?v=7.9.4.136-localization';
+import { SalesView } from './components__sales__SalesView.js?v=7.9.4.136-localization';
+import { PurchasesView } from './components__purchases__PurchasesView.js?v=7.9.4.136-localization';
+import { ProductsView } from './components__products__ProductsView.js?v=7.9.4.136-localization';
+import { CategoriesView } from './components__categories__CategoriesView.js?v=7.9.4.136-localization';
+import { InventoryView } from './components__inventory__InventoryView.js?v=7.9.4.136-localization';
+import { CustomersView } from './components__customers__CustomersView.js?v=7.9.4.136-localization';
+import { SuppliersView } from './components__suppliers__SuppliersView.js?v=7.9.4.136-localization';
+import { AccountsView } from './components__accounts__AccountsView.js?v=7.9.4.136-localization';
+import { ExpensesView } from './components__expenses__ExpensesView.js?v=7.9.4.136-localization';
+import { VouchersView } from './components__vouchers__VouchersView.js?v=7.9.4.136-localization';
+import { EmployeesView } from './components__employees__EmployeesView.js?v=7.9.4.136-localization';
+import { BarcodesView } from './components__barcodes__BarcodesView.js?v=7.9.4.136-localization';
+import { ReportsView } from './components__reports__ReportsView.js?v=7.9.4.136-localization';
+import { TrashView } from './components__trash__TrashView.js?v=7.9.4.136-localization';
+import { SettingsView } from './components__settings__SettingsView.js?v=7.9.4.136-localization';
+import { FinancialYearsView } from './components__financial__FinancialYearsView.js?v=7.9.4.136-localization';
+import { ThermalReceiptModal } from './components__pos__ThermalReceiptModal.js?v=7.9.4.136-localization';
+import { LoginGate } from './components__auth__LoginGate.js?v=7.9.4.136-localization';
+import { RestaurantProvider } from './restaurant__context__RestaurantContext.js?v=7.9.4.136-localization';
+import { RestaurantTablesView } from './restaurant__components__RestaurantTablesView.js?v=7.9.4.136-localization';
+import { RestaurantWaiterView } from './restaurant__components__RestaurantWaiterView.js?v=7.9.4.136-localization';
+import { RestaurantKDSView } from './restaurant__components__RestaurantKDSView.js?v=7.9.4.136-localization';
+import { RestaurantWasteView } from './restaurant__components__RestaurantWasteView.js?v=7.9.4.136-localization';
+import { RestaurantSettingsPanel } from './restaurant__components__RestaurantSettingsPanel.js?v=7.9.4.136-localization';
+import { MessageTemplatesView } from './components__messages__MessageTemplatesView.js?v=7.9.4.136-localization';
+import { isTrialAccount } from './trial__config.js?v=7.9.4.136-localization';
+import { canAccessTab, firstAllowedTab } from './utils__permissions.js?v=7.9.4.136-localization';
+import { startTelegramAutomation } from './services__telegram.js?v=7.9.4.136-localization';
+import { ensureProductImageAutoSync, syncPendingProductImages } from './services__productImages.js?v=7.9.4.136-localization';
+import { startDailyBackupAutomation } from './services__telegramReports.js?v=7.9.4.136-localization';
 
 const h = React.createElement;
 const ScrollScreen = ({ children }) => h('div', { className:'scroll-chain-page h-full min-h-0 overflow-y-auto custom-scrollbar mobile-safe-bottom lg:pb-0' }, children);
@@ -51,8 +54,10 @@ const RESTAURANT_TAB_PERMISSIONS = {
 
 const MainLayout = () => {
   const app = useApp();
+  useAppNavigation(app.activeTab,app.setActiveTab);const refreshRef=React.useRef(null);
   const { activeTab, setActiveTab, isLoaded, isCloudReady, settings, saveSettings, currentUser, activeEmployee, cart } = app;
   const [startupWait,setStartupWait]=React.useState(true);
+  const pull=usePullRefresh(refreshRef,async()=>{try{await app.refreshCurrentPage?.(app.activeTab);window.dispatchEvent(new CustomEvent('ct-page-refreshed',{detail:{tab:app.activeTab}}))}catch(e){app.showToast(e.message||'تعذر التحديث','error')}},isLoaded&&(!startupWait||isCloudReady||navigator.onLine===false));
   useEffect(()=>{const timer=setTimeout(()=>setStartupWait(false),8000);return()=>clearTimeout(timer)},[]);
   const backupAppRef = useRef(app);
   backupAppRef.current = app;
@@ -120,7 +125,7 @@ const MainLayout = () => {
       if(e.key==='Escape'){
         if(document.querySelector('.searchable-dropdown-panel,.ct-nav-menu,.ct-product-actions-menu,.cash-action-menu'))return;
         const buttons=Array.from(scope.querySelectorAll('button')).filter(isVisible);
-        const cancel=buttons.find(b=>/^(إلغاء|الغاء|إغلاق|اغلاق|رجوع)$/.test((b.textContent||'').trim())||/^(إغلاق|إلغاء)$/.test(b.getAttribute('aria-label')||''))||buttons.find(b=>b.querySelector('svg.lucide-x'));
+        const cancel=buttons.find(b=>/^(إلغاء|الغاء|إغلاق|اغلاق|رجوع)$/.test(toSourceText((b.textContent||'').trim()))||/^(إغلاق|إلغاء)$/.test(toSourceText(b.getAttribute('aria-label')||'')))||buttons.find(b=>b.querySelector('svg.lucide-x'));
         if(cancel){e.preventDefault();cancel.click()}return;
       }
       if(target?.id==='pos-barcode-input'||target?.tagName==='TEXTAREA'||target?.closest?.('.searchable-dropdown-panel'))return;
@@ -129,7 +134,7 @@ const MainLayout = () => {
       const submit=form&&Array.from(form.querySelectorAll('button[type="submit"],input[type="submit"]')).find(isVisible);
       if(submit){e.preventDefault();form.requestSubmit?form.requestSubmit(submit):submit.click();return}
       const candidates=Array.from(scope.querySelectorAll('button')).filter(isVisible);
-      const save=candidates.find(b=>b.matches('[data-enter-primary="true"]'))||candidates.find(b=>/^(حفظ|تأكيد|تطبيق|بيع وحفظ|حفظ المرتجع)/.test((b.textContent||'').trim()));
+      const save=candidates.find(b=>b.matches('[data-enter-primary="true"]'))||candidates.find(b=>/^(حفظ|تأكيد|تطبيق|بيع وحفظ|حفظ المرتجع)/.test(toSourceText((b.textContent||'').trim())));
       if(save){e.preventDefault();save.click()}
     };
     window.addEventListener('keydown', onEnterExecute);
@@ -232,7 +237,7 @@ const MainLayout = () => {
     return h(POSView);
   })();
 
-  if(!isLoaded||(startupWait&&!isCloudReady&&navigator.onLine!==false))return h(StartupScreen,{progress:app.startupProgress});
+  if(!isLoaded||(startupWait&&!isCloudReady&&navigator.onLine!==false))return h(StartupScreen,{progress:app.startupProgress,offline:!app.isOnline});
   return h('div', {
     className:'flex w-screen bg-slate-100 text-slate-900 overflow-hidden',
     style:{ height:'var(--oscar-app-height, 100dvh)', minHeight:'var(--oscar-app-height, 100dvh)' }
@@ -240,8 +245,9 @@ const MainLayout = () => {
     h(Sidebar),
     h('div', { className:'flex-1 flex flex-col min-w-0 h-full min-h-0 overflow-hidden' },
       h(Header),
-      h('main', { className:'flex-1 min-h-0 overflow-hidden relative pb-16 lg:pb-0' },
-        h('div', { key:activeTab, className:'oscar-page-stage h-full min-h-0 w-full overflow-hidden' }, screen)
+      h('main', { ref:refreshRef,className:'flex-1 min-h-0 overflow-hidden relative pb-16 lg:pb-0' },
+        h('div',{className:'ct-pull-indicator'+(pull.refreshing?' is-refreshing':''),style:{opacity:pull.distance?1:0,transform:`translate(-50%,${Math.max(0,pull.distance-45)}px)`},role:'status','aria-label':t("تحديث البيانات")},h('svg',{viewBox:'0 0 24 24',width:22,height:22,fill:'none',stroke:'currentColor',strokeWidth:2},h('path',{d:'M20 7v5h-5M4 17v-5h5M5.6 7a7 7 0 0 1 12-2L20 8M4 16l2.4 3a7 7 0 0 0 12-2'}))),
+        h('div', { key:activeTab,style:{transform:`translateY(${pull.distance}px)`,transition:pull.distance?'none':'transform .22s ease'},className:'oscar-page-stage h-full min-h-0 w-full overflow-hidden' }, screen)
       ),
       h(BottomNav)
     ),
@@ -252,5 +258,6 @@ const MainLayout = () => {
 };
 
 export default function App() {
+  useLanguage();
   return h(LoginGate, null, h(AppProvider, null, h(RestaurantProvider, null, h(MainLayout))));
 }

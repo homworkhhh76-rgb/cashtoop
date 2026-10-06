@@ -1,4 +1,4 @@
-import { renderElementTablePages, resolveExportElement } from './utils__canvasRenderer.js?v=7.9.4.134-invoice-filters';
+import { renderElementTablePages, resolveExportElement } from './utils__canvasRenderer.js?v=7.9.4.136-localization';
 
 const safe=v=>String(v||'export').replace(/[\\/:*?"<>|]+/g,'-').trim()||'export';
 const withExt=(name,ext)=>safe(name).toLowerCase().endsWith(ext)?safe(name):safe(name)+ext;

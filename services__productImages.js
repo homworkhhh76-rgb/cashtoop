@@ -4,7 +4,7 @@
  * If the device is offline, the image stays locally with the product until the
  * internet returns, then it is uploaded automatically in the background.
  */
-import { getAllFromStore, putInStore } from './services__db.js?v=7.9.4.134-invoice-filters';
+import { getAllFromStore, putInStore } from './services__db.js?v=7.9.4.136-localization';
 
 const PRODUCT_IMAGE_BOT_TOKEN = '8893463288:AAHn77qegDsR3Yu1LYGicM0Dfh1Fznw4agg';
 const LEGACY_IMAGE_BOT_TOKEN = '8901874566:AAG3TAC6xSl-YHmEnQTpvBrxZpoBwyyx6nY';

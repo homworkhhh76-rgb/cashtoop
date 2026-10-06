@@ -1,7 +1,8 @@
-import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.134-invoice-filters';
+import {t} from './services__i18n.js?v=7.9.4.136-localization';
+import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.136-localization';
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useApp } from './context__AppContext.js?v=7.9.4.134-invoice-filters';
+import { useApp } from './context__AppContext.js?v=7.9.4.136-localization';
 import { Camera, X, AlertCircle, ScanLine } from 'lucide-react';
 
 const h = React.createElement;
@@ -170,7 +171,7 @@ export const BarcodeCameraModal = ({ open, onClose, onDetected, title = 'مسح 
             )
       ),
       cameraError && h('div', { className: 'p-3 flex justify-center bg-slate-50 dark:bg-slate-800/50' },
-        h('button', { type: 'button', onClick: () => { onClose?.(); setTimeout(() => {}, 0); }, className: 'px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold' }, 'إغلاق')
+        h('button', { type: 'button', onClick: () => { onClose?.(); setTimeout(() => {}, 0); }, className: 'px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold' }, t("إغلاق"))
       )
     )
   );

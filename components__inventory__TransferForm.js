@@ -1,8 +1,9 @@
+import {t} from './services__i18n.js?v=7.9.4.136-localization';
 import React, { useMemo, useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.134-invoice-filters';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.134-invoice-filters';
+import { useApp } from './context__AppContext.js?v=7.9.4.136-localization';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.136-localization';
 import { ArrowLeftRight, Plus, Trash2 } from 'lucide-react';
-import { formatStockBreakdown } from './utils__unitTree.js?v=7.9.4.134-invoice-filters';
+import { formatStockBreakdown } from './utils__unitTree.js?v=7.9.4.136-localization';
 
 const h = React.createElement;
 const makeRow = (products = []) => {
@@ -60,7 +61,7 @@ export const TransferForm = () => {
         )
       ),
       h('button', { type: 'button', onClick: addRow, className: 'shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-violet-600 text-white text-xs font-black hover:bg-violet-700' },
-        h(Plus, { className: 'w-4 h-4' }), h('span', null, 'إضافة صنف')
+        h(Plus, { className: 'w-4 h-4' }), h('span', null, t("إضافة صنف"))
       )
     ),
     h('div', { className: 'grid grid-cols-1 sm:grid-cols-2 gap-3' },
@@ -88,7 +89,7 @@ export const TransferForm = () => {
           ),
           h('div', { className: 'grid grid-cols-1 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_120px] gap-2.5' },
             h('div', null,
-              h('label', { className: 'text-[11px] font-semibold block mb-1' }, 'الصنف:'),
+              h('label', { className: 'text-[11px] font-semibold block mb-1' }, t("الصنف:")),
               h(SearchableDropdown, {
                 id: `transfer-product-${row.id}`, options: productOptions, selectedId: row.productId,
                 onSelect: (productId) => {
@@ -99,11 +100,11 @@ export const TransferForm = () => {
               })
             ),
             h('div', null,
-              h('label', { className: 'text-[11px] font-semibold block mb-1' }, 'الوحدة:'),
+              h('label', { className: 'text-[11px] font-semibold block mb-1' }, t("الوحدة:")),
               h(SearchableDropdown, { id: `transfer-unit-${row.id}`, options: unitOptions, selectedId: row.unitId, onSelect: (unitId) => updateRow(row.id, { unitId }), placeholder: 'اختر الوحدة...' })
             ),
             h('div', null,
-              h('label', { className: 'text-[11px] font-semibold block mb-1' }, 'الكمية:'),
+              h('label', { className: 'text-[11px] font-semibold block mb-1' }, t("الكمية:")),
               h('input', { type: 'number', inputMode: 'decimal', min: '0.001', step: 'any', value: row.quantity, onChange: (e) => updateRow(row.id, { quantity: e.target.value }), className: 'w-full px-3 py-2 text-xs border rounded-xl font-mono font-bold bg-white dark:bg-slate-900' })
             )
           )

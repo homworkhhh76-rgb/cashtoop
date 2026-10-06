@@ -1,8 +1,9 @@
+import {t} from './services__i18n.js?v=7.9.4.136-localization';
 import React, { useEffect, useMemo, useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.134-invoice-filters';
-import { Pagination, usePagination, useDatabasePagination } from './components__common__Pagination.js?v=7.9.4.134-invoice-filters';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.134-invoice-filters';
-import { downloadProfessionalTablePDF, downloadProfessionalTableExcel } from './utils__professionalExport.js?v=7.9.4.134-invoice-filters';
+import { useApp } from './context__AppContext.js?v=7.9.4.136-localization';
+import { Pagination, usePagination, useDatabasePagination } from './components__common__Pagination.js?v=7.9.4.136-localization';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.136-localization';
+import { downloadProfessionalTablePDF, downloadProfessionalTableExcel } from './utils__professionalExport.js?v=7.9.4.136-localization';
 import { Plus, Search, Trash2, Edit2, FileSpreadsheet, FileText, Settings2, UsersRound, Receipt, WalletCards, X } from 'lucide-react';
 
 const h = React.createElement;
@@ -311,8 +312,8 @@ export const ExpensesView = () => {
     h('td',{className:'p-3'},exp.accountName || '-'),
     h('td',{className:'p-3 max-w-[260px] truncate',title:exp.notes||''},exp.notes || '-'),
     h('td',{className:'p-3'},h('div',{className:'flex gap-1 justify-end'},
-      h('button',{type:'button',onClick:()=>editExpense(exp),className:'p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50',title:'تعديل'},h(Edit2,{className:'w-3.5 h-3.5'})),
-      h('button',{type:'button',onClick:()=>softDeleteExpense(exp.id),className:'p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50',title:'حذف'},h(Trash2,{className:'w-3.5 h-3.5'}))
+      h('button',{type:'button',onClick:()=>editExpense(exp),className:'p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50',title:t("تعديل")},h(Edit2,{className:'w-3.5 h-3.5'})),
+      h('button',{type:'button',onClick:()=>softDeleteExpense(exp.id),className:'p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50',title:t("حذف")},h(Trash2,{className:'w-3.5 h-3.5'}))
     ))
   ));
   const receiptRows = receiptPager.pageItems.map(v => h('tr',{key:v.id,className:'border-b border-slate-100 hover:bg-slate-50/70'},
@@ -333,7 +334,7 @@ export const ExpensesView = () => {
         h('p',{className:'text-xs text-slate-500 mt-1'},'كشوفات مصنفة حسب النوع والفترة والفلترة، مع تنزيل PDF وExcel احترافي')
       ),
       h('div',{className:'flex flex-wrap items-center gap-2'},
-        mode !== 'receipts' && h('button',{type:'button',onClick:openNewExpense,className:'flex items-center gap-1.5 px-4 py-2 rounded-xl bg-violet-600 text-white text-xs font-bold shadow-sm'},h(Plus,{className:'w-4 h-4'}),'تسجيل مصروف'),
+        mode !== 'receipts' && h('button',{type:'button',onClick:openNewExpense,className:'flex items-center gap-1.5 px-4 py-2 rounded-xl bg-violet-600 text-white text-xs font-bold shadow-sm'},h(Plus,{className:'w-4 h-4'}),t("تسجيل مصروف")),
         mode === 'expenses' && h('button',{type:'button',onClick:()=>setShowTypeManager(true),className:'flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-bold'},h(Settings2,{className:'w-4 h-4'}),'أنواع المصروف'),
         h('button',{type:'button',onClick:exportPDF,className:'flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold'},h(FileText,{className:'w-4 h-4 text-rose-600'}),'PDF'),
         h('button',{type:'button',onClick:exportExcel,className:'flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold'},h(FileSpreadsheet,{className:'w-4 h-4 text-violet-600'}),'Excel')
@@ -354,16 +355,16 @@ export const ExpensesView = () => {
           h('input',{value:search,onChange:e=>setSearch(e.target.value),placeholder:mode==='receipts'?'ابحث بالجهة أو رقم السند أو البيان...':'ابحث بالنوع أو البيان أو الحساب...',className:'w-full pr-9 pl-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50'})
         ),
         mode === 'receipts'
-          ? h('div',null,h('label',{className:'block text-[10px] text-slate-500 font-bold mb-1'},'تصنيف الدفعة'),h(SearchableDropdown,{id:'receipt-class-filter',options:[{id:'all',label:'كل الدفعات'},{id:'sales',label:'دفعات المبيعات'},{id:'customer',label:'سندات قبض العملاء'},{id:'supplier',label:'سندات قبض الموردين'},{id:'other',label:'دفعات أخرى'}],selectedId:selectedReceiptClass,onSelect:setSelectedReceiptClass,placeholder:'التصنيف'}))
+          ? h('div',null,h('label',{className:'block text-[10px] text-slate-500 font-bold mb-1'},'تصنيف الدفعة'),h(SearchableDropdown,{id:'receipt-class-filter',options:[{id:'all',label:'كل الدفعات'},{id:'sales',label:'دفعات المبيعات'},{id:'customer',label:'سندات قبض العملاء'},{id:'supplier',label:'سندات قبض الموردين'},{id:'other',label:'دفعات أخرى'}],selectedId:selectedReceiptClass,onSelect:setSelectedReceiptClass,placeholder:t("التصنيف")}))
           : h('div',null,h('label',{className:'block text-[10px] text-slate-500 font-bold mb-1'},'نوع المصروف'),h(SearchableDropdown,{id:'expense-category-filter',options:[{id:'all',label:mode==='labor'?'كل بنود العمال والأجور':'كل أنواع المصروفات'},...filterCategories.filter(c=>mode!=='labor'||isLaborCategory(c)).map(c=>({id:c,label:c}))],selectedId:selectedCategory,onSelect:setSelectedCategory,placeholder:'نوع المصروف'})),
-        h('div',null,h('label',{className:'block text-[10px] text-slate-500 font-bold mb-1'},'من تاريخ'),h('input',{type:'date',value:dateFrom,onChange:e=>setDateFrom(e.target.value),className:'w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white'})),
-        h('div',null,h('label',{className:'block text-[10px] text-slate-500 font-bold mb-1'},'إلى تاريخ'),h('input',{type:'date',value:dateTo,onChange:e=>setDateTo(e.target.value),className:'w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white'}))
+        h('div',null,h('label',{className:'block text-[10px] text-slate-500 font-bold mb-1'},t("من تاريخ")),h('input',{type:'date',value:dateFrom,onChange:e=>setDateFrom(e.target.value),className:'w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white'})),
+        h('div',null,h('label',{className:'block text-[10px] text-slate-500 font-bold mb-1'},t("إلى تاريخ")),h('input',{type:'date',value:dateTo,onChange:e=>setDateTo(e.target.value),className:'w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white'}))
       ),
       h('div',{className:'flex flex-wrap gap-2 justify-between items-center border-t border-slate-100 pt-3'},
         h('div',{className:'flex gap-1.5'},
-          h('button',{type:'button',onClick:()=>setQuickRange('today'),className:'px-3 py-1.5 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600'},'اليوم'),
-          h('button',{type:'button',onClick:()=>setQuickRange('month'),className:'px-3 py-1.5 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600'},'هذا الشهر'),
-          h('button',{type:'button',onClick:()=>setQuickRange('all'),className:'px-3 py-1.5 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600'},'كل الفترات')
+          h('button',{type:'button',onClick:()=>setQuickRange('today'),className:'px-3 py-1.5 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600'},t("اليوم")),
+          h('button',{type:'button',onClick:()=>setQuickRange('month'),className:'px-3 py-1.5 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600'},t("هذا الشهر")),
+          h('button',{type:'button',onClick:()=>setQuickRange('all'),className:'px-3 py-1.5 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600'},t("كل الفترات"))
         ),
         h('div',{className:'text-xs font-bold text-slate-600'},`${periodLabel} • ${count} حركة • الإجمالي: `,h('span',{className:mode==='receipts'?'text-violet-700 font-mono':'text-rose-600 font-mono'},`${money(total)} ${settings.currencySymbol}`))
       )
@@ -393,12 +394,12 @@ export const ExpensesView = () => {
 
     showAddModal && h('div',{className:'fixed inset-0 z-[70] bg-black/60 p-3 flex items-center justify-center',onClick:()=>setShowAddModal(false)},
       h('form',{onSubmit:saveExpense,onClick:e=>e.stopPropagation(),className:'w-full max-w-md rounded-2xl bg-white shadow-2xl p-5 space-y-4 text-right max-h-[calc(100dvh-130px)] overflow-y-auto'},
-        h('div',{className:'flex justify-between items-center'},h('h3',{className:'text-sm font-black'},editingExpense?'تعديل المصروف':'تسجيل مصروف جديد'),h('button',{type:'button',onClick:()=>setShowAddModal(false),className:'p-1.5 rounded-lg hover:bg-slate-100'},h(X,{className:'w-4 h-4'}))),
-        h('div',null,h('label',{className:'text-xs font-bold block mb-1'},'المبلغ *'),h('input',{type:'number',step:'any',min:'0.01',required:true,value:amount,onChange:e=>setAmount(e.target.value),className:'w-full px-3 py-2 text-sm font-mono font-bold border rounded-xl'})),
+        h('div',{className:'flex justify-between items-center'},h('h3',{className:'text-sm font-black'},editingExpense?t("تعديل المصروف"):'تسجيل مصروف جديد'),h('button',{type:'button',onClick:()=>setShowAddModal(false),className:'p-1.5 rounded-lg hover:bg-slate-100'},h(X,{className:'w-4 h-4'}))),
+        h('div',null,h('label',{className:'text-xs font-bold block mb-1'},t("المبلغ *")),h('input',{type:'number',step:'any',min:'0.01',required:true,value:amount,onChange:e=>setAmount(e.target.value),className:'w-full px-3 py-2 text-sm font-mono font-bold border rounded-xl'})),
         h('div',null,h('label',{className:'text-xs font-bold block mb-1'},'نوع المصروف *'),h(SearchableDropdown,{id:'expense-category-editor',options:configuredCategories.map(c=>({id:c,label:c})),selectedId:category,onSelect:setCategory,placeholder:'اختر نوع المصروف'})),
-        h('div',null,h('label',{className:'text-xs font-bold block mb-1'},'صرف من الحساب *'),h(SearchableDropdown,{id:'expense-account-editor',options:accounts.map(a=>({id:a.id,label:a.name,subLabel:`الرصيد: ${money(a.balance)} ${settings.currencySymbol}`})),selectedId:accountId,onSelect:setAccountId,placeholder:'اختر الحساب'})),
+        h('div',null,h('label',{className:'text-xs font-bold block mb-1'},'صرف من الحساب *'),h(SearchableDropdown,{id:'expense-account-editor',options:accounts.map(a=>({id:a.id,label:a.name,subLabel:`الرصيد: ${money(a.balance)} ${settings.currencySymbol}`})),selectedId:accountId,onSelect:setAccountId,placeholder:t("اختر الحساب")})),
         h('div',null,h('label',{className:'text-xs font-bold block mb-1'},'البيان / الملاحظات'),h('input',{type:'text',value:notes,onChange:e=>setNotes(e.target.value),placeholder:'تفاصيل المصروف...',className:'w-full px-3 py-2 text-xs border rounded-xl'})),
-        h('div',{className:'flex justify-between pt-2 border-t'},h('button',{type:'button',onClick:()=>setShowAddModal(false),className:'px-3 py-2 text-xs text-slate-500'},'إلغاء'),h('button',{type:'submit',className:'px-5 py-2 rounded-xl bg-violet-600 text-white text-xs font-bold'},editingExpense?'حفظ التعديل':'تأكيد التسجيل'))
+        h('div',{className:'flex justify-between pt-2 border-t'},h('button',{type:'button',onClick:()=>setShowAddModal(false),className:'px-3 py-2 text-xs text-slate-500'},t("إلغاء")),h('button',{type:'submit',className:'px-5 py-2 rounded-xl bg-violet-600 text-white text-xs font-bold'},editingExpense?t("حفظ التعديل"):'تأكيد التسجيل'))
       )
     ),
 

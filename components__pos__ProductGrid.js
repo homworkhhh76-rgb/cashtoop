@@ -1,7 +1,8 @@
+import {t} from './services__i18n.js?v=7.9.4.136-localization';
 import React from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.134-invoice-filters';
+import { useApp } from './context__AppContext.js?v=7.9.4.136-localization';
 import { Layers } from 'lucide-react';
-import { ProductImage } from './components__common__ProductImage.js?v=7.9.4.134-invoice-filters';
+import { ProductImage } from './components__common__ProductImage.js?v=7.9.4.136-localization';
 
 const h = React.createElement;
 
@@ -41,6 +42,7 @@ const unitStockLines = (baseStock, units=[]) => {
 
 const ProductGridImpl = () => {
   const { products, categories, selectedCategory, setSelectedCategory, searchQuery, addToCart, getProductStock, settings, setActiveTab, softDeleteProduct } = useApp();
+  const [renderLimit,setRenderLimit]=React.useState(48);const scrollRef=React.useRef(null);const moreRef=React.useRef(null);
   const deferredSearch = React.useDeferredValue(searchQuery);
   const visibleProducts = React.useMemo(() => products.filter(p => !p.deletedAt && p.status !== 'archived' && isCashierVisibleProduct(p)), [products]);
   const categoryCounts = React.useMemo(() => {
@@ -60,11 +62,13 @@ const ProductGridImpl = () => {
       return matchName || matchSku || matchBrand || matchBarcode;
     });
   }, [visibleProducts, selectedCategory, deferredSearch]);
+  React.useEffect(()=>setRenderLimit(48),[selectedCategory,deferredSearch]);
+  React.useEffect(()=>{if(!moreRef.current||typeof IntersectionObserver==='undefined')return;const observer=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting))setRenderLimit(n=>Math.min(filteredProducts.length,n+48))},{root:scrollRef.current,rootMargin:'200px'});observer.observe(moreRef.current);return()=>observer.disconnect()},[renderLimit,filteredProducts.length]);
   return h('div', { className:'flex flex-col h-full overflow-hidden text-right select-none' },
-    h('div',{className:'ct-catalog-head'},h('strong',{className:'ct-catalog-heading'},`كافة الأصناف (${visibleProducts.length})`),h('div',{id:'ct-catalog-search-target'})),
+    h('div',{className:'ct-catalog-head'},h('strong',{className:'ct-catalog-heading'},`${t('كافة الأصناف')} (${visibleProducts.length})`),h('div',{id:'ct-catalog-search-target'})),
     h('div', { className:'ct-catalog-categories p-2 border-b border-slate-200 bg-white overflow-x-auto custom-scrollbar shrink-0 w-full min-w-full' },
       h('div', { className:'flex items-center gap-1.5 min-w-full w-max' },
-        h('button', { onClick:()=>setSelectedCategory(null), className:`px-3 py-1.5 rounded-lg text-xs font-bold shrink-0 ${selectedCategory===null?'bg-slate-900 text-white':'bg-slate-100 text-slate-600 hover:bg-slate-200'}` }, `كافة الأصناف (${visibleProducts.length})`),
+        h('button', { onClick:()=>setSelectedCategory(null), className:`px-3 py-1.5 rounded-lg text-xs font-bold shrink-0 ${selectedCategory===null?'bg-slate-900 text-white':'bg-slate-100 text-slate-600 hover:bg-slate-200'}` }, `${t('كافة الأصناف')} (${visibleProducts.length})`),
         ...categories.map(cat => {
           const active=selectedCategory===cat.id;
           const count=categoryCounts.get(cat.id)||0;
@@ -73,9 +77,9 @@ const ProductGridImpl = () => {
         })
       )
     ),
-    h('div', { className:'flex-1 overflow-y-auto p-3 custom-scrollbar' },
+    h('div', { ref:scrollRef,className:'flex-1 overflow-y-auto p-3 custom-scrollbar' },
       filteredProducts.length===0 ? null :
-      h('div',{className:'oscar-pos-product-grid'}, ...filteredProducts.map(product=>{
+      h('div',{className:'oscar-pos-product-grid'}, ...filteredProducts.slice(0,renderLimit).map(product=>{
         const baseStock=getProductStock(product.id,settings.activeWarehouseId);
         const defaultUnit=(product.units||[]).find(u=>u.isDefaultSale)||(product.units||[])[0];
         const low=product.reorderPoint!==undefined&&baseStock<=product.reorderPoint;
@@ -100,7 +104,7 @@ const ProductGridImpl = () => {
             h('div',{className:'flex flex-wrap gap-1'},...(product.units||[]).map(unit=>h('button',{key:unit.id,type:'button',onClick:e=>{e.stopPropagation();addToCart(product,unit,1);},className:`flex items-center justify-between gap-1 px-1.5 py-1 rounded-md text-[10px] font-semibold active:scale-95 ${unit.isDefaultSale?'bg-violet-50 text-violet-800 border border-violet-300/70':'bg-slate-100 text-slate-700 hover:bg-slate-200'}`,title:`إضافة ${unit.name} بسعر ${unit.salePrice} ${settings.currencySymbol}`},h('span',null,unit.name),h('span',{className:'font-mono font-bold'},unit.salePrice))))
           )
         );
-      }))
+      })),filteredProducts.length>renderLimit&&h('button',{ref:moreRef,type:'button',className:'ct-more-products',onClick:()=>setRenderLimit(n=>n+48)},t("عرض المزيد"))
     )
   );
 };

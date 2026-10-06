@@ -1,12 +1,13 @@
-import {buildCartReturn} from './services__cartReturn.js?v=7.9.4.134-invoice-filters';
+import {buildFinancialClose,fiscalStores,fiscalMasters} from './services__financialClose.js?v=7.9.4.136-localization';
+import {buildCartReturn} from './services__cartReturn.js?v=7.9.4.136-localization';
 import { jsx as _jsx } from "react/jsx-runtime";
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { getAllFromStore, getFromStore, putInStore, deleteFromStore, clearStore, bulkPut, commitLocalBatch, queryStorePage, queryAllStoreRecords, queryStoreStats, getLatestStockMovementLocal, initializeDatabase, seedDatabaseDefaults, cleanupLegacyDemoSeedIfPristine, ensurePrimaryShowroomWarehouse, resetDatabase, exportDatabaseBackup, importDatabaseBackup, syncChannel, DEFAULT_SETTINGS, CASH_CUSTOMER, DEFAULT_CATEGORIES, DEFAULT_WAREHOUSES, DEFAULT_ACCOUNTS, DEFAULT_SUPPLIERS, getDemoProducts, getDemoStock, DEFAULT_EMPLOYEES, } from './services__db.js?v=7.9.4.134-invoice-filters';
-import { calculateUnitConversions, findUnitByBarcode, toBaseQuantity } from './utils__unitTree.js?v=7.9.4.134-invoice-filters';
-import { playBeepSound, playSuccessSound, playErrorSound } from './services__audio.js?v=7.9.4.134-invoice-filters';
-import { notifyTelegramInvoice } from './services__telegram.js?v=7.9.4.134-invoice-filters';
-import { normalizeEmployeePermissions, canAccessTab, firstAllowedTab } from './utils__permissions.js?v=7.9.4.134-invoice-filters';
-import { isTrialAccount, TRIAL_LIMITS } from './trial__config.js?v=7.9.4.134-invoice-filters';
+import { assertOpenFinancialRecord, getAllFromStore, getFromStore, putInStore, deleteFromStore, clearStore, bulkPut, commitLocalBatch, queryStorePage, queryAllStoreRecords, queryStoreStats, getLatestStockMovementLocal, initializeDatabase, seedDatabaseDefaults, cleanupLegacyDemoSeedIfPristine, ensurePrimaryShowroomWarehouse, resetDatabase, exportDatabaseBackup, importDatabaseBackup, syncChannel, DEFAULT_SETTINGS, CASH_CUSTOMER, DEFAULT_CATEGORIES, DEFAULT_WAREHOUSES, DEFAULT_ACCOUNTS, DEFAULT_SUPPLIERS, getDemoProducts, getDemoStock, DEFAULT_EMPLOYEES, } from './services__db.js?v=7.9.4.136-localization';
+import { calculateUnitConversions, findUnitByBarcode, toBaseQuantity } from './utils__unitTree.js?v=7.9.4.136-localization';
+import { playBeepSound, playSuccessSound, playErrorSound } from './services__audio.js?v=7.9.4.136-localization';
+import { notifyTelegramInvoice } from './services__telegram.js?v=7.9.4.136-localization';
+import { isManagerAccess, normalizeEmployeePermissions, canAccessTab, firstAllowedTab } from './utils__permissions.js?v=7.9.4.136-localization';
+import { isTrialAccount, TRIAL_LIMITS } from './trial__config.js?v=7.9.4.136-localization';
 const AppContext = createContext(null);
 const recordTime = (item = {}) => {
     const fields = ['createdAt', 'date', 'timestamp', 'startTime', 'updatedAt'];
@@ -822,6 +823,7 @@ export const AppProvider = ({ children }) => {
     }, [cart, selectedCustomer, invoiceAdditionalCharges, invoiceDiscountType, invoiceDiscountValue, clearCart, showToast, settings.activeFinancialYearId]);
     const restoreHeldInvoice = useCallback(async (heldId) => {
         const held = heldInvoices.find((h) => h.id === heldId);
+        await assertOpenFinancialRecord(held);
         if (!held)
             return;
         if (cart.length > 0) {
@@ -1114,6 +1116,7 @@ export const AppProvider = ({ children }) => {
     // Create Return Invoice. Debt is reversed first; only the paid portion is refunded from the original payment accounts.
     const createReturnInvoice = useCallback(async (payload) => {
         const original = await getFromStore('invoices', payload.originalInvoiceId);
+        await assertOpenFinancialRecord(original);
         if (!original || original.type !== 'sale') {
             showToast('لم يتم العثور على فاتورة المبيعات الأصلية', 'error');
             return null;
@@ -2000,6 +2003,7 @@ export const AppProvider = ({ children }) => {
     }, [accounts, currentUser, saveExpense, showToast]);
     const updateExpense = useCallback(async (nextExpense) => {
         const previous = expenses.find((e) => e.id === nextExpense.id);
+        await assertOpenFinancialRecord(previous);
         if (!previous)
             return;
         const oldAcc = accounts.find((a) => a.id === previous.accountId);
@@ -2029,6 +2033,7 @@ export const AppProvider = ({ children }) => {
     }, [expenses, accounts, reloadData, showToast]);
     const deleteExpense = useCallback(async (id) => {
         const exp = expenses.find((e) => e.id === id);
+        await assertOpenFinancialRecord(exp);
         if (!exp || exp.deletedAt)
             return;
         const acc = accounts.find((a) => a.id === exp.accountId);
@@ -2049,6 +2054,7 @@ export const AppProvider = ({ children }) => {
     const softDeleteExpense = deleteExpense;
     const permanentDeleteExpense = useCallback(async (id) => {
         const exp = expenses.find((e) => e.id === id);
+        await assertOpenFinancialRecord(exp);
         if (!exp?.deletedAt) {
             showToast('يجب نقل المصروف إلى سلة المحذوفات أولاً', 'warning');
             return false;
@@ -2060,6 +2066,7 @@ export const AppProvider = ({ children }) => {
     }, [expenses, reloadData, showToast]);
     const restoreExpense = useCallback(async (id) => {
         const exp = expenses.find((e) => e.id === id);
+        await assertOpenFinancialRecord(exp);
         if (!exp || !exp.deletedAt)
             return;
         const acc = accounts.find((a) => a.id === exp.accountId);
@@ -2206,6 +2213,7 @@ export const AppProvider = ({ children }) => {
     }, [vouchers, accounts, customers, suppliers, currentUser, reloadData, showToast, settings.activeFinancialYearId]);
     const deleteVoucher = useCallback(async (id) => {
         const v = vouchers.find((item) => item.id === id);
+        await assertOpenFinancialRecord(v);
         if (!v)
             return;
         // Reverse account
@@ -2292,6 +2300,7 @@ export const AppProvider = ({ children }) => {
     // Reverse a sales-return document itself (used when deleting a return or cascading from original sale deletion).
     const reverseReturnInvoice = useCallback(async (ret, { deleteRecord = true } = {}) => {
         if (!ret || ret.type !== 'return') return false;
+        await assertOpenFinancialRecord(ret);
         const [liveReverseStock, liveReverseProducts] = await Promise.all([getAllFromStore('stock'), getAllFromStore('products')]);
         let updatedStockList = [...(liveReverseStock || [])];
         let updatedProducts = (Array.isArray(liveReverseProducts) && liveReverseProducts.length ? liveReverseProducts : products).map((p) => ({ ...p, fifoBatches: Array.isArray(p.fifoBatches) ? p.fifoBatches.map((b) => ({ ...b })) : [] }));
@@ -2339,6 +2348,7 @@ export const AppProvider = ({ children }) => {
     // Sales invoice deletion with a true reverse entry for inventory, customer debt, payment accounts, shift totals and FIFO.
     const deleteInvoice = useCallback(async (id, options = {}) => {
         const inv = await getFromStore('invoices', id);
+        await assertOpenFinancialRecord(inv);
         if (!inv) return false;
         if (inv.type === 'return') {
             await reverseReturnInvoice(inv, { deleteRecord: true });
@@ -2400,6 +2410,7 @@ export const AppProvider = ({ children }) => {
     // Purchase invoice deletion with full reverse entry. Purchased stock is removed even if the resulting stock becomes negative.
     const deletePurchase = useCallback(async (id, options = {}) => {
         const pur = await getFromStore('purchases', id);
+        await assertOpenFinancialRecord(pur);
         if (!pur) return false;
         const [livePurchaseDeleteStock, livePurchaseDeleteProducts] = await Promise.all([getAllFromStore('stock'), getAllFromStore('products')]);
         let updatedStockList = [...(livePurchaseDeleteStock || [])];
@@ -2480,6 +2491,7 @@ export const AppProvider = ({ children }) => {
 
     const updateSaleInvoice = useCallback(async (id, payload = {}) => {
         const old = await getFromStore('invoices', id);
+        await assertOpenFinancialRecord(old);
         if (!old || old.type !== 'sale') throw new Error('فاتورة المبيعات غير موجودة');
         const returnCheck = await queryStorePage('invoices', {
             page: 1,
@@ -2521,6 +2533,7 @@ export const AppProvider = ({ children }) => {
 
     const updatePurchaseInvoice = useCallback(async (id, payload = {}) => {
         const old = await getFromStore('purchases', id);
+        await assertOpenFinancialRecord(old);
         if (!old) throw new Error('فاتورة المشتريات غير موجودة');
         const reversed = await deletePurchase(id, { silent: true });
         if (!reversed) throw new Error('تعذر عكس فاتورة المشتريات القديمة');
@@ -2594,107 +2607,24 @@ export const AppProvider = ({ children }) => {
         await reloadData();
         showToast(`تم إغلاق الوردية. الفرق: ${diff >= 0 ? `+${diff}` : diff} ${settings.currencySymbol}`, diff === 0 ? 'success' : 'warning');
     }, [activeShift, settings.currencySymbol, reloadData, showToast]);
-    const openNewFinancialYear = useCallback(async ({ name, startDate } = {}) => {
-        const today = new Date().toISOString().slice(0, 10);
-        const chosen = String(startDate || today).slice(0, 10);
-        const start = new Date(`${chosen}T00:00:00`);
-        if (Number.isNaN(start.getTime())) { showToast('اختر تاريخ بداية صحيحاً للسنة المالية الجديدة', 'warning'); return false; }
-        const startIso = start.toISOString();
-        const years = Array.isArray(settings.financialYears) ? settings.financialYears.map((year) => ({ ...year })) : [];
-        const oldId = settings.activeFinancialYearId || years.find((year) => year?.status === 'open')?.id || 'fy-initial';
-        const oldYear = years.find((year) => year?.id === oldId);
-        if (oldYear?.startDate && start.getTime() < new Date(oldYear.startDate).getTime()) {
-            showToast('بداية السنة الجديدة لا يمكن أن تكون قبل بداية السنة الحالية', 'warning');
-            return false;
-        }
-        const archiveStamp = new Date().toISOString();
-        const transactionalStores = ['invoices','purchases','vouchers','expenses','stock_movements','transfers','audit_logs','partner_statements','shifts','held_invoices','waste_records','restaurant_orders'];
-        for (const storeName of transactionalStores) {
-            try {
-                const rows = await getAllFromStore(storeName);
-                if (!Array.isArray(rows) || !rows.length) continue;
-                const nextRows = rows.map((row) => {
-                    const rowYear = row?.financialYearId || oldId;
-                    if (rowYear !== oldId) return row;
-                    let next = { ...row, financialYearId: oldId, financialYearArchivedAt: archiveStamp };
-                    if (storeName === 'shifts' && next.status === 'open') next = { ...next, status:'closed', endTime:archiveStamp, actualCash:finiteNumber(next.expectedCash,0), difference:0, notes:`${next.notes ? next.notes + ' • ' : ''}إغلاق تلقائي عند إقفال السنة المالية` };
-                    return next;
-                });
-                await bulkPut(storeName, nextRows);
-            } catch (error) { console.warn('Fiscal archive skipped for', storeName, error); }
-        }
-        const closedYears = years.length
-            ? years.map((year) => year.id === oldId ? { ...year, status:'closed', endDate:archiveStamp, archivedAt:archiveStamp } : year)
-            : [{ id:oldId, name:'السنة المالية السابقة', startDate:oldYear?.startDate || archiveStamp, endDate:archiveStamp, status:'closed', archivedAt:archiveStamp }];
-        const id = `fy-${Date.now()}`;
-        const newYear = { id, name:String(name || `السنة المالية ${chosen}`).trim() || `السنة المالية ${chosen}`, startDate:startIso, endDate:null, status:'open', createdAt:archiveStamp };
-
-        // Carry only master balances/state into the new fiscal year. Old transactions
-        // stay tagged to the archived year; the rows below are clean opening snapshots.
-        try {
-            const openingStatements = [];
-            for (const customer of (customers || [])) {
-                if (customer?.deletedAt) continue;
-                const balance = finiteNumber(customer?.balance, 0);
-                if (!balance) continue;
-                openingStatements.push({
-                    id:`stmt-fy-open-${id}-cust-${customer.id}`, date:startIso, financialYearId:id,
-                    type:'fiscal_opening', partnerType:'customer', partnerId:customer.id, partnerName:customer.name,
-                    referenceType:'FISCAL_OPENING', referenceId:id, referenceNumber:newYear.name,
-                    description:`رصيد افتتاحي مرحل من ${oldYear?.name || 'السنة السابقة'}`,
-                    debit:balance > 0 ? balance : 0, credit:balance < 0 ? Math.abs(balance) : 0, runningBalance:balance,
-                });
-            }
-            for (const supplier of (suppliers || [])) {
-                if (supplier?.deletedAt) continue;
-                const balance = finiteNumber(supplier?.balance, 0);
-                if (!balance) continue;
-                openingStatements.push({
-                    id:`stmt-fy-open-${id}-supp-${supplier.id}`, date:startIso, financialYearId:id,
-                    type:'fiscal_opening', partnerType:'supplier', partnerId:supplier.id, partnerName:supplier.name,
-                    partyType:'supplier', partyId:supplier.id, referenceType:'FISCAL_OPENING', referenceId:id, referenceNumber:newYear.name,
-                    description:`رصيد افتتاحي مرحل من ${oldYear?.name || 'السنة السابقة'}`,
-                    debit:balance < 0 ? Math.abs(balance) : 0, credit:balance > 0 ? balance : 0, runningBalance:balance,
-                });
-            }
-            if (openingStatements.length) await bulkPut('partner_statements', openingStatements);
-
-            const openingStockMovements = [];
-            for (const row of (stock || [])) {
-                const quantity = finiteNumber(row?.baseQuantity, 0);
-                if (!quantity) continue;
-                const product = (products || []).find((item) => item?.id === row.productId);
-                const warehouse = (warehouses || []).find((item) => item?.id === row.warehouseId);
-                openingStockMovements.push({
-                    id:`mov-fy-open-${id}-${row.productId}-${row.warehouseId}`, date:startIso, financialYearId:id,
-                    productId:row.productId, productName:product?.name || 'صنف', warehouseId:row.warehouseId,
-                    warehouseName:warehouse?.name || 'المخزن', type:'opening_balance',
-                    unitName:product?.baseUnitName || 'وحدة أساسية', quantityInUnit:quantity, conversionFactor:1,
-                    baseQuantityChange:quantity, newBaseBalance:quantity, referenceId:id, referenceType:'FISCAL_OPENING',
-                    userId:currentUser?.id, userName:currentUser?.name,
-                    notes:`رصيد افتتاحي مرحل من ${oldYear?.name || 'السنة السابقة'}`,
-                });
-            }
-            if (openingStockMovements.length) await bulkPut('stock_movements', openingStockMovements);
-
-            await putInStore('audit_logs', {
-                id:`audit-fy-open-${Date.now()}`, date:archiveStamp, financialYearId:id, type:'financial_year_opened',
-                referenceId:id, referenceNumber:newYear.name, previousFinancialYearId:oldId,
-                description:`افتتاح ${newYear.name} وترحيل الأرصدة والثوابت من ${oldYear?.name || 'السنة السابقة'}`,
-                accountBalances:(accounts || []).map(a=>({id:a.id,name:a.name,balance:finiteNumber(a.balance,0)})),
-                userId:currentUser?.id, userName:currentUser?.name,
-            });
-        } catch (error) {
-            console.warn('Fiscal opening snapshots skipped', error);
-        }
-
-        const nextSettings = { ...settings, financialYears:[...closedYears, newYear], activeFinancialYearId:id, financialYearInitializedV48:true };
-        await putInStore('settings', { key:'store_config', ...nextSettings });
-        setSettings(nextSettings);
-        await reloadData();
-        showToast(`تم إغلاق ${oldYear?.name || 'السنة السابقة'} وأرشفت حركاتها وفتح ${newYear.name}. تم ترحيل الأرصدة والمخزون والحسابات والعملاء والموردين تلقائياً.`, 'success');
-        return newYear;
-    }, [settings, reloadData, showToast, customers, suppliers, stock, products, warehouses, accounts, currentUser]);
+    const fiscalCloseBusy=useRef(false);
+    const openNewFinancialYear = useCallback(async ({name,startDate,closedName}={})=>{
+        if(fiscalCloseBusy.current)throw Error('جاري إغلاق المجموعة');
+        if(!isManagerAccess({currentUser,activeEmployee}))throw Error('إغلاق المجموعة متاح للمدير فقط');
+        if(navigator.onLine===false)throw Error('اتصل بالإنترنت لمراجعة اكتمال السجلات قبل الإغلاق');
+        fiscalCloseBusy.current=true;
+        try{
+          const sync=await window.OscarCloudSync?.syncNow?.({manual:true,force:true});
+          if(sync?.error)throw Error('تعذرت المزامنة قبل الإغلاق');
+          const entries=await Promise.all([...fiscalStores,...fiscalMasters].map(async store=>[store,await queryAllStoreRecords(store,{pageSize:200,deletedMode:'all',requireRemote:true})]));
+          const current=await getFromStore('settings','store_config')||settings;
+          if(current.activeFinancialYearId!==settings.activeFinancialYearId)throw Error('تغيرت المجموعة الحالية، حدّث الصفحة قبل الإغلاق');
+          const result=buildFinancialClose({settings:current,data:Object.fromEntries(entries),name,startDate,closedName,user:currentUser});
+          await commitLocalBatch(result.operations,true,{fiscalClose:true});
+          setSettings(result.nextSettings);fullHistoryLoadedRef.current.clear();await reloadData();
+          showToast('تم إغلاق المجموعة وحفظ الأرشيف والأرصدة الافتتاحية','success');return result.newYear;
+        }finally{fiscalCloseBusy.current=false}
+    },[settings,currentUser,activeEmployee,reloadData,showToast]);
     const settingsWriteQueue=useRef(Promise.resolve());
     const persistSettingsPatch=useCallback((patch)=>{
         const task=settingsWriteQueue.current.catch(()=>{}).then(async()=>{
@@ -2728,6 +2658,13 @@ export const AppProvider = ({ children }) => {
             showToast('تعذر الاتصال الآن. بياناتك محفوظة محلياً وستتم المحاولة تلقائياً.', 'warning');
         } finally { setIsSyncing(false); }
     }, [showToast, reloadStores]);
+    const refreshCurrentPage=useCallback(async(tab)=>{
+      const map={pos:['products','stock','categories'],products:['products','categories','stock'],sales:['invoices'],purchases:['purchases'],customers:['customers','partner_statements'],suppliers:['suppliers','partner_statements'],accounts:['accounts','transfers','shifts'],expenses:['expenses'],vouchers:['vouchers'],inventory:['stock','stock_movements'],settings:['settings'],dashboard:['invoices','accounts','customers','stock'],reports:['invoices','purchases','expenses','vouchers']};
+      const names=map[tab]||['settings'];
+      if(navigator.onLine!==false)await Promise.all(names.map(store=>queryStorePage(store,{page:1,pageSize:50,deletedMode:'all',forceRefresh:true})));
+      for(const name of names)fullHistoryLoadedRef.current.delete(name);
+      await reloadStores(names);if(tab==='reports')await ensureFullHistoryStores(names);
+    },[reloadStores,ensureFullHistoryStores]);
     const retrySyncItem = useCallback(async () => {
         await syncPendingQueue();
     }, [syncPendingQueue]);
@@ -2879,6 +2816,7 @@ export const AppProvider = ({ children }) => {
         updateSettings,
         openNewFinancialYear,
         syncPendingQueue,
+        refreshCurrentPage,
         retrySyncItem,
         handleScannedBarcode,
         handleResetData,

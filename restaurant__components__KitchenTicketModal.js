@@ -1,8 +1,9 @@
+import {t} from './services__i18n.js?v=7.9.4.136-localization';
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { Printer, X } from 'lucide-react';
-import { useApp } from './restaurant__context__AppContext.js?v=7.9.4.134-invoice-filters';
-import { printElementOnly } from './utils__export.js?v=7.9.4.134-invoice-filters';
+import { useApp } from './restaurant__context__AppContext.js?v=7.9.4.136-localization';
+import { printElementOnly } from './utils__export.js?v=7.9.4.136-localization';
 
 const h = React.createElement;
 const money = (value) => Number(value || 0).toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -136,7 +137,7 @@ export const KitchenTicketModal = ({ order, isAdditionOnly = false, onClose }) =
               textAlign: 'center'
             }
           },
-            h('div', { style: { textAlign: 'right' } }, 'الصنف'),
+            h('div', { style: { textAlign: 'right' } }, t("الصنف")),
             h('div', null, 'كمية'),
             h('div', null, `السعر ${currency}`),
             h('div', null, `الإجمالي ${currency}`)
@@ -156,7 +157,7 @@ export const KitchenTicketModal = ({ order, isAdditionOnly = false, onClose }) =
         )
       ),
       h('div', { className: 'p-3 border-t bg-white flex items-center justify-end gap-2 shrink-0' },
-        h('button', { type: 'button', onClick: onClose, className: 'h-10 px-4 rounded-xl border bg-white text-xs font-bold text-slate-700' }, 'إغلاق'),
+        h('button', { type: 'button', onClick: onClose, className: 'h-10 px-4 rounded-xl border bg-white text-xs font-bold text-slate-700' }, t("إغلاق")),
         h('button', { type: 'button', onClick: handlePrint, className: 'h-10 px-5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-black flex items-center gap-2 shadow-sm' },
           h(Printer, { className: 'w-4 h-4' }), 'طباعة الفاتورة'
         )

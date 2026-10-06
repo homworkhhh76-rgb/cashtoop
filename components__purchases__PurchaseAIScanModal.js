@@ -1,8 +1,9 @@
+import {t} from './services__i18n.js?v=7.9.4.136-localization';
 import React, { useEffect, useState } from 'react';
 import { X, ScanLine, Upload, AlertTriangle, CheckCircle2, LoaderCircle, Sparkles, Image as ImageIcon } from 'lucide-react';
-import { useApp } from './context__AppContext.js?v=7.9.4.134-invoice-filters';
-import { scanPurchaseInvoice } from './services__ai.js?v=7.9.4.134-invoice-filters';
-import { findBestSupplier, findBestProduct, findBestUnit } from './utils__aiMatching.js?v=7.9.4.134-invoice-filters';
+import { useApp } from './context__AppContext.js?v=7.9.4.136-localization';
+import { scanPurchaseInvoice } from './services__ai.js?v=7.9.4.136-localization';
+import { findBestSupplier, findBestProduct, findBestUnit } from './utils__aiMatching.js?v=7.9.4.136-localization';
 
 const h = React.createElement;
 const n = (v) => Number(v || 0) || 0;
@@ -190,7 +191,7 @@ export const PurchaseAIScanModal = ({ open, onClose, onApply }) => {
         )
       ),
       h('div', null,
-        h('label', { className: 'text-[10px] font-bold block mb-1' }, 'الوحدة'),
+        h('label', { className: 'text-[10px] font-bold block mb-1' }, t("الوحدة")),
         h('select', { value: line.unitId, onChange: (event) => updateLine(index, { unitId: event.target.value }), className: 'w-full px-3 py-2.5 border rounded-xl bg-white text-xs' },
           h('option', { value: '' }, 'اختر الوحدة...'),
           ...unitOptions(product)
@@ -198,7 +199,7 @@ export const PurchaseAIScanModal = ({ open, onClose, onApply }) => {
       ),
       h('div', { className: 'grid grid-cols-2 gap-2' },
         h('div', null,
-          h('label', { className: 'text-[10px] font-bold block mb-1' }, 'الكمية'),
+          h('label', { className: 'text-[10px] font-bold block mb-1' }, t("الكمية")),
           h('input', { type: 'number', step: 'any', min: '0', value: line.quantity, onChange: (event) => updateLine(index, { quantity: n(event.target.value) }), className: 'w-full px-2 py-2.5 border rounded-xl font-mono text-center' })
         ),
         h('div', null,
@@ -321,7 +322,7 @@ export const PurchaseAIScanModal = ({ open, onClose, onApply }) => {
             h('div', { className: 'text-[10px] text-slate-500' }, 'قراءة احترافية من صور الفواتير فقط')
           )
         ),
-        h('button', { type: 'button', onClick: onClose, title: 'إغلاق', className: 'w-9 h-9 rounded-xl bg-slate-900 text-white shadow flex items-center justify-center hover:bg-slate-700' }, h(X, { className: 'w-5 h-5 stroke-[3]' }))
+        h('button', { type: 'button', onClick: onClose, title: t("إغلاق"), className: 'w-9 h-9 rounded-xl bg-slate-900 text-white shadow flex items-center justify-center hover:bg-slate-700' }, h(X, { className: 'w-5 h-5 stroke-[3]' }))
       ),
       h('div', { className: 'flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 sm:p-5 space-y-4' },
         uploadBlock,
@@ -331,7 +332,7 @@ export const PurchaseAIScanModal = ({ open, onClose, onApply }) => {
       h('footer', { className: 'shrink-0 p-3 border-t bg-white flex items-center justify-between gap-2' },
         h('div', { className: 'text-[10px] text-slate-400' }, raw ? `${lines.length} سطر • ${unmatched.length} بحاجة مراجعة` : 'لن يتم حفظ أي شيء قبل مراجعتك.'),
         h('div', { className: 'flex gap-2' },
-          h('button', { type: 'button', onClick: onClose, className: 'px-3 sm:px-4 py-2 rounded-xl border text-xs font-bold' }, 'إلغاء'),
+          h('button', { type: 'button', onClick: onClose, className: 'px-3 sm:px-4 py-2 rounded-xl border text-xs font-bold' }, t("إلغاء")),
           h('button', { type: 'button', disabled: !raw || busy, onClick: apply, className: 'px-4 sm:px-5 py-2 rounded-xl bg-violet-600 text-white text-xs font-black disabled:opacity-40' }, 'تعبئة الفاتورة')
         )
       )

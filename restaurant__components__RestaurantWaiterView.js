@@ -1,9 +1,10 @@
+import {t} from './services__i18n.js?v=7.9.4.136-localization';
 import React, { useMemo, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useRestaurant } from './restaurant__context__RestaurantContext.js?v=7.9.4.134-invoice-filters';
-import { useApp } from './restaurant__context__AppContext.js?v=7.9.4.134-invoice-filters';
+import { useRestaurant } from './restaurant__context__RestaurantContext.js?v=7.9.4.136-localization';
+import { useApp } from './restaurant__context__AppContext.js?v=7.9.4.136-localization';
 import { Utensils, Search, Plus, Minus, Trash2, Send, Printer, Users, ShoppingBag, ShoppingCart, AlertTriangle, Lock, X, StickyNote, ChevronDown } from 'lucide-react';
-import { KitchenTicketModal } from './restaurant__components__KitchenTicketModal.js?v=7.9.4.134-invoice-filters';
+import { KitchenTicketModal } from './restaurant__components__KitchenTicketModal.js?v=7.9.4.136-localization';
 
 const h = React.createElement;
 const orderNoteText = (notes) => typeof notes === 'string' ? notes : String(notes?.kitchenNotes || notes?.general || '');
@@ -236,10 +237,10 @@ export const RestaurantWaiterView = () => {
             h('div', { className:'waiter-dialog-icon' }, h(ShoppingCart,{size:19})),
             h('div', null,
               h('div', { className:'waiter-dialog-title' }, orderType==='dine_in' ? `طلب طاولة ${selectedTable?.tableNumber || selectedTable?.name || '-'}` : 'طلب سفري'),
-              h('div', { className:'waiter-dialog-subtitle' }, `${activeEmployee?.name || 'الجرسون'} • ${cartQty} قطعة${activeExistingOrder ? ' • طلب مفتوح' : ''}`)
+              h('div', { className:'waiter-dialog-subtitle' }, `${activeEmployee?.name || t("الجرسون")} • ${cartQty} قطعة${activeExistingOrder ? ' • طلب مفتوح' : ''}`)
             )
           ),
-          h('button', { type:'button', onClick:()=>setIsCartOpen(false), className:'waiter-icon-button', 'aria-label':'إغلاق' }, h(X,{size:18}))
+          h('button', { type:'button', onClick:()=>setIsCartOpen(false), className:'waiter-icon-button', 'aria-label':t("إغلاق") }, h(X,{size:18}))
         ),
         h('div', { className:'waiter-dialog-body custom-scrollbar' },
           draftItems.length === 0
@@ -281,8 +282,8 @@ export const RestaurantWaiterView = () => {
         h('footer', { className:'waiter-dialog-footer' },
           h('div', { className:'waiter-footer-fields' },
             h('label', { className:'waiter-field waiter-customer-field' },
-              h('span',null,'اسم العميل'),
-              h('input',{value:customerName,onChange:e=>setCustomerName(e.target.value),placeholder:'اختياري'})
+              h('span',null,t("اسم العميل")),
+              h('input',{value:customerName,onChange:e=>setCustomerName(e.target.value),placeholder:t("اختياري")})
             ),
             h('label', { className:'waiter-field waiter-note-field' },
               h('span',null,h(StickyNote,{size:14}),'ملاحظات للمطبخ'),
@@ -290,9 +291,9 @@ export const RestaurantWaiterView = () => {
             )
           ),
           h('div', { className:'waiter-footer-summary' },
-            h('div', { className:'waiter-total-box' }, h('span',null,'الإجمالي'), h('strong',null,`${money(subtotal)} ${settings.currencySymbol||'₪'}`)),
+            h('div', { className:'waiter-total-box' }, h('span',null,t("الإجمالي")), h('strong',null,`${money(subtotal)} ${settings.currencySymbol||'₪'}`)),
             h('div', { className:'waiter-footer-buttons' },
-              activeExistingOrder && h('button',{type:'button',onClick:()=>{setShowTicketModal(activeExistingOrder);setIsAdditionTicket(false);},className:'waiter-secondary-action'},h(Printer,{size:16}),'طباعة'),
+              activeExistingOrder && h('button',{type:'button',onClick:()=>{setShowTicketModal(activeExistingOrder);setIsAdditionTicket(false);},className:'waiter-secondary-action'},h(Printer,{size:16}),t("طباعة")),
               h('button',{type:'button',id:'waiter-send-kitchen','data-enter-primary':'true',onClick:handleSendToKitchen,disabled:!draftItems.length && !orderNote.trim(),className:'waiter-primary-action'},h(Send,{size:17}),activeExistingOrder?'إرسال التحديث':'إرسال للمطبخ')
             )
           )
@@ -328,7 +329,7 @@ export const RestaurantWaiterView = () => {
           orderType==='dine_in' && h('label',{className:'waiter-v2-guests',title:'عدد الأفراد'},h(Users,{size:16}),h('input',{type:'number',min:1,max:25,value:guestCount,onChange:e=>setGuestCount(parseInt(e.target.value)||1)}),h('span',null,'أفراد')),
           activeExistingOrder && h('span',{className:'waiter-v2-open-order'},'طلب مفتوح')
         ),
-        h('button',{type:'button',className:'waiter-v2-cart-summary',onClick:()=>setIsCartOpen(true)},h('span',{className:'waiter-v2-cart-icon'},h(ShoppingCart,{size:18}),cartQty>0&&h('b',null,cartQty)),h('span',{className:'waiter-v2-cart-copy'},h('small',null,'السلة'),h('strong',null,`${money(subtotal)} ${settings.currencySymbol||'₪'}`)))
+        h('button',{type:'button',className:'waiter-v2-cart-summary',onClick:()=>setIsCartOpen(true)},h('span',{className:'waiter-v2-cart-icon'},h(ShoppingCart,{size:18}),cartQty>0&&h('b',null,cartQty)),h('span',{className:'waiter-v2-cart-copy'},h('small',null,t("السلة")),h('strong',null,`${money(subtotal)} ${settings.currencySymbol||'₪'}`)))
       ),
       h('div',{className:'waiter-v2-discovery'},
         h('div',{className:'waiter-v2-search'},h(Search,{size:17}),h('input',{value:searchTerm,onChange:e=>setSearchTerm(e.target.value),placeholder:'ابحث باسم الصنف أو الباركود...'})),

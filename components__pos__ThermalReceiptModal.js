@@ -1,11 +1,12 @@
-import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.134-invoice-filters';
+import {t} from './services__i18n.js?v=7.9.4.136-localization';
+import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.136-localization';
 import React, { useEffect, useRef, useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.134-invoice-filters';
-import { printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.134-invoice-filters';
-import { downloadProfessionalInvoicePDF, downloadProfessionalInvoiceImage, downloadProfessionalInvoiceExcel, warmProfessionalExportLibraries } from './utils__professionalExport.js?v=7.9.4.134-invoice-filters';
-import { renderInvoiceCanvas } from './utils__canvasRenderer.js?v=7.9.4.134-invoice-filters';
-import { smartPrinter } from './services__printer.js?v=7.9.4.134-invoice-filters';
-import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.134-invoice-filters';
+import { useApp } from './context__AppContext.js?v=7.9.4.136-localization';
+import { printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.136-localization';
+import { downloadProfessionalInvoicePDF, downloadProfessionalInvoiceImage, downloadProfessionalInvoiceExcel, warmProfessionalExportLibraries } from './utils__professionalExport.js?v=7.9.4.136-localization';
+import { renderInvoiceCanvas } from './utils__canvasRenderer.js?v=7.9.4.136-localization';
+import { smartPrinter } from './services__printer.js?v=7.9.4.136-localization';
+import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.136-localization';
 import { Printer, X, Download, Image as ImageIcon, FileSpreadsheet, Bluetooth } from 'lucide-react';
 import JsBarcode from 'jsbarcode';
 
@@ -141,9 +142,10 @@ export const ThermalReceiptModal = () => {
         disabled: isExporting,
         className: 'flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 text-slate-700 dark:text-slate-200 text-xs font-bold transition disabled:opacity-50',
         title,
-    }, h(Icon, { className: `w-3.5 h-3.5 ${iconClass}` }), h('span', { className: 'hidden sm:inline' }, text));
+    }, h(Icon, { className: `w-3.5 h-3.5 ${iconClass}` }), h('span', { className: 'inline' }, t(text)));
 
     const itemRows = (invoice.items || []).map((item, idx) => h('tr', { key: item.id || idx, className: 'receipt-item-row' },
+        h('td', { className:'receipt-cell receipt-index-cell' },idx+1),
         h('td', { className: 'receipt-cell receipt-product-cell' }, item.productName),
         h('td', { className: 'receipt-cell receipt-unit-cell' }, item.unitName || '-'),
         h('td', { className: 'receipt-cell receipt-number-cell' }, item.quantity),
@@ -170,8 +172,8 @@ export const ThermalReceiptModal = () => {
                 paperButton('a4', 'A4')
             ),
             h('div', { className: 'flex items-center gap-1.5 flex-wrap justify-end' },
-                exportButton('btn-download-receipt-excel', handleDownloadExcel, FileSpreadsheet, 'Excel احترافي', 'text-violet-600', 'تنزيل الفاتورة كملف Excel احترافي'),
-                exportButton('btn-download-receipt-pdf', handleDownloadPDF, Download, 'PDF احترافي', 'text-rose-600', 'تنزيل الفاتورة كملف PDF احترافي'),
+                exportButton('btn-download-receipt-excel', handleDownloadExcel, FileSpreadsheet, 'Excel', 'text-violet-600', 'تنزيل الفاتورة كملف Excel احترافي'),
+                exportButton('btn-download-receipt-pdf', handleDownloadPDF, Download, 'PDF', 'text-rose-600', 'تنزيل الفاتورة كملف PDF احترافي'),
                 exportButton('btn-download-receipt-image', handleDownloadImage, ImageIcon, 'صورة', 'text-blue-600', 'تنزيل الفاتورة كصورة'),
                 h('button', { id: 'btn-bluetooth-print', onClick: handleBluetoothPrint, disabled: isExporting, className: `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-bold shadow-xs transition disabled:opacity-50 ${printerState.ready ? 'bg-violet-600 hover:bg-violet-700' : 'bg-blue-600 hover:bg-blue-700'}`, title: printerState.connected ? `متصل: ${printerState.name || 'طابعة'}` : printerState.systemMode ? 'طباعة عبر نظام الجهاز' : 'اختيار الطابعة والطباعة' },
                     h(Bluetooth, { className: 'w-4 h-4' }), h('span', null, printerState.connected ? 'طباعة Bluetooth' : printerState.systemMode ? (printerState.isIOS ? 'طباعة iPhone' : 'طباعة النظام') : (printerState.bluetoothSupported ? 'ربط وطباعة Bluetooth' : (printerState.isIOS ? 'طباعة iPhone' : 'طباعة النظام')))
@@ -190,14 +192,14 @@ export const ThermalReceiptModal = () => {
                 style: { fontFamily: "'Cairo', Arial, sans-serif" }
             },
                 h('div', { className: 'receipt-brand-header' },
-                    settings.receiptShowLogo !== false ? h('img', {
+                    logoSrc ? h('img', {
                         src: logoSrc,
                         alt: settings.storeName,
                         className: 'receipt-brand-logo',
                         onError: (e) => { e.currentTarget.onerror = null; e.currentTarget.src = DEFAULT_LOGO_DATA_URL; }
                     }) : null,
                     h('h2', { className: 'receipt-store-name' }, settings.storeName),
-                    settings.subtitle ? h('p', { className: 'receipt-store-subtitle' }, settings.subtitle) : null,
+                    null,
                     settings.receiptShowStoreInfo !== false ? h('div', { className: 'receipt-store-info-grid' },
                         settings.address ? h('span', { className: 'receipt-store-info' }, settings.address) : null,
                         settings.phone ? h('span', { className: 'receipt-store-info' }, `هاتف: ${settings.phone}`) : null,
@@ -206,25 +208,25 @@ export const ThermalReceiptModal = () => {
                 ),
                 h('div', { className: 'receipt-meta' },
                     h('div', { className: 'receipt-meta-row receipt-meta-strong' }, h('span', null, isReturn ? 'فاتورة مرتجع مبيعات' : 'فاتورة مبيعات'), h('span', { className: 'font-mono' }, `#${invoice.invoiceNumber}`)),
-                    h('div', { className: 'receipt-meta-row' }, h('span', null, 'التاريخ:'), h('span', null, `${new Date(invoice.date).toLocaleDateString('ar-EG')} - ${new Date(invoice.date).toLocaleTimeString('ar-EG')}`)),
-                    h('div', { className: 'receipt-meta-row' }, h('span', null, 'الكاشير:'), h('span', null, invoice.cashierName || '-')),
-                    invoice.customerName && invoice.customerId !== 'cust-walkin' ? h('div', { className: 'receipt-meta-row receipt-meta-strong' }, h('span', null, 'العميل:'), h('span', null, invoice.customerName)) : null
+                    h('div', { className: 'receipt-meta-row' }, h('span', null, t("التاريخ:")), h('span', null, `${new Date(invoice.date).toLocaleDateString('ar-EG')} - ${new Date(invoice.date).toLocaleTimeString('ar-EG')}`)),
+                    h('div', { className: 'receipt-meta-row' }, h('span', null, t("الكاشير:")), h('span', null, invoice.cashierName || '-')),
+                    invoice.customerName && invoice.customerId !== 'cust-walkin' ? h('div', { className: 'receipt-meta-row receipt-meta-strong' }, h('span', null, t("العميل:")), h('span', null, invoice.customerName)) : null
                 ),
                 h('div', { className: 'receipt-items-wrap' },
                     h('table', { className: 'receipt-items-table' },
                         h('colgroup', null,
-                            h('col', { className: 'receipt-col-product' }),
+                            h('col', { className:'receipt-col-index' }),h('col', { className: 'receipt-col-product' }),
                             h('col', { className: 'receipt-col-unit' }),
                             h('col', { className: 'receipt-col-qty' }),
                             h('col', { className: 'receipt-col-price' }),
                             h('col', { className: 'receipt-col-total' })
                         ),
-                        h('thead', null, h('tr', null,
-                            h('th', null, 'الصنف'),
-                            h('th', null, 'الوحدة'),
-                            h('th', { className: 'receipt-qty-heading' }, 'الكمية'),
-                            h('th', null, 'السعر'),
-                            h('th', null, 'الإجمالي')
+                        h('thead', null, h('tr', null,h('th',null,'#'),
+                            h('th', null, t("الصنف")),
+                            h('th', null, t("الوحدة")),
+                            h('th', { className: 'receipt-qty-heading' }, t("الكمية")),
+                            h('th', null, t("السعر")),
+                            h('th', null, t("الإجمالي"))
                         )),
                         h('tbody', null, itemRows)
                     )
@@ -242,10 +244,10 @@ export const ThermalReceiptModal = () => {
                 h('div', { className: 'receipt-footer' },
                     settings.receiptShowBarcode !== false ? h('div', { className: 'receipt-barcode' }, h('svg', { ref: barcodeRef })) : null,
                     h('p', null, settings.receiptFooterMessage || ''),
-                    h('div', { className: 'receipt-system-mark' }, 'نظام كاش توب 3 - POS')
+                    h('div', { className: 'receipt-system-mark' }, 'برنامج كاش توب المحاسبي جوال 0597603119')
                 )
             )
         ),
-        h('div',{className:'no-print ct-receipt-footer'},h('button',{type:'button',onClick:()=>setShowThermalModal(null)},'إغلاق العرض'))
+        h('div',{className:'no-print ct-receipt-footer'},h('button',{type:'button',onClick:()=>setShowThermalModal(null)},t("إغلاق العرض")))
     ));
 };
