@@ -1,19 +1,19 @@
-import {t} from './services__i18n.js?v=7.9.4.136-localization';
-import {StatementTable} from './components__customers__StatementTable.js?v=7.9.4.136-localization';
-import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.136-localization';
+import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
+import {StatementTable} from './components__customers__StatementTable.js?v=7.9.4.139-ledger-print';
+import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.139-ledger-print';
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useApp } from './context__AppContext.js?v=7.9.4.136-localization';
-import { Pagination, usePagination } from './components__common__Pagination.js?v=7.9.4.136-localization';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.136-localization';
-import { exportToCSV, printReceiptElement } from './utils__export.js?v=7.9.4.136-localization';
-import { downloadElementAsPDF } from './utils__pdfExport.js?v=7.9.4.136-localization';
-import { downloadElementAsImage } from './utils__imageExport.js?v=7.9.4.136-localization';
-import { downloadProfessionalCustomerStatementPDF, downloadProfessionalCustomerStatementImage, downloadProfessionalCustomerStatementExcel, downloadProfessionalTablePDF, downloadProfessionalTableImage } from './utils__professionalExport.js?v=7.9.4.136-localization';
-import { createQrSvgDataUrl } from './utils__qrcode.js?v=7.9.4.136-localization';
-import { createCustomerPortalLinks } from './services__customerPortalLinks.js?v=7.9.4.136-localization';
-import { MessageActionButtons } from './components__common__MessageActionButtons.js?v=7.9.4.136-localization';
+import { useApp } from './context__AppContext.js?v=7.9.4.139-ledger-print';
+import { Pagination, usePagination } from './components__common__Pagination.js?v=7.9.4.139-ledger-print';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.139-ledger-print';
+import { exportToCSV, printReceiptElement } from './utils__export.js?v=7.9.4.139-ledger-print';
+import { downloadElementAsPDF } from './utils__pdfExport.js?v=7.9.4.139-ledger-print';
+import { downloadElementAsImage } from './utils__imageExport.js?v=7.9.4.139-ledger-print';
+import { downloadProfessionalCustomerStatementPDF, downloadProfessionalCustomerStatementImage, downloadProfessionalCustomerStatementExcel, downloadProfessionalTablePDF, downloadProfessionalTableImage } from './utils__professionalExport.js?v=7.9.4.139-ledger-print';
+import { createQrSvgDataUrl } from './utils__qrcode.js?v=7.9.4.139-ledger-print';
+import { createCustomerPortalLinks } from './services__customerPortalLinks.js?v=7.9.4.139-ledger-print';
+import { MessageActionButtons } from './components__common__MessageActionButtons.js?v=7.9.4.139-ledger-print';
 import { Plus, Search, FileText, DollarSign, Download, Printer, Trash2, X, Edit, Image as ImageIcon, FileSpreadsheet, Link2, QrCode, Copy, MoreVertical, Eye, Phone, MapPin } from 'lucide-react';
 const normalizeOpeningBalanceInput = (value) => {
     let raw = String(value ?? '')

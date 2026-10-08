@@ -6074,3 +6074,128 @@ html[dir=ltr] .ct-drawer-chevron,html[dir=ltr] button[aria-label=Back] svg{trans
 .receipt-paper tbody tr,.receipt-paper td{animation:none!important;opacity:1!important;transform:none!important;color:#111!important}
 .ct-more-products{display:block;margin:14px auto;padding:10px 24px;border:1px solid #ddd6fe;border-radius:12px;color:#6d28d9;background:#f5f0ff;font-weight:700;font-size:12px}
 @media print{tbody tr,.oscar-page-stage{animation:none!important;opacity:1!important;transform:none!important}}
+
+/* v7.9.4.137: clearer desktop data tables and full-width workspace. */
+@media (min-width:1024px){
+  #sales-screen,#purchases-screen,#products-screen,#inventory-screen,#customers-screen,#suppliers-screen,#accounts-screen,#expenses-screen,#reports-screen,#barcodes-screen,#trash-screen,#employees-view-container,#vouchers-view-container{
+    width:100%!important;
+    max-width:none!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    padding-left:28px!important;
+    padding-right:28px!important;
+  }
+  #sales-screen table,#purchases-screen table,#products-screen table,#inventory-screen table,#customers-screen table,#suppliers-screen table,#accounts-screen table,#expenses-screen table,#reports-screen table,#barcodes-screen table,#trash-screen table,#employees-view-container table,#vouchers-view-container table{
+    width:100%!important;
+    font-size:14px!important;
+    line-height:1.55!important;
+  }
+  #sales-screen table th,#purchases-screen table th,#products-screen table th,#inventory-screen table th,#customers-screen table th,#suppliers-screen table th,#accounts-screen table th,#expenses-screen table th,#reports-screen table th,#barcodes-screen table th,#trash-screen table th,#employees-view-container table th,#vouchers-view-container table th{
+    padding:13px 15px!important;
+    font-size:13px!important;
+    font-weight:800!important;
+    letter-spacing:0!important;
+  }
+  #sales-screen table td,#purchases-screen table td,#products-screen table td,#inventory-screen table td,#customers-screen table td,#suppliers-screen table td,#accounts-screen table td,#expenses-screen table td,#reports-screen table td,#barcodes-screen table td,#trash-screen table td,#employees-view-container table td,#vouchers-view-container table td{
+    padding:13px 15px!important;
+    font-size:14px!important;
+    vertical-align:middle!important;
+  }
+}
+@media (min-width:1440px){
+  #sales-screen,#purchases-screen,#products-screen,#inventory-screen,#customers-screen,#suppliers-screen,#accounts-screen,#expenses-screen,#reports-screen,#barcodes-screen,#trash-screen,#employees-view-container,#vouchers-view-container{
+    padding-left:34px!important;
+    padding-right:34px!important;
+  }
+}
+/* Expense dialogs are portaled to body so page labels can never paint over them. */
+.expense-entry-overlay,.expense-types-overlay{
+  position:fixed!important;
+  inset:0!important;
+  isolation:isolate!important;
+  overflow:auto!important;
+  overscroll-behavior:contain!important;
+  background:rgba(15,23,42,.68)!important;
+  backdrop-filter:blur(2px);
+  -webkit-backdrop-filter:blur(2px);
+}
+.expense-entry-modal,.expense-types-modal-panel{
+  position:relative!important;
+  z-index:1!important;
+  background:#fff!important;
+  opacity:1!important;
+  isolation:isolate!important;
+}
+
+
+/* ===== Cash Top 3 v7.9.4.138 receipt print polish ===== */
+.receipt-paper{font-family:Tahoma,Arial,system-ui,-apple-system,sans-serif!important;padding:8px 7px 10px!important;line-height:1.32!important}
+.receipt-paper-80{width:80mm!important;max-width:80mm!important;font-size:11.3px!important}
+.receipt-paper-58{width:58mm!important;max-width:58mm!important;font-size:9.7px!important;padding:6px 5px 8px!important}
+.receipt-paper-a4{width:210mm!important;max-width:210mm!important;font-size:13.5px!important;padding:14mm 10mm!important}
+.receipt-brand-header{padding:0 0 6px!important;margin:0!important;border-bottom:1px solid #444!important}
+.receipt-brand-logo{display:block!important;height:86px!important;max-width:220px!important;width:auto!important;object-fit:contain!important;margin:0 auto 4px!important;image-rendering:auto!important}
+.receipt-paper-58 .receipt-brand-logo{height:66px!important;max-width:152px!important}
+.receipt-paper-a4 .receipt-brand-logo{height:102px!important;max-width:240px!important}
+.receipt-store-name{font-size:24px!important;line-height:1.15!important;font-weight:900!important;margin:0!important;color:#111!important}
+.receipt-paper-58 .receipt-store-name{font-size:20px!important}
+.receipt-store-info-grid{margin-top:4px!important;gap:2px 10px!important}
+.receipt-store-info{font-size:11px!important;line-height:1.35!important;color:#333!important}
+.receipt-meta{padding:6px 0!important;border-bottom:1px solid #444!important;font-size:12.5px!important;color:#111!important}
+.receipt-meta-row{margin:2px 0!important;gap:6px!important}
+.receipt-meta-row>span:last-child{font-weight:700!important}
+.receipt-items-wrap{padding:5px 0 2px!important;border-bottom:0!important}
+.receipt-items-table{width:100%!important;table-layout:fixed!important;border-collapse:collapse!important;font-size:12px!important}
+.receipt-paper-58 .receipt-items-table{font-size:9.4px!important}
+.receipt-items-table thead th{background:#fff!important;color:#111!important;font-size:12px!important;font-weight:900!important;padding:4px 1px 5px!important;border-bottom:1.5px solid #222!important;white-space:normal!important;line-height:1.2!important}
+.receipt-paper-58 .receipt-items-table thead th{font-size:9.1px!important}
+.receipt-paper .receipt-cell{font-size:12px!important;line-height:1.45!important;padding:6px 1px!important;color:#111!important;border-bottom:1px solid #d4d4d8!important;vertical-align:middle!important}
+.receipt-paper-58 .receipt-cell{font-size:9.2px!important;padding:5px 1px!important}
+.receipt-item-row:last-child .receipt-cell{border-bottom:0!important}
+.receipt-index-cell,.receipt-unit-cell,.receipt-number-cell,.receipt-total-cell{text-align:center!important}
+.receipt-product-cell{text-align:right!important;font-weight:800!important;padding-right:2px!important}
+.receipt-col-index{width:7%!important}.receipt-col-product{width:31%!important}.receipt-col-unit{width:14%!important}.receipt-col-qty{width:12%!important}.receipt-col-price{width:17%!important}.receipt-col-total{width:19%!important}
+.receipt-paper-58 .receipt-col-index{width:8%!important}.receipt-paper-58 .receipt-col-product{width:29%!important}.receipt-paper-58 .receipt-col-unit{width:15%!important}.receipt-paper-58 .receipt-col-qty{width:12%!important}.receipt-paper-58 .receipt-col-price{width:17%!important}.receipt-paper-58 .receipt-col-total{width:19%!important}
+.receipt-summary-divider{height:0;border-top:2px dotted #333;margin:5px 0 4px!important}
+.receipt-totals{padding:2px 0 6px!important;border-bottom:1px solid #444!important;font-size:12.5px!important}
+.receipt-total-row{display:flex!important;align-items:center!important;gap:6px!important;margin:2px 0!important;padding:1px 0!important;color:#111!important}
+.receipt-total-label{font-weight:800!important;white-space:nowrap!important}
+.receipt-total-dots{flex:1 1 auto!important;height:0!important;border-bottom:1px dotted #444!important;min-width:14px!important;transform:translateY(1px)}
+.receipt-total-value{min-width:124px!important;text-align:left!important;direction:ltr!important;font-family:Tahoma,Arial,system-ui,-apple-system,sans-serif!important;font-weight:800!important;font-size:1em!important;white-space:nowrap!important}
+.receipt-paper-58 .receipt-total-value{min-width:94px!important}
+.receipt-total-subtotal .receipt-total-label,.receipt-total-subtotal .receipt-total-value,.receipt-total-grand .receipt-total-label,.receipt-total-grand .receipt-total-value{font-size:1.12em!important;font-weight:900!important}
+.receipt-total-grand{padding-top:5px!important;margin-top:4px!important;border-top:1px solid #222!important}
+.receipt-total-paid .receipt-total-label,.receipt-total-paid .receipt-total-value,.receipt-total-debt .receipt-total-label,.receipt-total-debt .receipt-total-value{font-size:1.02em!important}
+.receipt-total-debt .receipt-total-label,.receipt-total-debt .receipt-total-value{color:#b91c1c!important;font-weight:900!important}
+.receipt-total-change .receipt-total-label,.receipt-total-change .receipt-total-value{color:#6d28d9!important;font-weight:900!important}
+.receipt-footer{padding-top:7px!important;text-align:center!important;font-size:11px!important;color:#111!important}
+.receipt-barcode{margin-top:2px!important}
+.receipt-barcode svg{max-width:100%!important;height:auto!important}
+.receipt-footer p{margin:4px 0 0!important;font-size:11px!important;font-weight:700!important;color:#333!important}
+.receipt-system-mark{text-align:left!important;font-size:9.3px!important;font-weight:700!important;color:#333!important;margin-top:8px!important}
+@media print{body.receipt-print-mode #printable-receipt{padding:2mm 1.8mm 2.5mm!important}body.receipt-print-mode[data-receipt-paper="80mm"] #printable-receipt{width:80mm!important;max-width:80mm!important}body.receipt-print-mode[data-receipt-paper="58mm"] #printable-receipt{width:58mm!important;max-width:58mm!important;padding:1.5mm!important}body.receipt-print-mode[data-receipt-paper="a4"] #printable-receipt{width:196mm!important;max-width:196mm!important;padding:0!important}}
+
+
+/* ===== Cash Top 3 v7.9.4.139 ledger + fast black receipt ===== */
+.receipt-paper,.receipt-paper *{color:#000!important;text-shadow:none!important}
+.receipt-paper .font-mono,.receipt-paper .receipt-number-cell,.receipt-paper .receipt-total-value,.receipt-paper .receipt-payment-value{font-family:Tahoma,Arial,system-ui,-apple-system,sans-serif!important}
+.receipt-summary-divider{border-top:2px solid #000!important;margin:5px 0 5px!important}
+.receipt-adjustments{padding:1px 0 4px!important;border-bottom:1px solid #000!important}
+.receipt-adjustments .receipt-total-row{display:flex!important;justify-content:space-between!important;align-items:center!important;gap:8px!important;margin:1px 0!important;padding:1px 0!important}
+.receipt-adjustments .receipt-total-label,.receipt-adjustments .receipt-total-value{font-size:11px!important;font-weight:800!important;color:#000!important}
+.receipt-payment-grid{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;grid-template-areas:'left right'!important;gap:5px 12px!important;direction:ltr!important;padding:5px 0 6px!important;border-bottom:1px solid #000!important}
+.receipt-payment-column{display:grid!important;gap:4px!important;min-width:0!important;direction:rtl!important}.receipt-payment-right{grid-area:right!important}.receipt-payment-left{grid-area:left!important}
+.receipt-payment-cell{display:flex!important;align-items:baseline!important;gap:5px!important;white-space:nowrap!important;font-size:12px!important;line-height:1.4!important}
+.receipt-payment-right .receipt-payment-cell{justify-content:flex-start!important;text-align:right!important;direction:rtl!important}
+.receipt-payment-left .receipt-payment-cell{justify-content:flex-end!important;text-align:left!important;direction:rtl!important}
+.receipt-payment-label{font-weight:900!important;color:#000!important}
+.receipt-payment-value{font-weight:900!important;color:#000!important;direction:ltr!important}
+.receipt-payment-strong .receipt-payment-label,.receipt-payment-strong .receipt-payment-value{font-size:13.2px!important;font-weight:900!important}
+.receipt-payment-debt .receipt-payment-label,.receipt-payment-debt .receipt-payment-value{color:#000!important}
+.receipt-paper-58 .receipt-payment-grid{gap:4px 7px!important}
+.receipt-paper-58 .receipt-payment-cell{font-size:9.6px!important;gap:3px!important}
+.receipt-paper-58 .receipt-payment-strong .receipt-payment-label,.receipt-paper-58 .receipt-payment-strong .receipt-payment-value{font-size:10.4px!important}
+.receipt-total-dots{display:none!important}
+.receipt-brand-header,.receipt-meta,.receipt-items-table thead th,.receipt-cell,.receipt-footer,.receipt-system-mark{border-color:#000!important;color:#000!important}
+.receipt-footer p,.receipt-store-info,.receipt-meta-row,.receipt-product-cell,.receipt-unit-cell,.receipt-number-cell{color:#000!important}
+.receipt-paper .receipt-brand-logo{filter:grayscale(1) contrast(2.2)!important}

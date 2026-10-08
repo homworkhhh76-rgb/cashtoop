@@ -1,11 +1,11 @@
-import {registerLayer} from './hooks__appNavigation.js?v=7.9.4.136-localization';
-import {t} from './services__i18n.js?v=7.9.4.136-localization';
+import {registerLayer} from './hooks__appNavigation.js?v=7.9.4.139-ledger-print';
+import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
 import { createPortal } from 'react-dom';
 import React, {useEffect} from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.136-localization';
-import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.136-localization';
-import { BrandLogoImage } from './components__common__BrandLogoImage.js?v=7.9.4.136-localization';
-import { canAccessTab, canAccessPermission, firstAllowedTab } from './utils__permissions.js?v=7.9.4.136-localization';
+import { useApp } from './context__AppContext.js?v=7.9.4.139-ledger-print';
+import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.139-ledger-print';
+import { BrandLogoImage } from './components__common__BrandLogoImage.js?v=7.9.4.139-ledger-print';
+import { canAccessTab, canAccessPermission, firstAllowedTab } from './utils__permissions.js?v=7.9.4.139-ledger-print';
 import {
   LayoutDashboard, ShoppingCart, ReceiptText, Truck, Package, Boxes, Warehouse,
   Users, Building2, Wallet, Receipt, FileSpreadsheet, UserCheck, Barcode, BarChart3,
@@ -89,7 +89,12 @@ export const Sidebar = () => {
     if (id === 'oscar_ledger') {
       if (canAccessPermission('canAccessOscarLedger', accessArgs)) {
         setMobileSidebarOpen(false);
-        window.location.href='./oscar-ledger.html';
+        try {
+          const rt = window.OscarActivation?.readRuntime?.();
+          const companyId = String(rt?.companyId || rt?.tenantId || '').trim();
+          if (companyId) sessionStorage.setItem('oscar_ledger_grant_v1', JSON.stringify({ companyId, at: Date.now() }));
+        } catch (_) {}
+        window.location.assign('./oscar-ledger.html?from=app');
       }
       return;
     }

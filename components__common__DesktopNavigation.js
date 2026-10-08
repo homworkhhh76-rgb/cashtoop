@@ -1,8 +1,8 @@
-import {registerLayer} from './hooks__appNavigation.js?v=7.9.4.136-localization';
-import {t} from './services__i18n.js?v=7.9.4.136-localization';
+import {registerLayer} from './hooks__appNavigation.js?v=7.9.4.139-ledger-print';
+import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
 import React, {useState,useEffect,useRef} from 'react';
-import {useApp} from './context__AppContext.js?v=7.9.4.136-localization';
-import {canAccessTab,canAccessPermission} from './utils__permissions.js?v=7.9.4.136-localization';
+import {useApp} from './context__AppContext.js?v=7.9.4.139-ledger-print';
+import {canAccessTab,canAccessPermission} from './utils__permissions.js?v=7.9.4.139-ledger-print';
 import {LayoutDashboard,ShoppingCart,ReceiptText,Truck,Package,Boxes,Warehouse,Users,Building2,Wallet,Receipt,FileSpreadsheet,UserCheck,Barcode,BarChart3,Trash2,Settings,LayoutGrid,UtensilsCrossed,ChefHat,Scale,Sparkles,CalendarRange,MessageSquareText,Headphones,BookOpenCheck,LogOut,ChevronDown} from 'lucide-react';
 const h=React.createElement;
 export function DesktopNavigation(){
@@ -59,7 +59,12 @@ export function DesktopNavigation(){
     if (id === 'oscar_ledger') {
       if (canAccessPermission('canAccessOscarLedger', accessArgs)) {
         setMobileSidebarOpen(false);
-        window.location.href='./oscar-ledger.html';
+        try {
+          const rt = window.OscarActivation?.readRuntime?.();
+          const companyId = String(rt?.companyId || rt?.tenantId || '').trim();
+          if (companyId) sessionStorage.setItem('oscar_ledger_grant_v1', JSON.stringify({ companyId, at: Date.now() }));
+        } catch (_) {}
+        window.location.assign('./oscar-ledger.html?from=app');
       }
       return;
     }

@@ -1,6 +1,6 @@
-import {t} from './services__i18n.js?v=7.9.4.136-localization';
+import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { queryStorePage } from './services__db.js?v=7.9.4.136-localization';
+import { queryStorePage } from './services__db.js?v=7.9.4.139-ledger-print';
 
 const h = React.createElement;
 

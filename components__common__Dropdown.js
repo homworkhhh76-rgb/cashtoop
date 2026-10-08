@@ -1,5 +1,5 @@
-import {t} from './services__i18n.js?v=7.9.4.136-localization';
-import {registerLayer} from './hooks__appNavigation.js?v=7.9.4.136-localization';
+import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
+import {registerLayer} from './hooks__appNavigation.js?v=7.9.4.139-ledger-print';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, Search, Plus, Check, X } from 'lucide-react';

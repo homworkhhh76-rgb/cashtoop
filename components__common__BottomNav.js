@@ -1,7 +1,7 @@
-import {t} from './services__i18n.js?v=7.9.4.136-localization';
+import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
 import React, { useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.136-localization';
-import { canAccessTab } from './utils__permissions.js?v=7.9.4.136-localization';
+import { useApp } from './context__AppContext.js?v=7.9.4.139-ledger-print';
+import { canAccessTab } from './utils__permissions.js?v=7.9.4.139-ledger-print';
 import {
   Home, ReceiptText, ScanLine, Package, Menu, X, Warehouse, Truck, Boxes, Users,
   Building2, Wallet, Receipt, Barcode, BarChart3, Trash2, Settings, UserCheck,

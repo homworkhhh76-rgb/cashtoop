@@ -1,12 +1,12 @@
-import {LanguagePicker} from './components__common__LanguagePicker.js?v=7.9.4.136-localization';
-import {t} from './services__i18n.js?v=7.9.4.136-localization';
+import {LanguagePicker} from './components__common__LanguagePicker.js?v=7.9.4.139-ledger-print';
+import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
 import React, { useMemo, useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.136-localization';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.136-localization';
+import { useApp } from './context__AppContext.js?v=7.9.4.139-ledger-print';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.139-ledger-print';
 import { LayoutDashboard, Package, Users, Wallet, Settings, Warehouse, Truck, Boxes, FileSpreadsheet, UserCheck, Barcode, CalendarRange, MessageSquareText, Trash2, UtensilsCrossed, ChefHat, Scale, ArrowRight, Menu, LogOut, Bell, ShoppingCart, CloudCog, UserPlus, Receipt, PackagePlus, BarChart3 } from 'lucide-react';
-import { NotificationsModal, buildSystemNotifications } from './components__common__NotificationsModal.js?v=7.9.4.136-localization';
+import { NotificationsModal, buildSystemNotifications } from './components__common__NotificationsModal.js?v=7.9.4.139-ledger-print';
 
-import { DesktopNavigation } from './components__common__DesktopNavigation.js?v=7.9.4.136-localization';
+import { DesktopNavigation } from './components__common__DesktopNavigation.js?v=7.9.4.139-ledger-print';
 const h = React.createElement;
 const TAB_TITLES = {
   dashboard:'لوحة التحكم', pos:'الكاشير', sales:'المبيعات', purchases:'المشتريات',
