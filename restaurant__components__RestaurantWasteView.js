@@ -1,9 +1,9 @@
-import {t} from './services__i18n.js?v=7.9.4.136-localization';
-import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.136-localization';
+import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
+import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.139-ledger-print';
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import React, { useState } from 'react';
-import { useRestaurant } from './restaurant__context__RestaurantContext.js?v=7.9.4.136-localization';
-import { useApp } from './restaurant__context__AppContext.js?v=7.9.4.136-localization';
+import { useRestaurant } from './restaurant__context__RestaurantContext.js?v=7.9.4.139-ledger-print';
+import { useApp } from './restaurant__context__AppContext.js?v=7.9.4.139-ledger-print';
 import { Trash2, Plus, BookOpen, Scale, AlertTriangle, } from 'lucide-react';
 export const RestaurantWasteView = () => {
     const { recipes, wasteLogs, addRecipe, updateRecipe, deleteRecipe, logWaste, deleteWasteRecord, } = useRestaurant();

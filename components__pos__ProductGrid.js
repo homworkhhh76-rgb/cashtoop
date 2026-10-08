@@ -1,8 +1,8 @@
-import {t} from './services__i18n.js?v=7.9.4.136-localization';
+import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
 import React from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.136-localization';
+import { useApp } from './context__AppContext.js?v=7.9.4.139-ledger-print';
 import { Layers } from 'lucide-react';
-import { ProductImage } from './components__common__ProductImage.js?v=7.9.4.136-localization';
+import { ProductImage } from './components__common__ProductImage.js?v=7.9.4.139-ledger-print';
 
 const h = React.createElement;
 

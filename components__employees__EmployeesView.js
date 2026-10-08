@@ -1,9 +1,9 @@
-import {t} from './services__i18n.js?v=7.9.4.136-localization';
+import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
 import React, { useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.136-localization';
-import { Pagination, usePagination } from './components__common__Pagination.js?v=7.9.4.136-localization';
-import { GENERAL_PAGE_PERMISSIONS, RESTAURANT_PAGE_PERMISSIONS, normalizeEmployeePermissions } from './utils__permissions.js?v=7.9.4.136-localization';
-import { isTrialAccount } from './trial__config.js?v=7.9.4.136-localization';
+import { useApp } from './context__AppContext.js?v=7.9.4.139-ledger-print';
+import { Pagination, usePagination } from './components__common__Pagination.js?v=7.9.4.139-ledger-print';
+import { GENERAL_PAGE_PERMISSIONS, RESTAURANT_PAGE_PERMISSIONS, normalizeEmployeePermissions } from './utils__permissions.js?v=7.9.4.139-ledger-print';
+import { isTrialAccount } from './trial__config.js?v=7.9.4.139-ledger-print';
 import {
   Users, UserPlus, ShieldCheck, Trash2, Edit2, UserCheck, Download,
   UtensilsCrossed, ChefHat, LayoutGrid, Scale, X

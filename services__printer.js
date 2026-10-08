@@ -379,24 +379,25 @@ class SmartPrinterManager {
   async _writeBluetooth(data) {
     const characteristic = this.characteristic;
     if (!characteristic) throw new Error('قناة الطابعة غير متاحة.');
-    const fn = characteristic.writeValueWithoutResponse ? 'writeValueWithoutResponse' : 'writeValue';
-    // 96 bytes + a short pause is intentionally conservative; it is substantially more reliable
-    // with low-cost ESC/POS BLE printers than flooding their small receive buffer.
-    let chunkSize = 96;
+    const noResponse = !!characteristic.writeValueWithoutResponse;
+    const fn = noResponse ? 'writeValueWithoutResponse' : 'writeValue';
+    // Fast path for thermal printers: larger packets and only a tiny pacing delay.
+    // If a low-MTU printer rejects the packet, retry that packet safely in 20-byte chunks.
+    let chunkSize = noResponse ? 180 : 96;
+    const pause = noResponse ? 2 : 4;
     for (let i=0; i<data.length; i+=chunkSize) {
       const chunk = data.slice(i, i+chunkSize);
       try {
         await characteristic[fn](chunk);
       } catch (err) {
-        // A few older BLE printers expose a very small MTU. Retry the same chunk as 20-byte packets.
         if (chunkSize > 20 && this.device?.gatt?.connected) {
           for (let j=0; j<chunk.length; j+=20) {
             await characteristic[fn](chunk.slice(j, j+20));
-            await sleep(6);
+            await sleep(2);
           }
         } else throw err;
       }
-      await sleep(8);
+      if (pause) await sleep(pause);
     }
   }
 
@@ -465,7 +466,7 @@ class SmartPrinterManager {
         for (let bit=0; bit<8; bit++) {
           const x = xb*8 + bit, o = (y*width+x)*4;
           const gray = rgba[o]*0.299 + rgba[o+1]*0.587 + rgba[o+2]*0.114;
-          if (rgba[o+3] > 20 && gray < 190) b |= (0x80 >> bit);
+          if (rgba[o+3] > 20 && gray < 218) b |= (0x80 >> bit);
         }
         raster[y*bytesPerRow+xb] = b;
       }

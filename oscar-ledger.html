@@ -1,21 +1,47 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<script src="./oscar-activation-runtime.js?v=7.9.4.136-localization"></script>
+<script src="./oscar-activation-runtime.js?v=7.9.4.139-ledger-print"></script>
 <script>
 (function(){
   document.documentElement.classList.add('auth-pending');
   const deny=(msg)=>{try{sessionStorage.setItem('oscar_ledger_access_message',msg||'لا تملك صلاحية دفتر كاش توب 3')}catch(_){} location.replace('./index.html');};
+  const hasLedgerPermission=(raw)=>{
+    if(!raw)return false;
+    if(Array.isArray(raw))return raw.some(item=>{
+      if(typeof item==='string')return item==='canAccessOscarLedger'||item==='oscar_ledger';
+      if(!item||typeof item!=='object')return false;
+      if(item.canAccessOscarLedger===true)return true;
+      const key=String(item.key||item.id||item.code||item.name||'');
+      return (key==='canAccessOscarLedger'||key==='oscar_ledger')&&(item.value===true||item.enabled===true||item.allowed===true||item.granted===true);
+    });
+    if(typeof raw==='object'){
+      if(raw.canAccessOscarLedger===true||raw.oscar_ledger===true)return true;
+      if(raw.permissions&&raw.permissions!==raw)return hasLedgerPermission(raw.permissions);
+    }
+    return false;
+  };
   try{
     const rt=window.OscarActivation?.readRuntime?.();
-    if(!rt?.companyId){deny('سجل الدخول إلى كاش توب 3 أولاً');return;}
-    const exp=rt.expiresAt?new Date(rt.expiresAt).getTime():0;
+    const companyId=String(rt?.companyId||rt?.tenantId||'').trim();
+    if(!companyId){deny('سجل الدخول إلى كاش توب 3 أولاً');return;}
+    let exp=0;
+    if(rt?.expiresAt){
+      const numeric=Number(rt.expiresAt);
+      exp=Number.isFinite(numeric)&&numeric>100000000000?numeric:new Date(rt.expiresAt).getTime();
+      if(!Number.isFinite(exp))exp=0;
+    }
     if(exp&&Date.now()>=exp){deny('انتهت مدة الاشتراك');return;}
-    const role=String(rt.account?.role||'').trim().toLowerCase();
-    const manager=rt.type==='company-manager'||role==='admin';
-    const perms=(rt.account?.permissions&&typeof rt.account.permissions==='object')?rt.account.permissions:((rt.permissions&&typeof rt.permissions==='object')?rt.permissions:{});
-    if(!manager&&perms.canAccessOscarLedger!==true){deny('هذا الموظف لا يملك صلاحية دفتر كاش توب 3');return;}
-    const session={token:'oscar-runtime',company:{id:String(rt.companyId),name:String(rt.companyName||rt.trialProfile?.companyName||'دفتر كاش توب 3'),expiresAt:exp||0,status:'active'},loginAt:Date.now(),lastValidatedAt:Date.now()};
+    const role=String(rt.account?.roleCode||rt.account?.role||'').trim().toLowerCase();
+    const manager=rt.type==='company-manager'||role==='admin'||rt.account?.isCompanyManager===true;
+    const allowed=hasLedgerPermission(rt.account?.permissions)||hasLedgerPermission(rt.permissions);
+    let grantedFromApp=false;
+    try{
+      const grant=JSON.parse(sessionStorage.getItem('oscar_ledger_grant_v1')||'null');
+      grantedFromApp=!!grant&&String(grant.companyId||'')===companyId&&Date.now()-Number(grant.at||0)<12*60*60*1000;
+    }catch(_){}
+    if(!manager&&!allowed&&!grantedFromApp){deny('هذا الموظف لا يملك صلاحية دفتر كاش توب 3');return;}
+    const session={token:'oscar-runtime',company:{id:companyId,name:String(rt.companyName||rt.trialProfile?.companyName||'دفتر كاش توب 3'),expiresAt:exp||0,status:'active'},loginAt:Date.now(),lastValidatedAt:Date.now()};
     localStorage.setItem('cashtop_cloud_session_v3',JSON.stringify(session));
     window.__oscarLedgerRuntime=rt;window.__ctSession=session;
     document.documentElement.classList.add('auth-ok');
@@ -1485,8 +1511,8 @@
 
         function exportExcel(){if(typeof XLSX==='undefined'){toast('مكتبة Excel غير متاحة حالياً','error');return;}const people=buildBalances(currentDebtTab),summary=people.map(p=>({'الاسم':p.name,'أخذت':p.debit,'أعطيت':p.credit,'الرصيد':p.net,'الهاتف':getContact(p.name,p.type).phone||''})),transactions=records.filter(r=>r.type===currentDebtTab&&getDebtAmount(r)>0).map(r=>({'الاسم':r.name,'النوع':Number(r.debit)>0?'أخذت':'أعطيت','المبلغ':getDebtAmount(r),'الملاحظة':r.note||'','التاريخ':formatDateTime(r.timestamp)}));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(summary),'الحسابات');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(transactions),'المعاملات');XLSX.writeFile(wb,`Oscar_Ledger_${currentDebtTab}_${new Date().toISOString().slice(0,10)}.xlsx`);toast('تم تجهيز ملف Excel');}
     </script>
-    <script src="./oscar-ledger-cloud.js?v=7.9.4.136-localization"></script>
-    <script src="./oscar-ledger-sync.js?v=7.9.4.136-localization"></script>
+    <script src="./oscar-ledger-cloud.js?v=7.9.4.139-ledger-print"></script>
+    <script src="./oscar-ledger-sync.js?v=7.9.4.139-ledger-print"></script>
 
 <script id="v8-behavior">
 (function(){

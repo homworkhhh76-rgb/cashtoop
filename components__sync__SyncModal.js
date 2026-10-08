@@ -1,8 +1,8 @@
-import {t} from './services__i18n.js?v=7.9.4.136-localization';
-import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.136-localization';
+import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
+import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.139-ledger-print';
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import React from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.136-localization';
+import { useApp } from './context__AppContext.js?v=7.9.4.139-ledger-print';
 import { RefreshCw, CheckCircle, Wifi, WifiOff, X } from 'lucide-react';
 export const SyncModal = () => {
     const { showSyncModal, setShowSyncModal, syncQueue, isOnline, isSyncing, syncPendingQueue, retrySyncItem, } = useApp();

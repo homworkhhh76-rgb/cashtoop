@@ -1,6 +1,6 @@
-import {customerStatementModel,statementHeaders} from './utils__customerStatement.js?v=7.9.4.136-localization';
-import { getBrandLogoDataUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.136-localization';
-import { code128Geometry } from './utils__code128.js?v=7.9.4.136-localization';
+import {customerStatementModel,statementHeaders} from './utils__customerStatement.js?v=7.9.4.139-ledger-print';
+import { getBrandLogoDataUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.139-ledger-print';
+import { code128Geometry } from './utils__code128.js?v=7.9.4.139-ledger-print';
 
 const imageCache = new Map();
 const num = v => { const n=Number(v); return Number.isFinite(n)?n:0; };
@@ -29,11 +29,13 @@ async function loadImage(src){
   imageCache.set(src,p); return p;
 }
 
-function setFont(ctx,size=24,weight=600){ctx.font=`${weight} ${size}px Cairo, Arial, Tahoma, sans-serif`;ctx.direction='rtl';ctx.textBaseline='middle';}
+let activeCanvasFont='Cairo, Arial, Tahoma, sans-serif';
+function setFont(ctx,size=24,weight=600){ctx.font=`${weight} ${size}px ${activeCanvasFont}`;ctx.direction='rtl';ctx.textBaseline='middle';}
 function txt(ctx,value,x,y,size=24,weight=600,align='right',color='#0f172a'){
   setFont(ctx,size,weight);ctx.textAlign=align;ctx.fillStyle=color;ctx.fillText(normalize(value)||'-',x,y);
 }
 function line(ctx,x1,y1,x2,y2,w=1,color='#cbd5e1'){ctx.strokeStyle=color;ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();}
+function dottedLine(ctx,x1,y1,x2,y2,w=1,color='#475569'){ctx.save();ctx.setLineDash([2,4]);line(ctx,x1,y1,x2,y2,w,color);ctx.restore();}
 function roundedRect(ctx,x,y,w,h,r=12,fill='#fff',stroke='#e2e8f0',lw=1){
   const rr=Math.min(r,w/2,h/2);ctx.beginPath();ctx.moveTo(x+rr,y);ctx.arcTo(x+w,y,x+w,y+h,rr);ctx.arcTo(x+w,y+h,x,y+h,rr);ctx.arcTo(x,y+h,x,y,rr);ctx.arcTo(x,y,x+w,y,rr);ctx.closePath();if(fill){ctx.fillStyle=fill;ctx.fill();}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw;ctx.stroke();}
 }
@@ -48,18 +50,19 @@ function wrapped(ctx,value,x,y,maxWidth,size=22,weight=600,align='right',color='
   const lines=wrap(ctx,value,maxWidth,size,weight,maxLines);lines.forEach((s,i)=>txt(ctx,s,x,y+i*lineH,size,weight,align,color));return lines.length;
 }
 function createCanvas(w,h){const c=document.createElement('canvas');c.width=Math.max(1,Math.ceil(w));c.height=Math.max(1,Math.ceil(h));const ctx=c.getContext('2d',{alpha:false,desynchronized:true});ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);return {canvas:c,ctx};}
+function monochromeCanvas(canvas,threshold=224){try{const ctx=canvas.getContext('2d',{willReadFrequently:true});const img=ctx.getImageData(0,0,canvas.width,canvas.height),d=img.data;for(let i=0;i<d.length;i+=4){const gray=d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114;const v=gray<threshold?0:255;d[i]=d[i+1]=d[i+2]=v;d[i+3]=255;}ctx.putImageData(img,0,0);}catch(_){}return canvas;}
 
 async function drawBrand(ctx,w,settings,title,subtitle='',top=34){
   let y=top; let logoSrc='';
   try{ logoSrc=getBrandLogoDataUrl(settings||{}); }catch(_){ logoSrc=settings?.logo||DEFAULT_LOGO_DATA_URL; }
   const logo=await loadImage(logoSrc||settings?.logo||DEFAULT_LOGO_DATA_URL);
-  if(logo){const maxW=Math.min(settings.invoiceBrand?240:170,w*.28),maxH=settings.invoiceBrand?130:92,ratio=Math.min(maxW/logo.width,maxH/logo.height);const dw=Math.max(45,logo.width*ratio),dh=Math.max(35,logo.height*ratio);ctx.drawImage(logo,(w-dw)/2,y,dw,dh);y+=dh+14;}
-  txt(ctx,settings?.storeName||'كاش توب 3',w/2,y+19,34,900,'center');y+=52;
+  if(logo){const maxW=Math.min(settings.invoiceBrand?260:180,w*.34),maxH=settings.invoiceBrand?138:98,ratio=Math.min(maxW/logo.width,maxH/logo.height);const dw=Math.max(56,logo.width*ratio),dh=Math.max(42,logo.height*ratio);ctx.drawImage(logo,(w-dw)/2,y,dw,dh);y+=dh+10;}
+  txt(ctx,settings?.storeName||'كاش توب 3',w/2,y+18,34,900,'center');y+=46;
   if(settings?.subtitle){txt(ctx,settings.subtitle,w/2,y,17,700,'center','#7C3AED');y+=30;}
   const details=[settings?.address,settings?.phone?`هاتف: ${settings.phone}`:'',settings?.taxNumber?`الرقم الضريبي: ${settings.taxNumber}`:''].filter(Boolean).join(' • ');
-  if(details){wrapped(ctx,details,w/2,y,w-90,16,600,'center','#64748b',24,2);y+=40;}
-  line(ctx,32,y,w-32,y,3,'#7C3AED');y+=38;
-  if(title){txt(ctx,title,w/2,y,28,900,'center','#0f172a');y+=38;}
+  if(details){wrapped(ctx,details,w/2,y,w-70,16,600,'center','#334155',22,2);y+=34;}
+  line(ctx,22,y,w-22,y,1.6,'#111');y+=24;
+  if(title){txt(ctx,title,w/2,y,27,900,'center','#0f172a');y+=34;}
   if(subtitle){wrapped(ctx,subtitle,w/2,y,w-100,16,600,'center','#64748b',23,2);y+=38;}
   return y;
 }
@@ -151,18 +154,73 @@ function drawPair(ctx,label,value,w,y,margin,font=19){txt(ctx,label,w-margin,y,f
 function drawBarcode(ctx,value,x,y,w,h){const g=code128Geometry(String(value||''));const unit=w/g.width;ctx.fillStyle='#000';g.rects.forEach(r=>ctx.fillRect(x+r.x*unit,y,r.width*unit,h));txt(ctx,g.text,x+w/2,y+h+18,14,600,'center','#111');}
 
 export async function renderInvoiceCanvas(invoice,settings={},options={}){
-  try{await document.fonts?.ready;}catch(_){}settings={...documentBrandSettings(settings),subtitle:"",invoiceBrand:true};
-  const paper=options.paperSize||settings.printerWidth||'80mm';const w=paper==='58mm'?720:paper==='a4'?1240:940;const margin=paper==='58mm'?28:paper==='a4'?62:40;const items=invoice?.items||[];const fs=paper==='a4'?25:28;const headers=['#','الصنف','الوحدة','الكمية','السعر','الإجمالي'];const rows=items.map((it,i)=>[i+1,it.productName||'صنف',it.unitName||'-',num(it.quantity),money(it.unitPrice),money(it.total)]);const probe=document.createElement('canvas').getContext('2d');const cols=tableColumnGeometry(headers,margin,w-margin*2);const est=1350+rows.reduce((sum,row)=>sum+rowHeight(probe,row,cols,fs,56),0);const {canvas,ctx}=createCanvas(w,Math.max(paper==='a4'?1500:1180,est));
-  let y=await drawBrand(ctx,w,settings,options.title||(options.kind==='purchase'?'فاتورة مشتريات':invoice?.type==='return'?'فاتورة مرتجع مبيعات':'فاتورة مبيعات'),'',28);
-  const party=options.kind==='purchase'?(invoice?.supplierName||'مورد'):(invoice?.customerName||'زبون عام');
-  roundedRect(ctx,margin,y,w-margin*2,150,12,'#f8fafc','#e2e8f0');y+=30;txt(ctx,`رقم الفاتورة: #${invoice?.invoiceNumber||'-'}`,w-margin-16,y,20,900,'right');txt(ctx,dateText(invoice?.date),margin+16,y,17,600,'left','#475569');y+=42;txt(ctx,options.kind==='purchase'?`المورد: ${party}`:`العميل: ${party}`,w-margin-16,y,19,800,'right');txt(ctx,options.kind==='purchase'?`المخزن: ${invoice?.warehouseName||'-'}`:`الكاشير: ${invoice?.cashierName||'-'}`,margin+16,y,17,700,'left');y+=63;
-  y=drawTable(ctx,{x:margin,y,w:w-margin*2,headers,rows,fontSize:fs,headH:70,plainHeader:true});y+=28;
-  const totals=[['المجموع',invoice?.subtotal],...(num(invoice?.discountTotal)>0?[['الخصم',-num(invoice.discountTotal)]]:[]),...(num(invoice?.taxTotal)>0?[['الضريبة',invoice.taxTotal]]:[]),['الصافي المطلوب',invoice?.grandTotal],['المدفوع',invoice?.paidAmount],...(num(invoice?.remainingAmount)>0?[['المتبقي',invoice.remainingAmount]]:[])];
-  totals.forEach(([k,v],i)=>{roundedRect(ctx,w-margin-430,y,430,42,8,i===totals.length-3?'#ecfdf5':'#fff','#e2e8f0');txt(ctx,`${k}:`,w-margin-18,y+21,18,i===totals.length-3?900:700,'right','#334155');txt(ctx,`${money(v)} ${settings.currencySymbol||''}`,w-margin-410,y+21,19,900,'left',num(v)<0?'#dc2626':'#0f172a');y+=48;});
-  if(invoice?.notes){y+=10;roundedRect(ctx,margin,y,w-margin*2,80,10,'#f8fafc','#e2e8f0');txt(ctx,'ملاحظات:',w-margin-16,y+24,16,800,'right','#64748b');wrapped(ctx,invoice.notes,w-margin-16,y+52,w-margin*2-32,16,600,'right','#334155',23,2);y+=96;}
-  if(settings?.receiptShowBarcode!==false){const bw=Math.min(520,w-margin*2-80);drawBarcode(ctx,invoice?.invoiceNumber||'',(w-bw)/2,y+14,bw,58);y+=112;}
-  txt(ctx,settings?.receiptFooterMessage||'شكراً لتعاملكم معنا',w/2,y+16,17,700,'center','#475569');y+=40;wrapped(ctx,'برنامج كاش توب المحاسبي جوال 0597603119',margin,y,w-margin*2,20,700,'left','#475569',28,2);y+=38;
-  const finalH=Math.min(canvas.height,Math.ceil(y+45));if(finalH<canvas.height){const out=createCanvas(w,finalH);out.ctx.drawImage(canvas,0,0,w,finalH,0,0,w,finalH);return out.canvas;}return canvas;
+  const previousFont=activeCanvasFont;activeCanvasFont='Tahoma, Arial, sans-serif';
+  try{
+    try{await document.fonts?.ready;}catch(_){}
+    settings={...documentBrandSettings(settings),subtitle:'',invoiceBrand:true};
+    const paper=options.paperSize||options.paperWidth||settings.printerWidth||'80mm';
+    const w=paper==='58mm'?720:paper==='a4'?1240:940;
+    const margin=paper==='58mm'?16:paper==='a4'?38:20;
+    const items=invoice?.items||[];
+    const fs=paper==='58mm'?22:paper==='a4'?24:26;
+    const headers=['#','الصنف','الوحدة','الكمية','السعر','الإجمالي'];
+    const rows=items.map((it,i)=>[i+1,it.productName||'صنف',it.unitName||'-',num(it.quantity),money(it.unitPrice),money(it.total)]);
+    const probe=document.createElement('canvas').getContext('2d');
+    const cols=tableColumnGeometry(headers,margin,w-margin*2);
+    const est=1080+rows.reduce((sum,row)=>sum+rowHeight(probe,row,cols,fs,52),0);
+    const {canvas,ctx}=createCanvas(w,Math.max(paper==='a4'?1400:1040,est));
+    let y=18;
+    let logoSrc='';try{logoSrc=getBrandLogoDataUrl(settings||{});}catch(_){logoSrc=settings?.logo||DEFAULT_LOGO_DATA_URL;}
+    const logo=await loadImage(logoSrc||DEFAULT_LOGO_DATA_URL);
+    if(logo){const maxW=Math.min(250,w*.34),maxH=128,ratio=Math.min(maxW/logo.width,maxH/logo.height);const dw=Math.max(56,logo.width*ratio),dh=Math.max(42,logo.height*ratio);ctx.drawImage(logo,(w-dw)/2,y,dw,dh);y+=dh+8;}
+    txt(ctx,settings?.storeName||'كاش توب 3',w/2,y+17,34,900,'center','#000');y+=43;
+    const details=[settings?.address,settings?.phone?`هاتف: ${settings.phone}`:'',settings?.taxNumber?`الرقم الضريبي: ${settings.taxNumber}`:''].filter(Boolean).join(' • ');
+    if(details){wrapped(ctx,details,w/2,y,w-52,16,700,'center','#000',22,2);y+=32;}
+    line(ctx,12,y,w-12,y,2,'#000');y+=22;
+    txt(ctx,options.title||(options.kind==='purchase'?'فاتورة مشتريات':invoice?.type==='return'?'فاتورة مرتجع مبيعات':'فاتورة مبيعات'),w/2,y,27,900,'center','#000');y+=30;
+    const party=options.kind==='purchase'?(invoice?.supplierName||'مورد'):(invoice?.customerName||'زبون عام');
+    y+=4;
+    txt(ctx,`رقم الفاتورة: #${invoice?.invoiceNumber||'-'}`,w-margin,y,19,900,'right','#000');
+    txt(ctx,dateText(invoice?.date),margin,y,16,700,'left','#000');y+=31;
+    txt(ctx,options.kind==='purchase'?`المورد: ${party}`:`العميل: ${party}`,w-margin,y,18,800,'right','#000');
+    txt(ctx,options.kind==='purchase'?`المخزن: ${invoice?.warehouseName||'-'}`:`الكاشير: ${invoice?.cashierName||'-'}`,margin,y,16,700,'left','#000');y+=28;
+    line(ctx,margin,y,w-margin,y,1.2,'#000');y+=5;
+
+    y=drawTable(ctx,{x:margin,y,w:w-margin*2,headers,rows,fontSize:fs,headH:58,plainHeader:true});
+    y+=13;line(ctx,margin,y,w-margin,y,2,'#000');y+=17;
+
+    const adjustments=[];
+    if(num(invoice?.discountTotal)>0)adjustments.push(['إجمالي الخصم',-num(invoice.discountTotal)]);
+    if(num(invoice?.taxTotal)>0)adjustments.push(['الضريبة',invoice.taxTotal]);
+    if(num(invoice?.additionalCharges)>0)adjustments.push(['كلفة إضافية / شحن',invoice.additionalCharges]);
+    for(const [label,val] of adjustments){txt(ctx,`${label}:`,w-margin,y+12,16,800,'right','#000');txt(ctx,`${money(val)} ${settings.currencySymbol||''}`,margin,y+12,17,900,'left','#000');y+=27;}
+    if(adjustments.length){line(ctx,margin,y,w-margin,y,1,'#000');y+=12;}
+
+    const mid=w/2;
+    const rightLabelX=w-margin,rightValueX=mid+18,leftLabelX=mid-18,leftValueX=margin;
+    // Row 1: right = total, left = paid
+    txt(ctx,'المجموع:',rightLabelX,y+15,20,900,'right','#000');
+    txt(ctx,`${money(invoice?.subtotal)} ${settings.currencySymbol||''}`,rightValueX,y+15,21,900,'left','#000');
+    txt(ctx,'المدفوع:',leftLabelX,y+15,18,850,'right','#000');
+    txt(ctx,`${money(invoice?.paidAmount)} ${settings.currencySymbol||''}`,leftValueX,y+15,19,900,'left','#000');
+    y+=34;
+    // Row 2: right = required, left = remaining
+    txt(ctx,'المبلغ المطلوب:',rightLabelX,y+15,20,900,'right','#000');
+    txt(ctx,`${money(invoice?.grandTotal)} ${settings.currencySymbol||''}`,rightValueX,y+15,21,900,'left','#000');
+    txt(ctx,'المتبقي:',leftLabelX,y+15,18,850,'right','#000');
+    txt(ctx,`${money(invoice?.remainingAmount||0)} ${settings.currencySymbol||''}`,leftValueX,y+15,19,900,'left','#000');
+    y+=35;
+    if(num(invoice?.changeAmount)>0){txt(ctx,'الفكة للزبون:',w-margin,y+13,17,800,'right','#000');txt(ctx,`${money(invoice.changeAmount)} ${settings.currencySymbol||''}`,margin,y+13,18,900,'left','#000');y+=28;}
+    line(ctx,margin,y,w-margin,y,1.2,'#000');y+=14;
+
+    if(invoice?.notes){txt(ctx,'ملاحظات:',w-margin,y+14,15,800,'right','#000');wrapped(ctx,invoice.notes,w-margin,y+40,w-margin*2,15,700,'right','#000',21,2);y+=77;}
+    if(settings?.receiptShowBarcode!==false){const bw=Math.min(530,w-margin*2-20);drawBarcode(ctx,invoice?.invoiceNumber||'',(w-bw)/2,y+6,bw,55);y+=94;}
+    txt(ctx,settings?.receiptFooterMessage||'شكراً لتعاملكم معنا',w/2,y+10,16,800,'center','#000');y+=30;
+    wrapped(ctx,'برنامج كاش توب المحاسبي جوال 0597603119',margin,y,w-margin*2,16,800,'left','#000',23,2);y+=26;
+    const finalH=Math.min(canvas.height,Math.ceil(y+24));
+    if(finalH<canvas.height){const out=createCanvas(w,finalH);out.ctx.drawImage(canvas,0,0,w,finalH,0,0,w,finalH);return monochromeCanvas(out.canvas);}
+    return monochromeCanvas(canvas);
+  }finally{activeCanvasFont=previousFont;}
 }
 
 export async function renderVoucherCanvas(voucher,settings={},options={}){

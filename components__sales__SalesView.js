@@ -1,16 +1,16 @@
-import {registerLayer} from './hooks__appNavigation.js?v=7.9.4.136-localization';
-import {t} from './services__i18n.js?v=7.9.4.136-localization';
-import {SalesFilters,salesDateRange} from './components__sales__SalesFilters.js?v=7.9.4.136-localization';
-import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.136-localization';
+import {registerLayer} from './hooks__appNavigation.js?v=7.9.4.139-ledger-print';
+import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
+import {SalesFilters,salesDateRange} from './components__sales__SalesFilters.js?v=7.9.4.139-ledger-print';
+import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.139-ledger-print';
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useApp } from './context__AppContext.js?v=7.9.4.136-localization';
-import { Pagination, useDatabasePagination } from './components__common__Pagination.js?v=7.9.4.136-localization';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.136-localization';
-import { MessageActionButtons } from './components__common__MessageActionButtons.js?v=7.9.4.136-localization';
-import { downloadProfessionalTablePDF, downloadProfessionalTableImage, downloadProfessionalTableExcel, downloadProfessionalInvoicePDF, downloadProfessionalInvoiceImage, downloadProfessionalInvoiceExcel } from './utils__professionalExport.js?v=7.9.4.136-localization';
-import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.136-localization';
+import { useApp } from './context__AppContext.js?v=7.9.4.139-ledger-print';
+import { Pagination, useDatabasePagination } from './components__common__Pagination.js?v=7.9.4.139-ledger-print';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.139-ledger-print';
+import { MessageActionButtons } from './components__common__MessageActionButtons.js?v=7.9.4.139-ledger-print';
+import { downloadProfessionalTablePDF, downloadProfessionalTableImage, downloadProfessionalTableExcel, downloadProfessionalInvoicePDF, downloadProfessionalInvoiceImage, downloadProfessionalInvoiceExcel } from './utils__professionalExport.js?v=7.9.4.139-ledger-print';
+import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.139-ledger-print';
 import { Search, Printer, RotateCcw, Download, Eye, X, AlertCircle, Trash2, Pencil, Image as ImageIcon, FileSpreadsheet, MoreVertical, MessageCircle } from 'lucide-react';
 export const SalesView = () => {
     const { customers, warehouses, accounts, settings, currentUser, deleteInvoice, beginEditSaleInvoice, setShowThermalModal, createReturnInvoice, showToast, queryAllStoreRecords, } = useApp();

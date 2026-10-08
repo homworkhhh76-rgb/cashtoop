@@ -1,4 +1,4 @@
-import { printElementOnly } from './utils__export.js?v=7.9.4.136-localization';
+import { printElementOnly } from './utils__export.js?v=7.9.4.139-ledger-print';
 
 const esc = (value) => String(value ?? '')
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')

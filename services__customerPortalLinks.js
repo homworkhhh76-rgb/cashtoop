@@ -1,5 +1,5 @@
-import { encodeCustomerPortalAccess } from './customer-portal-codec.js?v=7.9.4.136-localization';
-import { TRIAL_DATABASE } from './trial__config.js?v=7.9.4.136-localization';
+import { encodeCustomerPortalAccess } from './customer-portal-codec.js?v=7.9.4.139-ledger-print';
+import { TRIAL_DATABASE } from './trial__config.js?v=7.9.4.139-ledger-print';
 
 const ALPHABET='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const clean=v=>String(v??'').trim();

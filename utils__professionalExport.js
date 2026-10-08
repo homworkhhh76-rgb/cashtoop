@@ -1,8 +1,8 @@
-import {customerStatementModel,statementHeaders} from './utils__customerStatement.js?v=7.9.4.136-localization';
-import { downloadBlob } from './utils__export.js?v=7.9.4.136-localization';
-import { downloadCanvasAsImage } from './utils__imageExport.js?v=7.9.4.136-localization';
-import { downloadCanvasAsPDF, downloadCanvasesAsPDF } from './utils__pdfExport.js?v=7.9.4.136-localization';
-import { renderTableCanvas, renderTablePages, renderInvoiceCanvas, renderVoucherCanvas, renderCustomerStatementPages, combineCanvasesVertical, customerMovements } from './utils__canvasRenderer.js?v=7.9.4.136-localization';
+import {customerStatementModel,statementHeaders} from './utils__customerStatement.js?v=7.9.4.139-ledger-print';
+import { downloadBlob } from './utils__export.js?v=7.9.4.139-ledger-print';
+import { downloadCanvasAsImage } from './utils__imageExport.js?v=7.9.4.139-ledger-print';
+import { downloadCanvasAsPDF, downloadCanvasesAsPDF } from './utils__pdfExport.js?v=7.9.4.139-ledger-print';
+import { renderTableCanvas, renderTablePages, renderInvoiceCanvas, renderVoucherCanvas, renderCustomerStatementPages, combineCanvasesVertical, customerMovements } from './utils__canvasRenderer.js?v=7.9.4.139-ledger-print';
 
 const money=v=>{const n=Number(v);return Number.isFinite(n)?n.toFixed(2):'0.00';};
 const num=v=>{const n=Number(v);return Number.isFinite(n)?n:0;};

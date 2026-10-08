@@ -1,9 +1,9 @@
-import {t} from './services__i18n.js?v=7.9.4.136-localization';
-import {downloadProfessionalTablePDF,downloadProfessionalTableImage} from './utils__professionalExport.js?v=7.9.4.136-localization';
+import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
+import {downloadProfessionalTablePDF,downloadProfessionalTableImage} from './utils__professionalExport.js?v=7.9.4.139-ledger-print';
 import React, { useEffect, useMemo, useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.136-localization';
-import { exportToCSV, downloadBlob } from './utils__export.js?v=7.9.4.136-localization';
-import { getAllFromStore } from './services__db.js?v=7.9.4.136-localization';
+import { useApp } from './context__AppContext.js?v=7.9.4.139-ledger-print';
+import { exportToCSV, downloadBlob } from './utils__export.js?v=7.9.4.139-ledger-print';
+import { getAllFromStore } from './services__db.js?v=7.9.4.139-ledger-print';
 import { Download, ReceiptText, Package, Users, Truck, WalletCards, CalendarDays, CircleDollarSign, FileText, Image as ImageIcon, TrendingUp } from 'lucide-react';
 
 const h = React.createElement;

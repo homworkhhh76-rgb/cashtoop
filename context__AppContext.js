@@ -1,13 +1,13 @@
-import {buildFinancialClose,fiscalStores,fiscalMasters} from './services__financialClose.js?v=7.9.4.136-localization';
-import {buildCartReturn} from './services__cartReturn.js?v=7.9.4.136-localization';
+import {buildFinancialClose,fiscalStores,fiscalMasters} from './services__financialClose.js?v=7.9.4.139-ledger-print';
+import {buildCartReturn} from './services__cartReturn.js?v=7.9.4.139-ledger-print';
 import { jsx as _jsx } from "react/jsx-runtime";
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { assertOpenFinancialRecord, getAllFromStore, getFromStore, putInStore, deleteFromStore, clearStore, bulkPut, commitLocalBatch, queryStorePage, queryAllStoreRecords, queryStoreStats, getLatestStockMovementLocal, initializeDatabase, seedDatabaseDefaults, cleanupLegacyDemoSeedIfPristine, ensurePrimaryShowroomWarehouse, resetDatabase, exportDatabaseBackup, importDatabaseBackup, syncChannel, DEFAULT_SETTINGS, CASH_CUSTOMER, DEFAULT_CATEGORIES, DEFAULT_WAREHOUSES, DEFAULT_ACCOUNTS, DEFAULT_SUPPLIERS, getDemoProducts, getDemoStock, DEFAULT_EMPLOYEES, } from './services__db.js?v=7.9.4.136-localization';
-import { calculateUnitConversions, findUnitByBarcode, toBaseQuantity } from './utils__unitTree.js?v=7.9.4.136-localization';
-import { playBeepSound, playSuccessSound, playErrorSound } from './services__audio.js?v=7.9.4.136-localization';
-import { notifyTelegramInvoice } from './services__telegram.js?v=7.9.4.136-localization';
-import { isManagerAccess, normalizeEmployeePermissions, canAccessTab, firstAllowedTab } from './utils__permissions.js?v=7.9.4.136-localization';
-import { isTrialAccount, TRIAL_LIMITS } from './trial__config.js?v=7.9.4.136-localization';
+import { assertOpenFinancialRecord, getAllFromStore, getFromStore, putInStore, deleteFromStore, clearStore, bulkPut, commitLocalBatch, queryStorePage, queryAllStoreRecords, queryStoreStats, getLatestStockMovementLocal, initializeDatabase, seedDatabaseDefaults, cleanupLegacyDemoSeedIfPristine, ensurePrimaryShowroomWarehouse, resetDatabase, exportDatabaseBackup, importDatabaseBackup, syncChannel, DEFAULT_SETTINGS, CASH_CUSTOMER, DEFAULT_CATEGORIES, DEFAULT_WAREHOUSES, DEFAULT_ACCOUNTS, DEFAULT_SUPPLIERS, getDemoProducts, getDemoStock, DEFAULT_EMPLOYEES, } from './services__db.js?v=7.9.4.139-ledger-print';
+import { calculateUnitConversions, findUnitByBarcode, toBaseQuantity } from './utils__unitTree.js?v=7.9.4.139-ledger-print';
+import { playBeepSound, playSuccessSound, playErrorSound } from './services__audio.js?v=7.9.4.139-ledger-print';
+import { notifyTelegramInvoice } from './services__telegram.js?v=7.9.4.139-ledger-print';
+import { isManagerAccess, normalizeEmployeePermissions, canAccessTab, firstAllowedTab } from './utils__permissions.js?v=7.9.4.139-ledger-print';
+import { isTrialAccount, TRIAL_LIMITS } from './trial__config.js?v=7.9.4.139-ledger-print';
 const AppContext = createContext(null);
 const recordTime = (item = {}) => {
     const fields = ['createdAt', 'date', 'timestamp', 'startTime', 'updatedAt'];
@@ -1996,11 +1996,12 @@ export const AppProvider = ({ children }) => {
             accountId: acc.id,
             accountName: acc.name,
             notes: payload.notes,
+            financialYearId: payload.financialYearId || settings.activeFinancialYearId || settings.financialYears?.find?.(y => y?.status === 'open')?.id || 'fy-initial',
             userId: currentUser.id,
             userName: currentUser.name,
             deletedAt: null,
         });
-    }, [accounts, currentUser, saveExpense, showToast]);
+    }, [accounts, currentUser, saveExpense, showToast, settings.activeFinancialYearId, settings.financialYears]);
     const updateExpense = useCallback(async (nextExpense) => {
         const previous = expenses.find((e) => e.id === nextExpense.id);
         await assertOpenFinancialRecord(previous);

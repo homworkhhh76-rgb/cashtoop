@@ -1,9 +1,9 @@
-import {t} from './services__i18n.js?v=7.9.4.136-localization';
+import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
 import {createPortal} from 'react-dom';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.136-localization';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.139-ledger-print';
 import React,{useState,useEffect,useRef} from 'react';
-import {useApp} from './context__AppContext.js?v=7.9.4.136-localization';
-import {PaymentModal} from './components__pos__PaymentModal.js?v=7.9.4.136-localization';
+import {useApp} from './context__AppContext.js?v=7.9.4.139-ledger-print';
+import {PaymentModal} from './components__pos__PaymentModal.js?v=7.9.4.139-ledger-print';
 import {Plus,Minus,Trash2,PauseCircle,Clock,Package,Tag} from 'lucide-react';
 const h=React.createElement;
 export function DesktopCheckout(){

@@ -1,5 +1,5 @@
 import {useSyncExternalStore} from 'react';
-import {messages} from './locales__ui.js?v=7.9.4.136-localization';
+import {messages} from './locales__ui.js?v=7.9.4.139-ledger-print';
 export const languages=[{id:'ar',label:'العربية',dir:'rtl'},{id:'en',label:'English',dir:'ltr'},{id:'fr',label:'Français',dir:'ltr'},{id:'es',label:'Español',dir:'ltr'},{id:'hi',label:'हिन्दी',dir:'ltr'},{id:'zh',label:'中文',dir:'ltr'}];
 let language='ar';try{const saved=localStorage.getItem('ct-language');if(languages.some(l=>l.id===saved))language=saved}catch{}
 const listeners=new Set();

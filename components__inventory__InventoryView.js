@@ -1,16 +1,16 @@
-import {t} from './services__i18n.js?v=7.9.4.136-localization';
+import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import React, { useState, useRef } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.136-localization';
-import { Pagination, usePagination } from './components__common__Pagination.js?v=7.9.4.136-localization';
-import { formatStockBreakdown } from './utils__unitTree.js?v=7.9.4.136-localization';
-import { downloadElementAsPDF } from './utils__pdfExport.js?v=7.9.4.136-localization';
-import { downloadElementAsImage } from './utils__imageExport.js?v=7.9.4.136-localization';
-import { downloadProfessionalTablePDF, downloadProfessionalTableExcel, downloadProfessionalTableImage } from './utils__professionalExport.js?v=7.9.4.136-localization';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.136-localization';
-import { TransferForm } from './components__inventory__TransferForm.js?v=7.9.4.136-localization';
-import { BarcodeCameraModal } from './components__pos__CameraScannerModal.js?v=7.9.4.136-localization';
-import { playBeepSound } from './services__audio.js?v=7.9.4.136-localization';
+import { useApp } from './context__AppContext.js?v=7.9.4.139-ledger-print';
+import { Pagination, usePagination } from './components__common__Pagination.js?v=7.9.4.139-ledger-print';
+import { formatStockBreakdown } from './utils__unitTree.js?v=7.9.4.139-ledger-print';
+import { downloadElementAsPDF } from './utils__pdfExport.js?v=7.9.4.139-ledger-print';
+import { downloadElementAsImage } from './utils__imageExport.js?v=7.9.4.139-ledger-print';
+import { downloadProfessionalTablePDF, downloadProfessionalTableExcel, downloadProfessionalTableImage } from './utils__professionalExport.js?v=7.9.4.139-ledger-print';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.139-ledger-print';
+import { TransferForm } from './components__inventory__TransferForm.js?v=7.9.4.139-ledger-print';
+import { BarcodeCameraModal } from './components__pos__CameraScannerModal.js?v=7.9.4.139-ledger-print';
+import { playBeepSound } from './services__audio.js?v=7.9.4.139-ledger-print';
 import { ArrowLeftRight, Building2, Download, Search, Image as ImageIcon, FileSpreadsheet, Trash2, Camera, X, } from 'lucide-react';
 export const InventoryView = () => {
     const { products, warehouses, settings, getProductStock, adjustStockCount, transferStock, recordDamagedStock, showToast, } = useApp();

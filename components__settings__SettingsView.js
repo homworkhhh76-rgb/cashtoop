@@ -1,17 +1,17 @@
-import {t} from './services__i18n.js?v=7.9.4.136-localization';
+import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import React, { useState, useEffect, useRef } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.136-localization';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.136-localization';
-import { usePWAInstall } from './hooks__usePWAInstall.js?v=7.9.4.136-localization';
-import { db } from './services__db.js?v=7.9.4.136-localization';
-import { smartPrinter } from './services__printer.js?v=7.9.4.136-localization';
-import { TELEGRAM_BOT_URL, normalizeTelegramRecipients, testTelegramRecipient, testAllTelegramRecipients, sendFullTelegramReport } from './services__telegram.js?v=7.9.4.136-localization';
-import { saveTelegramConfig } from './services__telegramReports.js?v=7.9.4.136-localization';
-import { materializeLogoSource, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.136-localization';
-import { BrandLogoImage } from './components__common__BrandLogoImage.js?v=7.9.4.136-localization';
-import { uploadProductImageToTelegram } from './services__productImages.js?v=7.9.4.136-localization';
-import { TelegramQuickGuide } from './components__settings__TelegramQuickGuide.js?v=7.9.4.136-localization';
+import { useApp } from './context__AppContext.js?v=7.9.4.139-ledger-print';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.139-ledger-print';
+import { usePWAInstall } from './hooks__usePWAInstall.js?v=7.9.4.139-ledger-print';
+import { db } from './services__db.js?v=7.9.4.139-ledger-print';
+import { smartPrinter } from './services__printer.js?v=7.9.4.139-ledger-print';
+import { TELEGRAM_BOT_URL, normalizeTelegramRecipients, testTelegramRecipient, testAllTelegramRecipients, sendFullTelegramReport } from './services__telegram.js?v=7.9.4.139-ledger-print';
+import { saveTelegramConfig } from './services__telegramReports.js?v=7.9.4.139-ledger-print';
+import { materializeLogoSource, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.139-ledger-print';
+import { BrandLogoImage } from './components__common__BrandLogoImage.js?v=7.9.4.139-ledger-print';
+import { uploadProductImageToTelegram } from './services__productImages.js?v=7.9.4.139-ledger-print';
+import { TelegramQuickGuide } from './components__settings__TelegramQuickGuide.js?v=7.9.4.139-ledger-print';
 import { Store, Printer, ShieldCheck, Building2, Database, Download, Upload, RefreshCw, Trash2, Save, Edit2, X, Bluetooth, Cable, Bot, Send, ExternalLink, UserPlus, MessageCircle, CreditCard, WalletCards, Landmark, ArrowLeftRight, SlidersHorizontal, Warehouse, Settings2 } from 'lucide-react';
 const P2P_ICON_OPTIONS = [
     ['palpay','PalPay'],['jawwal-pay','Jawwal Pay'],['bank-palestine','بنك فلسطين'],

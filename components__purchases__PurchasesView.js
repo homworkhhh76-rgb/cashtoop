@@ -1,12 +1,12 @@
-import {t} from './services__i18n.js?v=7.9.4.136-localization';
-import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.136-localization';
+import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
+import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.139-ledger-print';
 import React, { useEffect, useRef, useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.136-localization';
-import { Pagination, useDatabasePagination } from './components__common__Pagination.js?v=7.9.4.136-localization';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.136-localization';
-import { getBrandLogoDataUrl, getBrandLogoDisplayUrl } from './brand__logo.js?v=7.9.4.136-localization';
-import { printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.136-localization';
-import { downloadProfessionalPurchaseInvoicePDF, downloadProfessionalPurchaseInvoiceImage, downloadProfessionalTableExcel } from './utils__professionalExport.js?v=7.9.4.136-localization';
+import { useApp } from './context__AppContext.js?v=7.9.4.139-ledger-print';
+import { Pagination, useDatabasePagination } from './components__common__Pagination.js?v=7.9.4.139-ledger-print';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.139-ledger-print';
+import { getBrandLogoDataUrl, getBrandLogoDisplayUrl } from './brand__logo.js?v=7.9.4.139-ledger-print';
+import { printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.139-ledger-print';
+import { downloadProfessionalPurchaseInvoicePDF, downloadProfessionalPurchaseInvoiceImage, downloadProfessionalTableExcel } from './utils__professionalExport.js?v=7.9.4.139-ledger-print';
 import { Plus, Trash2, Building2, Eye, X, Pencil, Image as ImageIcon, FileDown, FileSpreadsheet, Printer, AlertTriangle, ReceiptText } from 'lucide-react';
 
 const h = React.createElement;

@@ -9,13 +9,13 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="كاش توب 3" />
   <title>كاش توب 3</title>
-  <link rel="icon" type="image/png" href="./app-icon.png?v=7.9.4.136-localization" />
-  <link rel="apple-touch-icon" href="./icon-192.png?v=7.9.4.136-localization" />
+  <link rel="icon" type="image/png" href="./app-icon.png?v=7.9.4.139-ledger-print" />
+  <link rel="apple-touch-icon" href="./icon-192.png?v=7.9.4.139-ledger-print" />
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./app.css?v=7.9.4.136-localization" />
+  <link rel="stylesheet" href="./app.css?v=7.9.4.139-ledger-print" />
   <script type="importmap">
   {
     "imports": {
@@ -29,7 +29,7 @@
     }
   }
   </script>
-  <script src="./oscar-activation-runtime.js?v=7.9.4.136-localization"></script>
+  <script src="./oscar-activation-runtime.js?v=7.9.4.139-ledger-print"></script>
   <script>
     try {
       const rt = window.OscarActivation?.readRuntime?.();
@@ -37,13 +37,13 @@
       if (companyTitle) document.title = companyTitle;
     } catch (_) {}
   </script>
-  <script src="./oscar-cloud-sync.js?v=7.9.4.136-localization"></script>
+  <script src="./oscar-cloud-sync.js?v=7.9.4.139-ledger-print"></script>
 </head>
 <body>
   <script>document.documentElement.classList.remove('dark');</script>
   <style>.ct-startup-screen{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;text-align:center;background:#fafbff;color:#1e293b;padding:24px;font-family:Cairo,Tahoma,sans-serif;box-sizing:border-box}.ct-startup-screen h2{font-size:26px;max-width:420px;margin:0}.ct-startup-screen p{color:#64748b}.ct-loading-ring{width:150px;height:150px;border:12px solid #e5e7eb;border-top-color:#7c3aed;border-radius:50%;display:grid;place-items:center;animation:ct-spin .55s linear infinite}.ct-loading-ring span{font-size:65px;color:#7c3aed}.ct-loading-status{padding:18px 25px;border-radius:18px;background:#ede9fe;color:#6d28d9}@keyframes ct-spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.ct-loading-ring{animation:none}}</style><div id="root"><div class="ct-startup-screen" dir="rtl"><div class="ct-loading-ring" aria-label="جاري التشغيل"></div><div class="ct-loading-status" role="status">جاري تشغيل التطبيق…</div></div></div></div>
   <script type="module">
-    const OSCAR_BUILD = '7.9.4.136-localization';
+    const OSCAR_BUILD = '7.9.4.139-ledger-print';
     const isLocal = ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
 
     const clearCodeCaches = async () => {
@@ -106,7 +106,7 @@
       } catch (_) {}
 
       try {
-        await import('./main.js?v=7.9.4.136-localization');
+        await import('./main.js?v=7.9.4.139-ledger-print');
         sessionStorage.removeItem('oscar-rootfix-retry');
       } catch (error) {
         try { console.error('OSCAR_BOOT_RECOVERY', error); } catch (_) {}
@@ -127,7 +127,7 @@
   </script>
   <script>
     if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !['localhost','127.0.0.1','::1'].includes(location.hostname)) {
-      addEventListener('load', () => navigator.serviceWorker.register('./sw.js?v=7.9.4.136-localization', { updateViaCache: 'none' }).then((registration) => registration.update()).catch(() => {}));
+      addEventListener('load', () => navigator.serviceWorker.register('./sw.js?v=7.9.4.139-ledger-print', { updateViaCache: 'none' }).then((registration) => registration.update()).catch(() => {}));
     }
   </script>
 </body>

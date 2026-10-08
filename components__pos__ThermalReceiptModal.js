@@ -1,12 +1,12 @@
-import {t} from './services__i18n.js?v=7.9.4.136-localization';
-import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.136-localization';
+import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
+import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.139-ledger-print';
 import React, { useEffect, useRef, useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.136-localization';
-import { printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.136-localization';
-import { downloadProfessionalInvoicePDF, downloadProfessionalInvoiceImage, downloadProfessionalInvoiceExcel, warmProfessionalExportLibraries } from './utils__professionalExport.js?v=7.9.4.136-localization';
-import { renderInvoiceCanvas } from './utils__canvasRenderer.js?v=7.9.4.136-localization';
-import { smartPrinter } from './services__printer.js?v=7.9.4.136-localization';
-import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.136-localization';
+import { useApp } from './context__AppContext.js?v=7.9.4.139-ledger-print';
+import { printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.139-ledger-print';
+import { downloadProfessionalInvoicePDF, downloadProfessionalInvoiceImage, downloadProfessionalInvoiceExcel, warmProfessionalExportLibraries } from './utils__professionalExport.js?v=7.9.4.139-ledger-print';
+import { renderInvoiceCanvas } from './utils__canvasRenderer.js?v=7.9.4.139-ledger-print';
+import { smartPrinter } from './services__printer.js?v=7.9.4.139-ledger-print';
+import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.139-ledger-print';
 import { Printer, X, Download, Image as ImageIcon, FileSpreadsheet, Bluetooth } from 'lucide-react';
 import JsBarcode from 'jsbarcode';
 
@@ -154,8 +154,12 @@ export const ThermalReceiptModal = () => {
     ));
 
     const totalRow = (label, value, cls = '') => h('div', { className: `receipt-total-row ${cls}` },
-        h('span', null, label),
-        h('span', { className: 'font-mono' }, `${money(value)} ${settings.currencySymbol}`)
+        h('span', { className: 'receipt-total-label' }, label),
+        h('span', { className: 'receipt-total-value' }, `${money(value)} ${settings.currencySymbol}`)
+    );
+    const paymentCell = (label, value, cls = '') => h('div', { className: `receipt-payment-cell ${cls}` },
+        h('span', { className: 'receipt-payment-label' }, `${label}:`),
+        h('span', { className: 'receipt-payment-value' }, `${money(value)} ${settings.currencySymbol}`)
     );
 
     return h(ModalLayer, {
@@ -189,7 +193,7 @@ export const ThermalReceiptModal = () => {
                 id: 'printable-receipt',
                 'data-paper': paperWidth,
                 className: `receipt-paper bg-white text-black shadow-sm border border-slate-200 text-right select-none transition-all mx-auto ${paperWidth === '80mm' ? 'receipt-paper-80' : paperWidth === '58mm' ? 'receipt-paper-58' : 'receipt-paper-a4'}`,
-                style: { fontFamily: "'Cairo', Arial, sans-serif" }
+                style: { fontFamily: "Tahoma, Arial, system-ui, -apple-system, sans-serif" }
             },
                 h('div', { className: 'receipt-brand-header' },
                     logoSrc ? h('img', {
@@ -231,16 +235,23 @@ export const ThermalReceiptModal = () => {
                         h('tbody', null, itemRows)
                     )
                 ),
-                h('div', { className: 'receipt-totals' },
-                    totalRow('المجموع الإجمالي:', invoice.subtotal),
+                h('div', { className: 'receipt-summary-divider', 'aria-hidden': 'true' }),
+                (Number(invoice.discountTotal) > 0 || Number(invoice.taxTotal) > 0 || Number(invoice.additionalCharges) > 0) ? h('div', { className: 'receipt-adjustments' },
                     Number(invoice.discountTotal) > 0 ? totalRow('إجمالي الخصم:', -Number(invoice.discountTotal), 'receipt-total-discount') : null,
                     Number(invoice.taxTotal) > 0 ? totalRow(`ضريبة القيمة المضافة (${settings.taxRate}%):`, invoice.taxTotal) : null,
-                    Number(invoice.additionalCharges)>0 ? totalRow('كلفة إضافية / شحن:',invoice.additionalCharges) : null,
-                    totalRow('الصافي المطلوب:', invoice.grandTotal, 'receipt-total-grand'),
-                    totalRow('المبلغ المدفوع:', invoice.paidAmount),
-                    Number(invoice.changeAmount) > 0 ? totalRow('الفكة للزبون:', invoice.changeAmount, 'receipt-total-change') : null,
-                    Number(invoice.remainingAmount) > 0 ? totalRow('المتبقي عليه:', invoice.remainingAmount, 'receipt-total-debt') : null
+                    Number(invoice.additionalCharges)>0 ? totalRow('كلفة إضافية / شحن:',invoice.additionalCharges) : null
+                ) : null,
+                h('div', { className: 'receipt-payment-grid' },
+                    h('div', { className: 'receipt-payment-column receipt-payment-right' },
+                        paymentCell('المجموع', invoice.subtotal, 'receipt-payment-strong'),
+                        paymentCell('المبلغ المطلوب', invoice.grandTotal, 'receipt-payment-strong')
+                    ),
+                    h('div', { className: 'receipt-payment-column receipt-payment-left' },
+                        paymentCell('المدفوع', invoice.paidAmount),
+                        paymentCell('المتبقي', Number(invoice.remainingAmount || 0), 'receipt-payment-debt')
+                    )
                 ),
+                Number(invoice.changeAmount) > 0 ? h('div', { className: 'receipt-adjustments' }, totalRow('الفكة للزبون:', invoice.changeAmount, 'receipt-total-change')) : null,
                 h('div', { className: 'receipt-footer' },
                     settings.receiptShowBarcode !== false ? h('div', { className: 'receipt-barcode' }, h('svg', { ref: barcodeRef })) : null,
                     h('p', null, settings.receiptFooterMessage || ''),
