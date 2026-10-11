@@ -1,15 +1,15 @@
-import {registerLayer} from './hooks__appNavigation.js?v=7.9.4.139-ledger-print';
-import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
+import {registerLayer} from './hooks__appNavigation.js?v=7.9.4.154-distribution-menu';
+import {t} from './services__i18n.js?v=7.9.4.154-distribution-menu';
 import { createPortal } from 'react-dom';
 import React, {useEffect} from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.139-ledger-print';
-import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.139-ledger-print';
-import { BrandLogoImage } from './components__common__BrandLogoImage.js?v=7.9.4.139-ledger-print';
-import { canAccessTab, canAccessPermission, firstAllowedTab } from './utils__permissions.js?v=7.9.4.139-ledger-print';
+import { useApp } from './context__AppContext.js?v=7.9.4.154-distribution-menu';
+import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.154-distribution-menu';
+import { BrandLogoImage } from './components__common__BrandLogoImage.js?v=7.9.4.154-distribution-menu';
+import { canAccessTab, canAccessPermission, firstAllowedTab } from './utils__permissions.js?v=7.9.4.154-distribution-menu';
 import {
   LayoutDashboard, ShoppingCart, ReceiptText, Truck, Package, Boxes, Warehouse,
   Users, Building2, Wallet, Receipt, FileSpreadsheet, UserCheck, Barcode, BarChart3,
-  Trash2, Settings, LayoutGrid, UtensilsCrossed, ChefHat, Scale, Sparkles, CalendarRange, MessageSquareText, Headphones, BookOpenCheck, X, ChevronLeft, LogOut, Store, ChartNoAxesCombined, ContactRound, WalletCards
+  Trash2, Settings, LayoutGrid, UtensilsCrossed, ChefHat, Scale, Sparkles, CalendarRange, MessageSquareText, Headphones, BookOpenCheck, X, ChevronLeft, LogOut, Store, ChartNoAxesCombined, ContactRound, WalletCards, Percent
 } from 'lucide-react';
 
 const h = React.createElement;
@@ -47,6 +47,7 @@ export const Sidebar = () => {
   const navItems = [
     { id:'pos', label:t("الكاشير POS"), icon:ShoppingCart, badge:cart.length || undefined },
     { id:'oscar_ai', label:'كاش توب AI', icon:Sparkles, ai:true },
+    { id:'distribution', label:'مناديب التوزيع', icon:Truck },
     { id:'dashboard', label:t("لوحة التحكم"), icon:LayoutDashboard },
     { id:'sales', label:t("المبيعات والفواتير"), icon:ReceiptText },
     { id:'purchases', label:t("المشتريات والتوريد"), icon:Truck },
@@ -56,6 +57,7 @@ export const Sidebar = () => {
     { id:'categories', label:t("التصنيفات"), icon:Boxes },
     { id:'inventory', label:t("المخزون والتحويلات"), icon:Warehouse },
     { id:'customers', label:t("العملاء والديون"), icon:Users },
+    { id:'price_groups', label:'مجموعات الأسعار', icon:Percent },
     { id:'suppliers', label:t("الموردون والحسابات"), icon:Building2 },
     { id:'accounts', label:t("الصندوق والورديات"), icon:Wallet },
     { id:'expenses', label:t("المصروفات اليومية"), icon:Receipt },
@@ -63,7 +65,6 @@ export const Sidebar = () => {
     { id:'reports', label:t("التقارير والأرباح"), icon:BarChart3 },
     { id:'financial_years', label:t("المجموعات المالية"), icon:CalendarRange },
     { id:'message_templates', label:t("قوالب الرسائل"), icon:MessageSquareText },
-    { id:'oscar_ledger', label:'دفتر كاش توب 3', icon:BookOpenCheck },
     { id:'support', label:t("الدعم الفني"), icon:Headphones },
     { id:'trash', label:t("سلة المحذوفات"), icon:Trash2 },
     { id:'settings', label:t("إعدادات النظام"), icon:Settings },
@@ -83,19 +84,7 @@ export const Sidebar = () => {
   const go = id => {
     if (id === 'support') {
       setMobileSidebarOpen(false);
-      window.location.href='./support.html';
-      return;
-    }
-    if (id === 'oscar_ledger') {
-      if (canAccessPermission('canAccessOscarLedger', accessArgs)) {
-        setMobileSidebarOpen(false);
-        try {
-          const rt = window.OscarActivation?.readRuntime?.();
-          const companyId = String(rt?.companyId || rt?.tenantId || '').trim();
-          if (companyId) sessionStorage.setItem('oscar_ledger_grant_v1', JSON.stringify({ companyId, at: Date.now() }));
-        } catch (_) {}
-        window.location.assign('./oscar-ledger.html?from=app');
-      }
+      window.location.href='https://wa.me/970597603119';
       return;
     }
     if (id === 'oscar_ai') {
@@ -123,7 +112,7 @@ export const Sidebar = () => {
     )
   );
 
-  const groups=[['العمل اليومي',['dashboard','pos','sales','purchases']],['الأصناف والمخزون',['products','categories','inventory','barcodes']],['المال والعملاء',['customers','suppliers','accounts','vouchers','expenses','reports','financial_years']],['المطعم',restaurantItems.map(x=>x.id)],['الإدارة',['employees','message_templates','oscar_ledger','support','trash','settings']]];
+  const groups=[['العمل اليومي',['dashboard','pos','sales','purchases','distribution']],['الأصناف والمخزون',['products','categories','inventory','barcodes']],['المال والعملاء',['customers','price_groups','suppliers','accounts','vouchers','expenses','reports','financial_years']],['المطعم',restaurantItems.map(x=>x.id)],['الإدارة',['employees','message_templates','support','trash','settings']]];
   const appIcons={pos:Store,dashboard:ChartNoAxesCombined,customers:ContactRound,accounts:WalletCards};
   const nav = () => h('nav',{className:'ct-drawer-nav','aria-label':t("أقسام التطبيق")},...groups.map(([title,ids])=>{
     const items=ids.map(id=>allNavItems.find(x=>x.id===id)).filter(Boolean);
@@ -133,7 +122,7 @@ export const Sidebar = () => {
   return h(React.Fragment, null,
     mobileSidebarOpen ? h(SidebarLayer, { className: 'fixed inset-0 z-50 lg:hidden flex justify-start' },
       h('div', { className: 'ct-drawer-backdrop fixed inset-0 bg-black/60 backdrop-blur-[1px]', onClick:()=>setMobileSidebarOpen(false) }),
-      h('aside', { dir:'rtl', className:'ct-app-drawer mobile-sidebar-panel relative w-72 max-w-[85vw] h-full min-h-0 bg-white border-l border-slate-200 shadow-2xl flex flex-col z-10 text-right overflow-hidden' },
+      h('aside', { dir:'rtl', className:'ct-app-drawer mobile-sidebar-panel relative w-60 max-w-[74vw] h-full min-h-0 bg-white border-l border-slate-200 shadow-2xl flex flex-col z-10 text-right overflow-hidden' },
         h('div', { className:'relative ct-drawer-brand' }, brand(true),h('button',{type:'button',className:'ct-drawer-close','aria-label':t("إغلاق"),onClick:()=>setMobileSidebarOpen(false)},h(X,{size:20}))),
         nav(true),
         h('button',{type:'button',className:'ct-drawer-logout',onClick:()=>{if(confirm('تسجيل الخروج من الشركة؟ لن يتم حذف البيانات المحلية.')){window.OscarActivation?.clearRuntime?.();location.reload()}}},h(LogOut,{size:19}),t("تسجيل الخروج"))

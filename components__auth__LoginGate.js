@@ -1,9 +1,9 @@
-import {LanguagePicker} from './components__common__LanguagePicker.js?v=7.9.4.139-ledger-print';
-import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
+import {LanguagePicker} from './components__common__LanguagePicker.js?v=7.9.4.154-distribution-menu';
+import {t} from './services__i18n.js?v=7.9.4.154-distribution-menu';
 import React, { useEffect, useRef, useState } from 'react';
-import { Upload, ShieldCheck, Building2, FileText, X, ChevronDown, Search, Image as ImageIcon, MapPin, Phone, Check, LogIn, Headphones } from 'lucide-react';
-import { DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.139-ledger-print';
-import { TRIAL_DATABASE, TRIAL_LIMITS } from './trial__config.js?v=7.9.4.139-ledger-print';
+import { KeyRound, Upload, ShieldCheck, Building2, FileText, X, ChevronDown, Search, Image as ImageIcon, MapPin, Phone, Check, LogIn, Headphones } from 'lucide-react';
+import { DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.154-distribution-menu';
+import { TRIAL_DATABASE, TRIAL_LIMITS } from './trial__config.js?v=7.9.4.154-distribution-menu';
 
 const h = React.createElement;
 const CURRENCY_COUNTRY={ILS:'PS',USD:'US',JOD:'JO',EGP:'EG',SAR:'SA',AED:'AE',TRY:'TR',EUR:'EU',GBP:'GB',AUD:'AU',CAD:'CA',CHF:'CH',CNY:'CN',JPY:'JP',INR:'IN',KWD:'KW',QAR:'QA',BHD:'BH',OMR:'OM',LBP:'LB',SYP:'SY',IQD:'IQ',YER:'YE',MAD:'MA',TND:'TN',DZD:'DZ',LYD:'LY',SDG:'SD',MRU:'MR',SOS:'SO',DJF:'DJ',KMF:'KM',AFN:'AF',ALL:'AL',AMD:'AM',ANG:'CW',AOA:'AO',ARS:'AR',AWG:'AW',AZN:'AZ',BAM:'BA',BBD:'BB',BDT:'BD',BGN:'BG',BIF:'BI',BMD:'BM',BND:'BN',BOB:'BO',BRL:'BR',BSD:'BS',BTN:'BT',BWP:'BW',BYN:'BY',BZD:'BZ',CDF:'CD',CLP:'CL',COP:'CO',CRC:'CR',CUP:'CU',CVE:'CV',CZK:'CZ',DKK:'DK',DOP:'DO',ERN:'ER',ETB:'ET',FJD:'FJ',FKP:'FK',GEL:'GE',GHS:'GH',GIP:'GI',GMD:'GM',GNF:'GN',GTQ:'GT',GYD:'GY',HKD:'HK',HNL:'HN',HTG:'HT',HUF:'HU',IDR:'ID',IRR:'IR',ISK:'IS',JMD:'JM',KES:'KE',KGS:'KG',KHR:'KH',KPW:'KP',KRW:'KR',KYD:'KY',KZT:'KZ',LAK:'LA',LKR:'LK',LRD:'LR',LSL:'LS',MDL:'MD',MGA:'MG',MKD:'MK',MMK:'MM',MNT:'MN',MOP:'MO',MUR:'MU',MVR:'MV',MWK:'MW',MXN:'MX',MYR:'MY',MZN:'MZ',NAD:'NA',NGN:'NG',NIO:'NI',NOK:'NO',NPR:'NP',NZD:'NZ',PAB:'PA',PEN:'PE',PGK:'PG',PHP:'PH',PKR:'PK',PLN:'PL',PYG:'PY',RON:'RO',RSD:'RS',RUB:'RU',RWF:'RW',SBD:'SB',SCR:'SC',SEK:'SE',SGD:'SG',SHP:'SH',SLE:'SL',SRD:'SR',SSP:'SS',STN:'ST',SZL:'SZ',THB:'TH',TJS:'TJ',TMT:'TM',TOP:'TO',TTD:'TT',TWD:'TW',TZS:'TZ',UAH:'UA',UGX:'UG',UYU:'UY',UZS:'UZ',VES:'VE',VND:'VN',VUV:'VU',WST:'WS',XAF:'CM',XCD:'AG',XOF:'SN',XPF:'PF',ZAR:'ZA',ZMW:'ZM',ZWG:'ZW'};
@@ -73,6 +73,7 @@ const Picker = ({kind, value, onChange, options, open, setOpen, query, setQuery}
 export const LoginGate=({children})=>{
   const A=()=>window.OscarActivation;
   const [runtime,setRuntime]=useState(()=>A()?.readRuntime?.()||null);
+  const [codeOpen,setCodeOpen]=useState(false),[loginCode,setLoginCode]=useState('');
   const [file,setFile]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[success,setSuccess]=useState('');
   const [trialOpen,setTrialOpen]=useState(false),[trialBusy,setTrialBusy]=useState(false);
   const [companyName,setCompanyName]=useState(''),[address,setAddress]=useState(''),[phone,setPhone]=useState('');
@@ -115,11 +116,12 @@ export const LoginGate=({children})=>{
     setFile(f);setError('');setSuccess('');
     try{await A().primeActivationFile(f);}catch(err){setError(String(err?.message||err));}
   };
-  const open=async()=>{
-    if(!file){setError('أرفق ملف التفعيل أولاً لتسجيل الدخول.');return;}
+  const open=async(candidate)=>{
+    const selected=candidate instanceof Blob?candidate:file;
+    if(!selected){setError('أرفق ملف التفعيل أولاً لتسجيل الدخول.');return;}
     setBusy(true);setError('');setSuccess('');
     try{
-      const payload=await A().parseActivationFile(file);
+      const payload=await A().parseActivationFile(selected);
       const verified=await A().verifyPayload(payload,{allowOffline:true});
       const accessStatus=verified?.access?.status||payload.status;
       const accessExpiry=verified?.access?.endAt||verified?.access?.expiresAt||payload.expiresAt||'';
@@ -131,7 +133,7 @@ export const LoginGate=({children})=>{
         permissions:verified?.account?.permissions??payload.permissions,
         trialProfile:verified?.access?.trialProfile?{...(payload.trialProfile||{}),...verified.access.trialProfile}:payload.trialProfile
       }:payload;
-      const rt=A().activatePayload(effective);window.OscarCloudSync?.resetForTenant?.();setRuntime(rt);
+      const rt=A().activatePayload(effective);window.OscarCloudSync?.resetForTenant?.();setLoginCode('');setCodeOpen(false);setRuntime(rt);
     }catch(e){setError(String(e?.message||e||'تعذر فتح ملف الدخول.'));}finally{setBusy(false);}
   };
 
@@ -161,13 +163,13 @@ export const LoginGate=({children})=>{
 
   if(runtime)return children;
   const curr=CURRENCIES.find(x=>x.code===currency)||CURRENCIES[0];
-  return h('main',{className:'auth2-view'},h('div',{className:'ct-auth-language'},h(LanguagePicker)),
+  return h('main',{className:'auth2-view'},codeOpen&&h('div',{className:'ct-login-code',role:'dialog','aria-modal':true},h('section',null,h('h2',null,'الدخول بواسطة الشفرة'),h('textarea',{autoFocus:true,value:loginCode,onChange:e=>setLoginCode(e.target.value),placeholder:'الصق شفرة الدخول هنا','aria-label':'شفرة الدخول'}),error&&h('p',{role:'alert'},error),h('button',{type:'button',disabled:busy||!loginCode.trim(),onClick:()=>open(new File([loginCode.trim()], 'login.mzauth',{type:'application/octet-stream'}))},busy?'جارٍ التحقق':'تسجيل الدخول'),h('button',{type:'button',disabled:busy,onClick:()=>{setCodeOpen(false);setLoginCode('');setError('')}},'إلغاء'))),h('div',{className:'ct-auth-language'},h(LanguagePicker)),
     h('section',{className:'auth2-card','aria-labelledby':'loginTitle'},
       h('div',{className:'auth2-brand'},h('img',{className:'brand-logo-img',src:DEFAULT_LOGO_DATA_URL,alt:'شعار كاش توب 3'}),h('div',null,h('div',{className:'auth2-brand-name'},'كاش توب 3'),h('div',{className:'auth2-brand-sub'},t("نظامك المحاسبي في مكان واحد")))),
       h('div',{className:'auth2-intro'},h('h1',{id:'loginTitle'},t("مرحباً بك في كاش توب 3")),h('p',null,t("أدر مبيعاتك وحساباتك ومخزونك بسهولة من مكان واحد."))),
       h('div',{className:'auth2-section-title'},h(ShieldCheck,{className:'icon'}),h('span',null,t("تسجيل الدخول بواسطة ملف التفعيل"))),
       !file?h('div',{className:'auth2-dropzone',role:'button',tabIndex:0,onClick:()=>inputRef.current?.click(),onKeyDown:e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();inputRef.current?.click();}},onDragOver:e=>{e.preventDefault();e.currentTarget.classList.add('dragging');},onDragLeave:e=>e.currentTarget.classList.remove('dragging'),onDrop:e=>{e.preventDefault();e.currentTarget.classList.remove('dragging');handleActivationFile(e.dataTransfer.files?.[0]);}},
-        h('div',{className:'auth2-drop-icon'},h(Upload,{className:'icon'})),h('strong',null,t("أرفق ملف التفعيل الخاص بحسابك")),h('p',null,t("اختر ملف التفعيل .mzauth من جهازك للدخول إلى النظام.")),h('span',{className:'auth2-file-button'},t("اختيار ملف التفعيل"))):null,
+        h('div',{className:'auth2-drop-icon'},h(Upload,{className:'icon'})),h('strong',null,t("أرفق ملف التفعيل الخاص بحسابك")),h('p',null,t("اختر ملف التفعيل .mzauth من جهازك للدخول إلى النظام.")),h('div',{className:'ct-login-choices'},h('span',{className:'auth2-file-button'},t("اختيار ملف التفعيل")),h('button',{type:'button',className:'ct-login-code-icon',title:'الدخول بواسطة الشفرة','aria-label':'الدخول بواسطة الشفرة',onClick:e=>{e.stopPropagation();setError('');setCodeOpen(true)},onKeyDown:e=>e.stopPropagation()},h(KeyRound,{className:'icon'})))):null,
       h('input',{ref:inputRef,type:'file',accept:'.mzauth',hidden:true,onChange:e=>handleActivationFile(e.target.files?.[0])}),
       file?h('div',{className:'auth2-file-ready'},h('div',{className:'auth2-file-main'},h('span',{className:'auth2-file-icon'},h(FileText,{className:'icon'})),h('div',null,h('strong',null,file.name),h('small',null,t("جاهز للتحقق")))),h('button',{type:'button',className:'icon-btn',onClick:()=>{setFile(null);setError('');if(inputRef.current)inputRef.current.value='';},'aria-label':t("إزالة ملف التفعيل")},h(X,{className:'icon'}))):null,
       file?h('button',{type:'button',className:'auth2-primary',disabled:busy,onClick:open},busy?h('span',{className:'spinner'}):h(LogIn,{className:'icon'}),h('span',null,busy?t("جارٍ تسجيل الدخول"):t("تسجيل الدخول"))):null,

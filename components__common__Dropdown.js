@@ -1,5 +1,5 @@
-import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
-import {registerLayer} from './hooks__appNavigation.js?v=7.9.4.139-ledger-print';
+import {t} from './services__i18n.js?v=7.9.4.154-distribution-menu';
+import {registerLayer} from './hooks__appNavigation.js?v=7.9.4.154-distribution-menu';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, Search, Plus, Check, X } from 'lucide-react';
@@ -7,7 +7,7 @@ const h = React.createElement;
 
 export const SearchableDropdown = ({
   id, label, placeholder='اختر...', icon, options=[], selectedId, onSelect,
-  onQuickAdd, quickAddLabel='+ إضافة سريعة', className='', disabled=false,
+  onQuickAdd, quickAddLabel='+ إضافة سريعة', className='', disabled=false, placement='auto',
 }) => {
   const [isOpen,setIsOpen]=useState(false);
   useEffect(()=>{if(isOpen)return registerLayer(()=>setIsOpen(false))},[isOpen]);
@@ -29,7 +29,7 @@ export const SearchableDropdown = ({
     const btn=buttonRef.current; if(!btn) return;
     const r=btn.getBoundingClientRect();
     const below=Math.max(90,window.innerHeight-r.bottom-10), above=Math.max(90,r.top-10);
-    const openUp=below<190 && above>below;
+    const openUp=placement!=='bottom' && below<190 && above>below;
     const maxH=Math.min(300,openUp?above-8:below-8);
     const width=Math.min(Math.max(r.width,220),window.innerWidth-16);
     const left=Math.min(Math.max(8,r.left),Math.max(8,window.innerWidth-width-8));

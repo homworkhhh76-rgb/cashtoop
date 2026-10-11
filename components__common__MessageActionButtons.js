@@ -1,6 +1,6 @@
 import React,{useState} from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.139-ledger-print';
-import { createCustomerPortalLinks } from './services__customerPortalLinks.js?v=7.9.4.139-ledger-print';
+import { useApp } from './context__AppContext.js?v=7.9.4.154-distribution-menu';
+import { createCustomerPortalLinks } from './services__customerPortalLinks.js?v=7.9.4.154-distribution-menu';
 const h=React.createElement;
 const DEFAULTS={
  invoiceWhatsApp:`مرحباً {customer_name} 👋\nتم إصدار فاتورتك رقم {invoice_no} من {store_name}.\n\nالإجمالي: {invoice_total} {currency}\nالمدفوع: {paid_amount} {currency}\nالمتبقي: {remaining_amount} {currency}\n\nرابط السداد:\n{payment_link}\n\nشكراً لتعاملكم معنا.`,

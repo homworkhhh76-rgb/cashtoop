@@ -1,16 +1,16 @@
-import {LanguagePicker} from './components__common__LanguagePicker.js?v=7.9.4.139-ledger-print';
-import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
+import {LanguagePicker} from './components__common__LanguagePicker.js?v=7.9.4.154-distribution-menu';
+import {t} from './services__i18n.js?v=7.9.4.154-distribution-menu';
 import React, { useMemo, useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.139-ledger-print';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.139-ledger-print';
-import { LayoutDashboard, Package, Users, Wallet, Settings, Warehouse, Truck, Boxes, FileSpreadsheet, UserCheck, Barcode, CalendarRange, MessageSquareText, Trash2, UtensilsCrossed, ChefHat, Scale, ArrowRight, Menu, LogOut, Bell, ShoppingCart, CloudCog, UserPlus, Receipt, PackagePlus, BarChart3 } from 'lucide-react';
-import { NotificationsModal, buildSystemNotifications } from './components__common__NotificationsModal.js?v=7.9.4.139-ledger-print';
+import { useApp } from './context__AppContext.js?v=7.9.4.154-distribution-menu';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.154-distribution-menu';
+import { LayoutDashboard, Package, Users, Wallet, Settings, Warehouse, Truck, Boxes, FileSpreadsheet, UserCheck, Barcode, CalendarRange, MessageSquareText, Trash2, UtensilsCrossed, ChefHat, Scale, ArrowRight, Menu, LogOut, Bell, ShoppingCart, CloudCog, UserPlus, Receipt, PackagePlus, BarChart3, Percent } from 'lucide-react';
+import { NotificationsModal, buildSystemNotifications } from './components__common__NotificationsModal.js?v=7.9.4.154-distribution-menu';
 
-import { DesktopNavigation } from './components__common__DesktopNavigation.js?v=7.9.4.139-ledger-print';
+import { DesktopNavigation } from './components__common__DesktopNavigation.js?v=7.9.4.154-distribution-menu';
 const h = React.createElement;
 const TAB_TITLES = {
-  dashboard:'لوحة التحكم', pos:'الكاشير', sales:'المبيعات', purchases:'المشتريات',
-  products:'الأصناف', categories:'التصنيفات', inventory:'المخزون', customers:'العملاء',
+  distribution:'مناديب التوزيع', dashboard:'لوحة التحكم', pos:'الكاشير', sales:'المبيعات', purchases:'المشتريات',
+  products:'الأصناف', categories:'التصنيفات', inventory:'المخزون', customers:'العملاء', price_groups:'مجموعات الأسعار',
   suppliers:'الموردون', accounts:'الصندوق والورديات', expenses:'المصروفات', vouchers:'السندات',
   employees:'الموظفون', barcodes:'الباركود', reports:'التقارير', financial_years:'المجموعة المالية',
   message_templates:'قوالب الرسائل', trash:'سلة المحذوفات', settings:'الإعدادات',
@@ -45,10 +45,11 @@ export const Header = () => {
   return h('header',{id:'main-header',className:'oscar-app-header sticky top-0 z-40 h-14 px-2.5 sm:px-4 flex items-center justify-between gap-2 select-none'},
     h('div',{className:'flex items-center gap-2 min-w-0'},
       h('button',{type:'button',onClick:()=>setMobileSidebarOpen(!mobileSidebarOpen),className:'oscar-header-icon ct-mobile-menu-button lg:hidden',title:t("القائمة")},h(Menu,{className:'w-5 h-5'})),
-      h('button',{type:'button',className:'oscar-header-icon lg:hidden',title:t("رجوع"),'aria-label':t("رجوع"),onClick:()=>history.back()},h(ArrowRight,{size:20})),h('div',{className:'ct-page-heading'},h(({dashboard:LayoutDashboard,pos:ShoppingCart,sales:Receipt,purchases:Truck,products:Package,categories:Boxes,inventory:Warehouse,customers:Users,suppliers:Users,accounts:Wallet,expenses:Receipt,vouchers:FileSpreadsheet,employees:UserCheck,barcodes:Barcode,reports:BarChart3,financial_years:CalendarRange,message_templates:MessageSquareText,trash:Trash2,settings:Settings,restaurant_tables:UtensilsCrossed,restaurant_waiter:UtensilsCrossed,restaurant_kitchen:ChefHat,restaurant_waste:Scale})[activeTab]||LayoutDashboard,{size:21}),h('h1',{className:'oscar-header-title truncate'},title))
+      h('button',{type:'button',className:'oscar-header-icon lg:hidden',title:t("رجوع"),'aria-label':t("رجوع"),onClick:()=>history.back()},h(ArrowRight,{size:20})),h('div',{className:'ct-page-heading'},h(({distribution:Truck,dashboard:LayoutDashboard,pos:ShoppingCart,sales:Receipt,purchases:Truck,products:Package,categories:Boxes,inventory:Warehouse,customers:Users,price_groups:Percent,suppliers:Users,accounts:Wallet,expenses:Receipt,vouchers:FileSpreadsheet,employees:UserCheck,barcodes:Barcode,reports:BarChart3,financial_years:CalendarRange,message_templates:MessageSquareText,trash:Trash2,settings:Settings,restaurant_tables:UtensilsCrossed,restaurant_waiter:UtensilsCrossed,restaurant_kitchen:ChefHat,restaurant_waste:Scale})[activeTab]||LayoutDashboard,{size:21}),h('h1',{className:'oscar-header-title truncate'},title))
     ),
     h(DesktopNavigation),
     activeTab==='pos'&&h('div',{className:'ct-header-warehouse'},h(SearchableDropdown,{id:'header-warehouse',label:t("المخزن"),options:(app.warehouses||[]).map(w=>({id:w.id,label:w.name})),selectedId:settings.activeWarehouseId,onSelect:id=>app.updateSettings({activeWarehouseId:id})})),
+    activeTab==='pos'&&h('div',{className:'ct-header-price-group'},h(SearchableDropdown,{id:'header-price-group',label:'مجموعة الأسعار',options:[{id:'__normal__',label:'السعر العادي',subLabel:'بدون مجموعة'},...(app.priceGroups||[]).map(g=>({id:g.id,label:g.name,subLabel:`${g.percentageMode==='increase'?'زيادة':'خصم'} ${Number(g.percentage||0)}%`}))],selectedId:app.activePriceGroupId||'__normal__',onSelect:id=>app.setActivePriceGroupId(id==='__normal__'?'':id)})),
     h('div',{className:'oscar-header-quick-actions'},
       h('button',{type:'button',className:'oscar-header-quick-btn',onClick:()=>runQuick('customers','cash-top:quick-add-customer')},h(UserPlus,{className:'w-3.5 h-3.5'}),h('span',null,t("+ عميل"))),
       h('button',{type:'button',className:'oscar-header-quick-btn',onClick:()=>runQuick('expenses','cash-top:quick-add-expense')},h(Receipt,{className:'w-3.5 h-3.5'}),h('span',null,t("+ مصروف"))),

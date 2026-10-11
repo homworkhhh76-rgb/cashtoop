@@ -1,10 +1,11 @@
-import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
+import {AuditFilters,auditQuery,auditMatches,actorOf} from './components__common__AuditFilters.js?v=7.9.4.154-distribution-menu';
+import {t} from './services__i18n.js?v=7.9.4.154-distribution-menu';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.139-ledger-print';
-import { Pagination, usePagination, useDatabasePagination } from './components__common__Pagination.js?v=7.9.4.139-ledger-print';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.139-ledger-print';
-import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.139-ledger-print';
-import { downloadProfessionalTablePDF, downloadProfessionalTableExcel } from './utils__professionalExport.js?v=7.9.4.139-ledger-print';
+import { useApp } from './context__AppContext.js?v=7.9.4.154-distribution-menu';
+import { Pagination, usePagination, useDatabasePagination } from './components__common__Pagination.js?v=7.9.4.154-distribution-menu';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.154-distribution-menu';
+import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.154-distribution-menu';
+import { downloadProfessionalTablePDF, downloadProfessionalTableExcel } from './utils__professionalExport.js?v=7.9.4.154-distribution-menu';
 import { Plus, Search, Trash2, Edit2, FileSpreadsheet, FileText, Settings2, UsersRound, Receipt, WalletCards, X } from 'lucide-react';
 
 const h = React.createElement;
@@ -41,6 +42,7 @@ const paymentClassLabel = v => v === 'sales' ? 'دفعات المبيعات' : v
 const paymentMethodLabel = v => ({cash:'نقدي',card:'بطاقة',bank:'تحويل بنكي',wallet:'محفظة',transfer:'تحويل',credit:'آجل'}[String(v||'').toLowerCase()] || String(v||'غير محدد'));
 
 export const ExpensesView = () => {
+  const [audit,setAudit]=useState({});
   const {
     expenses, vouchers, invoices, accounts, settings, recordExpense, updateExpense,
     softDeleteExpense, updateSettings, showToast, setActiveTab, queryAllStoreRecords, queryStoreStats
@@ -98,8 +100,8 @@ export const ExpensesView = () => {
   const inPeriod = value => {
     const key = dayKey(value);
     if (!key) return false;
-    if (dateFrom && key < dateFrom) return false;
-    if (dateTo && key > dateTo) return false;
+    if (!audit.from && dateFrom && key < dateFrom) return false;
+    if (!audit.to && dateTo && key > dateTo) return false;
     return true;
   };
   const q = search.trim().toLowerCase();
@@ -107,6 +109,7 @@ export const ExpensesView = () => {
   const toEndIso = value => value ? new Date(`${value}T23:59:59.999`).toISOString() : null;
   const laborCategories = filterCategories.filter(isLaborCategory);
   const expenseFilters = {
+    actorId:audit.actorId||'all',
     financialYearId: activeFY,
     category: selectedCategory !== 'all' ? selectedCategory : (mode === 'labor' ? laborCategories : 'all'),
   };
@@ -114,15 +117,16 @@ export const ExpensesView = () => {
     search,
     filters: expenseFilters,
     legacyFinancialYearId: legacyFY,
-    dateFrom: toStartIso(dateFrom),
-    dateTo: toEndIso(dateTo),
+    dateFrom: audit.from?auditQuery(audit).dateFrom:toStartIso(dateFrom),
+    dateTo: audit.to?auditQuery(audit).dateTo:toEndIso(dateTo),
     sortField: 'date',
     sortDirection: 'desc',
     deletedMode: 'exclude',
     pageSize: 50,
   };
-  const expensePager = useDatabasePagination('expenses', expenseQueryOptions, `${mode}|${search}|${selectedCategory}|${dateFrom}|${dateTo}|${activeFY}`);
+  const expensePager = useDatabasePagination('expenses', expenseQueryOptions, `${mode}|${search}|${selectedCategory}|${dateFrom}|${dateTo}|${activeFY}|${JSON.stringify(audit)}`);
   const expenseMatchesCurrent = exp => {
+    if(!auditMatches(exp,audit))return false;
     if (!exp || exp.deletedAt) return false;
     const expFY = exp.financialYearId || legacyFY;
     if (String(expFY) !== String(activeFY)) return false;
@@ -149,7 +153,7 @@ export const ExpensesView = () => {
       .filter(expenseMatchesCurrent)
       .sort((a,b) => new Date(b.date || b.createdAt || 0).getTime() - new Date(a.date || a.createdAt || 0).getTime())
       .slice(0, Number(expensePager.pageSize || 50));
-  }, [expensePager.pageItems, expensePager.page, expensePager.pageSize, expenses, mode, selectedCategory, activeFY, legacyFY, dateFrom, dateTo, q]);
+  }, [expensePager.pageItems, expensePager.page, expensePager.pageSize, expenses, mode, selectedCategory, activeFY, legacyFY, dateFrom, dateTo, q,JSON.stringify(audit)]);
   const [expenseSummary,setExpenseSummary] = useState({count:0,total:0});
   const expenseMutationSeq = useRef(0);
   useEffect(()=>{
@@ -162,20 +166,20 @@ export const ExpensesView = () => {
       setExpenseSummary({count:Number(a.count||0),total:Number(a.sums?.amount||0)});
     }).catch(err=>console.warn('Expense aggregate failed',err));
     return()=>{cancelled=true;};
-  },[mode,search,selectedCategory,dateFrom,dateTo,activeFY,legacyFY,filterCategories.join('|')]);
+  },[mode,search,selectedCategory,dateFrom,dateTo,activeFY,legacyFY,filterCategories.join('|'),JSON.stringify(audit)]);
 
   const [receiptInvoices,setReceiptInvoices] = useState([]);
   const [receiptVouchers,setReceiptVouchers] = useState([]);
   useEffect(()=>{
     if(mode!=='receipts'||typeof queryAllStoreRecords!=='function')return undefined;
     let cancelled=false;
-    const common={legacyFinancialYearId:legacyFY,dateFrom:toStartIso(dateFrom),dateTo:toEndIso(dateTo),deletedMode:'exclude',sortField:'date',sortDirection:'desc',pageSize:200};
+    const common={legacyFinancialYearId:legacyFY,dateFrom:audit.from?auditQuery(audit).dateFrom:toStartIso(dateFrom),dateTo:audit.to?auditQuery(audit).dateTo:toEndIso(dateTo),deletedMode:'exclude',sortField:'date',sortDirection:'desc',pageSize:200};
     Promise.all([
-      queryAllStoreRecords('invoices',{...common,filters:{financialYearId:activeFY,type:'sale'}}),
-      queryAllStoreRecords('vouchers',{...common,filters:{financialYearId:activeFY,type:'receipt'}}),
+      queryAllStoreRecords('invoices',{...common,filters:{actorId:audit.actorId||'all',financialYearId:activeFY,type:'sale'}}),
+      queryAllStoreRecords('vouchers',{...common,filters:{actorId:audit.actorId||'all',financialYearId:activeFY,type:'receipt'}}),
     ]).then(([is,vs])=>{if(!cancelled){setReceiptInvoices(is||[]);setReceiptVouchers(vs||[]);}}).catch(err=>console.warn('Receipt report load failed',err));
     return()=>{cancelled=true;};
-  },[mode,dateFrom,dateTo,activeFY,legacyFY]);
+  },[mode,dateFrom,dateTo,activeFY,legacyFY,JSON.stringify(audit)]);
 
   const incomingPayments = useMemo(() => {
     const rows = [];
@@ -392,7 +396,7 @@ export const ExpensesView = () => {
     h('td',{className:'p-3 max-w-[260px] truncate',title:v.notes||''},v.notes || '-')
   ));
 
-  return h('div',{id:'expenses-screen',className:'p-4 sm:p-6 space-y-4 max-w-7xl mx-auto text-right select-none'},
+  return h('div',{id:'expenses-screen',className:'p-4 sm:p-6 space-y-4 max-w-7xl mx-auto text-right select-none'},h(AuditFilters,{value:audit,onChange:setAudit}),
     h('div',{className:'flex flex-col lg:flex-row lg:items-center justify-between gap-3'},
       h('div',null,
         h('h2',{className:'text-xl font-black text-slate-900'},'المصروفات والكشوفات'),

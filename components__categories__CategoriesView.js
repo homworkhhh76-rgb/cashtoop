@@ -1,9 +1,9 @@
-import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
-import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.139-ledger-print';
+import {t} from './services__i18n.js?v=7.9.4.154-distribution-menu';
+import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.154-distribution-menu';
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import React, { useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.139-ledger-print';
-import { Pagination, usePagination } from './components__common__Pagination.js?v=7.9.4.139-ledger-print';
+import { useApp } from './context__AppContext.js?v=7.9.4.154-distribution-menu';
+import { Pagination, usePagination } from './components__common__Pagination.js?v=7.9.4.154-distribution-menu';
 import { Plus, Trash2, Edit } from 'lucide-react';
 export const CategoriesView = () => {
     const { categories, products, saveCategory, deleteCategory, showToast } = useApp();

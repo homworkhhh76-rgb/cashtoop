@@ -1,8 +1,8 @@
 import React,{useState,useRef,useEffect} from 'react';
 import {createPortal} from 'react-dom';
 import {Languages,Check,X} from 'lucide-react';
-import {languages,useLanguage,setLanguage,t} from './services__i18n.js?v=7.9.4.139-ledger-print';
-import {registerLayer} from './hooks__appNavigation.js?v=7.9.4.139-ledger-print';
+import {languages,useLanguage,setLanguage,t} from './services__i18n.js?v=7.9.4.154-distribution-menu';
+import {registerLayer} from './hooks__appNavigation.js?v=7.9.4.154-distribution-menu';
 const h=React.createElement;
 export function LanguagePicker(){
  const language=useLanguage();const [open,setOpen]=useState(false);const ref=useRef(null);const [style,setStyle]=useState({});
