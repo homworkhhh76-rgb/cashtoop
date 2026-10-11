@@ -1,9 +1,9 @@
-import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
+import {t} from './services__i18n.js?v=7.9.4.154-distribution-menu';
 import React, { useEffect, useState } from 'react';
 import { X, ScanLine, Upload, AlertTriangle, CheckCircle2, LoaderCircle, Sparkles, Image as ImageIcon } from 'lucide-react';
-import { useApp } from './context__AppContext.js?v=7.9.4.139-ledger-print';
-import { scanPurchaseInvoice } from './services__ai.js?v=7.9.4.139-ledger-print';
-import { findBestSupplier, findBestProduct, findBestUnit } from './utils__aiMatching.js?v=7.9.4.139-ledger-print';
+import { useApp } from './context__AppContext.js?v=7.9.4.154-distribution-menu';
+import { scanPurchaseInvoice } from './services__ai.js?v=7.9.4.154-distribution-menu';
+import { findBestSupplier, findBestProduct, findBestUnit } from './utils__aiMatching.js?v=7.9.4.154-distribution-menu';
 
 const h = React.createElement;
 const n = (v) => Number(v || 0) || 0;

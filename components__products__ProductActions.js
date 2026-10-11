@@ -1,10 +1,10 @@
-import {registerLayer} from './hooks__appNavigation.js?v=7.9.4.139-ledger-print';
-import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
+import {registerLayer} from './hooks__appNavigation.js?v=7.9.4.154-distribution-menu';
+import {t} from './services__i18n.js?v=7.9.4.154-distribution-menu';
 import React,{useState,useEffect} from 'react';
 import {createPortal} from 'react-dom';
 import {MoreVertical,Eye,Edit,Trash2,X,Package} from 'lucide-react';
-import {useApp} from './context__AppContext.js?v=7.9.4.139-ledger-print';
-import {ModalLayer} from './components__common__ModalLayer.js?v=7.9.4.139-ledger-print';
+import {useApp} from './context__AppContext.js?v=7.9.4.154-distribution-menu';
+import {ModalLayer} from './components__common__ModalLayer.js?v=7.9.4.154-distribution-menu';
 const h=React.createElement;
 export function ProductActions({product,onEdit,onDelete}){
  const {settings,categories,getProductStock}=useApp();const [menu,setMenu]=useState(null);const [view,setView]=useState(false);

@@ -1,16 +1,16 @@
-import {registerLayer} from './hooks__appNavigation.js?v=7.9.4.139-ledger-print';
-import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
-import {SalesFilters,salesDateRange} from './components__sales__SalesFilters.js?v=7.9.4.139-ledger-print';
-import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.139-ledger-print';
+import {registerLayer} from './hooks__appNavigation.js?v=7.9.4.154-distribution-menu';
+import {t} from './services__i18n.js?v=7.9.4.154-distribution-menu';
+import {SalesFilters,salesDateRange} from './components__sales__SalesFilters.js?v=7.9.4.154-distribution-menu';
+import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.154-distribution-menu';
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useApp } from './context__AppContext.js?v=7.9.4.139-ledger-print';
-import { Pagination, useDatabasePagination } from './components__common__Pagination.js?v=7.9.4.139-ledger-print';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.139-ledger-print';
-import { MessageActionButtons } from './components__common__MessageActionButtons.js?v=7.9.4.139-ledger-print';
-import { downloadProfessionalTablePDF, downloadProfessionalTableImage, downloadProfessionalTableExcel, downloadProfessionalInvoicePDF, downloadProfessionalInvoiceImage, downloadProfessionalInvoiceExcel } from './utils__professionalExport.js?v=7.9.4.139-ledger-print';
-import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.139-ledger-print';
+import { useApp } from './context__AppContext.js?v=7.9.4.154-distribution-menu';
+import { Pagination, useDatabasePagination } from './components__common__Pagination.js?v=7.9.4.154-distribution-menu';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.154-distribution-menu';
+import { MessageActionButtons } from './components__common__MessageActionButtons.js?v=7.9.4.154-distribution-menu';
+import { downloadProfessionalTablePDF, downloadProfessionalTableImage, downloadProfessionalTableExcel, downloadProfessionalInvoicePDF, downloadProfessionalInvoiceImage, downloadProfessionalInvoiceExcel } from './utils__professionalExport.js?v=7.9.4.154-distribution-menu';
+import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.154-distribution-menu';
 import { Search, Printer, RotateCcw, Download, Eye, X, AlertCircle, Trash2, Pencil, Image as ImageIcon, FileSpreadsheet, MoreVertical, MessageCircle } from 'lucide-react';
 export const SalesView = () => {
     const { customers, warehouses, accounts, settings, currentUser, deleteInvoice, beginEditSaleInvoice, setShowThermalModal, createReturnInvoice, showToast, queryAllStoreRecords, } = useApp();
@@ -68,7 +68,7 @@ export const SalesView = () => {
     // True database-side pagination: only the requested 50 rows are fetched.
     const salesQueryOptions = {
         search,
-        filters: { financialYearId: financialYearFilter, type: filterType, paymentType: filterPayment,customerId:extraFilters.customerId||'all',warehouseId:extraFilters.warehouseId||'all' },
+        filters: { actorId:extraFilters.actorId||'all', financialYearId: financialYearFilter, type: filterType, paymentType: filterPayment,customerId:extraFilters.customerId||'all',warehouseId:extraFilters.warehouseId||'all' },
         ...salesDateRange(extraFilters),
         ...(extraFilters.status==='paid'?{numericLte:{remainingAmount:0}}:extraFilters.status==='debt'?{numericGt:{remainingAmount:0},numericLte:{paidAmount:0}}:extraFilters.status==='partial'?{numericGt:{remainingAmount:0,paidAmount:0}}:{}),
         legacyFinancialYearId,

@@ -1,4 +1,5 @@
 export const GENERAL_PAGE_PERMISSIONS = [
+  ['canAccessDistribution','distribution','مناديب التوزيع'],
   ['canAccessCashier','pos','الكاشير'],
   ['canAccessDashboard','dashboard','لوحة التحكم'],
   ['canAccessSales','sales','المبيعات والفواتير'],
@@ -42,6 +43,12 @@ export function normalizeEmployeePermissions(rawPermissions = {}, roleCode = 'cu
   const out = { ...(rawPermissions && typeof rawPermissions === 'object' && !Array.isArray(rawPermissions) ? rawPermissions : {}) };
   const role = String(roleCode || 'custom').trim().toLowerCase();
 
+  if (role === 'sales_rep') {
+    for (const key of ALL_PAGE_KEYS) out[key] = false;
+    out.canAccessDistribution = true; out.canAccessCashier = true;
+    out.canDeleteInvoice = false; out.canManageInventory = false;
+    return out;
+  }
   if (role === 'admin') {
     for (const key of ALL_PAGE_KEYS) out[key] = true;
     return out;
@@ -110,9 +117,12 @@ export function canAccessPermission(permissionKey, { runtime = null, currentUser
 }
 
 export function canAccessTab(tab, { runtime = null, currentUser = null, activeEmployee = null, restaurantEnabled = true } = {}) {
+  const role = String(currentUser?.roleCode || activeEmployee?.role || runtime?.account?.role || '').toLowerCase();
+  if(role === 'sales_rep' && !isManagerAccess({runtime,currentUser,activeEmployee})) return ['distribution','pos'].includes(tab);
   if (tab === 'no_access') return false;
   if (tab === 'support') return true;
   if (tab === 'financial_years') return canAccessPermission('canAccessSettings', { runtime, currentUser, activeEmployee });
+  if (tab === 'price_groups') return canAccessPermission('canAccessCustomers', { runtime, currentUser, activeEmployee });
   const permissionKey = PAGE_PERMISSION_MAP[tab];
   if (!permissionKey) return false;
   if (String(tab).startsWith('restaurant_') && !restaurantEnabled) return false;
@@ -120,11 +130,12 @@ export function canAccessTab(tab, { runtime = null, currentUser = null, activeEm
 }
 
 export const DEFAULT_TAB_ORDER = [
-  'pos','dashboard','sales','purchases','products','inventory','customers','suppliers','accounts','expenses','vouchers','reports','barcodes',
+  'pos','dashboard','distribution','sales','purchases','products','inventory','customers','price_groups','suppliers','accounts','expenses','vouchers','reports','barcodes',
   'restaurant_tables','restaurant_waiter','restaurant_kitchen','restaurant_waste',
   'categories','employees','financial_years','message_templates','oscar_ledger','settings','trash'
 ];
 
 export function firstAllowedTab(args = {}) {
+  if(String(args.currentUser?.roleCode || args.activeEmployee?.role || args.runtime?.account?.role || '') === 'sales_rep') return 'distribution';
   return DEFAULT_TAB_ORDER.find(tab => canAccessTab(tab, args)) || null;
 }

@@ -1,6 +1,7 @@
-import {customerStatementModel,statementHeaders} from './utils__customerStatement.js?v=7.9.4.139-ledger-print';
-import { getBrandLogoDataUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.139-ledger-print';
-import { code128Geometry } from './utils__code128.js?v=7.9.4.139-ledger-print';
+import {customerStatementModel,statementHeaders} from './utils__customerStatement.js?v=7.9.4.154-distribution-menu';
+import { getBrandLogoDataUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.154-distribution-menu';
+import { code128Geometry } from './utils__code128.js?v=7.9.4.154-distribution-menu';
+import { createQrMatrix } from './utils__qrcode.js?v=7.9.4.154-distribution-menu';
 
 const imageCache = new Map();
 const num = v => { const n=Number(v); return Number.isFinite(n)?n:0; };
@@ -152,6 +153,7 @@ export async function renderElementTablePages(target,options={}){const model=ext
 
 function drawPair(ctx,label,value,w,y,margin,font=19){txt(ctx,label,w-margin,y,font,700,'right','#64748b');wrapped(ctx,value,margin,y,w-margin*2-150,font,800,'left','#0f172a',font+9,2);return y+42;}
 function drawBarcode(ctx,value,x,y,w,h){const g=code128Geometry(String(value||''));const unit=w/g.width;ctx.fillStyle='#000';g.rects.forEach(r=>ctx.fillRect(x+r.x*unit,y,r.width*unit,h));txt(ctx,g.text,x+w/2,y+h+18,14,600,'center','#111');}
+function drawQr(ctx,value,x,y,size){const matrix=createQrMatrix(String(value||''),'L'),n=matrix.length;if(!n)return;ctx.fillStyle='#fff';ctx.fillRect(x,y,size,size);const cell=size/n;ctx.fillStyle='#000';for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(matrix[r][c])ctx.fillRect(x+c*cell,y+r*cell,Math.ceil(cell),Math.ceil(cell));}
 
 export async function renderInvoiceCanvas(invoice,settings={},options={}){
   const previousFont=activeCanvasFont;activeCanvasFont='Tahoma, Arial, sans-serif';
@@ -214,7 +216,7 @@ export async function renderInvoiceCanvas(invoice,settings={},options={}){
     line(ctx,margin,y,w-margin,y,1.2,'#000');y+=14;
 
     if(invoice?.notes){txt(ctx,'ملاحظات:',w-margin,y+14,15,800,'right','#000');wrapped(ctx,invoice.notes,w-margin,y+40,w-margin*2,15,700,'right','#000',21,2);y+=77;}
-    if(settings?.receiptShowBarcode!==false){const bw=Math.min(530,w-margin*2-20);drawBarcode(ctx,invoice?.invoiceNumber||'',(w-bw)/2,y+6,bw,55);y+=94;}
+    if(settings?.receiptShowBarcode!==false&&settings?.customerPortalUrl){const qs=paper==='58mm'?178:214;drawQr(ctx,settings.customerPortalUrl,(w-qs)/2,y+4,qs);y+=qs+18;txt(ctx,'امسح لفتح صفحة العميل والسداد',w/2,y,15,900,'center','#000');y+=28;}
     txt(ctx,settings?.receiptFooterMessage||'شكراً لتعاملكم معنا',w/2,y+10,16,800,'center','#000');y+=30;
     wrapped(ctx,'برنامج كاش توب المحاسبي جوال 0597603119',margin,y,w-margin*2,16,800,'left','#000',23,2);y+=26;
     const finalH=Math.min(canvas.height,Math.ceil(y+24));

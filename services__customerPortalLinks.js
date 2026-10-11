@@ -1,5 +1,5 @@
-import { encodeCustomerPortalAccess } from './customer-portal-codec.js?v=7.9.4.139-ledger-print';
-import { TRIAL_DATABASE } from './trial__config.js?v=7.9.4.139-ledger-print';
+import { encodeCustomerPortalAccess } from './customer-portal-codec.js?v=7.9.4.154-distribution-menu';
+import { TRIAL_DATABASE } from './trial__config.js?v=7.9.4.154-distribution-menu';
 
 const ALPHABET='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const clean=v=>String(v??'').trim();
@@ -70,7 +70,15 @@ export async function createCustomerPortalLinks(customer,{saveCustomer=null,forc
   const shortPortal=new URL(base.toString());shortPortal.searchParams.set('c',companyCode);shortPortal.searchParams.set('u',customerCode);
   const shortPayment=new URL('./معتمد.html',window.location.href);shortPayment.search='';shortPayment.hash='';shortPayment.searchParams.set('c',companyCode);shortPayment.searchParams.set('u',customerCode);
   const registered=await registerShortLink({companyCode,customerCode,accessCode,companyId:runtime.companyId,customerId:current.id});
-  const portalUrl=shortPortal.toString(),paymentUrl=shortPayment.toString(),isShort=true;
-  if(changed&&window.OscarCloudSync?.syncNow&&navigator.onLine!==false){try{await window.OscarCloudSync.syncNow({manual:false,force:true});}catch(_){}}
+  if(registered&&!current.portalShortRegisteredAt){
+    current={...current,portalShortRegisteredAt:new Date().toISOString(),portalUpdatedAt:new Date().toISOString()};
+    changed=true;
+    if(saveCustomer)await saveCustomer(current);
+  }
+  const canUseShort=registered||!!current.portalShortRegisteredAt;
+  const portalUrl=canUseShort?shortPortal.toString():longPortal.toString();
+  const paymentUrl=canUseShort?shortPayment.toString():paymentBase.toString();
+  const isShort=canUseShort;
+  if(changed&&window.OscarCloudSync?.syncNow&&navigator.onLine!==false){try{await window.OscarCloudSync.syncNow({manual:false,force:true});}catch(_){} }
   return {customer:current,portalUrl,paymentUrl,accessCode,companyCode,customerCode,isShort,registered,longPortalUrl:longPortal.toString(),longPaymentUrl:paymentBase.toString()};
 }

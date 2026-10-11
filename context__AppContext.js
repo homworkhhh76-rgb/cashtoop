@@ -1,13 +1,14 @@
-import {buildFinancialClose,fiscalStores,fiscalMasters} from './services__financialClose.js?v=7.9.4.139-ledger-print';
-import {buildCartReturn} from './services__cartReturn.js?v=7.9.4.139-ledger-print';
+import {prepareSale as prepareDistributionSale,postSale as postDistributionSale} from './services__distribution.js?v=7.9.4.154-distribution-menu';
+import {buildFinancialClose,fiscalStores,fiscalMasters} from './services__financialClose.js?v=7.9.4.154-distribution-menu';
+import {buildCartReturn} from './services__cartReturn.js?v=7.9.4.154-distribution-menu';
 import { jsx as _jsx } from "react/jsx-runtime";
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { assertOpenFinancialRecord, getAllFromStore, getFromStore, putInStore, deleteFromStore, clearStore, bulkPut, commitLocalBatch, queryStorePage, queryAllStoreRecords, queryStoreStats, getLatestStockMovementLocal, initializeDatabase, seedDatabaseDefaults, cleanupLegacyDemoSeedIfPristine, ensurePrimaryShowroomWarehouse, resetDatabase, exportDatabaseBackup, importDatabaseBackup, syncChannel, DEFAULT_SETTINGS, CASH_CUSTOMER, DEFAULT_CATEGORIES, DEFAULT_WAREHOUSES, DEFAULT_ACCOUNTS, DEFAULT_SUPPLIERS, getDemoProducts, getDemoStock, DEFAULT_EMPLOYEES, } from './services__db.js?v=7.9.4.139-ledger-print';
-import { calculateUnitConversions, findUnitByBarcode, toBaseQuantity } from './utils__unitTree.js?v=7.9.4.139-ledger-print';
-import { playBeepSound, playSuccessSound, playErrorSound } from './services__audio.js?v=7.9.4.139-ledger-print';
-import { notifyTelegramInvoice } from './services__telegram.js?v=7.9.4.139-ledger-print';
-import { isManagerAccess, normalizeEmployeePermissions, canAccessTab, firstAllowedTab } from './utils__permissions.js?v=7.9.4.139-ledger-print';
-import { isTrialAccount, TRIAL_LIMITS } from './trial__config.js?v=7.9.4.139-ledger-print';
+import { assertOpenFinancialRecord, getAllFromStore, getFromStore, putInStore, deleteFromStore, clearStore, bulkPut, commitLocalBatch, queryStorePage, queryAllStoreRecords, queryStoreStats, getLatestStockMovementLocal, initializeDatabase, seedDatabaseDefaults, cleanupLegacyDemoSeedIfPristine, ensurePrimaryShowroomWarehouse, resetDatabase, exportDatabaseBackup, importDatabaseBackup, syncChannel, DEFAULT_SETTINGS, CASH_CUSTOMER, DEFAULT_CATEGORIES, DEFAULT_WAREHOUSES, DEFAULT_ACCOUNTS, DEFAULT_SUPPLIERS, getDemoProducts, getDemoStock, DEFAULT_EMPLOYEES, } from './services__db.js?v=7.9.4.154-distribution-menu';
+import { calculateUnitConversions, findUnitByBarcode, toBaseQuantity } from './utils__unitTree.js?v=7.9.4.154-distribution-menu';
+import { playBeepSound, playSuccessSound, playErrorSound } from './services__audio.js?v=7.9.4.154-distribution-menu';
+import { notifyTelegramInvoice } from './services__telegram.js?v=7.9.4.154-distribution-menu';
+import { isManagerAccess, normalizeEmployeePermissions, canAccessTab, firstAllowedTab } from './utils__permissions.js?v=7.9.4.154-distribution-menu';
+import { isTrialAccount, TRIAL_LIMITS } from './trial__config.js?v=7.9.4.154-distribution-menu';
 const AppContext = createContext(null);
 const recordTime = (item = {}) => {
     const fields = ['createdAt', 'date', 'timestamp', 'startTime', 'updatedAt'];
@@ -40,6 +41,30 @@ const normalizeActiveWarehouseSettings = (value, warehouseRows = []) => {
 const finiteNumber = (value, fallback = 0) => {
     const n = Number(value);
     return Number.isFinite(n) ? n : fallback;
+};
+const normalizePriceGroups = (value) => Array.isArray(value?.priceGroups) ? value.priceGroups.filter((group) => group && group.id && !group.deletedAt) : [];
+const priceGroupHasCustomer = (group, customer) => !!group && !!customer?.id && customer.id !== CASH_CUSTOMER.id && (group.customerIds || []).some((id) => String(id) === String(customer.id));
+const readGroupUnitPrice = (group, productId, unitId) => {
+    const raw = group?.unitPrices?.[productId]?.[unitId];
+    if (raw === '' || raw == null) return null;
+    const n = Number(raw);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+};
+const calculatePercentageGroupPrice = (basePrice, group) => {
+    const base = Math.max(0, finiteNumber(basePrice, 0));
+    const pct = Math.max(0, finiteNumber(group?.percentage, 0));
+    const mode = group?.percentageMode === 'increase' ? 'increase' : 'discount';
+    const raw = mode === 'increase' ? base * (1 + pct / 100) : base * (1 - Math.min(100, pct) / 100);
+    return Math.max(0, Math.round(raw));
+};
+const resolvePriceGroupPrice = ({ product, unit, group, customer }) => {
+    const base = Math.max(0, finiteNumber(unit?.salePrice ?? product?.sellingPrice, 0));
+    if (!group) return base;
+    if (priceGroupHasCustomer(group, customer)) {
+        const manual = readGroupUnitPrice(group, product?.id, unit?.id);
+        return manual == null ? base : manual;
+    }
+    return calculatePercentageGroupPrice(base, group);
 };
 const normalizeAccountRecord = (account) => {
     if (!account || typeof account !== 'object') return account;
@@ -136,11 +161,15 @@ export const AppProvider = ({ children }) => {
     const [auditLogs, setAuditLogs] = useState([]);
     const [heldInvoices, setHeldInvoices] = useState([]);
     const [syncQueue, setSyncQueue] = useState([]);
-    const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+    const [storedSettings, setSettings] = useState(DEFAULT_SETTINGS);
     const [partnerStatements, setPartnerStatements] = useState([]);
     const [vouchers, setVouchers] = useState([]);
     const [employees, setEmployees] = useState(DEFAULT_EMPLOYEES);
     const [activeEmployee, setActiveEmployee] = useState(DEFAULT_EMPLOYEES[0]);
+    const distributionRuntime = window.OscarActivation?.readRuntime?.();
+    const distributionCandidate=employees.find(e=>e.id===distributionRuntime?.account?.id)|| (activeEmployee?.id===distributionRuntime?.account?.id?activeEmployee:distributionRuntime?.account);
+    const distributionEmployee = distributionRuntime?.type !== 'company-manager' && distributionCandidate?.role==='sales_rep' ? distributionCandidate : null;
+    const settings = useMemo(()=>distributionEmployee?.distribution?.warehouseId ? {...storedSettings, activeWarehouseId:distributionEmployee.distribution.warehouseId,allowNegativeStock:!!distributionEmployee.distribution.permissions?.negativeStock} : storedSettings,[storedSettings,distributionEmployee]);
     // UI state
     const [activeTab, setActiveTabState] = useState('dashboard');
     const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -176,6 +205,7 @@ export const AppProvider = ({ children }) => {
             name: liveEmployee?.name || account?.name || account?.displayName || activeEmployee?.name || 'مدير النظام',
             role: liveEmployee?.roleName || account?.roleName || activeEmployee?.roleName || account?.role || 'موظف',
             roleCode,
+            distribution: liveEmployee?.distribution || account?.distribution || activeEmployee?.distribution,
             permissions,
             isCompanyManager: rt?.type === 'company-manager',
             companyId: rt?.companyId || '',
@@ -216,6 +246,49 @@ export const AppProvider = ({ children }) => {
     const [invoiceDiscountValue, setInvoiceDiscountValue] = useState(0);
     const [selectedCustomer, setSelectedCustomer] = useState(CASH_CUSTOMER);
     const [editingSaleInvoiceId, setEditingSaleInvoiceId] = useState(null);
+    const priceGroups = useMemo(() => normalizePriceGroups(settings), [settings.priceGroups]);
+    const [activePriceGroupIdState, setActivePriceGroupIdState] = useState(() => {
+        try { return sessionStorage.getItem('cash-top-active-price-group-v1') || ''; } catch (_) { return ''; }
+    });
+    const activePriceGroup = useMemo(() => priceGroups.find((group) => String(group.id) === String(activePriceGroupIdState)) || null, [priceGroups, activePriceGroupIdState]);
+    const setActivePriceGroupId = useCallback((id) => {
+        const next = String(id || '');
+        setActivePriceGroupIdState(next);
+        try { next ? sessionStorage.setItem('cash-top-active-price-group-v1', next) : sessionStorage.removeItem('cash-top-active-price-group-v1'); } catch (_) {}
+    }, []);
+    const getEffectiveUnitPrice = useCallback((product, unit, groupId = activePriceGroupIdState, customer = selectedCustomer) => {
+        if(currentUser.roleCode==='sales_rep'&&!currentUser.isCompanyManager)groupId=currentUser.distribution?.priceGroupId||'';
+        const group = priceGroups.find((row) => String(row.id) === String(groupId || '')) || null;
+        return resolvePriceGroupPrice({ product, unit, group, customer });
+    }, [priceGroups, activePriceGroupIdState, selectedCustomer, currentUser]);
+    const previousPriceGroupIdRef = useRef('');
+    useEffect(() => {
+        if (!isLoaded) return;
+        if (activePriceGroupIdState && !priceGroups.some((group) => String(group.id) === String(activePriceGroupIdState))) setActivePriceGroupId('');
+    }, [isLoaded, activePriceGroupIdState, priceGroups, setActivePriceGroupId]);
+    const previousPriceGroupCustomerIdRef = useRef('');
+    useEffect(() => {
+        if (!isLoaded || editingSaleInvoiceId) return;
+        const currentCustomerId = String(selectedCustomer?.id || '');
+        const customerChanged = currentCustomerId !== previousPriceGroupCustomerIdRef.current;
+        previousPriceGroupCustomerIdRef.current = currentCustomerId;
+        if (!customerChanged) return;
+        const assigned = priceGroups.find((group) => priceGroupHasCustomer(group, selectedCustomer));
+        if (assigned && String(assigned.id) !== String(activePriceGroupIdState || '')) setActivePriceGroupId(assigned.id);
+    }, [isLoaded, editingSaleInvoiceId, selectedCustomer?.id, priceGroups, activePriceGroupIdState, setActivePriceGroupId]);
+    useEffect(() => {
+        if (!isLoaded || editingSaleInvoiceId) return;
+        const previous = previousPriceGroupIdRef.current;
+        previousPriceGroupIdRef.current = activePriceGroupIdState || '';
+        if (!activePriceGroupIdState && !previous) return;
+        setCart((prev) => prev.map((item) => {
+            const product = products.find((row) => String(row.id) === String(item.productId));
+            const unit = product?.units?.find((row) => String(row.id) === String(item.unitId));
+            if (!product || !unit) return item;
+            const price = activePriceGroupIdState ? getEffectiveUnitPrice(product, unit, activePriceGroupIdState, selectedCustomer) : Math.max(0, finiteNumber(unit.salePrice ?? product.sellingPrice, item.unitPrice));
+            return { ...item, availableUnits: product.units || item.availableUnits, unitPrice: price, catalogUnitPrice: price };
+        }));
+    }, [isLoaded, editingSaleInvoiceId, activePriceGroupIdState, selectedCustomer?.id, settings.priceGroupsUpdatedAt, priceGroups, products, getEffectiveUnitPrice]);
     // Toast helper
     const showToast = useCallback((message, type = 'info') => {
         try { window.__OSCAR_ACTION_LOADING__?.stop?.(); } catch (_) {}
@@ -725,8 +798,8 @@ export const AppProvider = ({ children }) => {
                     availableUnits: product.units,
                     quantity: quantity,
                     conversionFactor: targetUnit.conversionToBase || 1,
-                    unitPrice: targetUnit.salePrice || product.sellingPrice,
-                    catalogUnitPrice: Number(targetUnit.salePrice || product.sellingPrice || 0),
+                    unitPrice: getEffectiveUnitPrice(product, targetUnit),
+                    catalogUnitPrice: getEffectiveUnitPrice(product, targetUnit),
                     discount: 0,
                     taxRate: product.taxRate || 0,
                     costPriceAtSale: (product.costPrice || 0) * (targetUnit.conversionToBase || 1),
@@ -737,7 +810,7 @@ export const AppProvider = ({ children }) => {
             ];
         });
         playBeepSound(settings.scannerBeepEnabled);
-    }, [getProductStock, settings.activeWarehouseId, settings.scannerBeepEnabled]);
+    }, [getProductStock, getEffectiveUnitPrice, settings.activeWarehouseId, settings.scannerBeepEnabled]);
     const updateCartItemUnit = useCallback((productId, oldUnitId, newUnitId) => {
         setCart((prev) => {
             const index = prev.findIndex((item) => item.productId === productId && item.unitId === oldUnitId);
@@ -748,18 +821,20 @@ export const AppProvider = ({ children }) => {
             if (!newUnit)
                 return prev;
             const updated = [...prev];
+            const product = products.find((row) => String(row.id) === String(productId));
+            const groupPrice = product ? getEffectiveUnitPrice(product, newUnit) : Math.max(0, finiteNumber(newUnit.salePrice, 0));
             updated[index] = {
                 ...currentItem,
                 unitId: newUnit.id,
                 unitName: newUnit.name,
                 conversionFactor: newUnit.conversionToBase || 1,
-                unitPrice: newUnit.salePrice,
-                catalogUnitPrice: Number(newUnit.salePrice || 0),
+                unitPrice: groupPrice,
+                catalogUnitPrice: groupPrice,
                 costPriceAtSale: (currentItem.costPriceAtSale / currentItem.conversionFactor) * (newUnit.conversionToBase || 1),
             };
             return updated;
         });
-    }, []);
+    }, [products, getEffectiveUnitPrice]);
     const updateCartItemQuantity = useCallback((productId, unitId, quantity) => {
         if (quantity <= 0) {
             removeFromCart(productId, unitId);
@@ -791,6 +866,7 @@ export const AppProvider = ({ children }) => {
         setCart((prev) => prev.filter((item) => !(item.productId === productId && item.unitId === unitId)));
     }, []);
     const clearCart = useCallback(() => {
+        window.__CT_DISTRIBUTION_ORDER__=null;
         setCart([]);
         setInvoiceAdditionalCharges(0);
         setInvoiceDiscountType('fixed');
@@ -811,6 +887,7 @@ export const AppProvider = ({ children }) => {
             financialYearId: settings.activeFinancialYearId || 'fy-initial',
             customerId: selectedCustomer?.id || CASH_CUSTOMER.id,
             customerName: selectedCustomer?.name || CASH_CUSTOMER.name,
+            repId:currentUser.roleCode==='sales_rep'?currentUser.id:undefined,
             items: [...cart],
             additionalCharges: invoiceAdditionalCharges, invoiceDiscountType, invoiceDiscountValue,
             subtotal: cart.reduce((s, i) => s + (i.quantity * i.unitPrice), 0),
@@ -867,6 +944,11 @@ export const AppProvider = ({ children }) => {
     }, [products, addToCart, showToast, settings.scannerBeepEnabled]);
     // Create Sale Invoice (invoice discount + FIFO cost consumption)
     const createSaleInvoice = useCallback(async (payload = {}) => {
+        const pendingOrder=window.__CT_DISTRIBUTION_ORDER__;
+        if(pendingOrder&&pendingOrder.companyId===currentUser.companyId){payload.distributionRepId=pendingOrder.repId;payload.distributionOrderId=pendingOrder.id;}
+        const distributionApp={currentUser,activeEmployee,settings,selectedCustomer,invoiceDiscountType,invoiceDiscountValue,getEffectiveUnitPrice};
+        const distributionContext=await prepareDistributionSale(distributionApp,payload,cart);
+        if(distributionContext){payload.invoiceIdOverride=payload.invoiceIdOverride||('inv-'+crypto.randomUUID());payload.invoiceNumberOverride=payload.invoiceNumberOverride||('D-'+payload.invoiceIdOverride.slice(-12).toUpperCase());}
         if (isTrialAccount() && !payload.isEdit && invoices.filter((row) => row?.type === 'sale').length >= TRIAL_LIMITS.salesInvoices) {
             showToast(`وصلت إلى الحد المتاح لفواتير المبيعات (${TRIAL_LIMITS.salesInvoices}).`, 'warning');
             return null;
@@ -876,10 +958,7 @@ export const AppProvider = ({ children }) => {
         if (saleCart.length === 0) { showToast('السلة فارغة!', 'error'); return null; }
         // Use the already-synced in-memory snapshot for an instant local save.
         // Remote changes update these states separately; saving never waits for fresh cloud/database reads.
-        const sourceProducts = products;
-        const sourceStock = stock;
-        const sourceAccounts = accounts;
-        const sourceCustomers = customers;
+        const [sourceProducts,sourceStock,sourceAccounts,sourceCustomers]=distributionContext ? await Promise.all(['products','stock','accounts','customers'].map(getAllFromStore)) : [products,stock,accounts,customers];
         const liveActiveShift = activeShift || null;
         const warehouseId = payload.warehouseIdOverride || settings.activeWarehouseId;
         const warehouse = warehouses.find((w) => w.id === warehouseId) || warehouses[0];
@@ -978,8 +1057,10 @@ export const AppProvider = ({ children }) => {
         const change = Math.max(0, paid - grandTotal);
         const selectedLiveCustomer = selectedCustomer?.id ? (sourceCustomers.find((c) => c.id === selectedCustomer.id) || selectedCustomer) : CASH_CUSTOMER;
         const saleCustomer = payload.forceCashCustomer ? CASH_CUSTOMER : (payload.customerObject || (payload.customerId ? (sourceCustomers.find((c) => c.id === payload.customerId) || selectedLiveCustomer || CASH_CUSTOMER) : (selectedLiveCustomer || CASH_CUSTOMER)));
+        const salePriceGroup = priceGroups.find((group) => String(group.id) === String(distributionContext?.rep?.distribution?.priceGroupId || activePriceGroupIdState || '')) || null;
+        const salePriceGroupMode = salePriceGroup ? (priceGroupHasCustomer(salePriceGroup, saleCustomer) ? 'custom' : 'percentage') : '';
         if ((payload.paymentType === 'debt' || payload.paymentType === 'partial') && saleCustomer.id === CASH_CUSTOMER.id) { showToast('يجب اختيار عميل مسجل للبيع الآجل أو الدفع الجزئي!', 'error'); return null; }
-        const invoice = { id:invoiceId, invoiceNumber, type:'sale', date:invoiceDate, financialYearId: payload.financialYearIdOverride || settings.activeFinancialYearId || 'fy-initial', customerId:saleCustomer.id, customerName:saleCustomer.name, cashierId:currentUser.id, cashierName:currentUser.name, shiftId:liveActiveShift?.id, branchId:settings.activeBranchName, warehouseId, items:invoiceItems, subtotal, lineDiscountTotal, invoiceDiscountType:effectiveDiscountType, invoiceDiscountValue:rawDiscount, invoiceDiscountAmount, discountTotal, taxTotal, additionalCharges, roundingAdjustment, grandTotal, paidAmount:Math.min(paid,grandTotal), remainingAmount:remaining, changeAmount:change, paymentType:payload.paymentType, payments, status:'completed', notes:payload.notes, syncId, isSynced:false, createdAt:payload.createdAtOverride || now, updatedAt:now, editedAt:payload.isEdit ? now : undefined };
+        const invoice = { id:invoiceId, invoiceNumber, type:'sale', date:invoiceDate, financialYearId: payload.financialYearIdOverride || settings.activeFinancialYearId || 'fy-initial', customerId:saleCustomer.id, customerName:saleCustomer.name, priceGroupId:salePriceGroup?.id || '', priceGroupName:salePriceGroup?.name || '', priceGroupMode:salePriceGroupMode, cashierId:currentUser.id, cashierName:currentUser.name, shiftId:liveActiveShift?.id, branchId:settings.activeBranchName, warehouseId, items:invoiceItems, subtotal, lineDiscountTotal, invoiceDiscountType:effectiveDiscountType, invoiceDiscountValue:rawDiscount, invoiceDiscountAmount, discountTotal, taxTotal, additionalCharges, roundingAdjustment, grandTotal, paidAmount:Math.min(paid,grandTotal), remainingAmount:remaining, changeAmount:change, paymentType:payload.paymentType, payments, status:'completed', notes:payload.notes, syncId, isSynced:false, createdAt:payload.createdAtOverride || now, updatedAt:now, editedAt:payload.isEdit ? now : undefined };
         const updatedStockList=[...sourceStock], newMovements=[], changedStockKeys=new Set();
         const deductStock = (productId, productName, baseQty, movementMeta = {}) => {
             const stockIndex=updatedStockList.findIndex(s=>s.productId===productId&&s.warehouseId===warehouseId);
@@ -1021,7 +1102,10 @@ export const AppProvider = ({ children }) => {
         if (updatedCustomer) localOps.push({ type:'put', storeName:'customers', value:updatedCustomer, actionHint:'update' });
         if (customerStatement) localOps.push({ type:'put', storeName:'partner_statements', value:customerStatement, actionHint:'add' });
         if (updatedShift) localOps.push({ type:'put', storeName:'shifts', value:updatedShift, actionHint:'update' });
-        await commitLocalBatch(localOps);
+        if(distributionContext){
+            for(const op of localOps){const sources={products:sourceProducts,stock:sourceStock,accounts:sourceAccounts,customers:sourceCustomers,shifts:shifts,invoices:invoices};const list=sources[op.storeName]||[];op.before=list.find(x=>op.storeName==='stock'?x.productId===op.value.productId&&x.warehouseId===op.value.warehouseId:x.id===op.value.id)||null;}
+            await postDistributionSale(distributionApp,invoice,localOps,distributionContext,payload);window.__CT_DISTRIBUTION_ORDER__=null;}
+        else await commitLocalBatch(localOps, true, { telegramPrimaryStore:'invoices' });
         // Update the open screen from the already-saved local data; no full database reload and no cloud wait.
         setInvoices(prev => [invoice, ...prev.filter(x => x.id !== invoice.id)]);
         setStock(updatedStockList);
@@ -1032,7 +1116,7 @@ export const AppProvider = ({ children }) => {
         if(customerStatement)setPartnerStatements(prev => [customerStatement, ...prev]);
         if(updatedShift)setShifts(prev => prev.map(x => x.id===updatedShift.id?updatedShift:x));
         playSuccessSound(settings.scannerBeepEnabled); if(!isDirectSale) clearCart(); setEditingSaleInvoiceId(null); notifyTelegramInvoice(invoice,'sale').catch(()=>{}); showToast(payload.isEdit ? `تم تعديل الفاتورة [${invoiceNumber}] مع عكس القيد القديم وإعادة احتساب الجديد` : `تم حفظ الفاتورة بنجاح [${invoiceNumber}]`,'success'); return invoice;
-    }, [cart, invoiceDiscountType, invoiceDiscountValue, invoiceAdditionalCharges, settings, warehouses, products, customers, selectedCustomer, currentUser, activeShift, stock, accounts, invoices, clearCart, showToast]);
+    }, [cart, invoiceDiscountType, invoiceDiscountValue, invoiceAdditionalCharges, settings, warehouses, products, customers, selectedCustomer, currentUser, activeShift, stock, accounts, invoices, clearCart, showToast, priceGroups, activePriceGroupIdState]);
     // Transaction reversal helpers: all invoice changes pass through the same accounting/stock logic.
     const addStockDelta = useCallback(async ({ rows, productId, warehouseId, delta, movement }) => {
         const qty = finiteNumber(delta, 0);
@@ -1056,7 +1140,7 @@ export const AppProvider = ({ children }) => {
                 userId: currentUser.id,
                 userName: currentUser.name,
                 ...movement,
-            });
+            }, true, { suppressTelegram:true, telegramPrimaryStore: movement?.referenceType?.includes('PURCHASE') ? 'purchases' : 'invoices' });
         }
         return nextRows;
     }, [currentUser, settings.activeFinancialYearId]);
@@ -1066,7 +1150,7 @@ export const AppProvider = ({ children }) => {
         if (!partner?.id || value <= 0) return;
         const nextBalance = finiteNumber(partner.balance, 0) + (direction === 'increase' ? value : -value);
         const store = partnerType === 'supplier' ? 'suppliers' : 'customers';
-        await putInStore(store, { ...partner, balance: nextBalance });
+        await putInStore(store, { ...partner, balance: nextBalance }, true, { suppressTelegram:true, telegramPrimaryStore: String(referenceType||'').includes('PURCHASE') ? 'purchases' : 'invoices' });
         await putInStore('partner_statements', {
             id: `stmt-rev-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
             date: new Date().toISOString(),
@@ -1116,6 +1200,7 @@ export const AppProvider = ({ children }) => {
     // Create Return Invoice. Debt is reversed first; only the paid portion is refunded from the original payment accounts.
     const createReturnInvoice = useCallback(async (payload) => {
         const original = await getFromStore('invoices', payload.originalInvoiceId);
+        if(original?.distributionManaged)throw Error('استخدم مرتجع العميل من قسم مناديب التوزيع');
         await assertOpenFinancialRecord(original);
         if (!original || original.type !== 'sale') {
             showToast('لم يتم العثور على فاتورة المبيعات الأصلية', 'error');
@@ -1282,7 +1367,7 @@ export const AppProvider = ({ children }) => {
         if (updatedAccounts.length) await bulkPut('accounts', updatedAccounts);
         if (activeShift) {
             const cashRefund = accountRefunds.filter((r) => r.method === 'cash' || (liveReturnAccounts || []).find((a) => a.id === r.accountId)?.type === 'cash').reduce((s, r) => s + finiteNumber(r.amount, 0), 0);
-            if (cashRefund > 0) await putInStore('shifts', { ...activeShift, totalCashReturns: finiteNumber(activeShift.totalCashReturns, 0) + cashRefund, expectedCash: finiteNumber(activeShift.expectedCash, 0) - cashRefund });
+            if (cashRefund > 0) await putInStore('shifts', { ...activeShift, totalCashReturns: finiteNumber(activeShift.totalCashReturns, 0) + cashRefund, expectedCash: finiteNumber(activeShift.expectedCash, 0) - cashRefund }, true, { suppressTelegram:true, telegramPrimaryStore:'invoices' });
         }
         await putInStore('audit_logs', { id: `audit-${Date.now()}-${Math.random().toString(36).slice(2,7)}`, date: now, financialYearId: settings.activeFinancialYearId || 'fy-initial', type: 'sales_return_reverse_entry', referenceId: returnInvoice.id, originalReferenceId: original.id, amount: refundTotal, debtReversed, accountRefunds, userId: currentUser.id, userName: currentUser.name });
         await reloadData();
@@ -1298,7 +1383,7 @@ export const AppProvider = ({ children }) => {
             const [liveProducts,liveStock,liveAccounts,liveCustomers,liveShifts]=await Promise.all(['products','stock','accounts','customers','shifts'].map(getAllFromStore));
             const id=`ret-${crypto.randomUUID?.()||`${Date.now()}-${Math.random().toString(36).slice(2)}`}`;
             const {invoice,operations}=buildCartReturn({cart,products:liveProducts,stock:liveStock,accounts:liveAccounts,customers:liveCustomers,settings,customer:selectedCustomer,user:currentUser,shift:liveShifts.find(s=>s.id===activeShift?.id),payload,discountType:invoiceDiscountType,discountValue:invoiceDiscountValue,id,now:new Date().toISOString()});
-            await commitLocalBatch(operations);
+            await commitLocalBatch(operations, true, { telegramPrimaryStore:'invoices' });
             clearCart();
             await reloadStores(['invoices','stock','products','accounts','customers','shifts','partner_statements','sync_queue']).catch(()=>{});
             notifyTelegramInvoice(invoice,'return').catch(()=>{});
@@ -1327,7 +1412,7 @@ export const AppProvider = ({ children }) => {
         const subtotal=items.reduce((x,i)=>x+(Number(i.total)||0),0);
         const discountTotal=Math.max(0,Math.min(subtotal,Number(payload.discountAmount)||0));
         const grandTotal=Math.max(0,subtotal-discountTotal); const paidAmount=Math.min(grandTotal,Math.max(0,Number(payload.paidAmount)||0)); const remaining=Math.max(0,grandTotal-paidAmount); const ratio=subtotal>0?grandTotal/subtotal:1;
-        const purchaseInvoice={id:purchaseId,invoiceNumber,supplierInvoiceNumber:payload.supplierInvoiceNumber||'',date:purchaseDate,financialYearId:payload.financialYearIdOverride || settings.activeFinancialYearId || 'fy-initial',supplierId:payload.supplierId,supplierName:payload.supplierName,warehouseId,warehouseName:targetWarehouse.name||'صالة العرض',items:items.map((it,idx)=>({id:`pur-it-${Date.now()}-${idx}`,...it})),subtotal,discountType:payload.discountType||'fixed',discountValue:Number(payload.discountValue)||0,discountTotal,taxTotal:0,grandTotal,paidAmount,remainingAmount:remaining,paymentType:payload.paymentType,payments,notes:payload.notes||'',syncId,isSynced:false,createdAt:payload.createdAtOverride || now,updatedAt:now,editedAt:payload.isEdit?now:undefined};
+        const purchaseInvoice={userId:currentUser.id,userName:currentUser.name,id:purchaseId,invoiceNumber,supplierInvoiceNumber:payload.supplierInvoiceNumber||'',date:purchaseDate,financialYearId:payload.financialYearIdOverride || settings.activeFinancialYearId || 'fy-initial',supplierId:payload.supplierId,supplierName:payload.supplierName,warehouseId,warehouseName:targetWarehouse.name||'صالة العرض',items:items.map((it,idx)=>({id:`pur-it-${Date.now()}-${idx}`,...it})),subtotal,discountType:payload.discountType||'fixed',discountValue:Number(payload.discountValue)||0,discountTotal,taxTotal:0,grandTotal,paidAmount,remainingAmount:remaining,paymentType:payload.paymentType,payments,notes:payload.notes||'',syncId,isSynced:false,createdAt:payload.createdAtOverride || now,updatedAt:now,editedAt:payload.isEdit?now:undefined};
         const updatedProducts=[...sourceProducts]; const updatedStockList=[...sourceStock],newMovements=[],changedProductIds=new Set(),changedStockKeys=new Set();
         for(const item of items){const pi=updatedProducts.findIndex(p=>p.id===item.productId);const si=updatedStockList.findIndex(x=>x.productId===item.productId&&x.warehouseId===warehouseId);const currentBaseStock=si>=0?Number(updatedStockList[si].baseQuantity)||0:0;const currentTotalBaseStock=updatedStockList.filter(x=>x.productId===item.productId).reduce((sum,row)=>sum+Math.max(0,Number(row.baseQuantity)||0),0);const baseQty=Math.max(0,Number(item.baseQuantity)||0);const newBaseStock=currentBaseStock+baseQty;
           if(pi>=0){if(!changedProductIds.has(item.productId)){const original=updatedProducts[pi];updatedProducts[pi]={...original,fifoBatches:Array.isArray(original.fifoBatches)?original.fifoBatches.map(b=>({...b})):[]};changedProductIds.add(item.productId);}const currentCost=Number(updatedProducts[pi].costPrice)||0;const unitCost=((Number(item.unitPrice)||0)*ratio)/Math.max(0.00000001,(Number(item.conversionFactor)||1));let batches=updatedProducts[pi].fifoBatches||[];if(currentBaseStock>0&&!batches.some(b=>(b.warehouseId===warehouseId||!b.warehouseId)&&Number(b.remainingBaseQty)>0)){batches.push({id:`legacy-${item.productId}-${warehouseId}`,purchaseId:'legacy',warehouseId,receivedAt:'2000-01-01T00:00:00.000Z',expiryDate:updatedProducts[pi].expiryDate||'',unitCost:currentCost,remainingBaseQty:currentBaseStock});}batches.push({id:`batch-${purchaseInvoice.id}-${item.productId}-${Math.random().toString(36).slice(2,6)}`,purchaseId:purchaseInvoice.id,warehouseId,receivedAt:purchaseDate,expiryDate:item.expiryDate||updatedProducts[pi].expiryDate||'',unitCost,remainingBaseQty:baseQty});const oldVal=Math.max(0,currentTotalBaseStock)*currentCost,newVal=baseQty*unitCost,totalUnits=Math.max(0,currentTotalBaseStock)+baseQty,newWAC=totalUnits>0?(oldVal+newVal)/totalUnits:unitCost;updatedProducts[pi]={...updatedProducts[pi],costPrice:parseFloat(newWAC.toFixed(4)),fifoBatches:batches,updatedAt:now};}
@@ -1343,7 +1428,7 @@ export const AppProvider = ({ children }) => {
         for(const acc of updatedAccounts)if(changedAccountIds.has(acc.id))purchaseOps.push({type:'put',storeName:'accounts',value:acc,actionHint:'update'});
         if(updatedSupplier)purchaseOps.push({type:'put',storeName:'suppliers',value:updatedSupplier,actionHint:'update'});
         if(supplierStatement)purchaseOps.push({type:'put',storeName:'partner_statements',value:supplierStatement,actionHint:'add'});
-        await commitLocalBatch(purchaseOps);
+        await commitLocalBatch(purchaseOps, true, { telegramPrimaryStore:'purchases' });
         setPurchases(prev => [purchaseInvoice, ...prev.filter(x=>x.id!==purchaseInvoice.id)]);
         setProducts(updatedProducts);setStock(updatedStockList);setStockMovements(prev=>[...newMovements,...prev]);setAccounts(updatedAccounts);
         if(updatedSupplier)setSuppliers(prev=>prev.some(x=>x.id===updatedSupplier.id)?prev.map(x=>x.id===updatedSupplier.id?updatedSupplier:x):[updatedSupplier,...prev]);if(supplierStatement)setPartnerStatements(prev=>[supplierStatement,...prev]);
@@ -1649,7 +1734,7 @@ export const AppProvider = ({ children }) => {
                         }
                     }
                     cleanProduct.fifoBatches = fifo;
-                    await putInStore('stock', { ...(stockRow || {}), productId: product.id, warehouseId, baseQuantity: targetQty, updatedAt: now });
+                    await putInStore('stock', { ...(stockRow || {}), productId: product.id, warehouseId, baseQuantity: targetQty, updatedAt: now }, true, { suppressTelegram:true, telegramPrimaryStore:'products' });
                     await putInStore('stock_movements', {
                         id: `mov-opening-edit-${product.id}-${Date.now()}`,
                         date: now,
@@ -1669,7 +1754,7 @@ export const AppProvider = ({ children }) => {
                         userId: currentUser.id,
                         userName: currentUser.name,
                         notes: `تعديل الكمية الافتتاحية من ${currentQty} إلى ${targetQty} ${baseUnit?.name || product.baseUnitName || 'حبة'}`,
-                    });
+                    }, true, { suppressTelegram:true, telegramPrimaryStore:'products' });
                 }
             }
         }
@@ -1681,7 +1766,7 @@ export const AppProvider = ({ children }) => {
                 { id: `opening-${product.id}-${Date.now()}`, purchaseId: 'opening-stock', warehouseId, receivedAt: now, expiryDate: product.expiryDate || '', unitCost: baseCost, remainingBaseQty: openingBaseQuantity },
             ];
             if (warehouseId) {
-                await putInStore('stock', { productId: product.id, warehouseId, baseQuantity: openingBaseQuantity });
+                await putInStore('stock', { productId: product.id, warehouseId, baseQuantity: openingBaseQuantity }, true, { suppressTelegram:true, telegramPrimaryStore:'products' });
                 // نحفظ الكمية الافتتاحية حسب كل وحدة بدلاً من دمجها كسطر واحد بالوحدة الأساسية.
                 const openingRows = Array.isArray(product.openingUnitBreakdown) && product.openingUnitBreakdown.length
                     ? product.openingUnitBreakdown
@@ -1710,7 +1795,7 @@ export const AppProvider = ({ children }) => {
                         notes: Number(row.conversionToBase) > 1
                             ? `كمية افتتاحية: ${row.quantity} ${row.unitName} = ${rowBase} ${baseUnit?.name || product.baseUnitName || 'حبة'}`
                             : `كمية افتتاحية: ${row.quantity} ${row.unitName || baseUnit?.name || 'حبة'}`,
-                    });
+                    }, true, { suppressTelegram:true, telegramPrimaryStore:'products' });
                 }
             }
         }
@@ -1943,8 +2028,8 @@ export const AppProvider = ({ children }) => {
             showToast('الرصيد في الحساب المصدر غير كافٍ!', 'error');
             return;
         }
-        await putInStore('accounts', normalizeAccountRecord({ ...fromAcc, balance: fromBalance - numericAmount }));
-        await putInStore('accounts', normalizeAccountRecord({ ...toAcc, balance: toBalance + numericAmount }));
+        await putInStore('accounts', normalizeAccountRecord({ ...fromAcc, balance: fromBalance - numericAmount }), true, { suppressTelegram:true, telegramPrimaryStore:'transfers' });
+        await putInStore('accounts', normalizeAccountRecord({ ...toAcc, balance: toBalance + numericAmount }), true, { suppressTelegram:true, telegramPrimaryStore:'transfers' });
         const transferRecord = {
             id: 'trans-' + Date.now(),
             date: new Date().toISOString(),
@@ -1963,6 +2048,7 @@ export const AppProvider = ({ children }) => {
         showToast(`تم تحويل ${amount} ${settings.currencySymbol} بنجاح`, 'success');
     }, [accounts, currentUser, settings.currencySymbol, settings.activeFinancialYearId, reloadData, showToast]);
     const saveExpense = useCallback(async (exp) => {
+        if(exp?.id&&(await getFromStore('expenses',exp.id))?.distributionManaged)throw Error('لا يمكن تعديل مصروف توزيع مرتبط بقيود مباشرة');
         const newExpense = {
             ...exp,
             id: 'exp-' + Date.now(),
@@ -1972,13 +2058,13 @@ export const AppProvider = ({ children }) => {
         await putInStore('expenses', newExpense);
         const acc = accounts.find((a) => a.id === exp.accountId);
         if (acc)
-            await putInStore('accounts', { ...acc, balance: acc.balance - exp.amount });
+            await putInStore('accounts', { ...acc, balance: acc.balance - exp.amount }, true, { suppressTelegram:true, telegramPrimaryStore:'expenses' });
         if (activeShift && acc?.type === 'cash') {
             await putInStore('shifts', {
                 ...activeShift,
                 totalCashExpenses: activeShift.totalCashExpenses + exp.amount,
                 expectedCash: activeShift.expectedCash - exp.amount,
-            });
+            }, true, { suppressTelegram:true, telegramPrimaryStore:'expenses' });
         }
         await reloadData();
         showToast('تم تسجيل المصروف بنجاح', 'success');
@@ -2017,12 +2103,12 @@ export const AppProvider = ({ children }) => {
             await putInStore('accounts', {
                 ...oldAcc,
                 balance: oldAcc.balance + previous.amount - nextExpense.amount,
-            });
+            }, true, { suppressTelegram:true, telegramPrimaryStore:'expenses' });
         }
         else {
             if (oldAcc)
-                await putInStore('accounts', { ...oldAcc, balance: oldAcc.balance + previous.amount });
-            await putInStore('accounts', { ...newAcc, balance: newAcc.balance - nextExpense.amount });
+                await putInStore('accounts', { ...oldAcc, balance: oldAcc.balance + previous.amount }, true, { suppressTelegram:true, telegramPrimaryStore:'expenses' });
+            await putInStore('accounts', { ...newAcc, balance: newAcc.balance - nextExpense.amount }, true, { suppressTelegram:true, telegramPrimaryStore:'expenses' });
         }
         await putInStore('expenses', {
             ...nextExpense,
@@ -2033,19 +2119,20 @@ export const AppProvider = ({ children }) => {
         showToast('تم تعديل المصروف وإعادة احتساب أثره المالي', 'success');
     }, [expenses, accounts, reloadData, showToast]);
     const deleteExpense = useCallback(async (id) => {
+        if((await getFromStore('expenses',id))?.distributionManaged)throw Error('مصروف توزيع مرتبط بقيود؛ استخدم تسوية معتمدة');
         const exp = expenses.find((e) => e.id === id);
         await assertOpenFinancialRecord(exp);
         if (!exp || exp.deletedAt)
             return;
         const acc = accounts.find((a) => a.id === exp.accountId);
         if (acc)
-            await putInStore('accounts', { ...acc, balance: acc.balance + exp.amount });
+            await putInStore('accounts', { ...acc, balance: acc.balance + exp.amount }, true, { suppressTelegram:true, telegramPrimaryStore:'expenses' });
         if (activeShift && acc?.type === 'cash') {
             await putInStore('shifts', {
                 ...activeShift,
                 totalCashExpenses: Math.max(0, activeShift.totalCashExpenses - exp.amount),
                 expectedCash: activeShift.expectedCash + exp.amount,
-            });
+            }, true, { suppressTelegram:true, telegramPrimaryStore:'expenses' });
         }
         await putInStore('audit_logs', { id:`audit-exp-del-${Date.now()}-${Math.random().toString(36).slice(2,7)}`, date:new Date().toISOString(), financialYearId: settings.activeFinancialYearId || 'fy-initial', type:'expense_deleted_reversal', referenceId:exp.id, originalDate:exp.date || exp.createdAt, accountId:exp.accountId, accountName:exp.accountName, amount:finiteNumber(exp.amount,0), category:exp.category, userId:currentUser.id, userName:currentUser.name });
         await putInStore('expenses', { ...exp, deletedAt: new Date().toISOString() });
@@ -2072,7 +2159,7 @@ export const AppProvider = ({ children }) => {
             return;
         const acc = accounts.find((a) => a.id === exp.accountId);
         if (acc)
-            await putInStore('accounts', { ...acc, balance: acc.balance - exp.amount });
+            await putInStore('accounts', { ...acc, balance: acc.balance - exp.amount }, true, { suppressTelegram:true, telegramPrimaryStore:'expenses' });
         await putInStore('expenses', { ...exp, deletedAt: null });
         await reloadData();
         showToast('تم استرجاع المصروف وإعادة تطبيق أثره المالي', 'success');
@@ -2086,7 +2173,7 @@ export const AppProvider = ({ children }) => {
         if (warehouse.isDefault) {
             for (const existing of warehouses) {
                 if (existing.id !== warehouse.id && existing.isDefault) {
-                    await putInStore('warehouses', { ...existing, isDefault: false });
+                    await putInStore('warehouses', { ...existing, isDefault: false }, true, { suppressTelegram:true, telegramPrimaryStore:'warehouses' });
                 }
             }
         }
@@ -2111,7 +2198,7 @@ export const AppProvider = ({ children }) => {
         await deleteFromStore('warehouses', warehouseId);
         const remaining = warehouses.filter((w) => w.id !== warehouseId);
         if (warehouse.isDefault && remaining.length > 0) {
-            await putInStore('warehouses', { ...remaining[0], isDefault: true });
+            await putInStore('warehouses', { ...remaining[0], isDefault: true }, true, { suppressTelegram:true, telegramPrimaryStore:'warehouses' });
         }
         if (settings.activeWarehouseId === warehouseId && remaining.length > 0) {
             const nextSettings = { ...settings, activeWarehouseId: remaining[0].id };
@@ -2155,7 +2242,7 @@ export const AppProvider = ({ children }) => {
             const newBalance = payload.type === 'receipt'
                 ? account.balance + payload.amount
                 : account.balance - payload.amount;
-            await putInStore('accounts', { ...account, balance: newBalance });
+            await putInStore('accounts', { ...account, balance: newBalance }, true, { suppressTelegram:true, telegramPrimaryStore:'vouchers' });
         }
         // 2. Customer or Supplier balance impact
         if (payload.partyType === 'customer' && payload.partyId) {
@@ -2164,7 +2251,7 @@ export const AppProvider = ({ children }) => {
                 const newCustBalance = payload.type === 'receipt'
                     ? cust.balance - payload.amount
                     : cust.balance + payload.amount;
-                await putInStore('customers', { ...cust, balance: newCustBalance });
+                await putInStore('customers', { ...cust, balance: newCustBalance }, true, { suppressTelegram:true, telegramPrimaryStore:'vouchers' });
                 const stmt = {
                     id: 'stmt-' + Date.now(),
                     financialYearId: settings.activeFinancialYearId || 'fy-initial',
@@ -2189,7 +2276,7 @@ export const AppProvider = ({ children }) => {
                 const newSuppBalance = payload.type === 'payment'
                     ? supp.balance - payload.amount
                     : supp.balance + payload.amount;
-                await putInStore('suppliers', { ...supp, balance: newSuppBalance });
+                await putInStore('suppliers', { ...supp, balance: newSuppBalance }, true, { suppressTelegram:true, telegramPrimaryStore:'vouchers' });
                 const stmt = {
                     id: 'stmt-' + Date.now(),
                     financialYearId: settings.activeFinancialYearId || 'fy-initial',
@@ -2213,6 +2300,7 @@ export const AppProvider = ({ children }) => {
         return voucher;
     }, [vouchers, accounts, customers, suppliers, currentUser, reloadData, showToast, settings.activeFinancialYearId]);
     const deleteVoucher = useCallback(async (id) => {
+        if((await getFromStore('vouchers',id))?.distributionManaged)throw Error('سند المندوب يصحح بقيد عكسي معتمد');
         const v = vouchers.find((item) => item.id === id);
         await assertOpenFinancialRecord(v);
         if (!v)
@@ -2222,7 +2310,7 @@ export const AppProvider = ({ children }) => {
             const acc = accounts.find((a) => a.id === v.accountId);
             if (acc) {
                 const revBalance = v.type === 'receipt' ? acc.balance - v.amount : acc.balance + v.amount;
-                await putInStore('accounts', { ...acc, balance: revBalance });
+                await putInStore('accounts', { ...acc, balance: revBalance }, true, { suppressTelegram:true, telegramPrimaryStore:'vouchers' });
             }
         }
         // Reverse customer or supplier
@@ -2230,14 +2318,14 @@ export const AppProvider = ({ children }) => {
             const cust = customers.find((c) => c.id === v.partyId);
             if (cust) {
                 const revBalance = v.type === 'receipt' ? cust.balance + v.amount : cust.balance - v.amount;
-                await putInStore('customers', { ...cust, balance: revBalance });
+                await putInStore('customers', { ...cust, balance: revBalance }, true, { suppressTelegram:true, telegramPrimaryStore:'vouchers' });
             }
         }
         else if (v.partyType === 'supplier' && v.partyId) {
             const supp = suppliers.find((s) => s.id === v.partyId);
             if (supp) {
                 const revBalance = v.type === 'payment' ? supp.balance + v.amount : supp.balance - v.amount;
-                await putInStore('suppliers', { ...supp, balance: revBalance });
+                await putInStore('suppliers', { ...supp, balance: revBalance }, true, { suppressTelegram:true, telegramPrimaryStore:'vouchers' });
             }
         }
         await putInStore('audit_logs', { id:`audit-voucher-del-${Date.now()}-${Math.random().toString(36).slice(2,7)}`, date:new Date().toISOString(), financialYearId: settings.activeFinancialYearId || 'fy-initial', type:'voucher_deleted_reversal', referenceId:v.id, originalDate:v.date || v.createdAt, voucherNumber:v.voucherNumber, partyName:v.partyName, voucherType:v.type, accountId:v.accountId, accountName:v.accountName, amount:finiteNumber(v.amount,0), userId:currentUser.id, userName:currentUser.name });
@@ -2339,7 +2427,7 @@ export const AppProvider = ({ children }) => {
         const shift = ret.shiftId ? (await getAllFromStore('shifts')).find((x) => x.id === ret.shiftId) : null;
         if (shift) {
             const cashRefund = refunds.filter((r) => r.method === 'cash' || currentAccounts.find((a) => a.id === r.accountId)?.type === 'cash').reduce((s, r) => s + finiteNumber(r.amount, 0), 0);
-            if (cashRefund > 0) await putInStore('shifts', { ...shift, totalCashReturns: finiteNumber(shift.totalCashReturns, 0) - cashRefund, expectedCash: finiteNumber(shift.expectedCash, 0) + cashRefund });
+            if (cashRefund > 0) await putInStore('shifts', { ...shift, totalCashReturns: finiteNumber(shift.totalCashReturns, 0) - cashRefund, expectedCash: finiteNumber(shift.expectedCash, 0) + cashRefund }, true, { suppressTelegram:true, telegramPrimaryStore:'invoices' });
         }
         await putInStore('audit_logs', { id: `audit-${Date.now()}-${Math.random().toString(36).slice(2,7)}`, date: new Date().toISOString(), financialYearId: settings.activeFinancialYearId || 'fy-initial', type: 'return_deleted_reversal', referenceId: ret.id, originalReferenceId: ret.originalInvoiceId, originalDate: ret.date, referenceNumber: ret.invoiceNumber, amount: ret.grandTotal, debtReversed, refundsReversed: refunds, userId: currentUser.id, userName: currentUser.name });
         if (deleteRecord) await deleteFromStore('invoices', ret.id);
@@ -2349,6 +2437,7 @@ export const AppProvider = ({ children }) => {
     // Sales invoice deletion with a true reverse entry for inventory, customer debt, payment accounts, shift totals and FIFO.
     const deleteInvoice = useCallback(async (id, options = {}) => {
         const inv = await getFromStore('invoices', id);
+        if(inv?.distributionManaged)throw Error('فاتورة مندوب: استخدم مرتجعاً أو تسوية بصلاحية المدير');
         await assertOpenFinancialRecord(inv);
         if (!inv) return false;
         if (inv.type === 'return') {
@@ -2399,7 +2488,7 @@ export const AppProvider = ({ children }) => {
         if (shift) {
             const cashPaid = (inv.payments || []).filter((p) => p.method === 'cash' || currentAccounts.find((a) => a.id === p.accountId)?.type === 'cash').reduce((s, p) => s + finiteNumber(p.amount, 0), 0) - Math.max(0, finiteNumber(inv.changeAmount, 0));
             const otherPaid = (inv.payments || []).filter((p) => !(p.method === 'cash' || currentAccounts.find((a) => a.id === p.accountId)?.type === 'cash')).reduce((s, p) => s + finiteNumber(p.amount, 0), 0);
-            await putInStore('shifts', { ...shift, totalCashSales: finiteNumber(shift.totalCashSales, 0) - Math.max(0, cashPaid), totalOtherSales: finiteNumber(shift.totalOtherSales, 0) - otherPaid, expectedCash: finiteNumber(shift.expectedCash, 0) - Math.max(0, cashPaid) });
+            await putInStore('shifts', { ...shift, totalCashSales: finiteNumber(shift.totalCashSales, 0) - Math.max(0, cashPaid), totalOtherSales: finiteNumber(shift.totalOtherSales, 0) - otherPaid, expectedCash: finiteNumber(shift.expectedCash, 0) - Math.max(0, cashPaid) }, true, { suppressTelegram:true, telegramPrimaryStore:'invoices' });
         }
         await putInStore('audit_logs', { id: `audit-${Date.now()}-${Math.random().toString(36).slice(2,7)}`, date: new Date().toISOString(), financialYearId: settings.activeFinancialYearId || 'fy-initial', type: 'sale_deleted_reversal', referenceId: inv.id, referenceNumber: inv.invoiceNumber, originalDate: inv.date, debtReversed: debtAmount, paymentsReversed: inv.payments || [], userId: currentUser.id, userName: currentUser.name });
         await deleteFromStore('invoices', id);
@@ -2478,17 +2567,18 @@ export const AppProvider = ({ children }) => {
                 lastAddedAt: Date.now(),
             };
         });
+        setEditingSaleInvoiceId(inv.id);
+        setActivePriceGroupId(inv.priceGroupId || '');
         setCart(restoredCart);
         setInvoiceAdditionalCharges(Number(inv.additionalCharges)||0);
         const cust = inv.customerId === CASH_CUSTOMER.id ? CASH_CUSTOMER : (customers.find((c) => c.id === inv.customerId) || CASH_CUSTOMER);
         setSelectedCustomer(cust);
         setInvoiceDiscountType(inv.invoiceDiscountType || 'fixed');
         setInvoiceDiscountValue(finiteNumber(inv.invoiceDiscountValue, 0));
-        setEditingSaleInvoiceId(inv.id);
         setActiveTab('pos');
         showToast(`تم إرجاع الفاتورة [${inv.invoiceNumber}] للسلة للتعديل. لن يتغير الحساب إلا عند الحفظ.`, 'info');
         return true;
-    }, [invoices, products, customers, getProductStock, setActiveTab, showToast]);
+    }, [invoices, products, customers, getProductStock, setActiveTab, setActivePriceGroupId, showToast]);
 
     const updateSaleInvoice = useCallback(async (id, payload = {}) => {
         const old = await getFromStore('invoices', id);
@@ -2660,7 +2750,7 @@ export const AppProvider = ({ children }) => {
         } finally { setIsSyncing(false); }
     }, [showToast, reloadStores]);
     const refreshCurrentPage=useCallback(async(tab)=>{
-      const map={pos:['products','stock','categories'],products:['products','categories','stock'],sales:['invoices'],purchases:['purchases'],customers:['customers','partner_statements'],suppliers:['suppliers','partner_statements'],accounts:['accounts','transfers','shifts'],expenses:['expenses'],vouchers:['vouchers'],inventory:['stock','stock_movements'],settings:['settings'],dashboard:['invoices','accounts','customers','stock'],reports:['invoices','purchases','expenses','vouchers']};
+      const map={pos:['products','stock','categories'],products:['products','categories','stock'],sales:['invoices'],purchases:['purchases'],customers:['customers','partner_statements'],price_groups:['settings','customers','products'],suppliers:['suppliers','partner_statements'],accounts:['accounts','transfers','shifts'],expenses:['expenses'],vouchers:['vouchers'],inventory:['stock','stock_movements'],settings:['settings'],dashboard:['invoices','accounts','customers','stock'],reports:['invoices','purchases','expenses','vouchers']};
       const names=map[tab]||['settings'];
       if(navigator.onLine!==false)await Promise.all(names.map(store=>queryStorePage(store,{page:1,pageSize:50,deletedMode:'all',forceRefresh:true})));
       for(const name of names)fullHistoryLoadedRef.current.delete(name);
@@ -2686,6 +2776,7 @@ export const AppProvider = ({ children }) => {
         showToast('تمت استعادة النسخة الاحتياطية بنجاح', 'success');
     }, [clearCart, reloadData, showToast]);
     const value = {
+        reloadData,
         isLoaded,
         startupProgress,
         isCloudReady,
@@ -2744,6 +2835,11 @@ export const AppProvider = ({ children }) => {
         setInvoiceDiscountValue,
         selectedCustomer,
         setSelectedCustomer,
+        priceGroups,
+        activePriceGroup,
+        activePriceGroupId: activePriceGroupIdState,
+        setActivePriceGroupId,
+        getEffectiveUnitPrice,
         addToCart,
         updateCartItemUnit,
         invoiceAdditionalCharges, setInvoiceAdditionalCharges,
@@ -2824,6 +2920,24 @@ export const AppProvider = ({ children }) => {
         handleExportBackup,
         handleImportBackup,
     };
+    if(currentUser.roleCode==='sales_rep'&&!currentUser.isCompanyManager){
+        const cfg=employees.find(e=>e.id===currentUser.id)?.distribution||currentUser.distribution||{};
+        value.products=activeTab==='pos'?products.filter(p=>getProductStock(p.id,cfg.warehouseId)>0):products;
+        value.customers=customers.filter(c=>(cfg.customerIds||[]).includes(c.id));
+        value.warehouses=activeTab==='pos'?warehouses.filter(w=>w.id===cfg.warehouseId):warehouses;
+        value.accounts=accounts.filter(a=>activeTab!=='pos'||a.id===(cfg.cashAccountId||'cash-'+currentUser.id)||a.repId===currentUser.id||cfg.collectionAccountIds?.includes(a.id)).map(a=>a.id===(cfg.cashAccountId||'cash-'+currentUser.id)?{...a,isDefault:true}:{...a,isDefault:false,balance:0});
+        value.employees=employees.filter(e=>e.id===currentUser.id);
+        value.invoices=invoices.filter(i=>i.repId===currentUser.id);
+        value.vouchers=vouchers.filter(i=>i.repId===currentUser.id);
+        value.stock=stock.filter(i=>i.warehouseId===cfg.warehouseId);
+        value.purchases=[];value.suppliers=[];value.auditLogs=[];
+        value.heldInvoices=heldInvoices.filter(i=>i.repId===currentUser.id);
+        value.setActiveEmployee=()=>{};
+        const blockedAction=()=>{showToast('استخدم العمليات المخصصة من قسم مناديب التوزيع','error');return false;};
+        for(const name of ['saveEmployee','deleteEmployee','saveProduct','softDeleteProduct','deleteProduct','saveSettings','updateSettings','saveExpense','deleteExpense','createVoucher','deleteVoucher','deleteInvoice','deletePurchase','transferStock','transferStockBatch','transferBetweenAccounts','handleResetData','handleImportBackup','handleExportBackup','openNewFinancialYear','saveCustomer','deleteCustomer','saveSupplier','deleteSupplier']) if(value[name])value[name]=blockedAction;
+        value.priceGroups=priceGroups.filter(g=>g.id===cfg.priceGroupId);
+        value.setActivePriceGroupId=()=>{};
+    }
     return _jsx(AppContext.Provider, { value: value, children: children });
 };
 export const useApp = () => {

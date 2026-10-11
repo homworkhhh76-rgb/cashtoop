@@ -66,6 +66,15 @@ async function ensureSchema(){
 }
 
 async function requireCompany(token,force=false){
+  // When دفتر كاش توب is launched from the main Cash Top activation, the
+  // authoritative company/session is OscarActivation itself. Do not look for a
+  // second legacy ct3_companies licence row in the tenant database; that old
+  // check was sending valid users straight back to index.html.
+  if(String(token||'')==='oscar-runtime'){
+    const c=oscarCompany();
+    companyCache.set(c.id,{at:Date.now(),company:c});
+    return c;
+  }
   const p=await verifyToken(token);if(p.type!=='company'||!p.cid)throw err(401,'تسجيل الدخول مطلوب');
   const cached=companyCache.get(p.cid);if(!force&&cached&&Date.now()-cached.at<COMPANY_CACHE_TTL)return cached.company;
   const [r]=await pipeline([stmt(`SELECT id,name,status,expires_at,updated_at FROM ct3_companies WHERE id=? LIMIT 1`,[p.cid])]);const c=rowsOf(r)[0];

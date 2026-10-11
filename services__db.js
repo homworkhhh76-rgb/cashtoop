@@ -1,6 +1,6 @@
-import { calculateUnitConversions } from './utils__unitTree.js?v=7.9.4.139-ledger-print';
+import { calculateUnitConversions } from './utils__unitTree.js?v=7.9.4.154-distribution-menu';
 const DB_BASE_NAME = 'Oscar_Accounting_POS_DB';
-const DB_VERSION = 9;
+const DB_VERSION = 10;
 export const getTenantId = () => String(window.OscarActivation?.readRuntime?.()?.companyId || 'local').trim() || 'local';
 const dbNameForTenant = (tenantId = getTenantId()) => `${DB_BASE_NAME}__${encodeURIComponent(String(tenantId || 'local').trim() || 'local')}`;
 let cachedTenant = '';
@@ -108,7 +108,7 @@ function openDB() {
                 request.onupgradeneeded = (event) => {
                     const db = event.target.result;
                     const stores = [
-                        'products','categories','warehouses','stock','stock_movements','invoices','purchases','customers','suppliers','partner_statements','accounts','transfers','expenses','shifts','audit_logs','held_invoices','sync_queue','settings','vouchers','employees','restaurant_tables','restaurant_sections','restaurant_orders','kitchen_sections','table_reservations','recipes','waste_records',
+                        'products','categories','warehouses','stock','stock_movements','invoices','purchases','customers','suppliers','partner_statements','accounts','transfers','expenses','shifts','audit_logs','held_invoices','sync_queue','settings','vouchers','employees','restaurant_tables','restaurant_sections','restaurant_orders','kitchen_sections','table_reservations','recipes','waste_records','distribution_sessions','distribution_docs','distribution_routes','distribution_commissions','distribution_journal','distribution_shifts',
                     ];
                     stores.forEach((storeName) => {
                         if (!db.objectStoreNames.contains(storeName)) {
@@ -120,6 +120,12 @@ function openDB() {
                     // v8: real database-side pagination. These indexes let record screens walk
                     // only the requested page instead of materializing whole historical tables.
                     const indexSpecs = {
+distribution_docs: [['date','date'],['repId','repId'],['status','status'],['kind','kind'],['repDate',['repId','date']],['shiftId','shiftId']],
+distribution_commissions: [['date','date'],['repId','repId'],['status','status'],['kind','kind'],['repDate',['repId','date']],['shiftId','shiftId']],
+distribution_journal: [['date','date'],['repId','repId'],['status','status'],['kind','kind'],['repDate',['repId','date']],['shiftId','shiftId']],
+distribution_shifts: [['date','date'],['repId','repId'],['status','status'],['kind','kind'],['repDate',['repId','date']],['shiftId','shiftId']],
+distribution_routes: [['date','date'],['repId','repId'],['status','status'],['kind','kind'],['repDate',['repId','date']],['shiftId','shiftId']],
+
                         invoices: [['date','date'],['createdAt','createdAt'],['financialYearId','financialYearId'],['type','type'],['paymentType','paymentType'],['customerId','customerId']],
                         purchases: [['date','date'],['createdAt','createdAt'],['financialYearId','financialYearId'],['supplierId','supplierId']],
                         stock_movements: [['date','date'],['financialYearId','financialYearId'],['productId','productId'],['warehouseId','warehouseId'],['productWarehouseDate',['productId','warehouseId','date']]],
@@ -261,7 +267,10 @@ export async function commitLocalBatch(operations = [], notifySync = true, optio
                         window.dispatchEvent(new CustomEvent('oscar:db-mutation', { detail: {
                             action: op.actionHint || (op.type === 'delete' ? 'delete' : 'update'),
                             storeName: op.storeName, value: op.type === 'delete' ? (op.before || null) : op.value,
-                            before: op.before || null, key: op.key, localBatch:true, at: new Date().toISOString()
+                            before: op.before || null, key: op.key, localBatch:true,
+                            suppressTelegram: !!options.telegramPrimaryStore && op.storeName !== options.telegramPrimaryStore,
+                            telegramPrimaryStore: options.telegramPrimaryStore || '',
+                            at: new Date().toISOString()
                         } }));
                     } catch {}
                 }
@@ -308,7 +317,7 @@ const PAGE_SORT_FIELD = {
     vouchers: 'date', transfers: 'date', audit_logs: 'date', partner_statements: 'date',
     held_invoices: 'date', customers: 'createdAt', suppliers: 'createdAt',
 };
-const PAGED_HISTORY_STORES = new Set(['invoices','purchases','stock_movements','expenses','vouchers','transfers','audit_logs','partner_statements','held_invoices']);
+const PAGED_HISTORY_STORES = new Set(['distribution_docs','distribution_routes','distribution_commissions','distribution_journal','distribution_shifts','invoices','purchases','stock_movements','expenses','vouchers','transfers','audit_logs','partner_statements','held_invoices']);
 export const isPagedHistoryStore = (storeName) => PAGED_HISTORY_STORES.has(String(storeName || ''));
 
 function normalizedComparable(value) {
@@ -322,7 +331,7 @@ function recordMatchesPageQuery(row, options = {}) {
     const legacyFinancialYearId = options.legacyFinancialYearId || '';
     for (const [field, wanted] of Object.entries(filters)) {
         if (wanted === undefined || wanted === '' || wanted === 'all') continue;
-        let actual = row?.[field];
+        let actual = field==='actorId' ? (row.cashierId||row.userId||row.employeeId||row.createdBy||'') : row?.[field];
         if (field === 'financialYearId' && (actual === undefined || actual === null || actual === '')) actual = legacyFinancialYearId;
         if (Array.isArray(wanted)) {
             if (!wanted.map(normalizedComparable).includes(normalizedComparable(actual))) return false;
@@ -736,7 +745,7 @@ export async function getFromStore(storeName, key) {
         request.onerror = () => reject(request.error);
     });
 }
-export async function putInStore(storeName, value, notifySync = true) {
+export async function putInStore(storeName, value, notifySync = true, options = {}) {
     if(notifySync&&FISCAL_LOCKED_STORES.has(storeName))await assertOpenFinancialRecord(await getFromStore(storeName,recordKey(storeName,value))||value);
     const db = await openDB();
     const key = recordKey(storeName, value);
@@ -770,7 +779,10 @@ export async function putInStore(storeName, value, notifySync = true) {
                 broadcastStoreUpdated(storeName);
                 try {
                     window.dispatchEvent(new CustomEvent('oscar:db-mutation', { detail: {
-                        action, storeName, value: storedValue, before: beforeValue, at: new Date().toISOString()
+                        action, storeName, value: storedValue, before: beforeValue,
+                        suppressTelegram: !!options.suppressTelegram,
+                        telegramPrimaryStore: options.telegramPrimaryStore || '',
+                        at: new Date().toISOString()
                     } }));
                 } catch {}
             }, 0);
@@ -779,7 +791,7 @@ export async function putInStore(storeName, value, notifySync = true) {
         tx.onabort = () => reject(tx.error || new Error(`تعذر حفظ ${storeName}`));
     });
 }
-export async function deleteFromStore(storeName, key, notifySync = true) {
+export async function deleteFromStore(storeName, key, notifySync = true, options = {}) {
     if(notifySync&&FISCAL_LOCKED_STORES.has(storeName))await assertOpenFinancialRecord(await getFromStore(storeName,key));
     const db = await openDB();
     let beforeValue = null;
@@ -799,7 +811,10 @@ export async function deleteFromStore(storeName, key, notifySync = true) {
                 broadcastStoreUpdated(storeName);
                 try {
                     window.dispatchEvent(new CustomEvent('oscar:db-mutation', { detail: {
-                        action: 'delete', storeName, value: beforeValue, before: beforeValue, key, at: new Date().toISOString()
+                        action: 'delete', storeName, value: beforeValue, before: beforeValue, key,
+                        suppressTelegram: !!options.suppressTelegram,
+                        telegramPrimaryStore: options.telegramPrimaryStore || '',
+                        at: new Date().toISOString()
                     } }));
                 } catch {}
             }, 0);
@@ -826,7 +841,7 @@ export async function clearStore(storeName, notifySync = true) {
     });
 }
 // Bulk put items
-export async function bulkPut(storeName, items, notifySync = true) {
+export async function bulkPut(storeName, items, notifySync = true, options = {}) {
     if(notifySync&&FISCAL_LOCKED_STORES.has(storeName))for(const item of items||[])await assertOpenFinancialRecord(await getFromStore(storeName,recordKey(storeName,item))||item);
     const rows = Array.isArray(items) ? items.filter(Boolean) : [];
     if (!rows.length) return;
@@ -853,7 +868,7 @@ export async function bulkPut(storeName, items, notifySync = true) {
                 changedItems.forEach(item => scheduleCloudCapture(storeName, item));
                 broadcastStoreUpdated(storeName);
                 try {
-                    if (changedItems.length <= 25) changedItems.forEach(item => window.dispatchEvent(new CustomEvent('oscar:db-mutation', { detail: { action:'update', storeName, value:item, before:null, bulk:true, at:new Date().toISOString() } })));
+                    if (changedItems.length <= 25) changedItems.forEach(item => window.dispatchEvent(new CustomEvent('oscar:db-mutation', { detail: { action:'update', storeName, value:item, before:null, bulk:true, suppressTelegram:!!options.suppressTelegram, telegramPrimaryStore:options.telegramPrimaryStore||'', at:new Date().toISOString() } })));
                 } catch {}
             }, 0);
         };
@@ -897,6 +912,8 @@ export const DEFAULT_SETTINGS = {
     telegramChatIds: '',
     p2pPaymentChatId: '',
     p2pPaymentMethods: [],
+    priceGroups: [],
+    priceGroupsUpdatedAt: '',
     p2pMethodsManualOnlyV53Initialized: true,
     telegramDailyReportEnabled: false,
     telegramDailyBackupEnabled: true,
@@ -1789,6 +1806,7 @@ export async function resetDatabase(withDemo = false) {
         'table_reservations',
         'recipes',
         'waste_records',
+        'distribution_sessions','distribution_docs','distribution_routes','distribution_commissions','distribution_journal','distribution_shifts',
     ];
     for (const store of stores) {
         await clearStore(store);
@@ -1840,6 +1858,7 @@ export async function exportDatabaseBackup() {
         'table_reservations',
         'recipes',
         'waste_records',
+        'distribution_sessions','distribution_docs','distribution_routes','distribution_commissions','distribution_journal','distribution_shifts',
     ];
     for (const store of stores) {
         data[store] = await getAllFromStore(store);
@@ -1875,9 +1894,37 @@ export const db = {
 
 export async function assertOpenFinancialRecord(row){
  if(!row)return;
+ if(row.distributionShiftId || (row.repId && row.shiftId)){const shift=await getFromStore('distribution_shifts',row.distributionShiftId||row.shiftId);if(shift?.status==='closed')throw Error('وردية المندوب مغلقة؛ استخدم حركة تصحيح جديدة');}
  const config=await getFromStore('settings','store_config')||{};
  const years=config.financialYears||[];const yearId=row.financialYearId||years[0]?.id||config.activeFinancialYearId;
  if(row.financialYearArchivedAt||years.some(y=>y.id===yearId&&y.status==='closed'))throw Error('المجموعة المالية مؤرشفة: السجل للقراءة فقط');
 }
 
-const FISCAL_LOCKED_STORES=new Set(['invoices','purchases','vouchers','expenses','stock_movements','transfers','audit_logs','partner_statements','shifts','held_invoices','waste_records','restaurant_orders']);
+const FISCAL_LOCKED_STORES=new Set(['distribution_docs','distribution_journal','distribution_commissions','distribution_shifts','invoices','purchases','vouchers','expenses','stock_movements','transfers','audit_logs','partner_statements','shifts','held_invoices','waste_records','restaurant_orders']);
+
+// Durable distribution unit of work. Compare read snapshots inside the SAME IDB
+// transaction as all writes and its outbox. A tab race aborts without partial effects.
+export async function commitDistributionBatch(operations, checks = [], batchId = crypto.randomUUID()) {
+    const tenant = getTenantId();
+    for (const op of operations) if (FISCAL_LOCKED_STORES.has(op.storeName)) await assertOpenFinancialRecord(op.before || op.value);
+    const db = await openDB();
+    if (tenant !== getTenantId()) throw Error('تغيرت الشركة؛ أعد فتح العملية');
+    const stamp = new Date().toISOString();
+    const ops = operations.map(op => ({...op, value: {...op.value, companyId: tenant, updatedAt: stamp}}));
+    const queueId = 'distribution_batch\u0001' + batchId;
+    const row = {id:queueId,__oscarCloudOp:true,store:'distribution_batch',key:batchId,rev:Date.now()*1000,deviceId:'distribution',timestamp:Date.now(),attempts:0,value:{id:batchId,companyId:tenant,operations:ops,checks}};
+    await new Promise((resolve,reject)=>{
+        const stores=[...new Set(['sync_queue',...ops.map(x=>x.storeName),...checks.map(x=>x.storeName)])];
+        const tx=db.transaction(stores,'readwrite'); let fault=null;
+        const fail=()=>{fault=Error('تغير أحد الأرصدة أثناء الحفظ؛ أعد المحاولة');tx.abort()};
+        const guards=[...checks,...ops.filter(x=>Object.prototype.hasOwnProperty.call(x,'before')).map(x=>({storeName:x.storeName,key:recordKey(x.storeName,x.value),before:x.before}))];
+        let pending=guards.length;
+        const write=()=>{for(const op of ops)tx.objectStore(op.storeName).put(op.value);tx.objectStore('sync_queue').put(row)};
+        if(!pending)write();
+        for(const check of guards){const req=tx.objectStore(check.storeName).get(check.key);req.onsuccess=()=>{if(!sameRecord(req.result||null,check.before||null))return fail();if(--pending===0)write()}};
+        tx.oncomplete=resolve;tx.onerror=()=>reject(fault||tx.error);tx.onabort=()=>reject(fault||tx.error||Error('لم تحفظ العملية'));
+    });
+    window.OscarCloudSync?.adoptDistributionBatch?.(row);
+    for(const op of ops){adjustCachedQueryMetadata(op.storeName,op.before||null,op.value,op.before?'update':'add');broadcastStoreUpdated(op.storeName);window.dispatchEvent(new CustomEvent('oscar:db-mutation',{detail:{storeName:op.storeName,value:op.value,before:op.before,action:op.before?'update':'add',localBatch:true,suppressTelegram:true}}))}
+    return {id:batchId,committed:ops.length};
+}

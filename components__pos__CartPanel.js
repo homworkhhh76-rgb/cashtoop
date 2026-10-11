@@ -1,9 +1,9 @@
-import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
-import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.139-ledger-print';
+import {t} from './services__i18n.js?v=7.9.4.154-distribution-menu';
+import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.154-distribution-menu';
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { useApp } from './context__AppContext.js?v=7.9.4.139-ledger-print';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.139-ledger-print';
+import { useApp } from './context__AppContext.js?v=7.9.4.154-distribution-menu';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.154-distribution-menu';
 import { Trash2, Plus, Minus, PauseCircle, CreditCard, User, UserPlus, Tag, ChevronDown, Clock, X } from 'lucide-react';
 
 const h = React.createElement;
@@ -33,7 +33,7 @@ const EditablePrice = ({ value, onCommit, currency, scaleMode=false }) => {
 
 const CartPanelImpl = ({ onOpenPayment }) => {
   const {
-    cart, customers, selectedCustomer, setSelectedCustomer, saveCustomer,
+    cart, customers, selectedCustomer, setSelectedCustomer, saveCustomer, getEffectiveUnitPrice, products,
     updateCartItemUnit, updateCartItemQuantity, updateCartItemPrice, updateCartItemScaleAmount,
     removeFromCart, clearCart, holdCurrentInvoice, heldInvoices, setShowHoldInvoicesModal,
     settings, invoiceDiscountType, setInvoiceDiscountType, invoiceDiscountValue, setInvoiceDiscountValue, invoiceAdditionalCharges,
@@ -162,7 +162,7 @@ const CartPanelImpl = ({ onOpenPayment }) => {
   const activeMenuItem = activeUnitDropdown ? cart.find((i)=>`${i.productId}-${i.unitId}`===activeUnitDropdown) : null;
   const unitPortal = activeUnitDropdown&&unitMenuPos&&activeMenuItem&&typeof document!=='undefined' ? createPortal(
     h('div',{'data-cart-unit-menu':activeUnitDropdown,onPointerDown:(e)=>e.stopPropagation(),style:{position:'fixed',top:`${unitMenuPos.top}px`,left:`${unitMenuPos.left}px`,width:`${unitMenuPos.width}px`,zIndex:2147483000},className:'rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 shadow-2xl max-h-[240px] overflow-y-auto'},
-      ...(activeMenuItem.availableUnits||[]).map((u)=>h('button',{key:u.id,type:'button',onClick:()=>{setActiveUnitDropdown(null);setUnitMenuPos(null);updateCartItemUnit(activeMenuItem.productId,activeMenuItem.unitId,u.id);},className:`w-full text-right px-3 py-2 text-xs rounded-lg flex items-center justify-between gap-3 ${u.id===activeMenuItem.unitId?'bg-violet-600 text-white font-bold':'text-slate-700 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800'}`},h('span',{className:'truncate'},u.name),h('span',{className:'text-[9px] opacity-80 font-mono shrink-0'},`${u.salePrice} ${settings.currencySymbol}`)))
+      ...(activeMenuItem.availableUnits||[]).map((u)=>{const product=products.find(p=>p.id===activeMenuItem.productId);const price=product?getEffectiveUnitPrice(product,u):u.salePrice;return h('button',{key:u.id,type:'button',onClick:()=>{setActiveUnitDropdown(null);setUnitMenuPos(null);updateCartItemUnit(activeMenuItem.productId,activeMenuItem.unitId,u.id);},className:`w-full text-right px-3 py-2 text-xs rounded-lg flex items-center justify-between gap-3 ${u.id===activeMenuItem.unitId?'bg-violet-600 text-white font-bold':'text-slate-700 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800'}`},h('span',{className:'truncate'},u.name),h('span',{className:'text-[9px] opacity-80 font-mono shrink-0'},`${price} ${settings.currencySymbol}`));})
     ),document.body) : null;
   const customerPortal = showQuickCustomer&&typeof document!=='undefined' ? createPortal(
     h(ModalLayer, { className: 'fixed inset-0 p-4 flex items-center justify-center',style:{zIndex:2147483500,background:'rgba(15,23,42,.55)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)'}, onPointerDown:(e)=>{if(e.target===e.currentTarget)setShowQuickCustomer(false);} },

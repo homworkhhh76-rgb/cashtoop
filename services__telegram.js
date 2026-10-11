@@ -1,5 +1,5 @@
-import { getAllFromStore, getFromStore, putInStore } from './services__db.js?v=7.9.4.139-ledger-print';
-import { renderInvoiceCanvas, renderVoucherCanvas, renderTableCanvas } from './utils__canvasRenderer.js?v=7.9.4.139-ledger-print';
+import { getAllFromStore, getFromStore, putInStore } from './services__db.js?v=7.9.4.154-distribution-menu';
+import { renderInvoiceCanvas, renderVoucherCanvas, renderTableCanvas } from './utils__canvasRenderer.js?v=7.9.4.154-distribution-menu';
 
 // Telegram integration for Cash Top 3.
 // The owner explicitly requested embedding this token in the app build.
@@ -949,14 +949,16 @@ function formatMutationMessage(detail, settings) {
 
 async function notifyTelegramMutation(detail) {
   try {
-    if (!detail?.storeName || detail?.bulk) return { ok:false, skipped:true };
-    if (['settings','sync_queue','stock','partner_statements'].includes(detail.storeName)) return { ok:false, skipped:true };
+    if (!detail?.storeName || detail?.bulk || detail?.suppressTelegram) return { ok:false, skipped:true };
+    if (['settings','sync_queue','stock','partner_statements','audit_logs'].includes(detail.storeName)) return { ok:false, skipped:true };
     const row = detail?.value || detail?.before || {};
     const invoiceRule = invoiceMutationRule(row, detail.storeName);
     const rule = invoiceRule || TELEGRAM_MUTATION_RULES[detail.storeName];
     if (!rule) return { ok:false, skipped:true };
-    // New invoices use the dedicated detailed formatter called from the save flow.
-    if (detail.action === 'add' && (detail.storeName === 'invoices' || detail.storeName === 'purchases')) return { ok:false, skipped:true };
+    // Sales / purchase / return documents always use the dedicated detailed notifier
+    // from their save flow. Skipping the generic mutation path prevents duplicate messages
+    // and prevents side effects from looking like separate user actions.
+    if (detail.storeName === 'invoices' || detail.storeName === 'purchases') return { ok:false, skipped:true };
     const settings = await getStoreSettings();
     if (settings.telegramEnabled === false || settings[rule.setting] === false) return { ok:false, skipped:true };
     const text = formatMutationMessage(detail, settings);

@@ -1,7 +1,7 @@
-import { TELEGRAM_BOT_TOKEN, normalizeTelegramRecipients, sendTelegramTextToRecipients, sendTelegramPhotoBlobToRecipients, sendTelegramDocumentBlobToRecipients, buildFullTelegramReportText } from './services__telegram.js?v=7.9.4.139-ledger-print';
-import { renderExecutiveReportCanvas, renderTablePages } from './utils__canvasRenderer.js?v=7.9.4.139-ledger-print';
-import { canvasesToPDFBlob } from './utils__pdfExport.js?v=7.9.4.139-ledger-print';
-import { canvasToImageBlob } from './utils__imageExport.js?v=7.9.4.139-ledger-print';
+import { TELEGRAM_BOT_TOKEN, normalizeTelegramRecipients, sendTelegramTextToRecipients, sendTelegramPhotoBlobToRecipients, sendTelegramDocumentBlobToRecipients, buildFullTelegramReportText } from './services__telegram.js?v=7.9.4.154-distribution-menu';
+import { renderExecutiveReportCanvas, renderTablePages } from './utils__canvasRenderer.js?v=7.9.4.154-distribution-menu';
+import { canvasesToPDFBlob } from './utils__pdfExport.js?v=7.9.4.154-distribution-menu';
+import { canvasToImageBlob } from './utils__imageExport.js?v=7.9.4.154-distribution-menu';
 
 const num=v=>{const n=Number(v);return Number.isFinite(n)?n:0;};
 const money=v=>num(v).toFixed(2);

@@ -1,12 +1,13 @@
-import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
-import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.139-ledger-print';
+import {AuditFilters,auditQuery,auditMatches,actorOf} from './components__common__AuditFilters.js?v=7.9.4.154-distribution-menu';
+import {t} from './services__i18n.js?v=7.9.4.154-distribution-menu';
+import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.154-distribution-menu';
 import React, { useEffect, useRef, useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.139-ledger-print';
-import { Pagination, useDatabasePagination } from './components__common__Pagination.js?v=7.9.4.139-ledger-print';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.139-ledger-print';
-import { getBrandLogoDataUrl, getBrandLogoDisplayUrl } from './brand__logo.js?v=7.9.4.139-ledger-print';
-import { printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.139-ledger-print';
-import { downloadProfessionalPurchaseInvoicePDF, downloadProfessionalPurchaseInvoiceImage, downloadProfessionalTableExcel } from './utils__professionalExport.js?v=7.9.4.139-ledger-print';
+import { useApp } from './context__AppContext.js?v=7.9.4.154-distribution-menu';
+import { Pagination, useDatabasePagination } from './components__common__Pagination.js?v=7.9.4.154-distribution-menu';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.154-distribution-menu';
+import { getBrandLogoDataUrl, getBrandLogoDisplayUrl } from './brand__logo.js?v=7.9.4.154-distribution-menu';
+import { printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.154-distribution-menu';
+import { downloadProfessionalPurchaseInvoicePDF, downloadProfessionalPurchaseInvoiceImage, downloadProfessionalTableExcel } from './utils__professionalExport.js?v=7.9.4.154-distribution-menu';
 import { Plus, Trash2, Building2, Eye, X, Pencil, Image as ImageIcon, FileDown, FileSpreadsheet, Printer, AlertTriangle, ReceiptText } from 'lucide-react';
 
 const h = React.createElement;
@@ -28,6 +29,7 @@ const safeDate = (value) => {
 };
 
 export const PurchasesView = () => {
+  const [audit,setAudit]=useState({});
   const app = useApp();
   const products = Array.isArray(app.products) ? app.products.filter(Boolean) : [];
   const suppliers = Array.isArray(app.suppliers) ? app.suppliers.filter(Boolean) : [];
@@ -218,14 +220,15 @@ export const PurchasesView = () => {
   const whOpts = warehouses.map((w) => ({ id: w.id, label: w.name || 'مخزن', subLabel: w.code || '' }));
   const accountOpts = accounts.map((a) => ({ id: a.id, label: a.name || 'حساب', subLabel: `الرصيد: ${money(a.balance)} ${settings.currencySymbol || ''}` }));
   const purchaseQueryOptions = {
-    filters: { financialYearId: financialYearFilter },
+    ...auditQuery(audit),
+    filters: { actorId:audit.actorId||'all', financialYearId: financialYearFilter },
     legacyFinancialYearId,
     sortField: 'date',
     sortDirection: 'desc',
     deletedMode: 'exclude',
     pageSize: 50,
   };
-  const purchasesPager = useDatabasePagination('purchases', purchaseQueryOptions, financialYearFilter);
+  const purchasesPager = useDatabasePagination('purchases', purchaseQueryOptions, financialYearFilter+JSON.stringify(audit));
   const sortedPurchases = purchasesPager.pageItems;
   const statementTotals = statementRows.reduce((acc,row)=>{ acc.total += num(row.grandTotal); acc.paid += num(row.paidAmount); acc.debt += num(row.remainingAmount); return acc; },{total:0,paid:0,debt:0});
 
@@ -237,8 +240,8 @@ export const PurchasesView = () => {
     const to = new Date(`${statementTo || todayIso}T23:59:59.999`).toISOString();
     queryAllStoreRecords('purchases', {
       ...purchaseQueryOptions,
-      dateFrom: from,
-      dateTo: to,
+      dateFrom: audit.from?auditQuery(audit).dateFrom:from,
+      dateTo: audit.to?auditQuery(audit).dateTo:to,
       pageSize: 200,
     }).then((rows) => {
       if (!cancelled) setStatementRows(Array.isArray(rows) ? rows : []);
@@ -250,7 +253,7 @@ export const PurchasesView = () => {
       }
     }).finally(() => { if (!cancelled) setStatementLoading(false); });
     return () => { cancelled = true; };
-  }, [showPurchaseStatement, statementFrom, statementTo, financialYearFilter, legacyFinancialYearId]);
+  }, [showPurchaseStatement, statementFrom, statementTo, financialYearFilter, legacyFinancialYearId,JSON.stringify(audit)]);
 
   const form = h('div', { className: 'rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-sm space-y-4' },
     h('div', { className: 'grid grid-cols-1 sm:grid-cols-3 gap-3' },
@@ -399,6 +402,7 @@ export const PurchasesView = () => {
   ) : null;
 
   return h('div', { id: 'purchases-screen', className: 'p-4 sm:p-6 space-y-4 max-w-7xl mx-auto text-right min-h-full' },
+    h(AuditFilters,{value:audit,onChange:setAudit}),
     h('div', { className: 'flex flex-wrap items-center justify-between gap-2' },
       h('div',{className:'flex items-center gap-2 flex-wrap'},
         h(SearchableDropdown,{id:'purchases-financial-group',label:t('المجموعة المالية'),selectedId:financialYearFilter,onSelect:setFinancialYearFilter,options:[{id:'all',label:t('كل المجموعات المالية')},...financialYears.map(y=>({id:y.id,label:y.name,subLabel:y.id===activeFinancialYearId?t('الحالية'):t('أرشيف')}))]}),

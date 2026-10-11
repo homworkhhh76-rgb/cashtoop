@@ -1,14 +1,15 @@
-import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
-import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.139-ledger-print';
+import {t} from './services__i18n.js?v=7.9.4.154-distribution-menu';
+import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.154-distribution-menu';
 import React, { useEffect, useRef, useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.139-ledger-print';
-import { printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.139-ledger-print';
-import { downloadProfessionalInvoicePDF, downloadProfessionalInvoiceImage, downloadProfessionalInvoiceExcel, warmProfessionalExportLibraries } from './utils__professionalExport.js?v=7.9.4.139-ledger-print';
-import { renderInvoiceCanvas } from './utils__canvasRenderer.js?v=7.9.4.139-ledger-print';
-import { smartPrinter } from './services__printer.js?v=7.9.4.139-ledger-print';
-import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.139-ledger-print';
+import { useApp } from './context__AppContext.js?v=7.9.4.154-distribution-menu';
+import { printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.154-distribution-menu';
+import { downloadProfessionalInvoicePDF, downloadProfessionalInvoiceImage, downloadProfessionalInvoiceExcel, warmProfessionalExportLibraries } from './utils__professionalExport.js?v=7.9.4.154-distribution-menu';
+import { renderInvoiceCanvas } from './utils__canvasRenderer.js?v=7.9.4.154-distribution-menu';
+import { smartPrinter } from './services__printer.js?v=7.9.4.154-distribution-menu';
+import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.154-distribution-menu';
+import { createCustomerPortalLinks } from './services__customerPortalLinks.js?v=7.9.4.154-distribution-menu';
+import { createQrSvgDataUrl } from './utils__qrcode.js?v=7.9.4.154-distribution-menu';
 import { Printer, X, Download, Image as ImageIcon, FileSpreadsheet, Bluetooth } from 'lucide-react';
-import JsBarcode from 'jsbarcode';
 
 const h = React.createElement;
 
@@ -18,12 +19,14 @@ function money(value) {
 }
 
 export const ThermalReceiptModal = () => {
-    const { showThermalModal, setShowThermalModal, settings, showToast } = useApp();
+    const { showThermalModal, setShowThermalModal, settings, showToast, customers, saveCustomer } = useApp();
     const [paperWidth, setPaperWidth] = useState(settings.printerWidth || '80mm');
-    const barcodeRef = useRef(null);
     const receiptContainerRef = useRef(null);
     const [isExporting, setIsExporting] = useState(false);
     const [printerState, setPrinterState] = useState(() => smartPrinter.getState());
+    const [customerPortalUrl, setCustomerPortalUrl] = useState('');
+    const [customerQrDataUrl, setCustomerQrDataUrl] = useState('');
+    const portalLinkRef = useRef('');
     const logoSrc = getBrandLogoDisplayUrl(settings);
 
     useEffect(() => smartPrinter.subscribe(setPrinterState), []);
@@ -39,24 +42,40 @@ export const ThermalReceiptModal = () => {
         if (showThermalModal) setPaperWidth(settings.printerWidth || '80mm');
     }, [showThermalModal, settings.printerWidth]);
 
-    useEffect(() => {
-        if (showThermalModal && barcodeRef.current) {
-            try {
-                JsBarcode(barcodeRef.current, showThermalModal.invoiceNumber, {
-                    format: 'CODE128',
-                    lineColor: '#000000',
-                    width: 1.35,
-                    height: 34,
-                    displayValue: true,
-                    font: 'monospace',
-                    fontSize: 11,
-                    margin: 2,
-                });
-            } catch (e) {
-                console.warn('Barcode generation failed:', e);
+
+    const ensureCustomerPortalLink = async () => {
+        const inv = showThermalModal;
+        if (!inv || !inv.customerId || inv.customerId === 'cust-walkin') return '';
+        if (portalLinkRef.current) return portalLinkRef.current;
+        const customer = (customers || []).find(c => String(c.id) === String(inv.customerId));
+        if (!customer) return '';
+        try {
+            const links = await createCustomerPortalLinks(customer, { saveCustomer });
+            const url = links?.portalUrl || links?.longPortalUrl || '';
+            if (url) {
+                portalLinkRef.current = url;
+                setCustomerPortalUrl(url);
+                setCustomerQrDataUrl(createQrSvgDataUrl(url, { size: 260, margin: 2, level: 'L' }));
             }
+            return url;
+        } catch (err) {
+            console.warn('Customer portal QR unavailable:', err);
+            return '';
         }
-    }, [showThermalModal, paperWidth]);
+    };
+
+    useEffect(() => {
+        portalLinkRef.current = '';
+        setCustomerPortalUrl('');
+        setCustomerQrDataUrl('');
+        if (!showThermalModal || !showThermalModal.customerId || showThermalModal.customerId === 'cust-walkin') return;
+        let cancelled = false;
+        (async () => {
+            const url = await ensureCustomerPortalLink();
+            if (cancelled || !url) return;
+        })();
+        return () => { cancelled = true; };
+    }, [showThermalModal?.invoiceNumber, showThermalModal?.customerId, customers?.length]);
 
     if (!showThermalModal) return null;
     const invoice = showThermalModal;
@@ -65,6 +84,8 @@ export const ThermalReceiptModal = () => {
     const handlePrint = async () => {
         const source = receiptContainerRef.current;
         if (!source) return;
+        await ensureCustomerPortalLink();
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
         await printElementOnly(source, paperWidth, `فاتورة ${invoice.invoiceNumber}`);
     };
 
@@ -72,6 +93,8 @@ export const ThermalReceiptModal = () => {
         if (isExporting) return;
         setIsExporting(true);
         try {
+            await ensureCustomerPortalLink();
+            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
             let state = smartPrinter.getState();
             // Safari/iPhone and browsers without Web Bluetooth must use the OS print path.
             if (!state.bluetoothSupported && !state.serialSupported && !state.systemMode) {
@@ -97,7 +120,8 @@ export const ThermalReceiptModal = () => {
                     return;
                 }
             }
-            const canvas = await renderInvoiceCanvas(invoice, { ...settings, printerWidth: paperWidth }, { paperWidth });
+            const portalUrl = await ensureCustomerPortalLink();
+            const canvas = await renderInvoiceCanvas(invoice, { ...settings, printerWidth: paperWidth, customerPortalUrl: portalUrl }, { paperWidth });
             await smartPrinter.printCanvas(canvas, { paperWidth: paperWidth === '58mm' ? '58mm' : '80mm' });
             state = smartPrinter.getState();
             showToast(`تم إرسال الفاتورة إلى ${state.name || state.preferredName || 'الطابعة'}`, 'success');
@@ -123,12 +147,14 @@ export const ThermalReceiptModal = () => {
         }
     };
 
-    const handleDownloadImage = () => withExporting(() =>
-        downloadProfessionalInvoiceImage(invoice, { ...settings, printerWidth: paperWidth }, `فاتورة-${invoice.invoiceNumber}.png`)
-    );
-    const handleDownloadPDF = () => withExporting(() =>
-        downloadProfessionalInvoicePDF(invoice, { ...settings, printerWidth: paperWidth }, `فاتورة-${invoice.invoiceNumber}.pdf`)
-    );
+    const handleDownloadImage = () => withExporting(async () => {
+        const portalUrl = await ensureCustomerPortalLink();
+        return downloadProfessionalInvoiceImage(invoice, { ...settings, printerWidth: paperWidth, customerPortalUrl: portalUrl }, `فاتورة-${invoice.invoiceNumber}.png`);
+    });
+    const handleDownloadPDF = () => withExporting(async () => {
+        const portalUrl = await ensureCustomerPortalLink();
+        return downloadProfessionalInvoicePDF(invoice, { ...settings, printerWidth: paperWidth, customerPortalUrl: portalUrl }, `فاتورة-${invoice.invoiceNumber}.pdf`);
+    });
     const handleDownloadExcel = () => withExporting(() => downloadProfessionalInvoiceExcel(invoice, settings, `فاتورة-${invoice.invoiceNumber}.xlsx`));
 
     const paperButton = (key, label) => h('button', {
@@ -253,7 +279,7 @@ export const ThermalReceiptModal = () => {
                 ),
                 Number(invoice.changeAmount) > 0 ? h('div', { className: 'receipt-adjustments' }, totalRow('الفكة للزبون:', invoice.changeAmount, 'receipt-total-change')) : null,
                 h('div', { className: 'receipt-footer' },
-                    settings.receiptShowBarcode !== false ? h('div', { className: 'receipt-barcode' }, h('svg', { ref: barcodeRef })) : null,
+                    settings.receiptShowBarcode !== false && customerQrDataUrl ? h('div', { className: 'receipt-customer-qr' }, h('img', { src: customerQrDataUrl, alt: 'QR صفحة العميل والسداد' }), h('strong', null, 'امسح لفتح صفحة العميل والسداد')) : null,
                     h('p', null, settings.receiptFooterMessage || ''),
                     h('div', { className: 'receipt-system-mark' }, 'برنامج كاش توب المحاسبي جوال 0597603119')
                 )

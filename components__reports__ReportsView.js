@@ -1,9 +1,10 @@
-import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
-import {downloadProfessionalTablePDF,downloadProfessionalTableImage} from './utils__professionalExport.js?v=7.9.4.139-ledger-print';
+import {AuditFilters,auditQuery,auditMatches,actorOf} from './components__common__AuditFilters.js?v=7.9.4.154-distribution-menu';
+import {t} from './services__i18n.js?v=7.9.4.154-distribution-menu';
+import {downloadProfessionalTablePDF,downloadProfessionalTableImage} from './utils__professionalExport.js?v=7.9.4.154-distribution-menu';
 import React, { useEffect, useMemo, useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.139-ledger-print';
-import { exportToCSV, downloadBlob } from './utils__export.js?v=7.9.4.139-ledger-print';
-import { getAllFromStore } from './services__db.js?v=7.9.4.139-ledger-print';
+import { useApp } from './context__AppContext.js?v=7.9.4.154-distribution-menu';
+import { exportToCSV, downloadBlob } from './utils__export.js?v=7.9.4.154-distribution-menu';
+import { getAllFromStore } from './services__db.js?v=7.9.4.154-distribution-menu';
 import { Download, ReceiptText, Package, Users, Truck, WalletCards, CalendarDays, CircleDollarSign, FileText, Image as ImageIcon, TrendingUp } from 'lucide-react';
 
 const h = React.createElement;
@@ -37,6 +38,7 @@ const Section = ({ icon: Icon, title, subtitle, children }) => h('section', { cl
 
 export const ReportsView = () => {
   const app = useApp();
+  const [audit,setAudit]=useState({});
   const [reportReady,setReportReady]=useState(!app.ensureFullHistoryStores);
   const [reportError,setReportError]=useState('');
   useEffect(()=>{let alive=true;if(app.ensureFullHistoryStores)app.ensureFullHistoryStores(['invoices','purchases','expenses','vouchers']).then(()=>{if(alive)setReportReady(true)}).catch(e=>{if(alive)setReportError(e.message||'تعذر تحميل التقارير')});return()=>{alive=false}},[app.ensureFullHistoryStores]);
@@ -53,7 +55,7 @@ export const ReportsView = () => {
   const financialYears = Array.isArray(settings.financialYears) ? settings.financialYears : [];
   const activeFinancialYearId = settings.activeFinancialYearId || financialYears.find(y=>y?.status==='open')?.id || 'fy-initial';
   const legacyFinancialYearId = financialYears[0]?.id || activeFinancialYearId;
-  const inActiveYear = row => String(row?.financialYearId || legacyFinancialYearId) === String(activeFinancialYearId);
+  const inActiveYear = row => auditMatches(row,audit) && String(row?.financialYearId || legacyFinancialYearId) === String(activeFinancialYearId);
 
   const [period, setPeriod] = useState('month');
   const [fromDate, setFromDate] = useState('');
@@ -178,7 +180,9 @@ export const ReportsView = () => {
     return acc;
   }, {})).sort((a,b) => b.amount - a.amount);
 
-  const periodLabel = period === 'today' ? 'اليوم' : period === 'week' ? 'آخر 7 أيام' : period === 'month' ? 'هذا الشهر' : period === 'year' ? 'هذا العام' : period === 'all' ? 'كل الفترات' : `${fromDate || 'البداية'} إلى ${toDate || 'اليوم'}`;
+  const auditLabel=[audit.actorId&&audit.actorId!=='all'?'الموظف: '+(app.employees?.find(e=>e.id===audit.actorId)?.name||app.currentUser?.name||audit.actorId):'',audit.from?'من '+audit.from.replace('T',' '):'',audit.to?'إلى '+audit.to.replace('T',' '):''].filter(Boolean).join(' — ');
+  const basePeriodLabel = period === 'today' ? 'اليوم' : period === 'week' ? 'آخر 7 أيام' : period === 'month' ? 'هذا الشهر' : period === 'year' ? 'هذا العام' : period === 'all' ? 'كل الفترات' : `${fromDate || 'البداية'} إلى ${toDate || 'اليوم'}`;
+  const periodLabel=[basePeriodLabel,auditLabel].filter(Boolean).join(' — ');
 
   const summaryData = () => {
     const headers = ['القسم', 'المؤشر', 'القيمة'];
@@ -226,7 +230,7 @@ export const ReportsView = () => {
         h('h2', { className:'text-xl font-black text-slate-900 dark:text-white' }, t("التقارير الشاملة")),
         h('p', { className:'text-xs text-slate-500 mt-1' }, `تقارير الفواتير والمخازن والعملاء والموردين والمصروفات — الفترة: ${periodLabel}`)
       ),
-      h('div', { className:'flex flex-wrap items-end gap-2' },
+      h('div', { className:'flex flex-wrap items-end gap-2' },h(AuditFilters,{value:audit,onChange:v=>{setAudit(v);if(v.from||v.to)setPeriod('all')}}),
         h('div', { className:'flex gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800' }, ...periodButtons.map(([id,label]) => h('button', {
           key:id, type:'button', onClick:()=>setPeriod(id), className:`px-3 py-2 rounded-lg text-[11px] font-black ${period===id?'bg-white dark:bg-slate-900 text-violet-600 shadow-sm':'text-slate-500'}`
         }, t(label)))),

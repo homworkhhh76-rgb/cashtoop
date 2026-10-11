@@ -1,5 +1,5 @@
-import { decodeCustomerPortalAccess } from './customer-portal-codec.js?v=7.9.4.139-ledger-print';
-import { TRIAL_DATABASE } from './trial__config.js?v=7.9.4.139-ledger-print';
+import { decodeCustomerPortalAccess } from './customer-portal-codec.js?v=7.9.4.154-distribution-menu';
+import { TRIAL_DATABASE } from './trial__config.js?v=7.9.4.154-distribution-menu';
 
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

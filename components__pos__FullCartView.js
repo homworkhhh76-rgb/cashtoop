@@ -1,8 +1,8 @@
-import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
+import {t} from './services__i18n.js?v=7.9.4.154-distribution-menu';
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useApp } from './context__AppContext.js?v=7.9.4.139-ledger-print';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.139-ledger-print';
+import { useApp } from './context__AppContext.js?v=7.9.4.154-distribution-menu';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.154-distribution-menu';
 import { Trash2, Plus, Minus, CreditCard, User, UserPlus, ChevronDown, LayoutGrid, Search, PauseCircle, Clock, ShoppingBag, X } from 'lucide-react';
 
 const h = React.createElement;
@@ -33,7 +33,7 @@ export const FullCartView = ({ onOpenPayment, onToggleLayout }) => {
     cart, customers, selectedCustomer, setSelectedCustomer, saveCustomer,
     updateCartItemUnit, updateCartItemQuantity, updateCartItemPrice, updateCartItemScaleAmount,
     removeFromCart, clearCart, holdCurrentInvoice, heldInvoices, setShowHoldInvoicesModal,
-    settings, products, addToCart,
+    settings, products, addToCart, getEffectiveUnitPrice,
     invoiceDiscountType, setInvoiceDiscountType, invoiceDiscountValue, setInvoiceDiscountValue, invoiceAdditionalCharges,
   } = useApp();
   const [activeUnitDropdown, setActiveUnitDropdown] = useState(null);
@@ -104,7 +104,7 @@ export const FullCartView = ({ onOpenPayment, onToggleLayout }) => {
         h(Search, { className: 'absolute right-3 top-2.5 w-4 h-4 text-slate-400 pointer-events-none' }),
         h('input', { type: 'text', value: quickProductSearch, onChange: (e) => setQuickProductSearch(e.target.value), placeholder: 'إضافة صنف سريع للسلة...', className: 'w-full pr-9 pl-3 py-1.5 text-xs rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-violet-500' }),
         quickProducts.length > 0 && h('div', { className: 'absolute top-full right-0 left-0 mt-1 z-40 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xl p-1.5 max-h-48 overflow-y-auto' },
-          ...quickProducts.map((p) => { const unit=(p.units||[]).find((u)=>u.isDefaultSale)||(p.units||[])[0]; if(!unit)return null; return h('button',{key:p.id,type:'button',onClick:()=>{addToCart(p,unit);setQuickProductSearch('');},className:'w-full text-right p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-between text-xs'},h('div',null,h('span',{className:'font-bold'},p.name),h('span',{className:'text-[10px] text-slate-400 block font-mono'},(unit.barcodes||[])[0]||p.sku||'')),h('span',{className:'font-bold font-mono text-violet-600'},`${unit.salePrice} ${settings.currencySymbol}`)); })
+          ...quickProducts.map((p) => { const unit=(p.units||[]).find((u)=>u.isDefaultSale)||(p.units||[])[0]; if(!unit)return null; return h('button',{key:p.id,type:'button',onClick:()=>{addToCart(p,unit);setQuickProductSearch('');},className:'w-full text-right p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-between text-xs'},h('div',null,h('span',{className:'font-bold'},p.name),h('span',{className:'text-[10px] text-slate-400 block font-mono'},(unit.barcodes||[])[0]||p.sku||'')),h('span',{className:'font-bold font-mono text-violet-600'},`${getEffectiveUnitPrice(p,unit)} ${settings.currencySymbol}`)); })
         )
       ),
       h('div', { className: 'flex items-center gap-2 min-w-0' },
@@ -166,7 +166,7 @@ export const FullCartView = ({ onOpenPayment, onToggleLayout }) => {
   const activeMenuItem = activeUnitDropdown ? cart.find((i)=>`${i.productId}-${i.unitId}`===activeUnitDropdown) : null;
   const unitPortal = activeUnitDropdown&&unitMenuPos&&activeMenuItem&&typeof document!=='undefined' ? createPortal(
     h('div',{'data-full-cart-unit-menu':activeUnitDropdown,onPointerDown:(e)=>e.stopPropagation(),style:{position:'fixed',top:`${unitMenuPos.top}px`,left:`${unitMenuPos.left}px`,width:`${unitMenuPos.width}px`,zIndex:2147483000},className:'rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 shadow-2xl max-h-[260px] overflow-y-auto'},
-      ...(activeMenuItem.availableUnits||[]).map((u)=>h('button',{key:u.id,type:'button',onClick:()=>{setActiveUnitDropdown(null);setUnitMenuPos(null);updateCartItemUnit(activeMenuItem.productId,activeMenuItem.unitId,u.id);},className:`w-full text-right px-3 py-2 text-xs rounded-lg flex items-center justify-between gap-3 ${u.id===activeMenuItem.unitId?'bg-violet-600 text-white font-bold':'text-slate-700 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800'}`},h('span',{className:'truncate'},u.name),h('span',{className:'text-[10px] font-mono opacity-80 shrink-0'},`${u.salePrice} ${settings.currencySymbol}`)))
+      ...(activeMenuItem.availableUnits||[]).map((u)=>{const product=products.find(p=>p.id===activeMenuItem.productId);const price=product?getEffectiveUnitPrice(product,u):u.salePrice;return h('button',{key:u.id,type:'button',onClick:()=>{setActiveUnitDropdown(null);setUnitMenuPos(null);updateCartItemUnit(activeMenuItem.productId,activeMenuItem.unitId,u.id);},className:`w-full text-right px-3 py-2 text-xs rounded-lg flex items-center justify-between gap-3 ${u.id===activeMenuItem.unitId?'bg-violet-600 text-white font-bold':'text-slate-700 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800'}`},h('span',{className:'truncate'},u.name),h('span',{className:'text-[10px] font-mono opacity-80 shrink-0'},`${price} ${settings.currencySymbol}`));})
     ),document.body) : null;
   const customerPortal = showQuickCustomer&&typeof document!=='undefined' ? createPortal(
     h('div',{className:'fixed inset-0 p-4 flex items-center justify-center',style:{zIndex:2147483500,background:'rgba(15,23,42,.55)'},onPointerDown:(e)=>{if(e.target===e.currentTarget)setShowQuickCustomer(false);}},

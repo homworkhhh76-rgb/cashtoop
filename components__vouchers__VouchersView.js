@@ -1,18 +1,20 @@
-import {t} from './services__i18n.js?v=7.9.4.139-ledger-print';
+import {AuditFilters,auditQuery,auditMatches,actorOf} from './components__common__AuditFilters.js?v=7.9.4.154-distribution-menu';
+import {t} from './services__i18n.js?v=7.9.4.154-distribution-menu';
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useApp } from './context__AppContext.js?v=7.9.4.139-ledger-print';
-import { Pagination, useDatabasePagination } from './components__common__Pagination.js?v=7.9.4.139-ledger-print';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.139-ledger-print';
-import { exportToCSV, printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.139-ledger-print';
-import { downloadProfessionalTablePDF, downloadProfessionalTableImage, downloadProfessionalVoucherPDF, downloadProfessionalVoucherImage } from './utils__professionalExport.js?v=7.9.4.139-ledger-print';
-import { getBrandLogoDataUrl, getBrandLogoDisplayUrl } from './brand__logo.js?v=7.9.4.139-ledger-print';
+import { useApp } from './context__AppContext.js?v=7.9.4.154-distribution-menu';
+import { Pagination, useDatabasePagination } from './components__common__Pagination.js?v=7.9.4.154-distribution-menu';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.154-distribution-menu';
+import { exportToCSV, printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.154-distribution-menu';
+import { downloadProfessionalTablePDF, downloadProfessionalTableImage, downloadProfessionalVoucherPDF, downloadProfessionalVoucherImage } from './utils__professionalExport.js?v=7.9.4.154-distribution-menu';
+import { getBrandLogoDataUrl, getBrandLogoDisplayUrl } from './brand__logo.js?v=7.9.4.154-distribution-menu';
 import { FileSpreadsheet, ArrowDownLeft, ArrowUpRight, Search, Trash2, Printer, Download, Image as ImageIcon, FileText, CreditCard, User, Building2, AlertCircle, Eye, X } from 'lucide-react';
 
 const h = React.createElement;
 const money = (v) => (Number(v) || 0).toFixed(2);
 
 export const VouchersView = () => {
+  const [audit,setAudit]=useState({});
   const { createVoucher, deleteVoucher, customers, suppliers, accounts, settings, currentUser, showToast, queryAllStoreRecords, queryStoreStats } = useApp();
   const [activeTabFilter, setActiveTabFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -42,23 +44,24 @@ export const VouchersView = () => {
   const activeFY = settings.activeFinancialYearId || years.find(y=>y?.status==='open')?.id || 'fy-initial';
   const legacyFY = years[0]?.id || activeFY;
   const voucherQueryOptions = {
+    ...auditQuery(audit),
     search: searchTerm,
-    filters: { financialYearId: activeFY, type: activeTabFilter },
+    filters: { actorId:audit.actorId||'all', financialYearId: activeFY, type: activeTabFilter },
     legacyFinancialYearId: legacyFY,
     sortField: 'date',
     sortDirection: 'desc',
     deletedMode: 'exclude',
     pageSize: 50,
   };
-  const vouchersPager = useDatabasePagination('vouchers', voucherQueryOptions, `${activeFY}|${activeTabFilter}|${searchTerm}`);
+  const vouchersPager = useDatabasePagination('vouchers', voucherQueryOptions, `${activeFY}|${activeTabFilter}|${searchTerm}|${JSON.stringify(audit)}`);
   const filteredVouchers = vouchersPager.pageItems;
   const [voucherTotals, setVoucherTotals] = useState({ receipts: 0, payments: 0 });
   useEffect(() => {
     if (typeof queryStoreStats !== 'function') return undefined;
     let cancelled = false;
     Promise.all([
-      queryStoreStats('vouchers', { filters:{ financialYearId: activeFY, type:'receipt' }, legacyFinancialYearId:legacyFY, sumFields:['amount'], deletedMode:'exclude' }),
-      queryStoreStats('vouchers', { filters:{ financialYearId: activeFY, type:'payment' }, legacyFinancialYearId:legacyFY, sumFields:['amount'], deletedMode:'exclude' }),
+      queryStoreStats('vouchers', { ...auditQuery(audit), search:searchTerm, filters:{ actorId:audit.actorId||'all', financialYearId: activeFY, type:'receipt' }, legacyFinancialYearId:legacyFY, sumFields:['amount'], deletedMode:'exclude' }),
+      queryStoreStats('vouchers', { ...auditQuery(audit), search:searchTerm, filters:{ actorId:audit.actorId||'all', financialYearId: activeFY, type:'payment' }, legacyFinancialYearId:legacyFY, sumFields:['amount'], deletedMode:'exclude' }),
     ]).then(([receipts,payments]) => {
       if (cancelled) return;
       setVoucherTotals({
@@ -67,7 +70,7 @@ export const VouchersView = () => {
       });
     }).catch((err)=>console.warn('Voucher totals failed',err));
     return () => { cancelled = true; };
-  }, [activeFY, legacyFY]);
+  }, [activeFY, legacyFY,JSON.stringify(audit),searchTerm]);
   const totalReceipts = voucherTotals.receipts;
   const totalPayments = voucherTotals.payments;
 
@@ -163,6 +166,7 @@ export const VouchersView = () => {
   ) : null;
 
   return h('div',{id:'vouchers-view-container',className:'p-3 sm:p-5 space-y-4 max-w-7xl mx-auto select-none min-h-full'},
+    h(AuditFilters,{value:audit,onChange:setAudit}),
     h('div',{className:'flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800'},
       h('div',null,h('div',{className:'flex items-center gap-2'},h(FileSpreadsheet,{className:'w-5 h-5 text-violet-600'}),h('h2',{className:'text-lg font-black'},t("سندات القبض والصرف")))),
       h('div',{id:'voucher-create-actions',className:'flex gap-2 flex-wrap'},

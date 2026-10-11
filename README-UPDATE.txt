@@ -1,3 +1,4 @@
+إصدار 7.9.4.142 - إصلاح تشغيل واجهة مجموعات الأسعار
 كاش توب 3 — 7.9.4.137
 
 التعديلات المنجزة:
@@ -36,3 +37,9 @@
 - لا تشمل الاختبارات طابعة فعلية أو مزامنة أجهزة الشركة الحقيقية.
 
 التثبيت: استبدل ملفات التطبيق مع إبقاء قاعدة بيانات الشركة وإعداداتها. النسخة ليست إعلانًا بأن جميع طلبات الترجمة أو الاختبارات على الأجهزة الحقيقية اكتملت.
+
+
+=== v7.9.4.141 Price Groups ===
+- Added customer price groups with percentage pricing and per-unit customer overrides.
+- Added desktop POS header selector and mobile POS/sidebar access.
+- Registered customers in a selected group use explicit unit prices; other customers use the group percentage rounded to integers.
