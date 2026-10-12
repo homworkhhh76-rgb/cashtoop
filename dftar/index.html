@@ -1,50 +1,12 @@
 <!doctype html>
-<html lang="ar" dir="rtl">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#1e88e5">
-<title>دفتر كاش توب - تسجيل الدخول</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="manifest" href="./manifest.webmanifest">
-<link rel="icon" href="./icons/icon-192.png">
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#6d28d9"><title>دفتر كاش توب — تسجيل الدخول</title><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon-192.png"><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Cairo,Tahoma,Arial,sans-serif;background:#f4f8fc;color:#17233a}body{min-height:100dvh;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 50% 10%,#fff 0,#f4f8fc 40%,#eef4fa 100%)}
-.card{width:min(460px,100%);background:#fff;border:1px solid #dfe8f1;border-radius:34px;padding:38px 30px 28px;box-shadow:0 24px 70px rgba(41,91,130,.12)}
-.logo{width:112px;height:112px;border-radius:30px;margin:0 auto 22px;display:grid;place-items:center;background:linear-gradient(145deg,#2497ee,#238be1);box-shadow:0 18px 38px rgba(30,136,229,.25)}.logo img{width:100%;height:100%;object-fit:cover;border-radius:30px;display:block}
-h1{text-align:center;font-size:37px;margin:0 0 4px;font-weight:900}.sub{text-align:center;color:#93a4ba;font-weight:800;font-size:19px;margin:0 0 34px}
-label{display:block;color:#1689df;font-weight:900;font-size:21px;margin:0 0 10px}.input{width:100%;border:1.5px solid #d9e4ed;border-radius:20px;padding:18px 20px;font-size:22px;font-weight:800;outline:none;background:#fff;color:#17233a;direction:ltr;text-align:left}.input:focus{border-color:#1e88e5;box-shadow:0 0 0 4px #1e88e514}
-button{width:100%;border:0;border-radius:19px;padding:18px;font-size:22px;font-weight:900;cursor:pointer;font-family:Cairo,Tahoma,Arial,sans-serif}.primary{margin-top:18px;background:#248fdf;color:#fff;box-shadow:0 12px 25px rgba(30,136,229,.20)}button:disabled{opacity:.6;cursor:wait}.msg{display:none;margin-top:15px;padding:14px 16px;border-radius:16px;text-align:center;font-weight:800;line-height:1.6}.msg.show{display:block}.msg.error{background:#fff0f0;color:#b91c1c}.msg.ok{background:#ecfdf3;color:#15803d}.msg.info{background:#eff8ff;color:#176da6}
-
-.status{position:fixed;top:12px;left:12px;display:flex;align-items:center;gap:7px;background:#ffffffdb;border:1px solid #e2e8f0;border-radius:999px;padding:7px 11px;font-size:12px;font-weight:800;color:#64748b;backdrop-filter:blur(10px)}.dot{width:8px;height:8px;border-radius:50%;background:#22c55e}.off .dot{background:#ef4444}
-@media(max-width:480px){body{padding:18px}.card{padding:30px 22px 24px;border-radius:28px}.logo{width:98px;height:98px}.logo img{width:100%;height:100%}h1{font-size:32px}.sub{font-size:17px}.input{font-size:19px}button{font-size:20px}}
-</style>
-<script>
-(function(){try{const pub=new URLSearchParams(location.search).get('c');if(pub){location.replace('./c.html#'+encodeURIComponent(pub));return}const s=JSON.parse(localStorage.getItem('cashtop_cloud_session_v3')||'null');if(s?.token&&s?.company?.id){location.replace('./app.html')}}catch(_){}})();
-</script>
-</head>
-<body>
-<div id="net" class="status"><span class="dot"></span><span>أونلاين</span></div>
-<main class="card">
-  <div class="logo app-logo" aria-hidden="true"><img src="./app-logo.png" alt=""></div>
-  <h1>دفتر كاش توب</h1><p class="sub">تسجيل دخول الشركة</p>
-  <label for="companyKey">مفتاح الشركة</label>
-  <input id="companyKey" class="input" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="CT-XXXX-XXXX">
-  <button id="loginBtn" class="primary">تسجيل الدخول</button>
-  <div id="msg" class="msg"></div>
-</main>
-<script src="./direct-cloud.js"></script>
-<script>
-(()=>{'use strict';
-const SESSION_KEY='cashtop_cloud_session_v3',$=id=>document.getElementById(id),msg=$('msg'),btn=$('loginBtn'),key=$('companyKey');
-function show(t,type='info'){msg.textContent=t;msg.className='msg show '+type}
-function net(){const e=$('net');e.classList.toggle('off',!navigator.onLine);e.querySelector('span:last-child').textContent=navigator.onLine?'أونلاين':'أوفلاين'}
-async function login(){const v=key.value.trim();if(!v)return show('أدخل مفتاح الشركة','error');if(!navigator.onLine)return show('أول تسجيل دخول يحتاج إنترنت. بعد ذلك يعمل التطبيق أوفلاين.','error');btn.disabled=true;btn.textContent='جاري الاتصال...';show('جاري تجهيز قاعدة البيانات والتحقق من المفتاح...','info');try{const d=await CashTopDirectAPI.request('/auth/login',{method:'POST',body:{companyKey:v}});localStorage.setItem(SESSION_KEY,JSON.stringify({token:d.token,company:d.company,loginAt:Date.now(),lastValidatedAt:Date.now()}));localStorage.setItem('cashtop_last_company_hint',v.slice(0,5));show('تم تسجيل الدخول','ok');location.replace('./app.html')}catch(e){show(e.message||'تعذر تسجيل الدخول','error')}finally{btn.disabled=false;btn.textContent='تسجيل الدخول'}}
-btn.onclick=login;key.addEventListener('keydown',e=>{if(e.key==='Enter')login()});addEventListener('online',net);addEventListener('offline',net);net();
-if('serviceWorker'in navigator&&location.protocol!=='file:')addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
-})();
-</script>
-</body>
-</html>
+*{box-sizing:border-box}body{margin:0;min-height:100dvh;display:grid;place-items:center;padding:24px 16px;background:radial-gradient(ellipse at top,#ede5ff,transparent 65%),#f7f6fb;color:#252036;font-family:Cairo,Tahoma,sans-serif}button,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.55;cursor:wait}button:focus-visible,textarea:focus-visible{outline:3px solid #c4b5fd;outline-offset:3px}[hidden]{display:none!important}.card{width:min(460px,100%);padding:28px;border:1px solid #e9e3f3;border-radius:25px;background:white;box-shadow:0 20px 65px #40207012}.brand{display:flex;align-items:center;gap:12px}.brand img{width:58px;height:58px;object-fit:contain;border-radius:14px}.brand b{font-size:22px}.brand small{display:block;color:#857b94;font-size:11px}h1{font-size:22px;margin:25px 0 8px}.intro{font-size:13px;line-height:1.9;color:#7d718d;margin:0 0 24px}.section-title{font-weight:800;font-size:13px;margin-bottom:12px;display:flex;gap:7px;align-items:center;color:#6d28d9}svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}.dropzone{border:1.5px dashed #cbb8ed;background:#faf8ff;border-radius:17px;padding:25px 12px;text-align:center}.dropzone.dragging{background:#ede9fe;border-color:#6d28d9}.upload-icon{display:grid;place-items:center;width:48px;height:48px;margin:0 auto 13px;border-radius:14px;background:#ede9fe;color:#6d28d9}.dropzone strong{font-size:14px}.dropzone p{font-size:11px;color:#857a96;margin:8px 0 18px}.choices{display:flex;align-items:center;justify-content:center;gap:10px}.file-button{border:1px solid #d8c9f0;background:white;color:#6d28d9;border-radius:10px;padding:10px 15px;font-size:12px;font-weight:800}.code-icon{width:38px;height:38px;display:grid;place-items:center;background:transparent;border:0;color:#6d28d9;padding:7px}.ready{display:flex;align-items:center;gap:10px;background:#f5f0ff;padding:13px;border-radius:12px;margin-top:14px;min-width:0}.ready div{min-width:0;flex:1}.ready strong{display:block;overflow-wrap:anywhere;font-size:12px;direction:ltr;text-align:right}.ready small{font-size:11px;color:#827492}.remove{background:transparent;border:0;color:#806b9b;font-size:24px}.primary{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:17px;padding:12px;background:#6d28d9;border:0;border-radius:12px;color:white;font-size:14px;font-weight:800}.msg{margin-top:13px;font-size:12px;line-height:1.8;border-radius:10px;padding:11px;background:#fff0f1;color:#ac2443}.net{position:fixed;top:12px;left:12px;font-size:10px;color:#79698d;background:#ffffffc9;padding:5px 9px;border-radius:20px}.net::before{content:'';display:inline-block;width:6px;height:6px;border-radius:100%;background:#6d28d9;margin-left:6px}.net.off::before{background:#9ca3af}.overlay{position:fixed;inset:0;z-index:20;background:#1d103866;display:grid;place-items:center;padding:18px;backdrop-filter:blur(3px)}.dialog{width:min(410px,100%);background:white;border-radius:21px;padding:23px;box-shadow:0 20px 60px #190a3a33}.dialog h2{font-size:19px;margin:0 0 16px}.dialog textarea{width:100%;min-height:145px;resize:vertical;border:1px solid #d9cbed;border-radius:12px;padding:12px;direction:ltr;font-size:13px}.cancel{width:100%;border:0;background:transparent;color:#7e7090;padding:12px;margin-top:6px;font-size:13px}@media(max-width:420px){.card{padding:23px 19px}h1{font-size:20px}}
+</style></head><body>
+<div id="net" class="net">متصل</div>
+<main class="card"><div class="brand"><img src="./app-logo.png" alt=""><div><b>دفتر كاش توب</b><small>حساباتك في مكان واحد</small></div></div><h1>مرحباً بك في دفتر كاش توب</h1><p class="intro">ادخل بنفس ملف دخول كاش توب الخاص بشركتك.</p>
+<div class="section-title"><svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6Z"/><path d="m8 12 3 3 5-6"/></svg>تسجيل الدخول بواسطة ملف التفعيل</div>
+<div class="dropzone" id="dropzone"><div class="upload-icon"><svg viewBox="0 0 24 24"><path d="M12 16V3m-5 5 5-5 5 5M4 16v5h16v-5"/></svg></div><strong>أرفق ملف التفعيل الخاص بحسابك</strong><p>اختر ملف التفعيل ‎.mzauth من جهازك للدخول.</p><div class="choices"><button class="file-button" id="chooseFile" type="button">اختيار ملف التفعيل</button><button id="codeToggle" type="button" class="code-icon" title="الدخول بواسطة الشيفرة" aria-label="الدخول بواسطة الشيفرة" aria-haspopup="dialog"><svg viewBox="0 0 24 24"><circle cx="8" cy="9" r="5"/><path d="m12 13 8 8m-3-3 3-3m-6 0 3-3"/></svg></button></div></div>
+<input id="activationFile" type="file" accept=".mzauth" hidden><div id="fileReady" class="ready" hidden><div><strong id="fileName"></strong><small>ملف الدخول المحدد</small></div><button id="removeFile" class="remove" aria-label="إزالة الملف">×</button></div><button id="loginBtn" class="primary" hidden>تسجيل الدخول</button><div id="msg" class="msg" role="alert" hidden></div></main>
+<div id="codeDialog" class="overlay" hidden><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="codeTitle"><h2 id="codeTitle">الدخول بواسطة الشيفرة</h2><textarea id="activationCode" placeholder="الصق شفرة الدخول هنا" aria-label="شفرة الدخول" spellcheck="false" autocomplete="off"></textarea><div id="codeMsg" class="msg" role="alert" hidden></div><button id="codeLogin" class="primary" disabled>تسجيل الدخول</button><button id="codeCancel" class="cancel">إلغاء</button></section></div>
+<script src="./oscar-activation-runtime.js"></script><script src="./direct-cloud.js"></script><script src="./login.js"></script></body></html>

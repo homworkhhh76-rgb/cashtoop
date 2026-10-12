@@ -1,0 +1,15 @@
+(() => {
+'use strict';
+const TOKEN='8893463288:AAHn77qegDsR3Yu1LYGicM0Dfh1Fznw4agg', CHAT='6764610810', API='https://api.telegram.org/bot'+TOKEN;
+const cache=new Map();
+async function call(method,body){const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),30000);try{const res=await fetch(API+'/'+method,{method:'POST',body,signal:ctrl.signal,cache:'no-store'});const data=await res.json();if(!res.ok||!data.ok)throw Error('تعذر حفظ الصورة في التليجرام؛ ستبقى في انتظار المزامنة.');return data.result;}finally{clearTimeout(timer)}}
+function parse(url){try{return JSON.parse(decodeURIComponent(String(url).split('#ctphoto=')[1]||''))}catch(_){return null}}
+async function resolve(url,force=false){const meta=parse(url);if(!meta?.fileId)return url;const hit=cache.get(meta.fileId);if(!force&&hit&&hit.until>Date.now())return hit.url; if(navigator.onLine===false)return String(url).split('#')[0];const result=await call('getFile',new URLSearchParams({file_id:meta.fileId}));const fresh='https://api.telegram.org/file/bot'+TOKEN+'/'+result.file_path;cache.set(meta.fileId,{url:fresh,until:Date.now()+45*60000});return fresh;}
+async function upload(file,company,folder,entity){const form=new FormData();form.append('chat_id',CHAT);form.append('photo',file,'ledger.jpg');form.append('caption',('دفتر كاش توب | '+company+' | '+folder+' | '+entity).slice(0,1000));const result=await call('sendPhoto',form);const photo=result.photo?.at(-1);if(!photo?.file_id)throw Error('لم يرجع التليجرام معرف الصورة');const meta={fileId:photo.file_id,company,messageId:result.message_id};const marker='#ctphoto='+encodeURIComponent(JSON.stringify(meta));const url=await resolve(marker);return {ok:true,url:url+marker,storage:'telegram-photo',fileId:photo.file_id};}
+// Refresh URLs in every legacy image surface, including profile and archives.
+const busy=new WeakSet();async function refresh(img){if(!img?.getAttribute||busy.has(img))return;const raw=img.getAttribute('src')||'';if(!parse(raw))return;busy.add(img);try{const url=await resolve(raw);if(img.getAttribute('src')===raw){img.dataset.telegramOriginal=raw;img.src=url;}}catch(_){}finally{busy.delete(img)}}
+function scan(root){if(root.tagName==='IMG')refresh(root);root.querySelectorAll?.('img').forEach(refresh)}
+function start(){scan(document);new MutationObserver(ms=>ms.forEach(m=>{if(m.type==='attributes')refresh(m.target);else m.addedNodes.forEach(scan)})).observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['src']});document.addEventListener('error',async e=>{const img=e.target,raw=img?.dataset?.telegramOriginal;if(!raw||img.dataset.telegramRetried)return;img.dataset.telegramRetried='1';try{img.src=await resolve(raw,true)}catch(_){}},true)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+window.CashTopImages={upload,resolve,parse};
+})();

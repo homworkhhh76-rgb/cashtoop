@@ -6,7 +6,7 @@ const API_KEY='cashtop_api_base_v3';
 const DEFAULT_API='/api';
 const MAX_OUTBOX_BATCH=100;
 const AUTO_REMOTE_PULL_MS=90*1000;
-const SESSION_VALIDATE_MS=60*1000;
+const SESSION_VALIDATE_MS=5*60*1000;
 const LAZY_REMOTE_CACHE_MS=90*1000;
 const ARCHIVE_DOM_LIMIT=240;
 const ARCHIVE_ROW_ESTIMATE=92;
@@ -34,19 +34,8 @@ window.CashTopSync={
   storeArchiveSession,resolveRecordImage,chooseInstall,requestPersistentStorage,
   showStorageInfo,buildBackup,restoreBackup,hydrateLegacyFromIndexedDB,apiBase:()=>apiBase(),session:()=>session,
   archiveDebtRecords,listDebtArchive,debtArchiveSummary,openDebtArchivedTransaction,restoreDebtArchivedTransaction,deleteDebtArchivedTransaction,restoreCashArchivedTransaction,moveDebtArchivePerson,restoreDebtArchiveBatch,deleteDebtArchiveBatch,
-  deleteEntityAndImage,deleteImageAsset,downloadRecordImage,isSubscriptionExpired,canWrite
+  deleteEntityAndImage,deleteImageAsset,downloadRecordImage
 };
-
-
-function isSubscriptionExpired(){
-  const exp=Number(session?.company?.expiresAt||0);
-  return !!(exp&&Date.now()>=exp);
-}
-function canWrite(showToast=true){
-  if(!isSubscriptionExpired())return true;
-  if(showToast)try{toast('اشتراكك انتهى','error')}catch(_){}
-  return false;
-}
 
 function readSession(){
   try{return JSON.parse(localStorage.getItem(SESSION_KEY)||'null')}catch{return null}
@@ -270,7 +259,8 @@ function handleInvalidSession(reason){
 }
 async function validateSession(force=false){
   if(!session)return false;
-  // انتهاء الاشتراك لا ينهي الجلسة: القراءة والتصفح يبقيان متاحين.
+  const exp=Number(session.company?.expiresAt||0);
+  if(exp&&Date.now()>=exp){handleInvalidSession('انتهت مدة مفتاح الشركة');return false}
   if(!navigator.onLine)return true;
   if(!force && Date.now()-lastValidateAt<SESSION_VALIDATE_MS)return true;
   try{
@@ -368,7 +358,6 @@ function applyRemoteToLegacy(it){
   else if(it.kind==='archive_session')upsert(cashArchives);
   else if(it.kind==='category')upsert(categories);
   else if(it.kind==='reminder')upsert(reminders);
-  else if(it.kind==='ledger_record'&&typeof ledgerRecords!=='undefined')upsert(ledgerRecords);
   else if(it.kind==='contact'){
     if(it.deleted)delete contacts[id]; else contacts[id]=p;
   }else if(it.kind==='profile'&&!it.deleted){profile={...profile,...p}}
@@ -388,15 +377,13 @@ async function syncNow(manual=false){
     // Pull only when due/manual. Local edits still PUSH immediately, so normal
     // usage no longer pays for a Turso read after every single transaction.
     if(remoteDue){await pullRemote(manual);forceNextRemotePull=false}
-    if(!isSubscriptionExpired()){
-      await processImageDeletes(manual?16:5);
-      await processImageUploads(manual?8:3);
-      await processImageDeletes(manual?16:5);
-      let loops=0;
-      do{const n=await pushOutbox();loops++;if(!n||loops>=(manual?12:2))break}while(true);
-    }
+    await processImageDeletes(manual?16:5);
+    await processImageUploads(manual?8:3);
+    await processImageDeletes(manual?16:5);
+    let loops=0;
+    do{const n=await pushOutbox();loops++;if(!n||loops>=(manual?12:2))break}while(true);
     await setMeta('lastSuccessfulSync',Date.now());lastSyncError='';updateSyncUI();
-    if(manual)toast(isSubscriptionExpired()?'تم تحديث بيانات العرض — اشتراكك انتهى':'تمت المزامنة بنجاح',isSubscriptionExpired()?'info':'success');return true;
+    if(manual)toast('تمت المزامنة بنجاح');return true;
   }catch(e){lastSyncError=e.message||'فشلت المزامنة';console.warn('sync',e);updateSyncUI();if(manual)toast(lastSyncError,'error');return false}
   finally{syncLock=false;setSyncVisual('idle')}
 }
@@ -407,7 +394,7 @@ async function updateSyncUI(){
   const badge=document.getElementById('sync-queue-badge');
   if(badge){badge.textContent=count>999?'999+':String(count);badge.classList.toggle('hidden',!count)}
   const status=document.getElementById('sync-status-text');
-  if(status)status.textContent=isSubscriptionExpired()?'عرض فقط':(navigator.onLine?(lastSyncError?'خطأ مزامنة':'متصل'):'دون اتصال');
+  if(status)status.textContent=navigator.onLine?(lastSyncError?'خطأ مزامنة':'متصل'):'دون اتصال';
   const queue=document.getElementById('settings-sync-queue');if(queue)queue.textContent=String(count);
   const online=document.getElementById('settings-online-state');if(online)online.textContent=navigator.onLine?'أونلاين':'أوفلاين';
   const err=document.getElementById('settings-sync-error');if(err)err.textContent=lastSyncError||'—';
@@ -656,7 +643,7 @@ async function showTransactionImage(r){
   const src=await resolveRecordImage(r);if(src){img.src=src;iw.classList.remove('hidden')}else iw.classList.add('hidden')
 }
 async function resolveRecordImage(r){
-  const remote=r?.imageUrl||r?.image||'';if(remote&&!String(remote).startsWith('data:'))return remote;
+  const remote=r?.imageUrl||r?.image||'';if(remote&&!String(remote).startsWith('data:'))return window.CashTopImages.resolve(remote);
   if(r?.imageLocalId){const e=await getBlob(r.imageLocalId);if(e?.blob){const u=URL.createObjectURL(e.blob);localObjectUrls.add(u);return u}}
   if(String(remote).startsWith('data:'))return remote;return ''
 }
@@ -688,7 +675,7 @@ window.editSingleTransaction=async function(){
 };
 const legacyDeleteSingle=deleteSingleTransaction;
 window.deleteSingleTransaction=async function(){
-  if(currentTransSource==='debtArchive'){const before=currentArchivedDebtRecord?{...currentArchivedDebtRecord}:null;const c=await Swal.fire({title:'حذف المعاملة المؤرشفة؟',text:'سيتم حذفها نهائياً من الأرشيف ومن كاش توب إذا كانت حركة مرتبطة.',icon:'warning',showCancelButton:true,confirmButtonText:'حذف',confirmButtonColor:'#ef4444',cancelButtonText:'إلغاء'});if(!c.isConfirmed)return;await deleteDebtArchivedTransaction();if(before)await window.CashTopLink?.handleLocalDelete?.(before).catch(e=>console.warn('linked delete',e));closeSingleTransaction();window.refreshPersonArchiveAfterMutation?.();toast('تم حذف المعاملة');return}
+  if(currentTransSource==='debtArchive'){const c=await Swal.fire({title:'حذف المعاملة المؤرشفة؟',text:'سيتم حذفها نهائياً من الأرشيف.',icon:'warning',showCancelButton:true,confirmButtonText:'حذف',confirmButtonColor:'#ef4444',cancelButtonText:'إلغاء'});if(!c.isConfirmed)return;await deleteDebtArchivedTransaction();closeSingleTransaction();window.refreshPersonArchiveAfterMutation?.();toast('تم حذف المعاملة');return}
   if(currentTransSource!=='archive'){
     const source=currentTransSource,id=currentTransId;
     const before=source==='cash'?cashRecords.find(x=>String(x.id)===String(id)):records.find(x=>String(x.id)===String(id));
@@ -697,12 +684,11 @@ window.deleteSingleTransaction=async function(){
     if(before&&!still){
       if(source==='cash')await deleteEntityAndImage('cash_record',id,{sortTs:before.timestamp||0},before);
       else await deleteEntityAndImage('debt_record',id,{parentId:personKey(before.name,before.type),sortTs:before.timestamp||0},before);
-      await window.CashTopLink?.handleLocalDelete?.(before).catch(e=>console.warn('linked delete',e));
     }
     return;
   }
-  const r=currentArchivedRecord;if(!r)return;const before={...r};const c=await Swal.fire({title:'حذف المعاملة المؤرشفة؟',text:'سيتم حذفها من هذه الشركة ومن كاش توب إذا كانت حركة مرتبطة.',icon:'warning',showCancelButton:true,confirmButtonText:'حذف',confirmButtonColor:'#ef4444',cancelButtonText:'إلغاء'});if(!c.isConfirmed)return;
-  await deleteEntityAndImage('archive_record',r.id,{parentId:String(currentArchiveSessionId),sortTs:r.timestamp},r);await adjustArchiveSessionSummary(currentArchiveSessionId,r,null);await window.CashTopLink?.handleLocalDelete?.(before).catch(e=>console.warn('linked delete',e));closeSingleTransaction();await resetArchiveDetails();toast('تم حذف المعاملة')
+  const r=currentArchivedRecord;if(!r)return;const c=await Swal.fire({title:'حذف المعاملة المؤرشفة؟',text:'سيتم حذفها من هذه الشركة عند المزامنة.',icon:'warning',showCancelButton:true,confirmButtonText:'حذف',confirmButtonColor:'#ef4444',cancelButtonText:'إلغاء'});if(!c.isConfirmed)return;
+  await deleteEntityAndImage('archive_record',r.id,{parentId:String(currentArchiveSessionId),sortTs:r.timestamp},r);await adjustArchiveSessionSummary(currentArchiveSessionId,r,null);closeSingleTransaction();await resetArchiveDetails();toast('تم حذف المعاملة')
 };
 
 async function restoreCashArchivedTransaction(){
@@ -738,31 +724,32 @@ async function recomputeArchiveSession(sessionId){
 }
 
 // ---------------- Image compression <= 50 KiB ----------------
-// v16: نحافظ على الصورة كاملة ونسبة أبعادها. لا يوجد قص مربع إطلاقاً.
-// نخفض جودة الترميز أولاً، وإذا كانت الصورة ضخمة جداً نخفض الدقة تناسبياً فقط كحل أخير للوصول إلى 50KB.
+// R100 strategy: crop to a square, max 500x500, then reduce JPEG quality/dimensions
+// until the file is genuinely <= 50 KiB. The compressed blob is saved locally first.
 async function compressImageUnder50KB(file,maxKB=50){
   if(!(file instanceof Blob))throw new Error('ملف الصورة غير صالح');
-  const limitBytes=Math.max(8,Number(maxKB||50))*1024;
-  if(file.size<=limitBytes&&/^image\/(jpeg|jpg|webp)$/i.test(file.type||''))return file;
-  const bitmap=await createBitmap(file),width=Number(bitmap.width||bitmap.naturalWidth||0),height=Number(bitmap.height||bitmap.naturalHeight||0);
+  const bitmap=await createBitmap(file);
+  const width=Number(bitmap.width||bitmap.naturalWidth||0),height=Number(bitmap.height||bitmap.naturalHeight||0);
   if(!width||!height){bitmap.close?.();throw new Error('أبعاد الصورة غير صالحة')}
-  let scale=1,best=null;
+  const sourceSize=Math.min(width,height),sourceX=Math.max(0,(width-sourceSize)/2),sourceY=Math.max(0,(height-sourceSize)/2);
+  const limitBytes=Math.max(8,Number(maxKB||50))*1024;
+  let target=Math.min(sourceSize,500),best=null;
   try{
-    while(scale>=.16){
-      const w=Math.max(1,Math.round(width*scale)),h=Math.max(1,Math.round(height*scale)),c=document.createElement('canvas');c.width=w;c.height=h;
-      const x=c.getContext('2d',{alpha:false});if(!x)throw new Error('Canvas غير متاح');x.fillStyle='#fff';x.fillRect(0,0,w,h);x.drawImage(bitmap,0,0,width,height,0,0,w,h);
-      for(const type of ['image/webp','image/jpeg']){
-        for(let q=.9;q>=.02;q-=.04){
-          const blob=await canvasBlob(c,type,Math.max(.01,q));if(!best||blob.size<best.size)best=blob;if(blob.size<=limitBytes)return blob;
-        }
+    while(target>=64){
+      const c=document.createElement('canvas');c.width=Math.max(1,Math.round(target));c.height=c.width;
+      const x=c.getContext('2d',{alpha:false});if(!x)throw new Error('Canvas غير متاح');
+      x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(bitmap,sourceX,sourceY,sourceSize,sourceSize,0,0,c.width,c.height);
+      for(let q=.88;q>=.06;q-=.06){
+        const blob=await canvasBlob(c,'image/jpeg',Math.max(.1,q));
+        if(!best||blob.size<best.size)best=blob;
+        if(blob.size<=limitBytes)return blob;
       }
-      scale*=.86;
+      target=Math.floor(target*.78);
     }
     if(best&&best.size<=limitBytes)return best;
     throw new Error('تعذر ضغط الصورة إلى 50KB أو أقل');
   }finally{try{bitmap.close?.()}catch{}}
 }
-
 function canvasBlob(c,type,q){return new Promise((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(new Error('تعذر ضغط الصورة')),type,q))}
 async function createBitmap(file){
   if(typeof createImageBitmap==='function'){
@@ -875,8 +862,8 @@ async function getAllKindPayloads(kind){
 function mergeById(target,incoming){const map=new Map(target.map(x=>[String(x.id),x]));for(const x of incoming||[])if(x&&x.id!==undefined)map.set(String(x.id),x);target.splice(0,target.length,...map.values());}
 async function hydrateLegacyFromIndexedDB(){
   try{
-    const [debt,cash,archives,cats,rems,ledger,contactRows,profiles]=await Promise.all(['debt_record','cash_record','archive_session','category','reminder','ledger_record','contact','profile'].map(getAllKindPayloads));
-    mergeById(records,debt);mergeById(cashRecords,cash);mergeById(cashArchives,archives);mergeById(categories,cats);mergeById(reminders,rems);if(typeof ledgerRecords!=='undefined')mergeById(ledgerRecords,ledger);
+    const [debt,cash,archives,cats,rems,contactRows,profiles]=await Promise.all(['debt_record','cash_record','archive_session','category','reminder','contact','profile'].map(getAllKindPayloads));
+    mergeById(records,debt);mergeById(cashRecords,cash);mergeById(cashArchives,archives);mergeById(categories,cats);mergeById(reminders,rems);
     for(const c of contactRows||[]){const k=c?.__contactKey||c?.key;if(k)contacts[k]=c}
     // contact payloads from older versions don't contain their key; read the store directly for those.
     const db=await openDb(),tx=db.transaction('items','readonly'),store=tx.objectStore('items');
@@ -914,12 +901,12 @@ async function buildBackup(){
   const parents=new Set([...Object.keys(contacts),...records.map(r=>personKey(r.name,r.type))]);
   for(const parentId of parents){let beforeTs=Number.MAX_SAFE_INTEGER,beforeId='\uffff',guard=0;while(guard++<100000){const page=await listDebtArchive(parentId,beforeTs,beforeId,120);if(!page.length)break;for(const r of page)debtArchiveMap.set(String(r.id),r);const last=page[page.length-1];beforeTs=Number(last.timestamp||0);beforeId=String(last.id);if(page.length<120)break}}
   const debtArchiveRecords=[...debtArchiveMap.values()];
-  return {backupVersion:'cashtop-cloud-v8',exportedAt:new Date().toISOString(),company:{id:session?.company?.id||'',name:session?.company?.name||''},data:{records:[...records],cashRecords:[...cashRecords],cashArchives:[...cashArchives],categories:[...categories],contacts:{...contacts},reminders:[...reminders],ledgerRecords:typeof ledgerRecords!=='undefined'?[...ledgerRecords]:[],profile:{...profile},archiveRecords,debtArchiveRecords}};
+  return {backupVersion:'cashtop-cloud-v8',exportedAt:new Date().toISOString(),company:{id:session?.company?.id||'',name:session?.company?.name||''},data:{records:[...records],cashRecords:[...cashRecords],cashArchives:[...cashArchives],categories:[...categories],contacts:{...contacts},reminders:[...reminders],profile:{...profile},archiveRecords,debtArchiveRecords}};
 }
 async function restoreBackup(doc){
   if(!doc||typeof doc!=='object'||!doc.data)throw new Error('ملف النسخة غير صالح');
-  const d=doc.data;const debt=Array.isArray(d.records)?d.records:[],cash=Array.isArray(d.cashRecords)?d.cashRecords:[],archives=Array.isArray(d.cashArchives)?d.cashArchives:[],cats=Array.isArray(d.categories)?d.categories:[],rems=Array.isArray(d.reminders)?d.reminders:[],ledger=Array.isArray(d.ledgerRecords)?d.ledgerRecords:[],ars=Array.isArray(d.archiveRecords)?d.archiveRecords:[],debtArs=Array.isArray(d.debtArchiveRecords)?d.debtArchiveRecords:[];
-  mergeById(records,debt);mergeById(cashRecords,cash);mergeById(cashArchives,archives);mergeById(categories,cats);mergeById(reminders,rems);if(typeof ledgerRecords!=='undefined')mergeById(ledgerRecords,ledger);Object.assign(contacts,d.contacts&&typeof d.contacts==='object'?d.contacts:{});if(d.profile&&typeof d.profile==='object')profile={...profile,...d.profile};saveData();
+  const d=doc.data;const debt=Array.isArray(d.records)?d.records:[],cash=Array.isArray(d.cashRecords)?d.cashRecords:[],archives=Array.isArray(d.cashArchives)?d.cashArchives:[],cats=Array.isArray(d.categories)?d.categories:[],rems=Array.isArray(d.reminders)?d.reminders:[],ars=Array.isArray(d.archiveRecords)?d.archiveRecords:[],debtArs=Array.isArray(d.debtArchiveRecords)?d.debtArchiveRecords:[];
+  mergeById(records,debt);mergeById(cashRecords,cash);mergeById(cashArchives,archives);mergeById(categories,cats);mergeById(reminders,rems);Object.assign(contacts,d.contacts&&typeof d.contacts==='object'?d.contacts:{});if(d.profile&&typeof d.profile==='object')profile={...profile,...d.profile};saveData();
   let total=0;
   for(const r of debt){await putEntity('debt_record',r.id,r,{parentId:personKey(r.name,r.type),sortTs:r.timestamp||0,queue:true});if(++total%60===0)await new Promise(requestAnimationFrame)}
   for(const r of cash){await putEntity('cash_record',r.id,r,{sortTs:r.timestamp||0,queue:true});if(++total%60===0)await new Promise(requestAnimationFrame)}
@@ -929,7 +916,6 @@ async function restoreBackup(doc){
   for(const c of cats){await putEntity('category',c.id,c,{sortTs:c.id||0,queue:true});total++}
   for(const [k,c] of Object.entries(d.contacts||{})){await putEntity('contact',k,c,{queue:true});total++}
   for(const r of rems){await putEntity('reminder',r.id,r,{parentId:personKey(r.name,r.type),sortTs:r.at||0,queue:true});total++}
-  for(const r of ledger){await putEntity('ledger_record',r.id,r,{sortTs:r.timestamp||0,queue:true});if(++total%60===0)await new Promise(requestAnimationFrame)}
   if(d.profile){await putEntity('profile','main',profile,{sortTs:Date.now(),queue:true});total++}
   refreshVisibleUI();scheduleAutoSync(300);return{ok:true,total};
 }
@@ -951,6 +937,7 @@ function hideLogin(){document.getElementById('loginScreen')?.classList.remove('s
 function bootAuthUI(){
   const reason=localStorage.getItem('cashtop_logout_reason');if(reason){localStorage.removeItem('cashtop_logout_reason');showLoginMessage(reason,'error')}
   if(!session?.token||!session?.company?.id){showLogin();return false}
+  if(Number(session.company.expiresAt||0)&&Date.now()>=Number(session.company.expiresAt)){writeSession(null);showLogin();showLoginMessage('انتهت مدة مفتاح الشركة','error');return false}
   hideLogin();document.getElementById('settings-company-name')?.replaceChildren(document.createTextNode(session.company.name||''));document.getElementById('settings-company-expiry')?.replaceChildren(document.createTextNode(new Date(session.company.expiresAt).toLocaleString('ar-EG')));return true
 }
 
@@ -994,9 +981,8 @@ document.addEventListener('DOMContentLoaded',async()=>{
   window.loginCompany=()=>login();window.logoutCompany=()=>logout();window.manualSync=()=>syncNow(true);window.installCashTop=()=>chooseInstall();
   const k=document.getElementById('login-company-key');if(k)k.addEventListener('keydown',e=>{if(e.key==='Enter')login()});
   if(!bootAuthUI())return;
-  if(isSubscriptionExpired())setTimeout(()=>toast('اشتراكك انتهى','error'),250);
   wrapLegacyMutations();await requestPersistentStorage();await migrateOutboxEconomyV14();await hydrateLegacyFromIndexedDB();await migrateCategoryScopesV10();await migrateLegacy();await updateSyncUI();updateInstallButton();renderArchiveSessions();validateSession(false);scheduleAutoSync(500);
-  setInterval(()=>{if(session){validateSession(false);if(navigator.onLine)scheduleAutoSync(100)}},60*1000);
+  setInterval(()=>{if(session){validateSession(false);if(navigator.onLine)scheduleAutoSync(100)}},5*60*1000);
 });
 
 })();
