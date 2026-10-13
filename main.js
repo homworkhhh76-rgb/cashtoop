@@ -1049,12 +1049,12 @@ function writeQueryMetaCache() {
   }
 }
 function hashQuerySignature(text) {
-  let h41 = 2166136261;
+  let h42 = 2166136261;
   for (let i = 0; i < text.length; i += 1) {
-    h41 ^= text.charCodeAt(i);
-    h41 = Math.imul(h41, 16777619);
+    h42 ^= text.charCodeAt(i);
+    h42 = Math.imul(h42, 16777619);
   }
-  return (h41 >>> 0).toString(36);
+  return (h42 >>> 0).toString(36);
 }
 function queryMetaSignature(kind, storeName, options = {}) {
   const normalized = stableCacheValue(options || {});
@@ -4480,14 +4480,14 @@ __factories["./index"] = function(module, exports, require2) {
           this.modules[this.moduleCount - 15 + v][8] = mod;
         }
       }
-      for (var h41 = 0; h41 < 15; h41++) {
-        mod = !test && (bits >> h41 & 1) === 1;
-        if (h41 < 8) {
-          this.modules[8][this.moduleCount - h41 - 1] = mod;
-        } else if (h41 < 9) {
-          this.modules[8][15 - h41 - 1 + 1] = mod;
+      for (var h42 = 0; h42 < 15; h42++) {
+        mod = !test && (bits >> h42 & 1) === 1;
+        if (h42 < 8) {
+          this.modules[8][this.moduleCount - h42 - 1] = mod;
+        } else if (h42 < 9) {
+          this.modules[8][15 - h42 - 1 + 1] = mod;
         } else {
-          this.modules[8][15 - h41 - 1] = mod;
+          this.modules[8][15 - h42 - 1] = mod;
         }
       }
       this.modules[this.moduleCount - 8][8] = !test;
@@ -4713,13 +4713,13 @@ function line(ctx, x1, y1, x2, y2, w = 1, color = "#cbd5e1") {
   ctx.lineTo(x2, y2);
   ctx.stroke();
 }
-function roundedRect(ctx, x, y, w, h41, r = 12, fill = "#fff", stroke = "#e2e8f0", lw = 1) {
-  const rr = Math.min(r, w / 2, h41 / 2);
+function roundedRect(ctx, x, y, w, h42, r = 12, fill = "#fff", stroke = "#e2e8f0", lw = 1) {
+  const rr = Math.min(r, w / 2, h42 / 2);
   ctx.beginPath();
   ctx.moveTo(x + rr, y);
-  ctx.arcTo(x + w, y, x + w, y + h41, rr);
-  ctx.arcTo(x + w, y + h41, x, y + h41, rr);
-  ctx.arcTo(x, y + h41, x, y, rr);
+  ctx.arcTo(x + w, y, x + w, y + h42, rr);
+  ctx.arcTo(x + w, y + h42, x, y + h42, rr);
+  ctx.arcTo(x, y + h42, x, y, rr);
   ctx.arcTo(x, y, x + w, y, rr);
   ctx.closePath();
   if (fill) {
@@ -4765,10 +4765,10 @@ function wrapped(ctx, value, x, y, maxWidth, size = 22, weight = 600, align = "r
   lines.forEach((s, i) => txt(ctx, s, x, y + i * lineH, size, weight, align, color));
   return lines.length;
 }
-function createCanvas(w, h41) {
+function createCanvas(w, h42) {
   const c = document.createElement("canvas");
   c.width = Math.max(1, Math.ceil(w));
-  c.height = Math.max(1, Math.ceil(h41));
+  c.height = Math.max(1, Math.ceil(h42));
   const ctx = c.getContext("2d", { alpha: false, desynchronized: true });
   ctx.fillStyle = "#fff";
   ctx.fillRect(0, 0, c.width, c.height);
@@ -4828,8 +4828,8 @@ async function drawBrand(ctx, w, settings, title, subtitle = "", top = 34) {
   return y;
 }
 function columnWeights(headers) {
-  return headers.map((h41) => {
-    const s = normalize(h41);
+  return headers.map((h42) => {
+    const s = normalize(h42);
     if (/الصنف|البيان|الملاحظ|التفاصيل|العنوان|الاسم/.test(s)) return 1.7;
     if (/التاريخ|الحساب|الجهة|العميل|المورد/.test(s)) return 1.25;
     if (/^#|رقم|النوع|الوحدة|الكمية/.test(s)) return 0.85;
@@ -4861,8 +4861,8 @@ function drawTable(ctx, { x, y, w, headers, rows, fontSize = 19, headH = 60, alt
   const data = maxRows == null ? rows : rows.slice(0, maxRows);
   const cols = tableColumnGeometry(headers, x, w);
   roundedRect(ctx, x, y, w, headH, 7, plainHeader ? "#fff" : "#7C3AED", plainHeader ? "#cbd5e1" : "#6D28D9", 1.2);
-  headers.forEach((h41, i) => {
-    const ls = cellLines(ctx, h41, cols[i].width, fontSize, true);
+  headers.forEach((h42, i) => {
+    const ls = cellLines(ctx, h42, cols[i].width, fontSize, true);
     const start = y + headH / 2 - (ls.length - 1) * (fontSize + 5) / 2;
     ls.forEach((s, j) => txt(ctx, s, cols[i].center, start + j * (fontSize + 5), fontSize, 900, "center", plainHeader ? "#111" : "#fff"));
   });
@@ -4900,8 +4900,8 @@ async function renderTableCanvas({ title = "\u062A\u0642\u0631\u064A\u0631", sub
   (rows || []).forEach((r) => bodyH += rowHeight(ctxProbe, r, cols, fs, 56));
   const probe = createCanvas(w, 800);
   const brandEnd = await drawBrand(probe.ctx, w, settings, title, subtitle, 30);
-  const h41 = Math.max(900, brandEnd + bodyH + 220);
-  const { canvas, ctx } = createCanvas(w, h41);
+  const h42 = Math.max(900, brandEnd + bodyH + 220);
+  const { canvas, ctx } = createCanvas(w, h42);
   let y = await drawBrand(ctx, w, settings, title, subtitle, 30);
   roundedRect(ctx, 48, y, w - 96, 52, 10, "#f8fafc", "#e2e8f0");
   txt(ctx, `\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0642\u0631\u064A\u0631: ${(/* @__PURE__ */ new Date()).toLocaleString("ar-EG")}`, w - 68, y + 26, 16, 600, "right", "#64748b");
@@ -4971,8 +4971,8 @@ function drawMetricGlyph(ctx, type, cx, cy, size = 34, color = "#7C3AED") {
 }
 async function renderExecutiveReportCanvas({ title = "\u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u064A\u0648\u0645\u064A", subtitle = "", metrics = [], headers = [], rows = [], settings = {} }) {
   settings = documentBrandSettings(settings);
-  const w = 1600, h41 = Math.max(1280, 760 + Math.ceil((rows || []).length / 1) * 64);
-  const { canvas, ctx } = createCanvas(w, h41);
+  const w = 1600, h42 = Math.max(1280, 760 + Math.ceil((rows || []).length / 1) * 64);
+  const { canvas, ctx } = createCanvas(w, h42);
   let y = await drawBrand(ctx, w, settings, title, subtitle, 30);
   const cards = (metrics || []).slice(0, 6);
   const gap = 22, margin = 48, cols = 3, cardW = (w - margin * 2 - gap * (cols - 1)) / cols, cardH = 142;
@@ -5210,11 +5210,11 @@ async function renderVoucherCanvas(voucher, settings = {}, options = {}) {
 async function renderCustomerStatementPages(customer, invoices = [], vouchers = [], settings = {}) {
   settings = documentBrandSettings(settings);
   const model = customerStatementModel(customer, invoices, vouchers);
-  const pages = [], w = 1120, h41 = 1584, x = 40, widths = [42, 122, 132, 400, 110, 110, 124], heads = statementHeaders;
+  const pages = [], w = 1120, h42 = 1584, x = 40, widths = [42, 122, 132, 400, 110, 110, 124], heads = statementHeaders;
   let canvas, ctx, y, page = 0;
   async function newPage() {
     if (canvas) pages.push(canvas);
-    ({ canvas, ctx } = createCanvas(w, h41));
+    ({ canvas, ctx } = createCanvas(w, h42));
     page++;
     y = await drawBrand(ctx, w, settings, "\u0643\u0634\u0641 \u062D\u0633\u0627\u0628", `\u0627\u0644\u0639\u0645\u064A\u0644: ${customer.name} \u2022 \u0627\u0644\u0647\u0627\u062A\u0641: ${customer.phone || "-"}`, 24);
     ctx.fillStyle = "#7c3aed";
@@ -5225,7 +5225,7 @@ async function renderCustomerStatementPages(customer, invoices = [], vouchers = 
       right -= widths[i];
     });
     y += 44;
-    txt(ctx, `\u0635\u0641\u062D\u0629 ${page}`, w / 2, h41 - 28, 15, 600, "center", "#64748b");
+    txt(ctx, `\u0635\u0641\u062D\u0629 ${page}`, w / 2, h42 - 28, 15, 600, "center", "#64748b");
   }
   await newPage();
   for (let ri = 0; ri < model.rows.length; ri++) {
@@ -5234,10 +5234,10 @@ async function renderCustomerStatementPages(customer, invoices = [], vouchers = 
     let offset = 0;
     const count = Math.max(...ls.map((a) => a.length));
     while (offset < count) {
-      let capacity = Math.floor((h41 - 70 - y - 20) / 25);
+      let capacity = Math.floor((h42 - 70 - y - 20) / 25);
       if (capacity < 2) {
         await newPage();
-        capacity = Math.floor((h41 - 70 - y - 20) / 25);
+        capacity = Math.floor((h42 - 70 - y - 20) / 25);
       }
       const take = Math.min(capacity, count - offset), rh = take * 25 + 20;
       ctx.fillStyle = ri % 2 ? "#f5f0ff" : "#fff";
@@ -5263,8 +5263,8 @@ function combineCanvasesVertical(canvases, gap = 22, maxHeight = 12e3) {
   const srcW = Math.max(...canvases.map((c) => c.width));
   const srcH = canvases.reduce((s, c) => s + c.height, 0) + gap * (canvases.length - 1);
   const scale = srcH > maxHeight ? maxHeight / srcH : 1;
-  const w = Math.max(1, Math.round(srcW * scale)), h41 = Math.max(1, Math.round(srcH * scale));
-  const { canvas, ctx } = createCanvas(w, h41);
+  const w = Math.max(1, Math.round(srcW * scale)), h42 = Math.max(1, Math.round(srcH * scale));
+  const { canvas, ctx } = createCanvas(w, h42);
   let y = 0;
   for (const c of canvases) {
     const dw = Math.round(c.width * scale), dh = Math.round(c.height * scale), x = Math.round((w - dw) / 2);
@@ -7260,7 +7260,7 @@ var AppProvider = ({ children }) => {
     showToast("\u062A\u0645 \u062A\u0639\u0644\u064A\u0642 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629 \u0628\u0646\u062C\u0627\u062D \u0648\u064A\u0645\u0643\u0646 \u0627\u0633\u062A\u0631\u062C\u0627\u0639\u0647\u0627 \u0641\u064A \u0623\u064A \u0648\u0642\u062A", "success");
   }, [cart, selectedCustomer, invoiceAdditionalCharges, invoiceDiscountType, invoiceDiscountValue, clearCart, showToast, settings.activeFinancialYearId]);
   const restoreHeldInvoice = useCallback(async (heldId) => {
-    const held = heldInvoices.find((h41) => h41.id === heldId);
+    const held = heldInvoices.find((h42) => h42.id === heldId);
     await assertOpenFinancialRecord(held);
     if (!held)
       return;
@@ -7273,13 +7273,13 @@ var AppProvider = ({ children }) => {
     setInvoiceDiscountValue(Number(held.invoiceDiscountValue) || 0);
     setSelectedCustomer(held.customerId === CASH_CUSTOMER.id ? CASH_CUSTOMER : customers.find((c) => c.id === held.customerId) || CASH_CUSTOMER);
     await deleteFromStore("held_invoices", heldId);
-    setHeldInvoices((prev) => prev.filter((h41) => h41.id !== heldId));
+    setHeldInvoices((prev) => prev.filter((h42) => h42.id !== heldId));
     setShowHoldInvoicesModal(false);
     showToast("\u062A\u0645 \u0627\u0633\u062A\u0639\u0627\u062F\u0629 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629 \u0627\u0644\u0645\u0639\u0644\u0642\u0629 \u0625\u0644\u0649 \u0627\u0644\u0633\u0644\u0629", "info");
   }, [heldInvoices, cart.length, holdCurrentInvoice, customers, showToast]);
   const deleteHeldInvoice = useCallback(async (heldId) => {
     await deleteFromStore("held_invoices", heldId);
-    setHeldInvoices((prev) => prev.filter((h41) => h41.id !== heldId));
+    setHeldInvoices((prev) => prev.filter((h42) => h42.id !== heldId));
   }, []);
   const handleScannedBarcode = useCallback((barcode) => {
     if (!barcode || barcode.trim() === "")
@@ -9894,7 +9894,7 @@ function excelCell(value, style = "Cell") {
 }
 function exportToCSV(filename, headers, rows) {
   const title = String(filename || "\u062A\u0642\u0631\u064A\u0631").replace(/[\-_]+/g, " "), appHeader = document.getElementById("main-header"), storeName = appHeader?.querySelector("h1")?.textContent?.trim() || "\u0643\u0627\u0634 \u062A\u0648\u0628 3", storeSubtitle = appHeader?.querySelector("h1 + span")?.textContent?.trim() || "", maxCols = Math.max(1, headers?.length || 1), dataRows = (rows || []).map((row2, ri) => `<Row>${(row2 || []).map((v) => excelCell(v, ri % 2 ? "Alt" : "Cell")).join("")}</Row>`).join("");
-  const xml = `<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Styles><Style ss:ID="Default" ss:Name="Normal"><Alignment ss:Vertical="Center" ss:Horizontal="Right"/><Font ss:FontName="Arial" ss:Size="10"/></Style><Style ss:ID="Title"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:FontName="Arial" ss:Size="16" ss:Bold="1" ss:Color="#0F172A"/></Style><Style ss:ID="Meta"><Alignment ss:Horizontal="Center"/><Font ss:FontName="Arial" ss:Size="9" ss:Color="#64748B"/></Style><Style ss:ID="Head"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Arial" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#7C3AED" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#6D28D9"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#6D28D9"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#6D28D9"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#6D28D9"/></Borders></Style><Style ss:ID="Cell"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/></Borders></Style><Style ss:ID="Alt"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Interior ss:Color="#F5F0FF" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/></Borders></Style></Styles><Worksheet ss:Name="\u0627\u0644\u062A\u0642\u0631\u064A\u0631"><Table><Row ss:Height="30"><Cell ss:StyleID="Title" ss:MergeAcross="${maxCols - 1}"><Data ss:Type="String">${xmlEscape(storeName)}</Data></Cell></Row><Row><Cell ss:StyleID="Meta" ss:MergeAcross="${maxCols - 1}"><Data ss:Type="String">${xmlEscape(storeSubtitle)}</Data></Cell></Row><Row ss:Height="24"><Cell ss:StyleID="Title" ss:MergeAcross="${maxCols - 1}"><Data ss:Type="String">${xmlEscape(title)}</Data></Cell></Row><Row><Cell ss:StyleID="Meta" ss:MergeAcross="${maxCols - 1}"><Data ss:Type="String">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0635\u062F\u064A\u0631: ${xmlEscape((/* @__PURE__ */ new Date()).toLocaleString("ar-EG"))}</Data></Cell></Row><Row ss:Height="8"></Row><Row>${(headers || []).map((h41) => excelCell(h41, "Head")).join("")}</Row>${dataRows}</Table><WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel"><DisplayRightToLeft/><FreezePanes/><FrozenNoSplit/><SplitHorizontal>6</SplitHorizontal><TopRowBottomPane>6</TopRowBottomPane></WorksheetOptions></Worksheet></Workbook>`;
+  const xml = `<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Styles><Style ss:ID="Default" ss:Name="Normal"><Alignment ss:Vertical="Center" ss:Horizontal="Right"/><Font ss:FontName="Arial" ss:Size="10"/></Style><Style ss:ID="Title"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:FontName="Arial" ss:Size="16" ss:Bold="1" ss:Color="#0F172A"/></Style><Style ss:ID="Meta"><Alignment ss:Horizontal="Center"/><Font ss:FontName="Arial" ss:Size="9" ss:Color="#64748B"/></Style><Style ss:ID="Head"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Arial" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#7C3AED" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#6D28D9"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#6D28D9"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#6D28D9"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#6D28D9"/></Borders></Style><Style ss:ID="Cell"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/></Borders></Style><Style ss:ID="Alt"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Interior ss:Color="#F5F0FF" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/></Borders></Style></Styles><Worksheet ss:Name="\u0627\u0644\u062A\u0642\u0631\u064A\u0631"><Table><Row ss:Height="30"><Cell ss:StyleID="Title" ss:MergeAcross="${maxCols - 1}"><Data ss:Type="String">${xmlEscape(storeName)}</Data></Cell></Row><Row><Cell ss:StyleID="Meta" ss:MergeAcross="${maxCols - 1}"><Data ss:Type="String">${xmlEscape(storeSubtitle)}</Data></Cell></Row><Row ss:Height="24"><Cell ss:StyleID="Title" ss:MergeAcross="${maxCols - 1}"><Data ss:Type="String">${xmlEscape(title)}</Data></Cell></Row><Row><Cell ss:StyleID="Meta" ss:MergeAcross="${maxCols - 1}"><Data ss:Type="String">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0635\u062F\u064A\u0631: ${xmlEscape((/* @__PURE__ */ new Date()).toLocaleString("ar-EG"))}</Data></Cell></Row><Row ss:Height="8"></Row><Row>${(headers || []).map((h42) => excelCell(h42, "Head")).join("")}</Row>${dataRows}</Table><WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel"><DisplayRightToLeft/><FreezePanes/><FrozenNoSplit/><SplitHorizontal>6</SplitHorizontal><TopRowBottomPane>6</TopRowBottomPane></WorksheetOptions></Worksheet></Workbook>`;
   const outName = safeName(filename).replace(/\.(csv|xlsx|xls)$/i, "") + ".xls";
   return downloadBlob(new Blob(["\uFEFF", xml], { type: "application/vnd.ms-excel;charset=utf-8" }), outName);
 }
@@ -10288,7 +10288,7 @@ function excelXml({ title, subtitle = "", headers, rows, settings, filename, ext
   const info = [settings?.address, settings?.phone ? `\u0647\u0627\u062A\u0641: ${settings.phone}` : "", settings?.taxNumber ? `\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0636\u0631\u064A\u0628\u064A: ${settings.taxNumber}` : ""].filter(Boolean).join(" \u2022 ");
   const extra = extraTopRows.map((r) => `<Row ss:AutoFitHeight="1">${r.map((v) => cell(v, "Info")).join("")}</Row>`).join("");
   const body = (rows || []).map((r, ri) => `<Row ss:AutoFitHeight="1">${r.map((v) => cell(v, ri % 2 ? "Alt" : "Cell")).join("")}</Row>`).join("");
-  const xml = `<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Styles><Style ss:ID="Default" ss:Name="Normal"><Alignment ss:Vertical="Center" ss:Horizontal="Right"/><Font ss:FontName="Arial" ss:Size="10"/></Style><Style ss:ID="Store"><Alignment ss:Horizontal="Right"/><Font ss:FontName="Arial" ss:Size="18" ss:Bold="1" ss:Color="#0F172A"/></Style><Style ss:ID="Sub"><Alignment ss:Horizontal="Right"/><Font ss:FontName="Arial" ss:Size="9" ss:Color="#64748B"/></Style><Style ss:ID="Title"><Alignment ss:Horizontal="Center"/><Font ss:FontName="Arial" ss:Size="14" ss:Bold="1" ss:Color="#0F172A"/></Style><Style ss:ID="Info"><Alignment ss:Horizontal="Right" ss:WrapText="1"/><Font ss:FontName="Arial" ss:Size="9" ss:Bold="1" ss:Color="#334155"/></Style><Style ss:ID="Head"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Arial" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#7C3AED" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#6D28D9"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#6D28D9"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#6D28D9"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#6D28D9"/></Borders></Style><Style ss:ID="Cell"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/></Borders></Style><Style ss:ID="Alt"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Interior ss:Color="#F5F0FF" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/></Borders></Style></Styles><Worksheet ss:Name="\u0627\u0644\u062A\u0642\u0631\u064A\u0631"><Table>${headers.map((h41) => `<Column ss:Width="${h41 === "\u0627\u0644\u0648\u0635\u0641" ? 330 : 90}"/>`).join("")}<Row ss:Height="28"><Cell ss:StyleID="Store" ss:MergeAcross="${colCount - 1}"><Data ss:Type="String">${esc(settings?.storeName || "\u0643\u0627\u0634 \u062A\u0648\u0628 3")}</Data></Cell></Row><Row><Cell ss:StyleID="Sub" ss:MergeAcross="${colCount - 1}"><Data ss:Type="String">${esc(info)}</Data></Cell></Row><Row ss:Height="24"><Cell ss:StyleID="Title" ss:MergeAcross="${colCount - 1}"><Data ss:Type="String">${esc(title)}</Data></Cell></Row><Row><Cell ss:StyleID="Sub" ss:MergeAcross="${colCount - 1}"><Data ss:Type="String">${esc(subtitle)} \u2022 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0642\u0631\u064A\u0631: ${esc((/* @__PURE__ */ new Date()).toLocaleString("ar-EG"))}</Data></Cell></Row>${extra}<Row ss:Height="8"></Row><Row>${headers.map((h41) => cell(h41, "Head")).join("")}</Row>${body}</Table><WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel"><DisplayRightToLeft/><FreezePanes/><FrozenNoSplit/><SplitHorizontal>${6 + extraTopRows.length}</SplitHorizontal><TopRowBottomPane>${6 + extraTopRows.length}</TopRowBottomPane></WorksheetOptions></Worksheet></Workbook>`;
+  const xml = `<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Styles><Style ss:ID="Default" ss:Name="Normal"><Alignment ss:Vertical="Center" ss:Horizontal="Right"/><Font ss:FontName="Arial" ss:Size="10"/></Style><Style ss:ID="Store"><Alignment ss:Horizontal="Right"/><Font ss:FontName="Arial" ss:Size="18" ss:Bold="1" ss:Color="#0F172A"/></Style><Style ss:ID="Sub"><Alignment ss:Horizontal="Right"/><Font ss:FontName="Arial" ss:Size="9" ss:Color="#64748B"/></Style><Style ss:ID="Title"><Alignment ss:Horizontal="Center"/><Font ss:FontName="Arial" ss:Size="14" ss:Bold="1" ss:Color="#0F172A"/></Style><Style ss:ID="Info"><Alignment ss:Horizontal="Right" ss:WrapText="1"/><Font ss:FontName="Arial" ss:Size="9" ss:Bold="1" ss:Color="#334155"/></Style><Style ss:ID="Head"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Arial" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#7C3AED" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#6D28D9"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#6D28D9"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#6D28D9"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#6D28D9"/></Borders></Style><Style ss:ID="Cell"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/></Borders></Style><Style ss:ID="Alt"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Interior ss:Color="#F5F0FF" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/></Borders></Style></Styles><Worksheet ss:Name="\u0627\u0644\u062A\u0642\u0631\u064A\u0631"><Table>${headers.map((h42) => `<Column ss:Width="${h42 === "\u0627\u0644\u0648\u0635\u0641" ? 330 : 90}"/>`).join("")}<Row ss:Height="28"><Cell ss:StyleID="Store" ss:MergeAcross="${colCount - 1}"><Data ss:Type="String">${esc(settings?.storeName || "\u0643\u0627\u0634 \u062A\u0648\u0628 3")}</Data></Cell></Row><Row><Cell ss:StyleID="Sub" ss:MergeAcross="${colCount - 1}"><Data ss:Type="String">${esc(info)}</Data></Cell></Row><Row ss:Height="24"><Cell ss:StyleID="Title" ss:MergeAcross="${colCount - 1}"><Data ss:Type="String">${esc(title)}</Data></Cell></Row><Row><Cell ss:StyleID="Sub" ss:MergeAcross="${colCount - 1}"><Data ss:Type="String">${esc(subtitle)} \u2022 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0642\u0631\u064A\u0631: ${esc((/* @__PURE__ */ new Date()).toLocaleString("ar-EG"))}</Data></Cell></Row>${extra}<Row ss:Height="8"></Row><Row>${headers.map((h42) => cell(h42, "Head")).join("")}</Row>${body}</Table><WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel"><DisplayRightToLeft/><FreezePanes/><FrozenNoSplit/><SplitHorizontal>${6 + extraTopRows.length}</SplitHorizontal><TopRowBottomPane>${6 + extraTopRows.length}</TopRowBottomPane></WorksheetOptions></Worksheet></Workbook>`;
   const name = safeFile(filename).replace(/\.(xlsx|xls)$/i, "") + ".xls";
   return downloadBlob(new Blob(["\uFEFF", xml], { type: "application/vnd.ms-excel;charset=utf-8" }), name);
 }
@@ -10762,9 +10762,9 @@ function DistributionView() {
 // app/components__common__StartupScreen.js
 import React5 from "react";
 function StartupScreen({ progress = 5, offline = false }) {
-  const h41 = React5.createElement;
+  const h42 = React5.createElement;
   const pct = Math.min(100, Math.max(0, Math.round(progress)));
-  return h41("div", { className: "ct-startup-screen" + (offline ? " ct-startup-offline" : ""), dir: "rtl" }, h41("h2", null, offline ? t("\u062C\u0627\u0631\u064A \u0641\u062A\u062D \u0628\u064A\u0627\u0646\u0627\u062A\u0643 \u0627\u0644\u0645\u062D\u0644\u064A\u0629\u2026") : t("\u062C\u0627\u0631\u064A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629\u060C \u064A\u0631\u062C\u0649 \u0627\u0644\u0627\u0646\u062A\u0638\u0627\u0631\u2026")), h41("p", null, t("\u0644\u062D\u0638\u0627\u062A \u0648\u0646\u0643\u0648\u0646 \u062C\u0627\u0647\u0632\u064A\u0646")), h41("div", { className: "ct-progress-person", role: "progressbar", "aria-label": t("\u062A\u062C\u0647\u064A\u0632 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"), "aria-valuenow": pct, "aria-valuemin": 0, "aria-valuemax": 100 }, h41("svg", { viewBox: "0 0 200 200", "aria-hidden": true }, h41("circle", { cx: 100, cy: 100, r: 88, fill: "none", stroke: "#e5e7eb", strokeWidth: 10 }), h41("circle", { cx: 100, cy: 100, r: 88, fill: "none", stroke: "#7c3aed", strokeWidth: 10, strokeLinecap: "round", pathLength: 100, strokeDasharray: `${pct} 100`, transform: "rotate(-90 100 100)" }), h41("g", { className: "ct-person-face" }, h41("rect", { x: 67, y: 115, width: 66, height: 33, rx: 16, fill: "#7c3aed" }), h41("circle", { cx: 100, cy: 93, r: 33, fill: "#ffd4a1" }), h41("rect", { x: 72, y: 61, width: 56, height: 12, rx: 6, fill: "#5b21b6" }), h41("rect", { x: 80, y: 44, width: 40, height: 22, rx: 9, fill: "#8b5cf6" }), h41("g", { className: "ct-person-eyes" }, h41("circle", { cx: 88, cy: 91, r: 5, fill: "#fff" }), h41("circle", { cx: 112, cy: 91, r: 5, fill: "#fff" }), h41("circle", { cx: 88, cy: 91, r: 2.6, fill: "#513b35" }), h41("circle", { cx: 112, cy: 91, r: 2.6, fill: "#513b35" })), h41("path", { className: "ct-person-smile", d: "M88 106 Q100 118 112 106", fill: "none", stroke: "#80503c", strokeWidth: 3, strokeLinecap: "round" }))), h41("b", null, pct + "%")), h41("div", { className: "ct-loading-status", role: "status" }, offline ? t("\u062C\u0627\u0631\u064A \u0641\u062A\u062D \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0641\u0648\u0638\u0629 \u0639\u0644\u0649 \u0627\u0644\u062C\u0647\u0627\u0632\u2026") : pct < 45 ? t("\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629\u2026") : pct < 80 ? t("\u062C\u0627\u0631\u064A \u0645\u0632\u0627\u0645\u0646\u0629 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0634\u0631\u0643\u0629\u2026") : pct < 100 ? t("\u062C\u0627\u0631\u064A \u062A\u062C\u0647\u064A\u0632 \u0623\u0648\u0644 50 \u0633\u062C\u0644\u2026") : t("\u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u062C\u0627\u0647\u0632\u0629")));
+  return h42("div", { className: "ct-startup-screen" + (offline ? " ct-startup-offline" : ""), dir: "rtl" }, h42("h2", null, offline ? t("\u062C\u0627\u0631\u064A \u0641\u062A\u062D \u0628\u064A\u0627\u0646\u0627\u062A\u0643 \u0627\u0644\u0645\u062D\u0644\u064A\u0629\u2026") : t("\u062C\u0627\u0631\u064A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629\u060C \u064A\u0631\u062C\u0649 \u0627\u0644\u0627\u0646\u062A\u0638\u0627\u0631\u2026")), h42("p", null, t("\u0644\u062D\u0638\u0627\u062A \u0648\u0646\u0643\u0648\u0646 \u062C\u0627\u0647\u0632\u064A\u0646")), h42("div", { className: "ct-progress-person", role: "progressbar", "aria-label": t("\u062A\u062C\u0647\u064A\u0632 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"), "aria-valuenow": pct, "aria-valuemin": 0, "aria-valuemax": 100 }, h42("svg", { viewBox: "0 0 200 200", "aria-hidden": true }, h42("circle", { cx: 100, cy: 100, r: 88, fill: "none", stroke: "#e5e7eb", strokeWidth: 10 }), h42("circle", { cx: 100, cy: 100, r: 88, fill: "none", stroke: "#7c3aed", strokeWidth: 10, strokeLinecap: "round", pathLength: 100, strokeDasharray: `${pct} 100`, transform: "rotate(-90 100 100)" }), h42("g", { className: "ct-person-face" }, h42("rect", { x: 67, y: 115, width: 66, height: 33, rx: 16, fill: "#7c3aed" }), h42("circle", { cx: 100, cy: 93, r: 33, fill: "#ffd4a1" }), h42("rect", { x: 72, y: 61, width: 56, height: 12, rx: 6, fill: "#5b21b6" }), h42("rect", { x: 80, y: 44, width: 40, height: 22, rx: 9, fill: "#8b5cf6" }), h42("g", { className: "ct-person-eyes" }, h42("circle", { cx: 88, cy: 91, r: 5, fill: "#fff" }), h42("circle", { cx: 112, cy: 91, r: 5, fill: "#fff" }), h42("circle", { cx: 88, cy: 91, r: 2.6, fill: "#513b35" }), h42("circle", { cx: 112, cy: 91, r: 2.6, fill: "#513b35" })), h42("path", { className: "ct-person-smile", d: "M88 106 Q100 118 112 106", fill: "none", stroke: "#80503c", strokeWidth: 3, strokeLinecap: "round" }))), h42("b", null, pct + "%")), h42("div", { className: "ct-loading-status", role: "status" }, offline ? t("\u062C\u0627\u0631\u064A \u0641\u062A\u062D \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0641\u0648\u0638\u0629 \u0639\u0644\u0649 \u0627\u0644\u062C\u0647\u0627\u0632\u2026") : pct < 45 ? t("\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629\u2026") : pct < 80 ? t("\u062C\u0627\u0631\u064A \u0645\u0632\u0627\u0645\u0646\u0629 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0634\u0631\u0643\u0629\u2026") : pct < 100 ? t("\u062C\u0627\u0631\u064A \u062A\u062C\u0647\u064A\u0632 \u0623\u0648\u0644 50 \u0633\u062C\u0644\u2026") : t("\u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u062C\u0627\u0647\u0632\u0629")));
 }
 
 // app/App.js
@@ -13581,13 +13581,13 @@ var PaymentModal = ({ isOpen, onClose, onSuccess, embedded = false, controls = n
     }
   };
   if (embedded) {
-    const h41 = React17.createElement;
+    const h42 = React17.createElement;
     const paid = paymentType === "debt" ? 0 : paymentType === "multi" ? multiRows.reduce((sum, r) => sum + Number(r.amount || 0), 0) : numCashGiven;
     const debt = Math.max(0, grandTotal - paid);
     const customerOptions = [{ id: "cust-walkin", label: t("\u0639\u0645\u064A\u0644 \u0646\u0642\u062F\u064A") }, ...customers.filter((c) => c && c.id !== "cust-walkin" && !c.deletedAt).map((c) => ({ id: c.id, label: c.name, subLabel: c.phone }))];
     if (selectedCustomer?.id && !customerOptions.some((c) => c.id === selectedCustomer.id)) customerOptions.push({ id: selectedCustomer.id, label: selectedCustomer.name });
     const chooseCustomer = (id) => setSelectedCustomer(id === "cust-walkin" ? { id: "cust-walkin", name: "\u0639\u0645\u064A\u0644 \u0646\u0642\u062F\u064A", balance: 0, isVirtual: true } : customers.find((c) => c.id === id) || selectedCustomer);
-    const field = (label, child) => h41("label", { className: "ct-compact-field" }, h41("span", null, label), child);
+    const field = (label, child) => h42("label", { className: "ct-compact-field" }, h42("span", null, label), child);
     const openPayment = (type) => {
       if (type === "debt") {
         setPaymentType(paymentType === "debt" ? "cash" : "debt");
@@ -13598,8 +13598,8 @@ var PaymentModal = ({ isOpen, onClose, onSuccess, embedded = false, controls = n
       setDraftRows(multiRows.map((r) => ({ ...r })));
       setPaymentDialog(type);
     };
-    const mode = (type, label) => h41("button", { type: "button", className: `ct-mode ${paymentType === type ? "active" : ""}`, "aria-pressed": paymentType === type, onClick: () => openPayment(type) }, h41(type === "multi" ? Split : type === "partial" ? Coins : Clock, { size: 15 }), label);
-    const modes = h41("div", { className: "ct-top-payment-modes" }, mode("debt", "\u0622\u062C\u0644"), mode("multi", "\u062F\u0641\u0639 \u0645\u062A\u0639\u062F\u062F"), mode("partial", "\u062F\u0641\u0639 \u062C\u0632\u0626\u064A"), h41("button", { type: "button", className: `ct-mode ${invoiceDiscountAmount > 0 ? "active" : ""}`, onClick: () => {
+    const mode = (type, label) => h42("button", { type: "button", className: `ct-mode ${paymentType === type ? "active" : ""}`, "aria-pressed": paymentType === type, onClick: () => openPayment(type) }, h42(type === "multi" ? Split : type === "partial" ? Coins : Clock, { size: 15 }), label);
+    const modes = h42("div", { className: "ct-top-payment-modes" }, mode("debt", "\u0622\u062C\u0644"), mode("multi", "\u062F\u0641\u0639 \u0645\u062A\u0639\u062F\u062F"), mode("partial", "\u062F\u0641\u0639 \u062C\u0632\u0626\u064A"), h42("button", { type: "button", className: `ct-mode ${invoiceDiscountAmount > 0 ? "active" : ""}`, onClick: () => {
       setDraftDiscountType(invoiceDiscountType);
       setDraftDiscountValue(invoiceDiscountValue);
       setShowDiscount(true);
@@ -13623,44 +13623,44 @@ var PaymentModal = ({ isOpen, onClose, onSuccess, embedded = false, controls = n
       setPaymentType(paymentDialog);
       setPaymentDialog(null);
     };
-    const dialog = (title, content, onSubmit, onClose2) => h41(ModalLayer, { className: "ct-payment-dialog-layer", onClick: (e) => {
+    const dialog = (title, content, onSubmit, onClose2) => h42(ModalLayer, { className: "ct-payment-dialog-layer", onClick: (e) => {
       if (e.target === e.currentTarget) onClose2();
-    } }, h41("form", { className: "ct-payment-dialog", onSubmit, onKeyDown: (e) => {
+    } }, h42("form", { className: "ct-payment-dialog", onSubmit, onKeyDown: (e) => {
       if (e.key === "Enter") e.stopPropagation();
-    }, onClick: (e) => e.stopPropagation() }, h41("header", null, h41("strong", null, title), h41("button", { type: "button", "aria-label": t("\u0625\u063A\u0644\u0627\u0642"), onClick: onClose2 }, h41(X9, { size: 19 }))), h41("div", { className: "ct-payment-dialog-body" }, content), h41("footer", null, h41("button", { type: "button", onClick: onClose2 }, t("\u0625\u0644\u063A\u0627\u0621")), h41("button", { type: "submit", className: "ct-apply-payment" }, t("\u062A\u0637\u0628\u064A\u0642")))));
-    const paymentPopup = paymentDialog && dialog(paymentDialog === "multi" ? "\u0627\u0644\u062F\u0641\u0639 \u0627\u0644\u0645\u062A\u0639\u062F\u062F" : "\u0627\u0644\u062F\u0641\u0639 \u0627\u0644\u062C\u0632\u0626\u064A", h41(React17.Fragment, null, h41("div", { className: "ct-dialog-required" }, "\u0627\u0644\u0645\u0628\u0644\u063A \u0627\u0644\u0645\u0637\u0644\u0648\u0628", h41("strong", null, `${grandTotal.toFixed(2)} ${settings.currencySymbol}`)), paymentDialog === "multi" ? h41("div", { className: "ct-account-payment-rows" }, ...accounts.map((acc, index) => h41("label", { key: acc.id }, h41("span", null, acc.name), h41("input", { "aria-label": `\u0627\u0644\u0645\u0628\u0644\u063A \u0627\u0644\u0645\u062F\u0641\u0648\u0639 - ${acc.name}`, autoFocus: index === 0, type: "number", min: 0, step: "any", placeholder: "0.00", value: draftRows.find((r) => r.accountId === acc.id)?.amount ?? "", onChange: (e) => {
+    }, onClick: (e) => e.stopPropagation() }, h42("header", null, h42("strong", null, title), h42("button", { type: "button", "aria-label": t("\u0625\u063A\u0644\u0627\u0642"), onClick: onClose2 }, h42(X9, { size: 19 }))), h42("div", { className: "ct-payment-dialog-body" }, content), h42("footer", null, h42("button", { type: "button", onClick: onClose2 }, t("\u0625\u0644\u063A\u0627\u0621")), h42("button", { type: "submit", className: "ct-apply-payment" }, t("\u062A\u0637\u0628\u064A\u0642")))));
+    const paymentPopup = paymentDialog && dialog(paymentDialog === "multi" ? "\u0627\u0644\u062F\u0641\u0639 \u0627\u0644\u0645\u062A\u0639\u062F\u062F" : "\u0627\u0644\u062F\u0641\u0639 \u0627\u0644\u062C\u0632\u0626\u064A", h42(React17.Fragment, null, h42("div", { className: "ct-dialog-required" }, "\u0627\u0644\u0645\u0628\u0644\u063A \u0627\u0644\u0645\u0637\u0644\u0648\u0628", h42("strong", null, `${grandTotal.toFixed(2)} ${settings.currencySymbol}`)), paymentDialog === "multi" ? h42("div", { className: "ct-account-payment-rows" }, ...accounts.map((acc, index) => h42("label", { key: acc.id }, h42("span", null, acc.name), h42("input", { "aria-label": `\u0627\u0644\u0645\u0628\u0644\u063A \u0627\u0644\u0645\u062F\u0641\u0648\u0639 - ${acc.name}`, autoFocus: index === 0, type: "number", min: 0, step: "any", placeholder: "0.00", value: draftRows.find((r) => r.accountId === acc.id)?.amount ?? "", onChange: (e) => {
       const amount = e.target.value === "" ? 0 : Number(e.target.value);
       setDraftRows((prev) => [...prev.filter((r) => r.accountId !== acc.id), { accountId: acc.id, method: acc.type || "cash", amount }]);
-    } })))) : h41(React17.Fragment, null, field("\u0627\u0644\u0645\u0628\u0644\u063A \u0627\u0644\u0645\u062F\u0641\u0648\u0639", h41("input", { autoFocus: true, "aria-label": "\u0627\u0644\u0645\u0628\u0644\u063A \u0627\u0644\u0645\u062F\u0641\u0648\u0639 \u062C\u0632\u0626\u064A\u0627\u064B", type: "number", min: 0, max: grandTotal, step: "any", required: true, value: draftPaid, onChange: (e) => setDraftPaid(e.target.value) })), h41(SearchableDropdown, { id: "partial-payment-account", label: t("\u0627\u0644\u062D\u0633\u0627\u0628 / \u0627\u0644\u0635\u0646\u062F\u0648\u0642"), options: accounts.map((a) => ({ id: a.id, label: a.name })), selectedId: draftAccount, onSelect: setDraftAccount })), h41("div", { className: "ct-dialog-debt" }, "\u0627\u0644\u0645\u062A\u0628\u0642\u064A \u0643\u062F\u064A\u0646", h41("strong", null, `${Math.max(0, grandTotal - (paymentDialog === "multi" ? draftTotal : Number(draftPaid) || 0)).toFixed(2)} ${settings.currencySymbol}`))), applyPayment, () => setPaymentDialog(null));
-    const discountPopup = showDiscount && dialog("\u062E\u0635\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629", h41("div", { className: "ct-discount-row" }, h41(SearchableDropdown, { id: "invoice-discount-kind", label: t("\u0646\u0648\u0639 \u0627\u0644\u062E\u0635\u0645"), options: [{ id: "fixed", label: t("\u062E\u0635\u0645 \u0645\u0628\u0644\u063A") }, { id: "percent", label: t("\u062E\u0635\u0645 %") }], selectedId: draftDiscountType, onSelect: setDraftDiscountType }), h41("input", { "aria-label": t("\u0642\u064A\u0645\u0629 \u0627\u0644\u062E\u0635\u0645"), type: "number", min: 0, step: "any", autoFocus: true, value: draftDiscountValue, onChange: (e) => setDraftDiscountValue(Math.max(0, Number(e.target.value) || 0)) }), h41("span", null, `${(draftDiscountType === "percent" ? Math.min(beforeInvoiceDiscount, beforeInvoiceDiscount * Math.min(100, Number(draftDiscountValue) || 0) / 100) : Math.min(beforeInvoiceDiscount, Number(draftDiscountValue) || 0)).toFixed(2)} ${settings.currencySymbol}`)), (e) => {
+    } })))) : h42(React17.Fragment, null, field("\u0627\u0644\u0645\u0628\u0644\u063A \u0627\u0644\u0645\u062F\u0641\u0648\u0639", h42("input", { autoFocus: true, "aria-label": "\u0627\u0644\u0645\u0628\u0644\u063A \u0627\u0644\u0645\u062F\u0641\u0648\u0639 \u062C\u0632\u0626\u064A\u0627\u064B", type: "number", min: 0, max: grandTotal, step: "any", required: true, value: draftPaid, onChange: (e) => setDraftPaid(e.target.value) })), h42(SearchableDropdown, { id: "partial-payment-account", label: t("\u0627\u0644\u062D\u0633\u0627\u0628 / \u0627\u0644\u0635\u0646\u062F\u0648\u0642"), options: accounts.map((a) => ({ id: a.id, label: a.name })), selectedId: draftAccount, onSelect: setDraftAccount })), h42("div", { className: "ct-dialog-debt" }, "\u0627\u0644\u0645\u062A\u0628\u0642\u064A \u0643\u062F\u064A\u0646", h42("strong", null, `${Math.max(0, grandTotal - (paymentDialog === "multi" ? draftTotal : Number(draftPaid) || 0)).toFixed(2)} ${settings.currencySymbol}`))), applyPayment, () => setPaymentDialog(null));
+    const discountPopup = showDiscount && dialog("\u062E\u0635\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629", h42("div", { className: "ct-discount-row" }, h42(SearchableDropdown, { id: "invoice-discount-kind", label: t("\u0646\u0648\u0639 \u0627\u0644\u062E\u0635\u0645"), options: [{ id: "fixed", label: t("\u062E\u0635\u0645 \u0645\u0628\u0644\u063A") }, { id: "percent", label: t("\u062E\u0635\u0645 %") }], selectedId: draftDiscountType, onSelect: setDraftDiscountType }), h42("input", { "aria-label": t("\u0642\u064A\u0645\u0629 \u0627\u0644\u062E\u0635\u0645"), type: "number", min: 0, step: "any", autoFocus: true, value: draftDiscountValue, onChange: (e) => setDraftDiscountValue(Math.max(0, Number(e.target.value) || 0)) }), h42("span", null, `${(draftDiscountType === "percent" ? Math.min(beforeInvoiceDiscount, beforeInvoiceDiscount * Math.min(100, Number(draftDiscountValue) || 0) / 100) : Math.min(beforeInvoiceDiscount, Number(draftDiscountValue) || 0)).toFixed(2)} ${settings.currencySymbol}`)), (e) => {
       e.preventDefault();
       setInvoiceDiscountType(draftDiscountType);
       setInvoiceDiscountValue(draftDiscountValue);
       setShowDiscount(false);
     }, () => setShowDiscount(false));
-    return h41(
+    return h42(
       React17.Fragment,
       null,
-      accountTarget ? createPortal7(h41(SearchableDropdown, { id: "desktop-payment-account", label: "\u0635\u0646\u062F\u0648\u0642 \u0627\u0644\u062F\u0641\u0639", options: accounts.map((a) => ({ id: a.id, label: a.name })), selectedId: selectedAccountId, onSelect: (id) => {
+      accountTarget ? createPortal7(h42(SearchableDropdown, { id: "desktop-payment-account", label: "\u0635\u0646\u062F\u0648\u0642 \u0627\u0644\u062F\u0641\u0639", options: accounts.map((a) => ({ id: a.id, label: a.name })), selectedId: selectedAccountId, onSelect: (id) => {
         setSelectedAccountId(id);
         setPaymentType("cash");
-      } }), accountTarget) : h41(SearchableDropdown, { id: "inline-payment-account", label: "\u0627\u0644\u0635\u0646\u062F\u0648\u0642", placement: "bottom", options: accounts.map((a) => ({ id: a.id, label: a.name })), selectedId: selectedAccountId, onSelect: setSelectedAccountId }),
-      notesTarget ? createPortal7(h41("label", { className: "ct-outlined-field" }, h41("span", null, t("\u0645\u0644\u0627\u062D\u0638\u0627\u062A")), h41("input", { "aria-label": t("\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629"), value: notes, onChange: (e) => setNotes(e.target.value), placeholder: t("\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629") })), notesTarget) : null,
+      } }), accountTarget) : h42(SearchableDropdown, { id: "inline-payment-account", label: "\u0627\u0644\u0635\u0646\u062F\u0648\u0642", placement: "bottom", options: accounts.map((a) => ({ id: a.id, label: a.name })), selectedId: selectedAccountId, onSelect: setSelectedAccountId }),
+      notesTarget ? createPortal7(h42("label", { className: "ct-outlined-field" }, h42("span", null, t("\u0645\u0644\u0627\u062D\u0638\u0627\u062A")), h42("input", { "aria-label": t("\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629"), value: notes, onChange: (e) => setNotes(e.target.value), placeholder: t("\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629") })), notesTarget) : null,
       summaryTarget ? createPortal7(modes, summaryTarget) : null,
       paymentPopup,
       discountPopup,
-      h41(
+      h42(
         "div",
         { id: "desktop-payment", className: "ct-compact-payment" },
-        h41(
+        h42(
           "div",
           { className: "ct-payment-scroll" },
           controls,
           footerControls
         ),
-        h41("div", { className: "ct-compact-sell" }, h41("div", { className: "ct-sale-totals" }, ...[["\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A", grandTotal, "total"], ["\u0627\u0644\u0645\u062F\u0641\u0648\u0639", Math.min(paid, grandTotal), "paid"], ["\u0627\u0644\u0645\u062A\u0628\u0642\u064A", debt, "debt"]].map(([label, value, cls]) => h41("div", { key: cls, className: cls }, h41("span", null, label), h41("strong", null, `${value.toFixed(2)} ${settings.currencySymbol}`)))), paid > grandTotal && h41("small", null, `\u0627\u0644\u0628\u0627\u0642\u064A \u0644\u0644\u0639\u0645\u064A\u0644: ${(paid - grandTotal).toFixed(2)} ${settings.currencySymbol}`), h41("div", { className: "ct-sell-actions" }, h41("button", { type: "button", className: `ct-return-toggle ${returnMode ? "active" : ""}`, "aria-pressed": returnMode, title: t("\u0645\u0631\u062A\u062C\u0639 \u0623\u0635\u0646\u0627\u0641 \u0627\u0644\u0633\u0644\u0629"), disabled: isSubmitting || !cart.length || !!editingSaleInvoiceId, onClick: () => setReturnMode(!returnMode) }, h41(RotateCcw3, { size: 17 }), returnMode ? t("\u0639\u0648\u062F\u0629 \u0644\u0644\u0628\u064A\u0639") : t("\u0645\u0631\u062A\u062C\u0639")), h41("button", { id: "btn-confirm-payment", type: "button", "data-ct-sell": true, "data-enter-primary": true, disabled: isSubmitting || !cart.length || !!paymentDialog || showDiscount || showQuickCustModal, onClick: handleSubmit }, h41(CheckCircle22, { size: 16 }), isSubmitting ? "\u062C\u0627\u0631\u064D \u0627\u0644\u062D\u0641\u0638..." : returnMode ? "\u062D\u0641\u0638 \u0627\u0644\u0645\u0631\u062A\u062C\u0639 [Enter]" : t("\u0628\u064A\u0639 \u0648\u062D\u0641\u0638 [Enter]"))))
+        h42("div", { className: "ct-compact-sell" }, h42("div", { className: "ct-sale-totals" }, ...[["\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A", grandTotal, "total"], ["\u0627\u0644\u0645\u062F\u0641\u0648\u0639", Math.min(paid, grandTotal), "paid"], ["\u0627\u0644\u0645\u062A\u0628\u0642\u064A", debt, "debt"]].map(([label, value, cls]) => h42("div", { key: cls, className: cls }, h42("span", null, label), h42("strong", null, `${value.toFixed(2)} ${settings.currencySymbol}`)))), paid > grandTotal && h42("small", null, `\u0627\u0644\u0628\u0627\u0642\u064A \u0644\u0644\u0639\u0645\u064A\u0644: ${(paid - grandTotal).toFixed(2)} ${settings.currencySymbol}`), h42("div", { className: "ct-sell-actions" }, h42("button", { type: "button", className: `ct-return-toggle ${returnMode ? "active" : ""}`, "aria-pressed": returnMode, title: t("\u0645\u0631\u062A\u062C\u0639 \u0623\u0635\u0646\u0627\u0641 \u0627\u0644\u0633\u0644\u0629"), disabled: isSubmitting || !cart.length || !!editingSaleInvoiceId, onClick: () => setReturnMode(!returnMode) }, h42(RotateCcw3, { size: 17 }), returnMode ? t("\u0639\u0648\u062F\u0629 \u0644\u0644\u0628\u064A\u0639") : t("\u0645\u0631\u062A\u062C\u0639")), h42("button", { id: "btn-confirm-payment", type: "button", "data-ct-sell": true, "data-enter-primary": true, disabled: isSubmitting || !cart.length || !!paymentDialog || showDiscount || showQuickCustModal, onClick: handleSubmit }, h42(CheckCircle22, { size: 16 }), isSubmitting ? "\u062C\u0627\u0631\u064D \u0627\u0644\u062D\u0641\u0638..." : returnMode ? "\u062D\u0641\u0638 \u0627\u0644\u0645\u0631\u062A\u062C\u0639 [Enter]" : t("\u0628\u064A\u0639 \u0648\u062D\u0641\u0638 [Enter]"))))
       ),
-      showQuickCustModal && h41(ModalLayer, { className: "fixed inset-0 z-[1200] flex items-center justify-center bg-black/50 p-4", role: "dialog", "aria-modal": true }, h41("form", { className: "ct-quick-customer", onSubmit: handleQuickAddCustomer }, h41("strong", null, t("\u0625\u0636\u0627\u0641\u0629 \u0639\u0645\u064A\u0644")), h41("input", { required: true, placeholder: t("\u0627\u0633\u0645 \u0627\u0644\u0639\u0645\u064A\u0644"), value: newCustName, onChange: (e) => setNewCustName(e.target.value) }), h41("input", { placeholder: t("\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641"), value: newCustPhone, onChange: (e) => setNewCustPhone(e.target.value) }), h41("div", null, h41("button", { type: "button", onClick: () => setShowQuickCustModal(false) }, t("\u0625\u0644\u063A\u0627\u0621")), h41("button", { type: "submit" }, t("\u062D\u0641\u0638")))))
+      showQuickCustModal && h42(ModalLayer, { className: "fixed inset-0 z-[1200] flex items-center justify-center bg-black/50 p-4", role: "dialog", "aria-modal": true }, h42("form", { className: "ct-quick-customer", onSubmit: handleQuickAddCustomer }, h42("strong", null, t("\u0625\u0636\u0627\u0641\u0629 \u0639\u0645\u064A\u0644")), h42("input", { required: true, placeholder: t("\u0627\u0633\u0645 \u0627\u0644\u0639\u0645\u064A\u0644"), value: newCustName, onChange: (e) => setNewCustName(e.target.value) }), h42("input", { placeholder: t("\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641"), value: newCustPhone, onChange: (e) => setNewCustPhone(e.target.value) }), h42("div", null, h42("button", { type: "button", onClick: () => setShowQuickCustModal(false) }, t("\u0625\u0644\u063A\u0627\u0621")), h42("button", { type: "submit" }, t("\u062D\u0641\u0638")))))
     );
   }
   return _jsxs3(ModalLayer, { id: embedded ? "desktop-payment" : "modal-payment-backdrop", className: embedded ? "ct-payment-inline" : "fixed inset-0 z-[65] flex items-center justify-center bg-black/70 p-4 animate-in fade-in", children: [_jsxs3("div", { id: embedded ? "desktop-payment-box" : "modal-payment-box", className: embedded ? "ct-payment-box" : "w-full max-w-lg rounded-2xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-right flex flex-col max-h-[95vh]", children: [controls, _jsxs3("div", { className: "flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40", children: [_jsxs3("div", { children: [_jsx5("h3", { className: "text-base font-black text-slate-900 dark:text-white", children: "\u0625\u062A\u0645\u0627\u0645 \u0639\u0645\u0644\u064A\u0629 \u0627\u0644\u062F\u0641\u0639" }), _jsx5("p", { className: "text-xs text-slate-500", children: "\u0627\u062E\u062A\u0631 \u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u0633\u062F\u0627\u062F \u0648\u0623\u0643\u062F \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629" })] }), _jsx5("button", { onClick: onClose, className: "p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200", children: _jsx5(X9, { className: "w-5 h-5" }) })] }), _jsxs3("div", { className: "p-4 space-y-4 overflow-y-auto flex-1 custom-scrollbar", children: [_jsxs3("div", { className: "p-4 rounded-xl bg-slate-900 text-white flex items-center justify-between shadow-inner", children: [_jsxs3("div", { children: [_jsx5("span", { className: "text-xs font-semibold text-slate-400", children: t("\u0627\u0644\u0635\u0627\u0641\u064A \u0627\u0644\u0645\u0637\u0644\u0648\u0628:") }), _jsxs3("div", { className: "text-3xl font-black tracking-tight text-violet-400 mt-0.5", children: [grandTotal.toFixed(2), " ", _jsx5("span", { className: "text-sm font-normal text-white", children: settings.currencySymbol })] })] }), _jsxs3("div", { className: "text-left text-xs text-slate-400", children: [_jsxs3("div", { children: ["\u0639\u062F\u062F \u0627\u0644\u0623\u0635\u0646\u0627\u0641: ", cart.length] }), _jsxs3("div", { id: "payment-invoice-discount", className: embedded ? "ct-discount" : "hidden", children: [_jsx5("span", { className: "text-[11px] font-bold text-slate-600", children: "\u062E\u0635\u0645 \u0643\u0627\u0645\u0644 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629" }), _jsxs3("div", { className: "inline-flex rounded-lg overflow-hidden border bg-white", children: [_jsx5("button", { type: "button", onClick: () => setInvoiceDiscountType("fixed"), className: `px-2 py-1 text-[10px] font-bold ${invoiceDiscountType === "fixed" ? "bg-violet-600 text-white" : "text-slate-600"}`, children: t("\u062B\u0627\u0628\u062A") }), _jsx5("button", { type: "button", onClick: () => setInvoiceDiscountType("percent"), className: `px-2 py-1 text-[10px] font-bold ${invoiceDiscountType === "percent" ? "bg-violet-600 text-white" : "text-slate-600"}`, children: "%" })] }), _jsxs3("div", { className: "flex items-center gap-1", children: [_jsx5("input", { type: "number", min: "0", step: "any", value: invoiceDiscountValue, onChange: (e) => setInvoiceDiscountValue(parseFloat(e.target.value) || 0), className: "w-full px-2 py-1.5 text-xs font-mono font-bold border rounded-lg bg-white" }), _jsxs3("span", { className: "text-[10px] text-rose-600 whitespace-nowrap", children: ["\u062E\u0635\u0645 ", invoiceDiscountAmount.toFixed(2)] })] })] }), _jsxs3("div", { children: ["\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0642\u0637\u0639: ", cart.reduce((s, i) => s + i.quantity, 0)] })] })] }), _jsxs3("div", { children: [_jsx5("label", { className: "text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5", children: t("\u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u062F\u0641\u0639:") }), _jsxs3("div", { className: "grid grid-cols-4 gap-2", children: [_jsxs3("button", { type: "button", onClick: () => setPaymentType("cash"), className: `flex flex-col items-center justify-center p-2.5 rounded-xl border text-xs font-bold transition ${paymentType === "cash" ? "border-violet-600 bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300" : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50"}`, children: [_jsx5(Banknote, { className: "w-5 h-5 mb-1" }), _jsx5("span", { children: t("\u0646\u0642\u062F\u064A (\u0643\u0627\u0634)") })] }), _jsxs3("button", { type: "button", onClick: () => setPaymentType("debt"), className: `flex flex-col items-center justify-center p-2.5 rounded-xl border text-xs font-bold transition ${paymentType === "debt" ? "border-rose-600 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300" : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50"}`, children: [_jsx5(Clock, { className: "w-5 h-5 mb-1" }), _jsx5("span", { children: t("\u0622\u062C\u0644 (\u062F\u064A\u0646)") })] }), _jsxs3("button", { type: "button", onClick: () => setPaymentType("partial"), className: `flex flex-col items-center justify-center p-2.5 rounded-xl border text-xs font-bold transition ${paymentType === "partial" ? "border-amber-600 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300" : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50"}`, children: [_jsx5(Coins, { className: "w-5 h-5 mb-1" }), _jsx5("span", { children: t("\u062F\u0641\u0639 \u062C\u0632\u0626\u064A") })] }), _jsxs3("button", { type: "button", onClick: () => setPaymentType("multi"), className: `flex flex-col items-center justify-center p-2.5 rounded-xl border text-xs font-bold transition ${paymentType === "multi" ? "border-blue-600 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300" : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50"}`, children: [_jsx5(Split, { className: "w-5 h-5 mb-1" }), _jsx5("span", { children: t("\u062F\u0641\u0639 \u0645\u062A\u0639\u062F\u062F") })] })] })] }), _jsxs3("div", { children: [_jsx5(SearchableDropdown, { id: "payment-customer-dropdown", label: t("\u0627\u0644\u0639\u0645\u064A\u0644:"), placeholder: "\u0627\u062E\u062A\u0631 \u0627\u0644\u0639\u0645\u064A\u0644...", options: [{ id: "cust-walkin", label: t("\u0639\u0645\u064A\u0644 \u0646\u0642\u062F\u064A"), subLabel: "\u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A \u0644\u0644\u0628\u064A\u0639 \u0627\u0644\u0646\u0642\u062F\u064A \u0627\u0644\u0645\u0628\u0627\u0634\u0631" }, ...customers.filter((c) => c && c.id !== "cust-walkin" && !c.deletedAt).map((c) => ({
@@ -15275,6 +15275,7 @@ var DashboardView = () => {
 };
 
 // app/components__common__AuditFilters.js
+import { Filter, X as X15 } from "lucide-react";
 import React29 from "react";
 var actorOf = (row2) => row2?.cashierId || row2?.userId || row2?.employeeId || row2?.createdBy || "";
 function auditQuery(value = {}) {
@@ -15294,10 +15295,79 @@ function auditMatches(row2, value = {}) {
   const date2 = new Date(row2.date || row2.createdAt).getTime(), q = auditQuery(value);
   return (!value.actorId || value.actorId === "all" || actorOf(row2) === value.actorId) && (!q.dateFrom || date2 >= Date.parse(q.dateFrom)) && (!q.dateTo || date2 <= Date.parse(q.dateTo));
 }
-function AuditFilters({ value, onChange, dates = true }) {
-  const h41 = React29.createElement, app = useApp(), patch = (x) => onChange({ ...value, ...x });
+var h18 = React29.createElement;
+function AuditFilterFields({ value = {}, onChange, dates = true, periods = false }) {
+  const app = useApp(), id = React29.useId(), patch = (x) => onChange({ ...value, ...x });
   const people = [...new Map([...app.employees || [], ...app.currentUser?.id ? [{ id: app.currentUser.id, name: app.currentUser.name }] : []].map((x) => [x.id, x])).values()];
-  return h41("div", { className: "ct-audit-filters" }, h41("div", { className: "ct-employee-filter" }, h41(SearchableDropdown, { id: React29.useId(), label: "\u062D\u0633\u0628 \u0627\u0644\u0645\u0648\u0638\u0641", placement: "bottom", options: [{ id: "all", label: "\u0643\u0644 \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646" }, ...people.map((x) => ({ id: x.id, label: x.name }))], selectedId: value.actorId || "all", onSelect: (id) => patch({ actorId: id }) })), dates && h41("label", null, "\u0645\u0646 \u062A\u0627\u0631\u064A\u062E \u0648\u0648\u0642\u062A", h41("input", { type: "datetime-local", value: value.from || "", max: value.to || void 0, onChange: (e) => patch({ from: e.target.value }) })), dates && h41("label", null, "\u0625\u0644\u0649 \u062A\u0627\u0631\u064A\u062E \u0648\u0648\u0642\u062A", h41("input", { type: "datetime-local", value: value.to || "", min: value.from || void 0, onChange: (e) => patch({ to: e.target.value }) })), h41("button", { type: "button", onClick: () => onChange({}) }, "\u0645\u0633\u062D \u0627\u0644\u0641\u0644\u062A\u0631"));
+  return h18(
+    "div",
+    { className: "ct-record-filter-fields" },
+    h18(SearchableDropdown, { id: id + "-employee", label: "\u062D\u0633\u0628 \u0627\u0644\u0645\u0648\u0638\u0641", placement: "bottom", options: [{ id: "all", label: "\u0643\u0644 \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646" }, ...people.map((x) => ({ id: x.id, label: x.name }))], selectedId: value.actorId || "all", onSelect: (actorId) => patch({ actorId }) }),
+    periods && h18("div", { className: "ct-record-periods" }, ...[["all", "\u0627\u0644\u0643\u0644"], ["today", "\u0627\u0644\u064A\u0648\u0645"], ["week", "\u0623\u0633\u0628\u0648\u0639"], ["month", "\u0634\u0647\u0631"], ["year", "\u0633\u0646\u0629"], ["custom", "\u0645\u0646 / \u0625\u0644\u0649"]].map(([period, label]) => h18("button", { type: "button", key: period, "aria-pressed": value.period === period, onClick: () => patch({ period, from: "", to: "" }) }, label))),
+    dates && h18("div", { className: "ct-record-date-grid" }, ...[["from", "\u0645\u0646 \u062A\u0627\u0631\u064A\u062E \u0648\u0648\u0642\u062A"], ["to", "\u0625\u0644\u0649 \u062A\u0627\u0631\u064A\u062E \u0648\u0648\u0642\u062A"]].map(([key3, label]) => h18("label", { key: key3, className: "ct-record-date-field", htmlFor: id + "-" + key3 }, h18("span", null, label), h18("input", { id: id + "-" + key3, type: "datetime-local", value: value[key3] || "", max: key3 === "from" ? value.to || void 0 : void 0, min: key3 === "to" ? value.from || void 0 : void 0, onChange: (e) => patch({ [key3]: e.target.value, ...periods ? { period: "custom" } : {} }) }))))
+  );
+}
+function FilterDialog({ title = "\u0639\u0648\u0627\u0645\u0644 \u0627\u0644\u062A\u0635\u0641\u064A\u0629", onClose, onApply, onReset, children, error = "" }) {
+  const panel = React29.useRef(null);
+  React29.useEffect(() => {
+    const previous = document.activeElement;
+    panel.current?.focus();
+    return () => previous?.focus?.();
+  }, []);
+  const keys = (e) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      onClose();
+    }
+    if (e.key === "Tab") {
+      const nodes = [...panel.current.querySelectorAll('button,input,select,[tabindex="0"]')].filter((n4) => !n4.disabled && n4.getClientRects().length);
+      if (!nodes.length) return;
+      const first = nodes[0], last = nodes.at(-1);
+      if (e.shiftKey && (document.activeElement === first || document.activeElement === panel.current)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  };
+  return h18(ModalLayer, { className: "ct-record-filter-overlay", onDismiss: onClose, onClick: (e) => {
+    if (e.target === e.currentTarget) onClose();
+  } }, h18(
+    "form",
+    { ref: panel, tabIndex: -1, className: "ct-record-filter-dialog", dir: "rtl", "aria-label": title, onKeyDown: keys, onSubmit: (e) => {
+      e.preventDefault();
+      onApply();
+    } },
+    h18("header", null, h18("div", null, h18(Filter, { size: 19 }), h18("strong", null, title)), h18("button", { type: "button", onClick: onClose, "aria-label": "\u0625\u063A\u0644\u0627\u0642" }, h18(X15, { size: 20 }))),
+    h18("div", { className: "ct-record-filter-content" }, children, error && h18("p", { role: "alert", className: "ct-record-filter-error" }, error)),
+    h18("footer", null, h18("button", { type: "button", className: "ct-record-filter-reset", onClick: onReset }, "\u0645\u0633\u062D \u0627\u0644\u0641\u0644\u0627\u062A\u0631"), h18("button", { type: "button", className: "ct-record-filter-cancel", onClick: onClose }, "\u0625\u0644\u063A\u0627\u0621"), h18("button", { type: "submit", className: "ct-record-filter-apply" }, "\u062A\u0637\u0628\u064A\u0642"))
+  ));
+}
+function AuditFilters({ value = {}, onChange, dates = true, periods = false }) {
+  const [open, setOpen] = React29.useState(false), [draft, setDraft] = React29.useState({}), [error, setError] = React29.useState("");
+  const active3 = !!(value.actorId && value.actorId !== "all" || value.from || value.to || periods && value.period && value.period !== "all");
+  return h18(
+    React29.Fragment,
+    null,
+    h18("button", { type: "button", className: "ct-record-filter-trigger" + (active3 ? " is-active" : ""), title: "\u0639\u0648\u0627\u0645\u0644 \u0627\u0644\u062A\u0635\u0641\u064A\u0629", "aria-label": "\u0639\u0648\u0627\u0645\u0644 \u0627\u0644\u062A\u0635\u0641\u064A\u0629", "aria-haspopup": "dialog", "aria-expanded": open, onClick: () => {
+      setDraft({ ...value });
+      setError("");
+      setOpen(true);
+    } }, h18(Filter, { size: 20 }), active3 && h18("span", { className: "ct-record-filter-dot", "aria-hidden": true })),
+    open && h18(FilterDialog, { onClose: () => setOpen(false), onReset: () => {
+      setDraft(periods ? { period: "all" } : {});
+      setError("");
+    }, error, onApply: () => {
+      if (draft.from && draft.to && draft.from > draft.to) {
+        setError("\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0628\u062F\u0627\u064A\u0629 \u064A\u062C\u0628 \u0623\u0646 \u064A\u0633\u0628\u0642 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0646\u0647\u0627\u064A\u0629");
+        return;
+      }
+      onChange({ ...draft });
+      setOpen(false);
+    } }, h18(AuditFilterFields, { value: draft, onChange: setDraft, dates, periods }))
+  );
 }
 
 // app/components__sales__SalesFilters.js
@@ -15320,21 +15390,25 @@ function salesDateRange(f, now = /* @__PURE__ */ new Date()) {
   return { dateFrom: from.toISOString(), dateTo: to.toISOString() };
 }
 function SalesFilters({ value, onApply, onClose, customers = [], warehouses = [] }) {
-  const h41 = React30.createElement;
-  const [d, set] = React30.useState(value);
+  const h42 = React30.createElement, [d, set] = React30.useState({ ...value }), [error, setError] = React30.useState("");
   const patch = (x) => set((v) => ({ ...v, ...x }));
-  const dropdown = (label, k, options) => h41(SearchableDropdown, { id: "filter-" + k, label, options: [{ id: "all", label: t("\u0627\u0644\u0643\u0644") }, ...options], selectedId: d[k] || "all", onSelect: (id) => patch({ [k]: id }) });
-  return h41(ModalLayer, { className: "ct-filter-overlay", onClick: (e) => {
-    if (e.target === e.currentTarget) onClose();
-  } }, h41("form", { className: "ct-filter-sheet", onSubmit: (e) => {
-    e.preventDefault();
-    if (d.from && d.to && d.from > d.to) {
-      window.alert("\u0648\u0642\u062A \u0627\u0644\u0628\u062F\u0627\u064A\u0629 \u064A\u062C\u0628 \u0623\u0646 \u064A\u0633\u0628\u0642 \u0648\u0642\u062A \u0627\u0644\u0646\u0647\u0627\u064A\u0629");
-      return;
-    }
-    onApply(d);
-    onClose();
-  } }, h41(AuditFilters, { value: d, onChange: set }), h41("header", null, h41("strong", null, t("\u0627\u0644\u0641\u0644\u0627\u062A\u0631")), h41("button", { type: "button", onClick: () => set({ period: "all" }) }, t("\u0645\u0633\u062D \u0627\u0644\u0643\u0644")), h41("button", { type: "button", onClick: onClose, "aria-label": t("\u0625\u063A\u0644\u0627\u0642") }, "\xD7"), h41("button", { type: "submit" }, t("\u062A\u0637\u0628\u064A\u0642"))), dropdown("\u0627\u0644\u0645\u062E\u0632\u0646", "warehouseId", warehouses.map((x) => ({ id: x.id, label: x.name }))), dropdown("\u0627\u0644\u0639\u0645\u064A\u0644", "customerId", customers.filter((x) => !x.deletedAt).map((x) => ({ id: x.id, label: x.name }))), dropdown("\u062D\u0627\u0644\u0629 \u0627\u0644\u062F\u0641\u0639", "status", [{ id: "paid", label: "\u0645\u0633\u062F\u062F\u0629" }, { id: "debt", label: t("\u0622\u062C\u0644") }, { id: "partial", label: t("\u062C\u0632\u0626\u064A") }]), h41("div", { className: "ct-period-chips" }, ...[["all", "\u0627\u0644\u0643\u0644"], ["today", "\u064A\u0648\u0645"], ["week", "\u0623\u0633\u0628\u0648\u0639"], ["month", "\u0634\u0647\u0631"], ["year", "\u0633\u0646\u0629"], ["custom", "\u0645\u0646 / \u0625\u0644\u0649"]].map(([id, t2]) => h41("button", { key: id, type: "button", "aria-pressed": d.period === id, onClick: () => patch({ period: id, from: "", to: "" }) }, t2))), false));
+  const dropdown = (label, key3, options) => h42(SearchableDropdown, { id: "filter-" + key3, label, options: [{ id: "all", label: t("\u0627\u0644\u0643\u0644") }, ...options], selectedId: d[key3] || "all", onSelect: (id) => patch({ [key3]: id }) });
+  return h42(
+    FilterDialog,
+    { title: "\u062A\u0635\u0641\u064A\u0629 \u0627\u0644\u0641\u0648\u0627\u062A\u064A\u0631", onClose, error, onReset: () => {
+      set({ period: "all" });
+      setError("");
+    }, onApply: () => {
+      if (d.from && d.to && d.from > d.to) {
+        setError("\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0628\u062F\u0627\u064A\u0629 \u064A\u062C\u0628 \u0623\u0646 \u064A\u0633\u0628\u0642 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0646\u0647\u0627\u064A\u0629");
+        return;
+      }
+      onApply(d);
+      onClose();
+    } },
+    h42(AuditFilterFields, { value: d, onChange: set, periods: true }),
+    h42("div", { className: "ct-record-filter-fields" }, dropdown("\u0627\u0644\u0645\u062E\u0632\u0646", "warehouseId", warehouses.map((x) => ({ id: x.id, label: x.name }))), dropdown("\u0627\u0644\u0639\u0645\u064A\u0644", "customerId", customers.filter((x) => !x.deletedAt).map((x) => ({ id: x.id, label: x.name }))), dropdown("\u062D\u0627\u0644\u0629 \u0627\u0644\u062F\u0641\u0639", "status", [{ id: "paid", label: "\u0645\u0633\u062F\u062F\u0629" }, { id: "debt", label: "\u0622\u062C\u0644" }, { id: "partial", label: "\u062C\u0632\u0626\u064A" }]))
+  );
 }
 
 // app/components__sales__SalesView.js
@@ -15344,7 +15418,7 @@ import { createPortal as createPortal13 } from "react-dom";
 
 // app/components__common__Pagination.js
 import React31, { useCallback as useCallback5, useEffect as useEffect18, useMemo as useMemo8, useRef as useRef12, useState as useState19 } from "react";
-var h18 = React31.createElement;
+var h19 = React31.createElement;
 function usePagination(items = [], pageSize = 50, resetKey = "") {
   const safeItems = Array.isArray(items) ? items : [];
   const [page, setPage] = useState19(1);
@@ -15560,26 +15634,26 @@ function pageTokens(page, totalPages) {
 }
 var Pagination = ({ pager, className = "" }) => {
   if (!pager) return null;
-  if (pager.error) return h18("div", { role: "alert", className: "p-3 text-sm text-rose-600" }, "\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0633\u062C\u0644\u0627\u062A. ", h18("button", { type: "button", onClick: pager.refresh, className: "px-3 py-2 rounded-lg bg-violet-600 text-white" }, t("\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629")));
+  if (pager.error) return h19("div", { role: "alert", className: "p-3 text-sm text-rose-600" }, "\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0633\u062C\u0644\u0627\u062A. ", h19("button", { type: "button", onClick: pager.refresh, className: "px-3 py-2 rounded-lg bg-violet-600 text-white" }, t("\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629")));
   if (pager.totalItems <= pager.pageSize && !pager.offlineUnavailable) return null;
   const start = (pager.page - 1) * pager.pageSize + 1;
   const end = Math.min(pager.totalItems, pager.page * pager.pageSize);
-  return h18(
+  return h19(
     "div",
     { className: `oscar-pagination no-print flex flex-col sm:flex-row items-center justify-between gap-2 px-3 py-3 border-t border-slate-100 bg-white ${className}` },
-    h18(
+    h19(
       "div",
       { className: "text-[11px] font-bold text-slate-500" },
       pager.offlineUnavailable ? `\u0627\u0644\u0639\u062F\u062F \u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A ${pager.totalItems} \u0633\u062C\u0644 \u2022 \u0627\u062A\u0635\u0644 \u0628\u0627\u0644\u0625\u0646\u062A\u0631\u0646\u062A \u0644\u0641\u062A\u062D \u0627\u0644\u0635\u0641\u062D\u0629 ${pager.page}` : `\u0639\u0631\u0636 ${start}\u2013${end} \u0645\u0646 ${pager.totalItems} \u0633\u062C\u0644 \u2022 ${pager.pageSize} \u0633\u062C\u0644 \u0644\u0643\u0644 \u0635\u0641\u062D\u0629`
     ),
-    h18(
+    h19(
       "div",
       { className: "flex items-center gap-1 flex-wrap justify-center" },
-      h18("button", { type: "button", disabled: pager.page <= 1, onClick: () => pager.setPage(Math.max(1, pager.page - 1)), className: "px-3 h-8 rounded-lg border border-slate-200 text-[11px] font-black text-slate-600 bg-white disabled:opacity-35" }, t("\u0627\u0644\u0633\u0627\u0628\u0642")),
+      h19("button", { type: "button", disabled: pager.page <= 1, onClick: () => pager.setPage(Math.max(1, pager.page - 1)), className: "px-3 h-8 rounded-lg border border-slate-200 text-[11px] font-black text-slate-600 bg-white disabled:opacity-35" }, t("\u0627\u0644\u0633\u0627\u0628\u0642")),
       ...pageTokens(pager.page, pager.totalPages).map(
-        (token) => typeof token === "string" ? h18("span", { key: token, className: "px-1 text-slate-400" }, "\u2026") : h18("button", { key: token, type: "button", onClick: () => pager.setPage(token), className: `min-w-8 h-8 px-2 rounded-lg border text-[11px] font-black ${pager.page === token ? "bg-violet-600 border-violet-600 text-white" : "bg-white border-slate-200 text-slate-600"}` }, String(token))
+        (token) => typeof token === "string" ? h19("span", { key: token, className: "px-1 text-slate-400" }, "\u2026") : h19("button", { key: token, type: "button", onClick: () => pager.setPage(token), className: `min-w-8 h-8 px-2 rounded-lg border text-[11px] font-black ${pager.page === token ? "bg-violet-600 border-violet-600 text-white" : "bg-white border-slate-200 text-slate-600"}` }, String(token))
       ),
-      h18("button", { type: "button", disabled: pager.page >= pager.totalPages, onClick: () => pager.setPage(Math.min(pager.totalPages, pager.page + 1)), className: "px-3 h-8 rounded-lg border border-slate-200 text-[11px] font-black text-slate-600 bg-white disabled:opacity-35" }, t("\u0627\u0644\u062A\u0627\u0644\u064A"))
+      h19("button", { type: "button", disabled: pager.page >= pager.totalPages, onClick: () => pager.setPage(Math.min(pager.totalPages, pager.page + 1)), className: "px-3 h-8 rounded-lg border border-slate-200 text-[11px] font-black text-slate-600 bg-white disabled:opacity-35" }, t("\u0627\u0644\u062A\u0627\u0644\u064A"))
     )
   );
 };
@@ -15632,16 +15706,16 @@ async function encodeCustomerPortalAccess(payload) {
 var ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 var clean2 = (v) => String(v ?? "").trim();
 function fnvCode(input, len = 5) {
-  let h41 = 2166136261 >>> 0;
+  let h42 = 2166136261 >>> 0;
   const text = String(input || "oscar");
   for (let i = 0; i < text.length; i++) {
-    h41 ^= text.charCodeAt(i);
-    h41 = Math.imul(h41, 16777619) >>> 0;
+    h42 ^= text.charCodeAt(i);
+    h42 = Math.imul(h42, 16777619) >>> 0;
   }
   let out = "";
   for (let i = 0; i < len; i++) {
-    h41 = Math.imul(h41 ^ h41 >>> 13 & 65535, 2246822519) + 3266489917 >>> 0;
-    out += ALPHABET[h41 % ALPHABET.length];
+    h42 = Math.imul(h42 ^ h42 >>> 13 & 65535, 2246822519) + 3266489917 >>> 0;
+    out += ALPHABET[h42 % ALPHABET.length];
   }
   return out;
 }
@@ -15742,7 +15816,7 @@ async function createCustomerPortalLinks(customer, { saveCustomer = null, forceN
 }
 
 // app/components__common__MessageActionButtons.js
-var h19 = React32.createElement;
+var h20 = React32.createElement;
 var DEFAULTS = {
   invoiceWhatsApp: `\u0645\u0631\u062D\u0628\u0627\u064B {customer_name} \u{1F44B}
 \u062A\u0645 \u0625\u0635\u062F\u0627\u0631 \u0641\u0627\u062A\u0648\u0631\u062A\u0643 \u0631\u0642\u0645 {invoice_no} \u0645\u0646 {store_name}.
@@ -15784,8 +15858,8 @@ var phoneDigits = (value) => {
   return d ? `+${d}` : "";
 };
 var applyVars = (template, vars) => String(template || "").replace(/\{[a-z0-9_]+\}/gi, (m) => Object.prototype.hasOwnProperty.call(vars, m) ? String(vars[m] ?? "") : m);
-var WhatsAppSvg = ({ className = "w-[17px] h-[17px]" } = {}) => h19("svg", { viewBox: "0 0 24 24", className, fill: "none", "aria-hidden": "true", style: { display: "block", width: "17px", height: "17px", margin: "0" } }, h19("path", { d: "M20.5 11.7A8.5 8.5 0 0 1 7.9 19.1L3.5 20.5l1.4-4.2A8.5 8.5 0 1 1 20.5 11.7Z", stroke: "currentColor", strokeWidth: "1.8", strokeLinejoin: "round" }), h19("path", { d: "M8.2 7.7c.3-.4.6-.4.9-.2l1.1 1.6c.2.3.1.6-.1.9l-.6.7c.7 1.4 1.9 2.5 3.4 3.1l.7-.8c.2-.3.5-.4.8-.2l1.7.9c.3.2.4.5.3.8-.3 1.1-1.3 1.8-2.5 1.8-3.6-.1-7.3-3.4-7.5-7.1 0-.6.2-1.1.5-1.5Z", fill: "currentColor" }));
-var SmsSvg = ({ className = "w-[17px] h-[17px]" } = {}) => h19("svg", { viewBox: "0 0 24 24", className, fill: "none", "aria-hidden": "true", style: { display: "block", width: "17px", height: "17px", margin: "0" } }, h19("rect", { x: "3", y: "4", width: "18", height: "14", rx: "3", stroke: "currentColor", strokeWidth: "1.8" }), h19("path", { d: "m6 8 6 4 6-4M8 20h8", stroke: "currentColor", strokeWidth: "1.8", strokeLinecap: "round", strokeLinejoin: "round" }));
+var WhatsAppSvg = ({ className = "w-[17px] h-[17px]" } = {}) => h20("svg", { viewBox: "0 0 24 24", className, fill: "none", "aria-hidden": "true", style: { display: "block", width: "17px", height: "17px", margin: "0" } }, h20("path", { d: "M20.5 11.7A8.5 8.5 0 0 1 7.9 19.1L3.5 20.5l1.4-4.2A8.5 8.5 0 1 1 20.5 11.7Z", stroke: "currentColor", strokeWidth: "1.8", strokeLinejoin: "round" }), h20("path", { d: "M8.2 7.7c.3-.4.6-.4.9-.2l1.1 1.6c.2.3.1.6-.1.9l-.6.7c.7 1.4 1.9 2.5 3.4 3.1l.7-.8c.2-.3.5-.4.8-.2l1.7.9c.3.2.4.5.3.8-.3 1.1-1.3 1.8-2.5 1.8-3.6-.1-7.3-3.4-7.5-7.1 0-.6.2-1.1.5-1.5Z", fill: "currentColor" }));
+var SmsSvg = ({ className = "w-[17px] h-[17px]" } = {}) => h20("svg", { viewBox: "0 0 24 24", className, fill: "none", "aria-hidden": "true", style: { display: "block", width: "17px", height: "17px", margin: "0" } }, h20("rect", { x: "3", y: "4", width: "18", height: "14", rx: "3", stroke: "currentColor", strokeWidth: "1.8" }), h20("path", { d: "m6 8 6 4 6-4M8 20h8", stroke: "currentColor", strokeWidth: "1.8", strokeLinecap: "round", strokeLinejoin: "round" }));
 var MessageActionButtons = ({ customer = null, invoice = null, kind = "customer" }) => {
   const { settings, customers, saveCustomer, showToast } = useApp();
   const [busy, setBusy] = useState20("");
@@ -15829,16 +15903,16 @@ var MessageActionButtons = ({ customer = null, invoice = null, kind = "customer"
       setBusy("");
     }
   };
-  return h19(
+  return h20(
     "span",
     { className: "inline-flex items-center justify-center gap-1 align-middle" },
-    h19("button", { type: "button", disabled: !!busy, onClick: () => send("whatsapp"), title: "\u0625\u0631\u0633\u0627\u0644 \u0639\u0628\u0631 WhatsApp", className: `w-7 h-7 p-0 shrink-0 rounded-lg border transition ${disabled ? "text-slate-300 border-slate-200" : "text-violet-700 border-violet-200 bg-violet-50 hover:bg-violet-100"}`, style: { display: "flex", alignItems: "center", justifyContent: "center", padding: "0", lineHeight: "0" } }, busy === "whatsapp" ? h19("span", { className: "block w-3.5 h-3.5 rounded-full border-2 border-violet-200 border-t-violet-700 animate-spin" }) : h19(WhatsAppSvg)),
-    h19("button", { type: "button", disabled: !!busy, onClick: () => send("sms"), title: "\u0625\u0631\u0633\u0627\u0644 \u0631\u0633\u0627\u0644\u0629 SMS", className: `w-7 h-7 p-0 shrink-0 rounded-lg border transition ${disabled ? "text-slate-300 border-slate-200" : "text-blue-700 border-blue-200 bg-blue-50 hover:bg-blue-100"}`, style: { display: "flex", alignItems: "center", justifyContent: "center", padding: "0", lineHeight: "0" } }, busy === "sms" ? h19("span", { className: "block w-3.5 h-3.5 rounded-full border-2 border-blue-200 border-t-blue-700 animate-spin" }) : h19(SmsSvg))
+    h20("button", { type: "button", disabled: !!busy, onClick: () => send("whatsapp"), title: "\u0625\u0631\u0633\u0627\u0644 \u0639\u0628\u0631 WhatsApp", className: `w-7 h-7 p-0 shrink-0 rounded-lg border transition ${disabled ? "text-slate-300 border-slate-200" : "text-violet-700 border-violet-200 bg-violet-50 hover:bg-violet-100"}`, style: { display: "flex", alignItems: "center", justifyContent: "center", padding: "0", lineHeight: "0" } }, busy === "whatsapp" ? h20("span", { className: "block w-3.5 h-3.5 rounded-full border-2 border-violet-200 border-t-violet-700 animate-spin" }) : h20(WhatsAppSvg)),
+    h20("button", { type: "button", disabled: !!busy, onClick: () => send("sms"), title: "\u0625\u0631\u0633\u0627\u0644 \u0631\u0633\u0627\u0644\u0629 SMS", className: `w-7 h-7 p-0 shrink-0 rounded-lg border transition ${disabled ? "text-slate-300 border-slate-200" : "text-blue-700 border-blue-200 bg-blue-50 hover:bg-blue-100"}`, style: { display: "flex", alignItems: "center", justifyContent: "center", padding: "0", lineHeight: "0" } }, busy === "sms" ? h20("span", { className: "block w-3.5 h-3.5 rounded-full border-2 border-blue-200 border-t-blue-700 animate-spin" }) : h20(SmsSvg))
   );
 };
 
 // app/components__sales__SalesView.js
-import { Search as Search5, Printer as Printer2, RotateCcw as RotateCcw4, Download as Download2, Eye as Eye2, X as X15, AlertCircle as AlertCircle4, Trash2 as Trash211, Pencil, Image as ImageIcon2, FileSpreadsheet as FileSpreadsheet5, MoreVertical, MessageCircle } from "lucide-react";
+import { Search as Search5, Printer as Printer2, RotateCcw as RotateCcw4, Download as Download2, Eye as Eye2, X as X16, AlertCircle as AlertCircle4, Trash2 as Trash211, Pencil, Image as ImageIcon2, FileSpreadsheet as FileSpreadsheet5, MoreVertical, MessageCircle } from "lucide-react";
 var SalesView = () => {
   const { customers, warehouses, accounts, settings, currentUser, deleteInvoice, beginEditSaleInvoice, setShowThermalModal, createReturnInvoice, showToast, queryAllStoreRecords: queryAllStoreRecords2 } = useApp();
   const [filtersOpen, setFiltersOpen] = useState21(false);
@@ -16089,7 +16163,7 @@ var SalesView = () => {
   }, className: "flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600 text-white text-xs font-bold hover:bg-violet-700", children: [_jsx8(Printer2, { className: "w-3.5 h-3.5" }), _jsx8("span", { children: t("\u0625\u064A\u0635\u0627\u0644") })] })] }), _jsx8("button", { onClick: () => setSelectedInvoice(null), className: "px-4 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-xs font-bold hover:bg-slate-300", children: t("\u0625\u063A\u0644\u0627\u0642") })] }), _jsxs6("div", { className: "flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40", children: [_jsxs6("div", { children: [_jsxs6("h3", { className: "text-sm font-bold text-slate-900 dark:text-white", children: [t("\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629: "), selectedInvoice.invoiceNumber] }), _jsx8("span", { className: "text-[11px] text-slate-500", children: new Date(selectedInvoice.date).toLocaleString("ar-EG") })] }), null] }), _jsxs6("div", { id: "single-invoice-print-area", className: "invoice-detail-body p-4 space-y-4 max-h-[70vh] overflow-y-auto", children: [_jsxs6("div", { className: "text-center pb-3 border-b border-dashed border-slate-300", children: [_jsx8("img", { src: getBrandLogoDisplayUrl(settings), alt: settings.storeName, className: "h-16 max-w-[160px] mx-auto mb-2 object-contain", onError: (e) => {
     e.currentTarget.onerror = null;
     e.currentTarget.src = DEFAULT_LOGO_DATA_URL;
-  } }), _jsx8("h2", { className: "text-base font-black text-slate-900 dark:text-white", children: settings.storeName }), null, _jsx8("p", { className: "text-[10px] text-slate-500 mt-1", children: [settings.address || "", settings.phone ? ` \u2022 ${settings.phone}` : ""] })] }), _jsxs6("div", { className: "grid grid-cols-2 gap-3 text-xs bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800", children: [_jsxs6("div", { children: [_jsx8("span", { className: "text-slate-400", children: t("\u0627\u0644\u0639\u0645\u064A\u0644:") }), " ", _jsx8("strong", { className: "text-slate-800 dark:text-slate-200", children: selectedInvoice.customerName || t("\u0639\u0645\u064A\u0644 \u0646\u0642\u062F\u064A") })] }), _jsxs6("div", { children: [_jsx8("span", { className: "text-slate-400", children: t("\u0627\u0644\u0643\u0627\u0634\u064A\u0631:") }), " ", _jsx8("strong", { className: "text-slate-800 dark:text-slate-200", children: selectedInvoice.cashierName })] }), _jsxs6("div", { children: [_jsx8("span", { className: "text-slate-400", children: t("\u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u062F\u0641\u0639:") }), " ", _jsx8("strong", { className: "text-slate-800 dark:text-slate-200", children: selectedInvoice.paymentType === "cash" ? t("\u0646\u0642\u062F\u064A") : selectedInvoice.paymentType === "debt" ? t("\u0622\u062C\u0644") : t("\u062F\u0641\u0639 \u062C\u0632\u0626\u064A") })] }), _jsxs6("div", { children: [_jsx8("span", { className: "text-slate-400", children: "\u0627\u0644\u0645\u0628\u0644\u063A \u0627\u0644\u0635\u0627\u0641\u064A:" }), " ", _jsxs6("strong", { className: "text-violet-600 font-mono", children: [selectedInvoice.grandTotal.toFixed(2), " ", settings.currencySymbol] })] })] }), _jsx8("div", { className: "overflow-x-auto", children: _jsxs6("table", { className: "w-full text-xs text-right whitespace-nowrap", children: [_jsx8("thead", { children: _jsxs6("tr", { className: "border-b border-slate-200 dark:border-slate-700 text-slate-400", children: [_jsx8("th", { className: "pb-1.5", children: "#" }), _jsx8("th", { className: "pb-1.5", children: t("\u0627\u0644\u0635\u0646\u0641") }), _jsx8("th", { className: "pb-1.5", children: t("\u0627\u0644\u0648\u062D\u062F\u0629") }), _jsx8("th", { className: "pb-1.5 text-center", children: t("\u0627\u0644\u0643\u0645\u064A\u0629") }), _jsx8("th", { className: "pb-1.5 text-left", children: t("\u0627\u0644\u0633\u0639\u0631") }), _jsx8("th", { className: "pb-1.5 text-left", children: t("\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A") })] }) }), _jsx8("tbody", { className: "divide-y divide-slate-100 dark:divide-slate-800", children: selectedInvoice.items.map((item, i) => _jsxs6("tr", { className: "py-1.5", children: [_jsx8("td", { className: "py-2", children: i + 1 }), _jsx8("td", { className: "py-2 font-medium", children: item.productName }), _jsx8("td", { className: "py-2 text-slate-500", children: item.unitName }), _jsx8("td", { className: "py-2 text-center font-mono font-bold", children: item.quantity }), _jsx8("td", { className: "py-2 text-left font-mono", children: item.unitPrice.toFixed(2) }), _jsx8("td", { className: "py-2 text-left font-mono font-bold text-slate-900 dark:text-white", children: item.total.toFixed(2) })] }, i)) })] }) })] })] }) }), document.body) : null, deleteConfirmId && _jsx8(ModalLayer, { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in", children: _jsxs6("div", { className: "w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-2xl border border-slate-200 dark:border-slate-800 text-right space-y-4", children: [_jsxs6("div", { className: "flex items-center gap-3 text-rose-600", children: [_jsx8("div", { className: "p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40", children: _jsx8(AlertCircle4, { className: "w-6 h-6" }) }), _jsxs6("div", { children: [_jsx8("h3", { className: "text-sm font-bold text-slate-900 dark:text-white", children: "\u062A\u0623\u0643\u064A\u062F \u062D\u0630\u0641 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629" }), _jsx8("p", { className: "text-xs text-slate-500", children: "\u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0633\u064A\u0642\u0648\u0645 \u0628\u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629 \u0646\u0647\u0627\u0626\u064A\u0627\u064B" })] })] }), _jsxs6("p", { className: "text-xs text-slate-600 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl", children: ["\u0639\u0646\u062F \u0627\u0644\u062D\u0630\u0641\u060C \u0633\u064A\u062A\u0645 ", _jsx8("strong", { children: "\u0625\u0639\u0627\u062F\u0629 \u0643\u0645\u064A\u0627\u062A \u0627\u0644\u0623\u0635\u0646\u0627\u0641 \u0644\u0645\u062E\u0632\u0648\u0646 \u0627\u0644\u0645\u062A\u062C\u0631" }), " \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B\u060C \u0648\u0625\u0644\u063A\u0627\u0621 \u0623\u064A \u0645\u0628\u0627\u0644\u063A \u0623\u0648 \u062F\u064A\u0648\u0646 \u0645\u0633\u062C\u0644\u0629 \u0639\u0644\u0649 \u0627\u0644\u0639\u0645\u064A\u0644 \u0623\u0648 \u0627\u0644\u0635\u0646\u062F\u0648\u0642."] }), _jsxs6("div", { className: "flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800", children: [_jsx8("button", { type: "button", onClick: () => setDeleteConfirmId(null), className: "px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 hover:bg-slate-50", children: t("\u0625\u0644\u063A\u0627\u0621") }), _jsx8("button", { type: "button", disabled: isDeleting, onClick: handleDeleteInvoice, className: "px-4 py-1.5 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 shadow-md shadow-rose-600/20 disabled:opacity-50", children: isDeleting ? "\u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0630\u0641..." : "\u0646\u0639\u0645\u060C \u0627\u062D\u0630\u0641 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629" })] })] }) }), returnTargetInvoice && _jsx8(ModalLayer, { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in", children: _jsxs6("div", { className: "w-full max-w-lg rounded-2xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-right", children: [_jsxs6("div", { className: "flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800 bg-rose-50/50 dark:bg-rose-950/20", children: [_jsxs6("div", { className: "flex items-center gap-2", children: [_jsx8(RotateCcw4, { className: "w-5 h-5 text-rose-600" }), _jsxs6("div", { children: [_jsxs6("h3", { className: "text-sm font-bold text-slate-900 dark:text-white", children: ["\u0625\u0631\u062C\u0627\u0639 \u0623\u0635\u0646\u0627\u0641 \u0645\u0646 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629: ", returnTargetInvoice.invoiceNumber] }), _jsx8("p", { className: "text-xs text-slate-500", children: "\u062D\u062F\u062F \u0627\u0644\u0643\u0645\u064A\u0627\u062A \u0627\u0644\u0645\u0631\u0627\u062F \u0625\u0631\u062C\u0627\u0639\u0647\u0627 \u0625\u0644\u0649 \u0627\u0644\u0645\u062E\u0632\u0646" })] })] }), _jsx8("button", { onClick: () => setReturnTargetInvoice(null), className: "p-1 rounded-md text-slate-400 hover:text-slate-600", children: _jsx8(X15, { className: "w-5 h-5" }) })] }), _jsxs6("div", { className: "p-4 space-y-4 max-h-[70vh] overflow-y-auto", children: [_jsxs6("div", { className: "space-y-2", children: [_jsx8("label", { className: "text-xs font-bold text-slate-700 dark:text-slate-300 block", children: "\u0627\u0644\u0623\u0635\u0646\u0627\u0641 \u0627\u0644\u0645\u062A\u0636\u0645\u0646\u0629 \u0641\u064A \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629:" }), returnTargetInvoice.items.map((item) => _jsxs6("div", { className: "flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 gap-3", children: [_jsxs6("div", { children: [_jsx8("div", { className: "text-xs font-bold text-slate-800 dark:text-slate-200", children: item.productName }), _jsxs6("div", { className: "text-[11px] text-slate-400", children: [t("\u0627\u0644\u0648\u062D\u062F\u0629: "), item.unitName, " | \u0627\u0644\u0633\u0639\u0631: ", item.unitPrice, " ", settings.currencySymbol, " | \u0627\u0644\u0645\u0628\u0627\u0639: ", item.quantity] })] }), _jsxs6("div", { className: "flex items-center gap-2", children: [_jsx8("span", { className: "text-xs text-slate-500", children: "\u0643\u0645\u064A\u0629 \u0627\u0644\u0625\u0631\u062C\u0627\u0639:" }), _jsx8("input", { type: "number", min: "0", max: item.quantity, value: returnQtys[item.id] || 0, onChange: (e) => {
+  } }), _jsx8("h2", { className: "text-base font-black text-slate-900 dark:text-white", children: settings.storeName }), null, _jsx8("p", { className: "text-[10px] text-slate-500 mt-1", children: [settings.address || "", settings.phone ? ` \u2022 ${settings.phone}` : ""] })] }), _jsxs6("div", { className: "grid grid-cols-2 gap-3 text-xs bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800", children: [_jsxs6("div", { children: [_jsx8("span", { className: "text-slate-400", children: t("\u0627\u0644\u0639\u0645\u064A\u0644:") }), " ", _jsx8("strong", { className: "text-slate-800 dark:text-slate-200", children: selectedInvoice.customerName || t("\u0639\u0645\u064A\u0644 \u0646\u0642\u062F\u064A") })] }), _jsxs6("div", { children: [_jsx8("span", { className: "text-slate-400", children: t("\u0627\u0644\u0643\u0627\u0634\u064A\u0631:") }), " ", _jsx8("strong", { className: "text-slate-800 dark:text-slate-200", children: selectedInvoice.cashierName })] }), _jsxs6("div", { children: [_jsx8("span", { className: "text-slate-400", children: t("\u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u062F\u0641\u0639:") }), " ", _jsx8("strong", { className: "text-slate-800 dark:text-slate-200", children: selectedInvoice.paymentType === "cash" ? t("\u0646\u0642\u062F\u064A") : selectedInvoice.paymentType === "debt" ? t("\u0622\u062C\u0644") : t("\u062F\u0641\u0639 \u062C\u0632\u0626\u064A") })] }), _jsxs6("div", { children: [_jsx8("span", { className: "text-slate-400", children: "\u0627\u0644\u0645\u0628\u0644\u063A \u0627\u0644\u0635\u0627\u0641\u064A:" }), " ", _jsxs6("strong", { className: "text-violet-600 font-mono", children: [selectedInvoice.grandTotal.toFixed(2), " ", settings.currencySymbol] })] })] }), _jsx8("div", { className: "overflow-x-auto", children: _jsxs6("table", { className: "w-full text-xs text-right whitespace-nowrap", children: [_jsx8("thead", { children: _jsxs6("tr", { className: "border-b border-slate-200 dark:border-slate-700 text-slate-400", children: [_jsx8("th", { className: "pb-1.5", children: "#" }), _jsx8("th", { className: "pb-1.5", children: t("\u0627\u0644\u0635\u0646\u0641") }), _jsx8("th", { className: "pb-1.5", children: t("\u0627\u0644\u0648\u062D\u062F\u0629") }), _jsx8("th", { className: "pb-1.5 text-center", children: t("\u0627\u0644\u0643\u0645\u064A\u0629") }), _jsx8("th", { className: "pb-1.5 text-left", children: t("\u0627\u0644\u0633\u0639\u0631") }), _jsx8("th", { className: "pb-1.5 text-left", children: t("\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A") })] }) }), _jsx8("tbody", { className: "divide-y divide-slate-100 dark:divide-slate-800", children: selectedInvoice.items.map((item, i) => _jsxs6("tr", { className: "py-1.5", children: [_jsx8("td", { className: "py-2", children: i + 1 }), _jsx8("td", { className: "py-2 font-medium", children: item.productName }), _jsx8("td", { className: "py-2 text-slate-500", children: item.unitName }), _jsx8("td", { className: "py-2 text-center font-mono font-bold", children: item.quantity }), _jsx8("td", { className: "py-2 text-left font-mono", children: item.unitPrice.toFixed(2) }), _jsx8("td", { className: "py-2 text-left font-mono font-bold text-slate-900 dark:text-white", children: item.total.toFixed(2) })] }, i)) })] }) })] })] }) }), document.body) : null, deleteConfirmId && _jsx8(ModalLayer, { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in", children: _jsxs6("div", { className: "w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-2xl border border-slate-200 dark:border-slate-800 text-right space-y-4", children: [_jsxs6("div", { className: "flex items-center gap-3 text-rose-600", children: [_jsx8("div", { className: "p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40", children: _jsx8(AlertCircle4, { className: "w-6 h-6" }) }), _jsxs6("div", { children: [_jsx8("h3", { className: "text-sm font-bold text-slate-900 dark:text-white", children: "\u062A\u0623\u0643\u064A\u062F \u062D\u0630\u0641 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629" }), _jsx8("p", { className: "text-xs text-slate-500", children: "\u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0633\u064A\u0642\u0648\u0645 \u0628\u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629 \u0646\u0647\u0627\u0626\u064A\u0627\u064B" })] })] }), _jsxs6("p", { className: "text-xs text-slate-600 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl", children: ["\u0639\u0646\u062F \u0627\u0644\u062D\u0630\u0641\u060C \u0633\u064A\u062A\u0645 ", _jsx8("strong", { children: "\u0625\u0639\u0627\u062F\u0629 \u0643\u0645\u064A\u0627\u062A \u0627\u0644\u0623\u0635\u0646\u0627\u0641 \u0644\u0645\u062E\u0632\u0648\u0646 \u0627\u0644\u0645\u062A\u062C\u0631" }), " \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B\u060C \u0648\u0625\u0644\u063A\u0627\u0621 \u0623\u064A \u0645\u0628\u0627\u0644\u063A \u0623\u0648 \u062F\u064A\u0648\u0646 \u0645\u0633\u062C\u0644\u0629 \u0639\u0644\u0649 \u0627\u0644\u0639\u0645\u064A\u0644 \u0623\u0648 \u0627\u0644\u0635\u0646\u062F\u0648\u0642."] }), _jsxs6("div", { className: "flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800", children: [_jsx8("button", { type: "button", onClick: () => setDeleteConfirmId(null), className: "px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 hover:bg-slate-50", children: t("\u0625\u0644\u063A\u0627\u0621") }), _jsx8("button", { type: "button", disabled: isDeleting, onClick: handleDeleteInvoice, className: "px-4 py-1.5 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 shadow-md shadow-rose-600/20 disabled:opacity-50", children: isDeleting ? "\u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0630\u0641..." : "\u0646\u0639\u0645\u060C \u0627\u062D\u0630\u0641 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629" })] })] }) }), returnTargetInvoice && _jsx8(ModalLayer, { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in", children: _jsxs6("div", { className: "w-full max-w-lg rounded-2xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-right", children: [_jsxs6("div", { className: "flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800 bg-rose-50/50 dark:bg-rose-950/20", children: [_jsxs6("div", { className: "flex items-center gap-2", children: [_jsx8(RotateCcw4, { className: "w-5 h-5 text-rose-600" }), _jsxs6("div", { children: [_jsxs6("h3", { className: "text-sm font-bold text-slate-900 dark:text-white", children: ["\u0625\u0631\u062C\u0627\u0639 \u0623\u0635\u0646\u0627\u0641 \u0645\u0646 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629: ", returnTargetInvoice.invoiceNumber] }), _jsx8("p", { className: "text-xs text-slate-500", children: "\u062D\u062F\u062F \u0627\u0644\u0643\u0645\u064A\u0627\u062A \u0627\u0644\u0645\u0631\u0627\u062F \u0625\u0631\u062C\u0627\u0639\u0647\u0627 \u0625\u0644\u0649 \u0627\u0644\u0645\u062E\u0632\u0646" })] })] }), _jsx8("button", { onClick: () => setReturnTargetInvoice(null), className: "p-1 rounded-md text-slate-400 hover:text-slate-600", children: _jsx8(X16, { className: "w-5 h-5" }) })] }), _jsxs6("div", { className: "p-4 space-y-4 max-h-[70vh] overflow-y-auto", children: [_jsxs6("div", { className: "space-y-2", children: [_jsx8("label", { className: "text-xs font-bold text-slate-700 dark:text-slate-300 block", children: "\u0627\u0644\u0623\u0635\u0646\u0627\u0641 \u0627\u0644\u0645\u062A\u0636\u0645\u0646\u0629 \u0641\u064A \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629:" }), returnTargetInvoice.items.map((item) => _jsxs6("div", { className: "flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 gap-3", children: [_jsxs6("div", { children: [_jsx8("div", { className: "text-xs font-bold text-slate-800 dark:text-slate-200", children: item.productName }), _jsxs6("div", { className: "text-[11px] text-slate-400", children: [t("\u0627\u0644\u0648\u062D\u062F\u0629: "), item.unitName, " | \u0627\u0644\u0633\u0639\u0631: ", item.unitPrice, " ", settings.currencySymbol, " | \u0627\u0644\u0645\u0628\u0627\u0639: ", item.quantity] })] }), _jsxs6("div", { className: "flex items-center gap-2", children: [_jsx8("span", { className: "text-xs text-slate-500", children: "\u0643\u0645\u064A\u0629 \u0627\u0644\u0625\u0631\u062C\u0627\u0639:" }), _jsx8("input", { type: "number", min: "0", max: item.quantity, value: returnQtys[item.id] || 0, onChange: (e) => {
     const val = Math.min(item.quantity, Math.max(0, parseFloat(e.target.value) || 0));
     setReturnQtys((prev) => ({ ...prev, [item.id]: val }));
   }, className: "w-16 px-2 py-1 text-xs font-mono font-bold text-center border rounded-lg bg-white dark:bg-slate-900" })] })] }, item.id))] }), _jsxs6("div", { children: [_jsx8(SearchableDropdown, { label: "\u0631\u062F \u0627\u0644\u0645\u0628\u0644\u063A \u0645\u0646 \u0627\u0644\u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u0627\u0644\u064A:", id: "sales-refund-account", options: accounts.map((acc) => ({ id: acc.id, label: acc.name, subLabel: `\u0627\u0644\u0631\u0635\u064A\u062F: ${acc.balance} ${settings.currencySymbol}` })), selectedId: refundAccountId, onSelect: setRefundAccountId, placeholder: "\u0627\u0628\u062D\u062B \u0639\u0646 \u0627\u0644\u062D\u0633\u0627\u0628..." })] }), _jsx8("div", { children: _jsx8("input", { type: "text", placeholder: "\u0633\u0628\u0628 \u0627\u0644\u0625\u0631\u062C\u0627\u0639 (\u0645\u062B\u0644\u0627\u064B: \u062A\u0627\u0644\u0641\u060C \u0645\u0646\u062A\u0647\u064A\u060C \u062E\u0637\u0623 \u0632\u0628\u0648\u0646)...", value: returnNotes, onChange: (e) => setReturnNotes(e.target.value), className: "w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900" }) })] }), _jsxs6("div", { className: "p-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 flex justify-between gap-2", children: [_jsx8("button", { type: "button", onClick: () => setReturnTargetInvoice(null), className: "px-4 py-2 text-xs font-bold text-slate-600 rounded-lg hover:bg-slate-200", children: t("\u0625\u0644\u063A\u0627\u0621") }), _jsx8("button", { type: "button", id: "btn-confirm-return", disabled: isSubmittingReturn, onClick: handleConfirmReturn, className: "px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md shadow-rose-600/20 disabled:opacity-50", children: "\u062A\u0623\u0643\u064A\u062F \u0627\u0644\u0625\u0631\u062C\u0627\u0639 \u0648\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062E\u0632\u0648\u0646" })] })] }) })] });
@@ -16097,8 +16171,8 @@ var SalesView = () => {
 
 // app/components__purchases__PurchasesView.js
 import React34, { useEffect as useEffect20, useRef as useRef14, useState as useState22 } from "react";
-import { Plus as Plus6, Trash2 as Trash212, Building2 as Building24, Eye as Eye3, X as X16, Pencil as Pencil2, Image as ImageIcon3, FileDown, FileSpreadsheet as FileSpreadsheet6, Printer as Printer3, AlertTriangle as AlertTriangle4, ReceiptText as ReceiptText4 } from "lucide-react";
-var h20 = React34.createElement;
+import { Plus as Plus6, Trash2 as Trash212, Building2 as Building24, Eye as Eye3, X as X17, Pencil as Pencil2, Image as ImageIcon3, FileDown, FileSpreadsheet as FileSpreadsheet6, Printer as Printer3, AlertTriangle as AlertTriangle4, ReceiptText as ReceiptText4 } from "lucide-react";
+var h21 = React34.createElement;
 var money10 = (n4) => Number(n4 || 0).toFixed(2);
 var normalizeDigits = (value) => String(value ?? "").replace(/[٠-٩]/g, (d) => String("\u0660\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669".indexOf(d))).replace(/[۰-۹]/g, (d) => String("\u06F0\u06F1\u06F2\u06F3\u06F4\u06F5\u06F6\u06F7\u06F8\u06F9".indexOf(d))).replace(/[٫،]/g, ".").replace(/٬/g, "");
 var cleanNumber = (value) => {
@@ -16367,75 +16441,75 @@ var PurchasesView = () => {
       cancelled = true;
     };
   }, [showPurchaseStatement, statementFrom, statementTo, financialYearFilter, legacyFinancialYearId, JSON.stringify(audit)]);
-  const form = h20(
+  const form = h21(
     "div",
     { className: "rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-sm space-y-4" },
-    h20(
+    h21(
       "div",
       { className: "grid grid-cols-1 sm:grid-cols-3 gap-3" },
-      h20(SearchableDropdown, { id: "purchase-supplier", label: t("\u0627\u0644\u0645\u0648\u0631\u062F:"), options: supplierOpts, selectedId: supplierId, onSelect: setSupplierId, onQuickAdd: () => setShowQuickSupp(true), quickAddLabel: "+ \u0645\u0648\u0631\u062F \u062C\u062F\u064A\u062F", icon: h20(Building24, { className: "w-4 h-4" }) }),
-      h20(SearchableDropdown, { id: "purchase-warehouse", label: "\u0627\u0644\u0645\u062E\u0632\u0646 \u0627\u0644\u0645\u0633\u062A\u0644\u0645:", options: whOpts, selectedId: warehouseId, onSelect: setWarehouseId, onQuickAdd: () => setShowQuickWarehouse(true), quickAddLabel: "+ \u0625\u0636\u0627\u0641\u0629 \u0645\u062E\u0632\u0646", placeholder: "\u0627\u0628\u062D\u062B \u0639\u0646 \u0645\u062E\u0632\u0646..." }),
-      h20(SearchableDropdown, { id: "purchase-account", label: paidSafe > 0 ? "\u062D\u0633\u0627\u0628 \u062F\u0641\u0639 \u0627\u0644\u0645\u0628\u0644\u063A \u0627\u0644\u0645\u062F\u0641\u0648\u0639:" : "\u0627\u0644\u062D\u0633\u0627\u0628 (\u064A\u0633\u062A\u062E\u062F\u0645 \u0639\u0646\u062F \u0627\u0644\u062F\u0641\u0639):", options: accountOpts, selectedId: accountId, onSelect: setAccountId, placeholder: "\u0627\u0628\u062D\u062B \u0639\u0646 \u062D\u0633\u0627\u0628..." })
+      h21(SearchableDropdown, { id: "purchase-supplier", label: t("\u0627\u0644\u0645\u0648\u0631\u062F:"), options: supplierOpts, selectedId: supplierId, onSelect: setSupplierId, onQuickAdd: () => setShowQuickSupp(true), quickAddLabel: "+ \u0645\u0648\u0631\u062F \u062C\u062F\u064A\u062F", icon: h21(Building24, { className: "w-4 h-4" }) }),
+      h21(SearchableDropdown, { id: "purchase-warehouse", label: "\u0627\u0644\u0645\u062E\u0632\u0646 \u0627\u0644\u0645\u0633\u062A\u0644\u0645:", options: whOpts, selectedId: warehouseId, onSelect: setWarehouseId, onQuickAdd: () => setShowQuickWarehouse(true), quickAddLabel: "+ \u0625\u0636\u0627\u0641\u0629 \u0645\u062E\u0632\u0646", placeholder: "\u0627\u0628\u062D\u062B \u0639\u0646 \u0645\u062E\u0632\u0646..." }),
+      h21(SearchableDropdown, { id: "purchase-account", label: paidSafe > 0 ? "\u062D\u0633\u0627\u0628 \u062F\u0641\u0639 \u0627\u0644\u0645\u0628\u0644\u063A \u0627\u0644\u0645\u062F\u0641\u0648\u0639:" : "\u0627\u0644\u062D\u0633\u0627\u0628 (\u064A\u0633\u062A\u062E\u062F\u0645 \u0639\u0646\u062F \u0627\u0644\u062F\u0641\u0639):", options: accountOpts, selectedId: accountId, onSelect: setAccountId, placeholder: "\u0627\u0628\u062D\u062B \u0639\u0646 \u062D\u0633\u0627\u0628..." })
     ),
-    h20(
+    h21(
       "div",
       { className: "grid grid-cols-1 sm:grid-cols-2 gap-3" },
-      h20("div", null, h20("label", { className: "text-[11px] font-bold block mb-1" }, "\u062A\u0627\u0631\u064A\u062E \u0641\u0627\u062A\u0648\u0631\u0629 \u0627\u0644\u0645\u0648\u0631\u062F"), h20("input", { type: "date", value: purchaseDate, onChange: (e) => setPurchaseDate(e.target.value), className: "w-full px-3 py-2 border rounded-xl text-xs bg-white dark:bg-slate-900 dark:border-slate-700" })),
-      h20("div", null, h20("label", { className: "text-[11px] font-bold block mb-1" }, "\u0631\u0642\u0645 \u0641\u0627\u062A\u0648\u0631\u0629 \u0627\u0644\u0645\u0648\u0631\u062F"), h20("input", { value: supplierInvoiceNumber, onChange: (e) => setSupplierInvoiceNumber(e.target.value), placeholder: "\u064A\u064F\u0642\u0631\u0623 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0645\u0646 \u0627\u0644\u0635\u0648\u0631\u0629 \u0623\u0648 \u0623\u062F\u062E\u0644\u0647 \u064A\u062F\u0648\u064A\u0627\u064B", className: "w-full px-3 py-2 border rounded-xl text-xs bg-white dark:bg-slate-900 dark:border-slate-700" }))
+      h21("div", null, h21("label", { className: "text-[11px] font-bold block mb-1" }, "\u062A\u0627\u0631\u064A\u062E \u0641\u0627\u062A\u0648\u0631\u0629 \u0627\u0644\u0645\u0648\u0631\u062F"), h21("input", { type: "date", value: purchaseDate, onChange: (e) => setPurchaseDate(e.target.value), className: "w-full px-3 py-2 border rounded-xl text-xs bg-white dark:bg-slate-900 dark:border-slate-700" })),
+      h21("div", null, h21("label", { className: "text-[11px] font-bold block mb-1" }, "\u0631\u0642\u0645 \u0641\u0627\u062A\u0648\u0631\u0629 \u0627\u0644\u0645\u0648\u0631\u062F"), h21("input", { value: supplierInvoiceNumber, onChange: (e) => setSupplierInvoiceNumber(e.target.value), placeholder: "\u064A\u064F\u0642\u0631\u0623 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0645\u0646 \u0627\u0644\u0635\u0648\u0631\u0629 \u0623\u0648 \u0623\u062F\u062E\u0644\u0647 \u064A\u062F\u0648\u064A\u0627\u064B", className: "w-full px-3 py-2 border rounded-xl text-xs bg-white dark:bg-slate-900 dark:border-slate-700" }))
     ),
-    h20(
+    h21(
       "div",
       { className: "overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-xl slim-scrollbar" },
-      h20(
+      h21(
         "table",
         { className: "w-full min-w-[900px] text-xs text-right" },
-        h20("thead", null, h20("tr", { className: "bg-slate-50 dark:bg-slate-800 border-b text-slate-500" }, ...["\u0627\u0644\u0635\u0646\u0641", "\u0627\u0644\u0648\u062D\u062F\u0629", "\u0627\u0644\u0643\u0645\u064A\u0629", "\u0633\u0639\u0631 \u0627\u0644\u0634\u0631\u0627\u0621", "\u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621", "\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A", ""].map((x, i) => h20("th", { key: i, className: "p-2.5" }, x)))),
-        h20(
+        h21("thead", null, h21("tr", { className: "bg-slate-50 dark:bg-slate-800 border-b text-slate-500" }, ...["\u0627\u0644\u0635\u0646\u0641", "\u0627\u0644\u0648\u062D\u062F\u0629", "\u0627\u0644\u0643\u0645\u064A\u0629", "\u0633\u0639\u0631 \u0627\u0644\u0634\u0631\u0627\u0621", "\u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621", "\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A", ""].map((x, i) => h21("th", { key: i, className: "p-2.5" }, x)))),
+        h21(
           "tbody",
           null,
           ...rows.map((r, i) => {
             const p = activeProducts.find((x) => x.id === r.productId);
             const prodOpts = activeProducts.map((x) => ({ id: x.id, label: x.name || "\u0635\u0646\u0641", subLabel: x.sku || x.internalCode || "\u0635\u0646\u0641" }));
             const unitOpts = (p?.units || []).map((x) => ({ id: x.id, label: x.name || "\u0648\u062D\u062F\u0629", subLabel: `\xD7${x.conversionToBase || 1} ${p?.baseUnitName || ""}` }));
-            return h20(
+            return h21(
               "tr",
               { key: i, className: "border-b last:border-b-0 align-top dark:border-slate-800" },
-              h20(
+              h21(
                 "td",
                 { className: "p-2 min-w-64" },
-                h20(SearchableDropdown, { id: `purchase-product-${i}`, options: prodOpts, selectedId: r.productId, onSelect: (id) => updateRow(i, { productId: id }), placeholder: "\u0627\u0628\u062D\u062B \u0639\u0646 \u0627\u0644\u0635\u0646\u0641..." })
+                h21(SearchableDropdown, { id: `purchase-product-${i}`, options: prodOpts, selectedId: r.productId, onSelect: (id) => updateRow(i, { productId: id }), placeholder: "\u0627\u0628\u062D\u062B \u0639\u0646 \u0627\u0644\u0635\u0646\u0641..." })
               ),
-              h20("td", { className: "p-2 min-w-44" }, h20(SearchableDropdown, { id: `purchase-unit-${i}`, options: unitOpts, selectedId: r.unitId, onSelect: (id) => updateRow(i, { unitId: id }), placeholder: "\u0627\u0628\u062D\u062B \u0639\u0646 \u0627\u0644\u0648\u062D\u062F\u0629..." })),
-              h20("td", { className: "p-2" }, h20("input", { type: "text", inputMode: "decimal", dir: "ltr", value: r.quantity, onFocus: (e) => e.currentTarget.select(), onChange: (e) => updateRow(i, { quantity: cleanNumber(e.target.value) }), className: "w-24 px-2 py-2 border rounded-lg text-center font-mono font-bold bg-white dark:bg-slate-900 dark:border-slate-700 focus:outline-none focus:border-violet-500" })),
-              h20("td", { className: "p-2" }, h20("input", { type: "text", inputMode: "decimal", dir: "ltr", value: r.unitPrice, onFocus: (e) => e.currentTarget.select(), onChange: (e) => updateRow(i, { unitPrice: cleanNumber(e.target.value) }), placeholder: "0.00", className: "w-28 px-2 py-2 border rounded-lg text-center font-mono font-bold bg-white dark:bg-slate-900 dark:border-slate-700 focus:outline-none focus:border-violet-500" })),
-              h20("td", { className: "p-2" }, h20("input", { type: "date", value: r.expiryDate || "", onChange: (e) => updateRow(i, { expiryDate: e.target.value }), className: "px-2 py-2 border rounded-lg text-xs bg-white dark:bg-slate-900 dark:border-slate-700" })),
-              h20("td", { className: "p-2 font-mono font-black text-violet-700" }, `${money10(num4(r.quantity) * num4(r.unitPrice))} ${settings.currencySymbol || ""}`),
-              h20("td", { className: "p-2" }, h20("button", { type: "button", onClick: () => setRows((x) => x.filter((_, idx) => idx !== i)), className: "p-2 text-rose-600" }, h20(Trash212, { className: "w-4 h-4" })))
+              h21("td", { className: "p-2 min-w-44" }, h21(SearchableDropdown, { id: `purchase-unit-${i}`, options: unitOpts, selectedId: r.unitId, onSelect: (id) => updateRow(i, { unitId: id }), placeholder: "\u0627\u0628\u062D\u062B \u0639\u0646 \u0627\u0644\u0648\u062D\u062F\u0629..." })),
+              h21("td", { className: "p-2" }, h21("input", { type: "text", inputMode: "decimal", dir: "ltr", value: r.quantity, onFocus: (e) => e.currentTarget.select(), onChange: (e) => updateRow(i, { quantity: cleanNumber(e.target.value) }), className: "w-24 px-2 py-2 border rounded-lg text-center font-mono font-bold bg-white dark:bg-slate-900 dark:border-slate-700 focus:outline-none focus:border-violet-500" })),
+              h21("td", { className: "p-2" }, h21("input", { type: "text", inputMode: "decimal", dir: "ltr", value: r.unitPrice, onFocus: (e) => e.currentTarget.select(), onChange: (e) => updateRow(i, { unitPrice: cleanNumber(e.target.value) }), placeholder: "0.00", className: "w-28 px-2 py-2 border rounded-lg text-center font-mono font-bold bg-white dark:bg-slate-900 dark:border-slate-700 focus:outline-none focus:border-violet-500" })),
+              h21("td", { className: "p-2" }, h21("input", { type: "date", value: r.expiryDate || "", onChange: (e) => updateRow(i, { expiryDate: e.target.value }), className: "px-2 py-2 border rounded-lg text-xs bg-white dark:bg-slate-900 dark:border-slate-700" })),
+              h21("td", { className: "p-2 font-mono font-black text-violet-700" }, `${money10(num4(r.quantity) * num4(r.unitPrice))} ${settings.currencySymbol || ""}`),
+              h21("td", { className: "p-2" }, h21("button", { type: "button", onClick: () => setRows((x) => x.filter((_, idx) => idx !== i)), className: "p-2 text-rose-600" }, h21(Trash212, { className: "w-4 h-4" })))
             );
           })
         )
       )
     ),
-    h20("button", { type: "button", onClick: () => setRows((r) => [...r, makeRow2()]), className: "flex items-center gap-1 text-xs font-bold text-violet-700" }, h20(Plus6, { className: "w-4 h-4" }), t("\u0625\u0636\u0627\u0641\u0629 \u0635\u0646\u0641")),
-    h20(
+    h21("button", { type: "button", onClick: () => setRows((r) => [...r, makeRow2()]), className: "flex items-center gap-1 text-xs font-bold text-violet-700" }, h21(Plus6, { className: "w-4 h-4" }), t("\u0625\u0636\u0627\u0641\u0629 \u0635\u0646\u0641")),
+    h21(
       "div",
       { className: "grid grid-cols-1 sm:grid-cols-5 gap-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 p-3" },
-      h20("div", null, h20("label", { className: "text-[11px] font-bold block mb-1" }, t("\u0646\u0648\u0639 \u0627\u0644\u062E\u0635\u0645")), h20(
+      h21("div", null, h21("label", { className: "text-[11px] font-bold block mb-1" }, t("\u0646\u0648\u0639 \u0627\u0644\u062E\u0635\u0645")), h21(
         "div",
         { className: "flex gap-1" },
-        h20("button", { type: "button", onClick: () => setDiscountType("fixed"), className: `flex-1 py-2 rounded-lg text-xs font-bold border ${discountType === "fixed" ? "bg-violet-600 text-white" : "bg-white text-slate-700"}` }, "\u0645\u0628\u0644\u063A"),
-        h20("button", { type: "button", onClick: () => setDiscountType("percent"), className: `flex-1 py-2 rounded-lg text-xs font-bold border ${discountType === "percent" ? "bg-violet-600 text-white" : "bg-white text-slate-700"}` }, "%")
+        h21("button", { type: "button", onClick: () => setDiscountType("fixed"), className: `flex-1 py-2 rounded-lg text-xs font-bold border ${discountType === "fixed" ? "bg-violet-600 text-white" : "bg-white text-slate-700"}` }, "\u0645\u0628\u0644\u063A"),
+        h21("button", { type: "button", onClick: () => setDiscountType("percent"), className: `flex-1 py-2 rounded-lg text-xs font-bold border ${discountType === "percent" ? "bg-violet-600 text-white" : "bg-white text-slate-700"}` }, "%")
       )),
-      h20("div", null, h20("label", { className: "text-[11px] font-bold block mb-1" }, t("\u0642\u064A\u0645\u0629 \u0627\u0644\u062E\u0635\u0645")), h20("input", { type: "text", inputMode: "decimal", dir: "ltr", value: discountValue, onFocus: (e) => e.currentTarget.select(), onChange: (e) => setDiscountValue(cleanNumber(e.target.value)), placeholder: discountType === "percent" ? "0 - 100" : "0.00", className: "w-full px-3 py-2 border rounded-lg font-mono bg-white dark:bg-slate-900 dark:border-slate-700 focus:outline-none focus:border-violet-500" })),
-      h20("div", null, h20("label", { className: "text-[11px] font-bold block mb-1" }, t("\u0627\u0644\u0645\u0628\u0644\u063A \u0627\u0644\u0645\u062F\u0641\u0648\u0639")), h20("input", { type: "text", inputMode: "decimal", dir: "ltr", value: paid, onFocus: (e) => e.currentTarget.select(), onChange: (e) => setPaid(cleanNumber(e.target.value)), placeholder: "0.00", className: "w-full px-3 py-2 border rounded-lg font-mono font-bold text-violet-700 bg-white dark:bg-slate-900 dark:border-slate-700 focus:outline-none focus:border-violet-500" })),
-      h20("div", { className: "rounded-lg bg-white dark:bg-slate-900 border dark:border-slate-700 p-2" }, h20("div", { className: "text-[10px] text-slate-500" }, "\u0627\u0644\u0628\u0627\u0642\u064A \u062F\u064A\u0646"), h20("div", { className: "font-mono font-black text-rose-600 text-lg" }, `${money10(debt)} ${settings.currencySymbol || ""}`)),
-      h20("div", { className: "rounded-lg bg-white dark:bg-slate-900 border dark:border-slate-700 p-2" }, h20("div", { className: "text-[10px] text-slate-500" }, "\u0627\u0644\u0635\u0627\u0641\u064A \u0628\u0639\u062F \u0627\u0644\u062E\u0635\u0645"), h20("div", { className: "font-mono font-black text-violet-700 text-lg" }, `${money10(total)} ${settings.currencySymbol || ""}`))
+      h21("div", null, h21("label", { className: "text-[11px] font-bold block mb-1" }, t("\u0642\u064A\u0645\u0629 \u0627\u0644\u062E\u0635\u0645")), h21("input", { type: "text", inputMode: "decimal", dir: "ltr", value: discountValue, onFocus: (e) => e.currentTarget.select(), onChange: (e) => setDiscountValue(cleanNumber(e.target.value)), placeholder: discountType === "percent" ? "0 - 100" : "0.00", className: "w-full px-3 py-2 border rounded-lg font-mono bg-white dark:bg-slate-900 dark:border-slate-700 focus:outline-none focus:border-violet-500" })),
+      h21("div", null, h21("label", { className: "text-[11px] font-bold block mb-1" }, t("\u0627\u0644\u0645\u0628\u0644\u063A \u0627\u0644\u0645\u062F\u0641\u0648\u0639")), h21("input", { type: "text", inputMode: "decimal", dir: "ltr", value: paid, onFocus: (e) => e.currentTarget.select(), onChange: (e) => setPaid(cleanNumber(e.target.value)), placeholder: "0.00", className: "w-full px-3 py-2 border rounded-lg font-mono font-bold text-violet-700 bg-white dark:bg-slate-900 dark:border-slate-700 focus:outline-none focus:border-violet-500" })),
+      h21("div", { className: "rounded-lg bg-white dark:bg-slate-900 border dark:border-slate-700 p-2" }, h21("div", { className: "text-[10px] text-slate-500" }, "\u0627\u0644\u0628\u0627\u0642\u064A \u062F\u064A\u0646"), h21("div", { className: "font-mono font-black text-rose-600 text-lg" }, `${money10(debt)} ${settings.currencySymbol || ""}`)),
+      h21("div", { className: "rounded-lg bg-white dark:bg-slate-900 border dark:border-slate-700 p-2" }, h21("div", { className: "text-[10px] text-slate-500" }, "\u0627\u0644\u0635\u0627\u0641\u064A \u0628\u0639\u062F \u0627\u0644\u062E\u0635\u0645"), h21("div", { className: "font-mono font-black text-violet-700 text-lg" }, `${money10(total)} ${settings.currencySymbol || ""}`))
     ),
-    h20("input", { value: notes, onChange: (e) => setNotes(e.target.value), placeholder: "\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0641\u0627\u062A\u0648\u0631\u0629 \u0627\u0644\u0634\u0631\u0627\u0621...", className: "w-full px-3 py-2 border rounded-xl text-xs bg-white dark:bg-slate-900 dark:border-slate-700" }),
-    h20("div", { className: "flex justify-end gap-2" }, h20("button", { type: "button", onClick: () => {
+    h21("input", { value: notes, onChange: (e) => setNotes(e.target.value), placeholder: "\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0641\u0627\u062A\u0648\u0631\u0629 \u0627\u0644\u0634\u0631\u0627\u0621...", className: "w-full px-3 py-2 border rounded-xl text-xs bg-white dark:bg-slate-900 dark:border-slate-700" }),
+    h21("div", { className: "flex justify-end gap-2" }, h21("button", { type: "button", onClick: () => {
       setMode("list");
       setEditingId(null);
-    }, className: "px-4 py-2 border rounded-xl text-xs font-bold" }, t("\u0625\u0644\u063A\u0627\u0621")), h20("button", { type: "button", onClick: submit, disabled: isSaving, className: "px-6 py-2.5 rounded-xl bg-violet-600 text-white text-xs font-black disabled:opacity-60" }, isSaving ? "\u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638 \u0645\u062D\u0644\u064A\u0627\u064B..." : editingId ? "\u062D\u0641\u0638 \u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629" : "\u062D\u0641\u0638 \u0641\u0627\u062A\u0648\u0631\u0629 \u0627\u0644\u0634\u0631\u0627\u0621"))
+    }, className: "px-4 py-2 border rounded-xl text-xs font-bold" }, t("\u0625\u0644\u063A\u0627\u0621")), h21("button", { type: "button", onClick: submit, disabled: isSaving, className: "px-6 py-2.5 rounded-xl bg-violet-600 text-white text-xs font-black disabled:opacity-60" }, isSaving ? "\u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638 \u0645\u062D\u0644\u064A\u0627\u064B..." : editingId ? "\u062D\u0641\u0638 \u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629" : "\u062D\u0641\u0638 \u0641\u0627\u062A\u0648\u0631\u0629 \u0627\u0644\u0634\u0631\u0627\u0621"))
   );
   const exportPurchase = async (kind) => {
     if (!viewing || exporting) return;
@@ -16477,231 +16551,231 @@ var PurchasesView = () => {
       setExporting("");
     }
   };
-  const list = h20(
+  const list = h21(
     "div",
     { className: "rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm" },
-    !purchasesPager.loading && purchasesPager.totalItems === 0 ? h20(EmptyState, { message: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0641\u0648\u0627\u062A\u064A\u0631 \u0645\u0634\u062A\u0631\u064A\u0627\u062A" }) : h20(
+    !purchasesPager.loading && purchasesPager.totalItems === 0 ? h21(EmptyState, { message: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0641\u0648\u0627\u062A\u064A\u0631 \u0645\u0634\u062A\u0631\u064A\u0627\u062A" }) : h21(
       "div",
       { className: "overflow-x-auto slim-scrollbar" },
-      h20(
+      h21(
         "table",
         { className: "w-full min-w-[760px] text-xs text-right" },
-        h20("thead", null, h20("tr", { className: "bg-slate-50 dark:bg-slate-800 border-b text-slate-500 dark:border-slate-700" }, ...["\u0627\u0644\u0631\u0642\u0645", "\u0627\u0644\u062A\u0627\u0631\u064A\u062E", "\u0627\u0644\u0645\u0648\u0631\u062F", "\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A", "\u0627\u0644\u0645\u062F\u0641\u0648\u0639", "\u0627\u0644\u062F\u064A\u0646", ""].map((x, i) => h20("th", { key: i, className: "p-3" }, x)))),
-        h20("tbody", null, ...purchasesPager.pageItems.map((p, index) => h20(
+        h21("thead", null, h21("tr", { className: "bg-slate-50 dark:bg-slate-800 border-b text-slate-500 dark:border-slate-700" }, ...["\u0627\u0644\u0631\u0642\u0645", "\u0627\u0644\u062A\u0627\u0631\u064A\u062E", "\u0627\u0644\u0645\u0648\u0631\u062F", "\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A", "\u0627\u0644\u0645\u062F\u0641\u0648\u0639", "\u0627\u0644\u062F\u064A\u0646", ""].map((x, i) => h21("th", { key: i, className: "p-3" }, x)))),
+        h21("tbody", null, ...purchasesPager.pageItems.map((p, index) => h21(
           "tr",
           { key: p.id || index, className: "border-b last:border-0 dark:border-slate-800" },
-          h20("td", { className: "p-3 font-mono font-bold" }, p.invoiceNumber || `PUR-${index + 1}`),
-          h20("td", { className: "p-3" }, safeDate2(p.date).toLocaleDateString("ar-EG")),
-          h20("td", { className: "p-3 font-bold" }, p.supplierName || "\u0645\u0648\u0631\u062F"),
-          h20("td", { className: "p-3 font-mono" }, `${money10(p.grandTotal)} ${settings.currencySymbol || ""}`),
-          h20("td", { className: "p-3 font-mono text-violet-700" }, money10(p.paidAmount)),
-          h20("td", { className: "p-3 font-mono text-rose-600" }, money10(p.remainingAmount)),
-          h20("td", { className: "p-3 flex gap-1" }, h20("button", { type: "button", onClick: () => {
+          h21("td", { className: "p-3 font-mono font-bold" }, p.invoiceNumber || `PUR-${index + 1}`),
+          h21("td", { className: "p-3" }, safeDate2(p.date).toLocaleDateString("ar-EG")),
+          h21("td", { className: "p-3 font-bold" }, p.supplierName || "\u0645\u0648\u0631\u062F"),
+          h21("td", { className: "p-3 font-mono" }, `${money10(p.grandTotal)} ${settings.currencySymbol || ""}`),
+          h21("td", { className: "p-3 font-mono text-violet-700" }, money10(p.paidAmount)),
+          h21("td", { className: "p-3 font-mono text-rose-600" }, money10(p.remainingAmount)),
+          h21("td", { className: "p-3 flex gap-1" }, h21("button", { type: "button", onClick: () => {
             warmExportLibraries();
             setViewing(p);
-          }, className: "p-2 rounded-lg border dark:border-slate-700", title: t("\u0639\u0631\u0636") }, h20(Eye3, { className: "w-4 h-4" })), (p.financialYearId || activeFinancialYearId) === activeFinancialYearId ? h20("button", { type: "button", onClick: () => startEditPurchase(p), className: "p-2 rounded-lg border dark:border-slate-700 text-blue-600", title: "\u062A\u0639\u062F\u064A\u0644 \u0645\u0639 \u0642\u064A\u062F \u0639\u0643\u0633\u064A" }, h20(Pencil2, { className: "w-4 h-4" })) : null, canDelete && (p.financialYearId || activeFinancialYearId) === activeFinancialYearId ? h20("button", { type: "button", onClick: () => setDeleting(p.id), className: "p-2 rounded-lg border dark:border-slate-700 text-rose-600" }, h20(Trash212, { className: "w-4 h-4" })) : null)
+          }, className: "p-2 rounded-lg border dark:border-slate-700", title: t("\u0639\u0631\u0636") }, h21(Eye3, { className: "w-4 h-4" })), (p.financialYearId || activeFinancialYearId) === activeFinancialYearId ? h21("button", { type: "button", onClick: () => startEditPurchase(p), className: "p-2 rounded-lg border dark:border-slate-700 text-blue-600", title: "\u062A\u0639\u062F\u064A\u0644 \u0645\u0639 \u0642\u064A\u062F \u0639\u0643\u0633\u064A" }, h21(Pencil2, { className: "w-4 h-4" })) : null, canDelete && (p.financialYearId || activeFinancialYearId) === activeFinancialYearId ? h21("button", { type: "button", onClick: () => setDeleting(p.id), className: "p-2 rounded-lg border dark:border-slate-700 text-rose-600" }, h21(Trash212, { className: "w-4 h-4" })) : null)
         )))
       ),
-      h20(Pagination, { pager: purchasesPager })
+      h21(Pagination, { pager: purchasesPager })
     )
   );
-  const purchaseStatementModal = showPurchaseStatement ? h20(
+  const purchaseStatementModal = showPurchaseStatement ? h21(
     "div",
     { className: "fixed inset-0 p-2 sm:p-5 flex items-center justify-center bg-slate-950/65", style: { zIndex: 2147482500 } },
-    h20(
+    h21(
       "div",
       { className: "w-full max-w-5xl max-h-[96vh] bg-slate-100 rounded-2xl overflow-hidden flex flex-col shadow-2xl" },
-      h20(
+      h21(
         "div",
         { className: "no-print shrink-0 p-3 bg-white border-b flex flex-col sm:flex-row sm:items-center justify-between gap-2" },
-        h20("div", null, h20("div", { className: "font-black text-sm" }, "\u0643\u0634\u0641 \u0627\u0644\u0645\u0634\u062A\u0631\u064A\u0627\u062A \u0648\u0627\u0644\u062A\u0648\u0631\u064A\u062F"), h20("div", { className: "text-[10px] text-slate-500" }, "\u062D\u062F\u062F \u0627\u0644\u0641\u062A\u0631\u0629 \u062B\u0645 \u0627\u0637\u0628\u0639 \u0627\u0644\u0643\u0634\u0641 \u0623\u0648 \u0627\u062D\u0641\u0638\u0647 PDF \u0645\u0646 \u0646\u0627\u0641\u0630\u0629 \u0627\u0644\u0637\u0628\u0627\u0639\u0629")),
-        h20(
+        h21("div", null, h21("div", { className: "font-black text-sm" }, "\u0643\u0634\u0641 \u0627\u0644\u0645\u0634\u062A\u0631\u064A\u0627\u062A \u0648\u0627\u0644\u062A\u0648\u0631\u064A\u062F"), h21("div", { className: "text-[10px] text-slate-500" }, "\u062D\u062F\u062F \u0627\u0644\u0641\u062A\u0631\u0629 \u062B\u0645 \u0627\u0637\u0628\u0639 \u0627\u0644\u0643\u0634\u0641 \u0623\u0648 \u0627\u062D\u0641\u0638\u0647 PDF \u0645\u0646 \u0646\u0627\u0641\u0630\u0629 \u0627\u0644\u0637\u0628\u0627\u0639\u0629")),
+        h21(
           "div",
           { className: "flex flex-wrap gap-2 items-end" },
-          h20("label", { className: "text-[10px] font-bold" }, t("\u0645\u0646"), h20("input", { type: "date", value: statementFrom, onChange: (e) => setStatementFrom(e.target.value), className: "block mt-1 px-2 py-1.5 border rounded-lg text-xs" })),
-          h20("label", { className: "text-[10px] font-bold" }, t("\u0625\u0644\u0649"), h20("input", { type: "date", value: statementTo, onChange: (e) => setStatementTo(e.target.value), className: "block mt-1 px-2 py-1.5 border rounded-lg text-xs" })),
-          h20("button", { type: "button", disabled: statementLoading, onClick: async () => {
+          h21("label", { className: "text-[10px] font-bold" }, t("\u0645\u0646"), h21("input", { type: "date", value: statementFrom, onChange: (e) => setStatementFrom(e.target.value), className: "block mt-1 px-2 py-1.5 border rounded-lg text-xs" })),
+          h21("label", { className: "text-[10px] font-bold" }, t("\u0625\u0644\u0649"), h21("input", { type: "date", value: statementTo, onChange: (e) => setStatementTo(e.target.value), className: "block mt-1 px-2 py-1.5 border rounded-lg text-xs" })),
+          h21("button", { type: "button", disabled: statementLoading, onClick: async () => {
             if (statementRef.current) {
               const ok = await printElementOnly(statementRef.current, "a4", `\u0643\u0634\u0641 \u0645\u0634\u062A\u0631\u064A\u0627\u062A ${statementFrom} \u0625\u0644\u0649 ${statementTo}`);
               if (!ok) showToast?.("\u062A\u0639\u0630\u0631 \u062A\u062C\u0647\u064A\u0632 \u0643\u0634\u0641 \u0627\u0644\u0645\u0634\u062A\u0631\u064A\u0627\u062A \u0644\u0644\u0637\u0628\u0627\u0639\u0629", "error");
             }
-          }, className: "px-3 py-2 rounded-xl bg-violet-600 disabled:opacity-50 text-white text-xs font-black flex items-center gap-1.5" }, h20(Printer3, { className: "w-4 h-4" }), statementLoading ? "\u062C\u0627\u0631\u064D \u0627\u0644\u062A\u062D\u0645\u064A\u0644..." : "\u0637\u0628\u0627\u0639\u0629 / PDF"),
-          h20("button", { type: "button", onClick: () => setShowPurchaseStatement(false), className: "p-2 rounded-xl border bg-white" }, h20(X16, { className: "w-4 h-4" }))
+          }, className: "px-3 py-2 rounded-xl bg-violet-600 disabled:opacity-50 text-white text-xs font-black flex items-center gap-1.5" }, h21(Printer3, { className: "w-4 h-4" }), statementLoading ? "\u062C\u0627\u0631\u064D \u0627\u0644\u062A\u062D\u0645\u064A\u0644..." : "\u0637\u0628\u0627\u0639\u0629 / PDF"),
+          h21("button", { type: "button", onClick: () => setShowPurchaseStatement(false), className: "p-2 rounded-xl border bg-white" }, h21(X17, { className: "w-4 h-4" }))
         )
       ),
-      h20(
+      h21(
         "div",
         { className: "flex-1 overflow-auto p-3 sm:p-5" },
-        h20(
+        h21(
           "article",
           { ref: statementRef, dir: "rtl", className: "mx-auto bg-white text-slate-900 border rounded-xl overflow-hidden", style: { width: "100%", maxWidth: "980px", fontFamily: "'Cairo',Arial,sans-serif", padding: "10mm", boxSizing: "border-box" } },
-          h20(
+          h21(
             "header",
             { className: "text-center pb-4 border-b-2 border-violet-600" },
-            h20("img", { src: getBrandLogoDisplayUrl(settings), alt: "", style: { width: "64px", height: "64px", objectFit: "contain", margin: "0 auto 6px" } }),
-            h20("h2", { className: "text-xl font-black" }, settings.storeName || "\u0643\u0627\u0634 \u062A\u0648\u0628 3"),
-            h20("div", { className: "text-sm font-black text-violet-700 mt-1" }, "\u0643\u0634\u0641 \u0627\u0644\u0645\u0634\u062A\u0631\u064A\u0627\u062A \u0648\u0627\u0644\u062A\u0648\u0631\u064A\u062F"),
-            h20("div", { className: "text-[11px] text-slate-500 mt-2" }, `${statementFrom || "-"}  \u2190  ${statementTo || "-"} \u2022 ${financialYears.find((y) => y.id === financialYearFilter)?.name || (financialYearFilter === "all" ? "\u0643\u0644 \u0627\u0644\u0633\u0646\u0648\u0627\u062A" : "\u0627\u0644\u0633\u0646\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629 \u0627\u0644\u062D\u0627\u0644\u064A\u0629")}`),
-            h20("div", { className: "text-[10px] text-slate-400 mt-1" }, [settings.address, settings.phone ? `\u0647\u0627\u062A\u0641: ${settings.phone}` : "", settings.taxNumber ? `\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0636\u0631\u064A\u0628\u064A: ${settings.taxNumber}` : ""].filter(Boolean).join(" \u2022 "))
+            h21("img", { src: getBrandLogoDisplayUrl(settings), alt: "", style: { width: "64px", height: "64px", objectFit: "contain", margin: "0 auto 6px" } }),
+            h21("h2", { className: "text-xl font-black" }, settings.storeName || "\u0643\u0627\u0634 \u062A\u0648\u0628 3"),
+            h21("div", { className: "text-sm font-black text-violet-700 mt-1" }, "\u0643\u0634\u0641 \u0627\u0644\u0645\u0634\u062A\u0631\u064A\u0627\u062A \u0648\u0627\u0644\u062A\u0648\u0631\u064A\u062F"),
+            h21("div", { className: "text-[11px] text-slate-500 mt-2" }, `${statementFrom || "-"}  \u2190  ${statementTo || "-"} \u2022 ${financialYears.find((y) => y.id === financialYearFilter)?.name || (financialYearFilter === "all" ? "\u0643\u0644 \u0627\u0644\u0633\u0646\u0648\u0627\u062A" : "\u0627\u0644\u0633\u0646\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629 \u0627\u0644\u062D\u0627\u0644\u064A\u0629")}`),
+            h21("div", { className: "text-[10px] text-slate-400 mt-1" }, [settings.address, settings.phone ? `\u0647\u0627\u062A\u0641: ${settings.phone}` : "", settings.taxNumber ? `\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0636\u0631\u064A\u0628\u064A: ${settings.taxNumber}` : ""].filter(Boolean).join(" \u2022 "))
           ),
-          h20(
+          h21(
             "div",
             { className: "grid grid-cols-2 sm:grid-cols-4 gap-2 my-4" },
-            h20("div", { className: "border rounded-lg p-2 text-center" }, h20("div", { className: "text-[10px] text-slate-500" }, "\u0639\u062F\u062F \u0627\u0644\u0641\u0648\u0627\u062A\u064A\u0631"), h20("div", { className: "font-black" }, String(statementRows.length))),
-            h20("div", { className: "border rounded-lg p-2 text-center" }, h20("div", { className: "text-[10px] text-slate-500" }, t("\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A")), h20("div", { className: "font-black" }, `${money10(statementTotals.total)} ${settings.currencySymbol || ""}`)),
-            h20("div", { className: "border rounded-lg p-2 text-center" }, h20("div", { className: "text-[10px] text-slate-500" }, t("\u0627\u0644\u0645\u062F\u0641\u0648\u0639")), h20("div", { className: "font-black text-violet-700" }, `${money10(statementTotals.paid)} ${settings.currencySymbol || ""}`)),
-            h20("div", { className: "border rounded-lg p-2 text-center" }, h20("div", { className: "text-[10px] text-slate-500" }, t("\u0627\u0644\u0645\u062A\u0628\u0642\u064A")), h20("div", { className: "font-black text-rose-700" }, `${money10(statementTotals.debt)} ${settings.currencySymbol || ""}`))
+            h21("div", { className: "border rounded-lg p-2 text-center" }, h21("div", { className: "text-[10px] text-slate-500" }, "\u0639\u062F\u062F \u0627\u0644\u0641\u0648\u0627\u062A\u064A\u0631"), h21("div", { className: "font-black" }, String(statementRows.length))),
+            h21("div", { className: "border rounded-lg p-2 text-center" }, h21("div", { className: "text-[10px] text-slate-500" }, t("\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A")), h21("div", { className: "font-black" }, `${money10(statementTotals.total)} ${settings.currencySymbol || ""}`)),
+            h21("div", { className: "border rounded-lg p-2 text-center" }, h21("div", { className: "text-[10px] text-slate-500" }, t("\u0627\u0644\u0645\u062F\u0641\u0648\u0639")), h21("div", { className: "font-black text-violet-700" }, `${money10(statementTotals.paid)} ${settings.currencySymbol || ""}`)),
+            h21("div", { className: "border rounded-lg p-2 text-center" }, h21("div", { className: "text-[10px] text-slate-500" }, t("\u0627\u0644\u0645\u062A\u0628\u0642\u064A")), h21("div", { className: "font-black text-rose-700" }, `${money10(statementTotals.debt)} ${settings.currencySymbol || ""}`))
           ),
-          h20(
+          h21(
             "table",
             { className: "w-full text-[11px] border-collapse" },
-            h20("thead", null, h20("tr", { className: "bg-violet-600 text-white" }, ...["#", "\u0627\u0644\u062A\u0627\u0631\u064A\u062E", "\u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629", "\u0627\u0644\u0645\u0648\u0631\u062F", "\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A", "\u0627\u0644\u0645\u062F\u0641\u0648\u0639", "\u0627\u0644\u0645\u062A\u0628\u0642\u064A"].map((x, i) => h20("th", { key: i, className: "border border-violet-500 p-2 text-right" }, x)))),
-            h20("tbody", null, ...(statementRows.length ? statementRows : [null]).map((row2, i) => row2 ? h20(
+            h21("thead", null, h21("tr", { className: "bg-violet-600 text-white" }, ...["#", "\u0627\u0644\u062A\u0627\u0631\u064A\u062E", "\u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629", "\u0627\u0644\u0645\u0648\u0631\u062F", "\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A", "\u0627\u0644\u0645\u062F\u0641\u0648\u0639", "\u0627\u0644\u0645\u062A\u0628\u0642\u064A"].map((x, i) => h21("th", { key: i, className: "border border-violet-500 p-2 text-right" }, x)))),
+            h21("tbody", null, ...(statementRows.length ? statementRows : [null]).map((row2, i) => row2 ? h21(
               "tr",
               { key: row2.id || i },
-              h20("td", { className: "border p-2" }, i + 1),
-              h20("td", { className: "border p-2" }, safeDate2(row2.date).toLocaleDateString("ar-EG")),
-              h20("td", { className: "border p-2 font-mono" }, row2.invoiceNumber || "-"),
-              h20("td", { className: "border p-2 font-bold" }, row2.supplierName || "-"),
-              h20("td", { className: "border p-2" }, money10(row2.grandTotal)),
-              h20("td", { className: "border p-2" }, money10(row2.paidAmount)),
-              h20("td", { className: "border p-2" }, money10(row2.remainingAmount))
-            ) : h20("tr", { key: "empty" }, h20("td", { colSpan: 7, className: "border p-6 text-center text-slate-400" }, h20(EmptyState, { message: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0645\u0634\u062A\u0631\u064A\u0627\u062A" })))))
+              h21("td", { className: "border p-2" }, i + 1),
+              h21("td", { className: "border p-2" }, safeDate2(row2.date).toLocaleDateString("ar-EG")),
+              h21("td", { className: "border p-2 font-mono" }, row2.invoiceNumber || "-"),
+              h21("td", { className: "border p-2 font-bold" }, row2.supplierName || "-"),
+              h21("td", { className: "border p-2" }, money10(row2.grandTotal)),
+              h21("td", { className: "border p-2" }, money10(row2.paidAmount)),
+              h21("td", { className: "border p-2" }, money10(row2.remainingAmount))
+            ) : h21("tr", { key: "empty" }, h21("td", { colSpan: 7, className: "border p-6 text-center text-slate-400" }, h21(EmptyState, { message: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0645\u0634\u062A\u0631\u064A\u0627\u062A" })))))
           )
         )
       )
     )
   ) : null;
-  return h20(
+  return h21(
     "div",
     { id: "purchases-screen", className: "p-4 sm:p-6 space-y-4 max-w-7xl mx-auto text-right min-h-full" },
-    h20(AuditFilters, { value: audit, onChange: setAudit }),
-    h20(
+    h21(
       "div",
       { className: "flex flex-wrap items-center justify-between gap-2" },
-      h20(
+      h21(
         "div",
         { className: "flex items-center gap-2 flex-wrap" },
-        h20(SearchableDropdown, { id: "purchases-financial-group", label: t("\u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629"), selectedId: financialYearFilter, onSelect: setFinancialYearFilter, options: [{ id: "all", label: t("\u0643\u0644 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0627\u062A \u0627\u0644\u0645\u0627\u0644\u064A\u0629") }, ...financialYears.map((y) => ({ id: y.id, label: y.name, subLabel: y.id === activeFinancialYearId ? t("\u0627\u0644\u062D\u0627\u0644\u064A\u0629") : t("\u0623\u0631\u0634\u064A\u0641") }))] }),
-        h20("button", { type: "button", onClick: () => setShowPurchaseStatement(true), className: "px-3 py-2 rounded-xl border border-violet-200 bg-violet-50 text-violet-700 text-xs font-black flex items-center gap-1.5" }, h20(Printer3, { className: "w-4 h-4" }), "\u0643\u0634\u0641 \u0645\u0634\u062A\u0631\u064A\u0627\u062A \u0645\u0646 \u062A\u0627\u0631\u064A\u062E \u0625\u0644\u0649 \u062A\u0627\u0631\u064A\u062E")
+        h21(AuditFilters, { value: audit, onChange: setAudit }),
+        h21(SearchableDropdown, { id: "purchases-financial-group", label: t("\u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629"), selectedId: financialYearFilter, onSelect: setFinancialYearFilter, options: [{ id: "all", label: t("\u0643\u0644 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0627\u062A \u0627\u0644\u0645\u0627\u0644\u064A\u0629") }, ...financialYears.map((y) => ({ id: y.id, label: y.name, subLabel: y.id === activeFinancialYearId ? t("\u0627\u0644\u062D\u0627\u0644\u064A\u0629") : t("\u0623\u0631\u0634\u064A\u0641") }))] }),
+        h21("button", { type: "button", onClick: () => setShowPurchaseStatement(true), className: "px-3 py-2 rounded-xl border border-violet-200 bg-violet-50 text-violet-700 text-xs font-black flex items-center gap-1.5" }, h21(Printer3, { className: "w-4 h-4" }), "\u0643\u0634\u0641 \u0645\u0634\u062A\u0631\u064A\u0627\u062A \u0645\u0646 \u062A\u0627\u0631\u064A\u062E \u0625\u0644\u0649 \u062A\u0627\u0631\u064A\u062E")
       ),
-      h20("button", { type: "button", onClick: () => {
+      h21("button", { type: "button", onClick: () => {
         setEditingId(null);
         setMode(mode === "list" ? "new" : "list");
       }, className: "px-4 py-2 rounded-xl bg-violet-600 text-white text-xs font-bold shadow-sm" }, mode === "new" ? "\u0639\u0631\u0636 \u0627\u0644\u0633\u062C\u0644" : "\u0641\u0627\u062A\u0648\u0631\u0629 \u0634\u0631\u0627\u0621 \u062C\u062F\u064A\u062F\u0629")
     ),
     mode === "new" ? form : list,
     purchaseStatementModal,
-    viewing ? h20(
+    viewing ? h21(
       ModalLayer,
       { className: "fixed inset-x-0 oscar-bounded-modal p-2 sm:p-5 flex items-stretch sm:items-center justify-center overflow-hidden", style: { zIndex: 2147482e3, background: "rgba(15,23,42,.62)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" } },
-      h20(
+      h21(
         "div",
         { className: "w-full max-w-3xl h-full max-h-full sm:h-auto bg-slate-100 dark:bg-slate-950 rounded-2xl shadow-2xl overflow-hidden flex flex-col" },
-        h20(
+        h21(
           "div",
           { className: "no-print shrink-0 flex items-center justify-between gap-2 p-3 bg-white dark:bg-slate-900 border-b dark:border-slate-800" },
-          h20("div", null, h20("div", { className: "font-black text-sm" }, `\u0641\u0627\u062A\u0648\u0631\u0629 \u0645\u0634\u062A\u0631\u064A\u0627\u062A #${viewing.invoiceNumber || ""}`), h20("div", { className: "text-[10px] text-slate-400" }, "\u0645\u0639\u0627\u064A\u0646\u0629 \u062C\u0627\u0647\u0632\u0629 \u0644\u0644\u0637\u0628\u0627\u0639\u0629 \u0648\u0627\u0644\u062D\u0641\u0638")),
-          h20("button", { type: "button", onClick: () => setViewing(null), className: "p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800" }, h20(X16, { className: "w-5 h-5" }))
+          h21("div", null, h21("div", { className: "font-black text-sm" }, `\u0641\u0627\u062A\u0648\u0631\u0629 \u0645\u0634\u062A\u0631\u064A\u0627\u062A #${viewing.invoiceNumber || ""}`), h21("div", { className: "text-[10px] text-slate-400" }, "\u0645\u0639\u0627\u064A\u0646\u0629 \u062C\u0627\u0647\u0632\u0629 \u0644\u0644\u0637\u0628\u0627\u0639\u0629 \u0648\u0627\u0644\u062D\u0641\u0638")),
+          h21("button", { type: "button", onClick: () => setViewing(null), className: "p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800" }, h21(X17, { className: "w-5 h-5" }))
         ),
-        h20(
+        h21(
           "div",
           { className: "flex-1 overflow-y-auto p-3 sm:p-5 custom-scrollbar" },
-          h20(
+          h21(
             "article",
             { ref: singleRef, id: "purchase-invoice-export", dir: "rtl", className: "mx-auto w-full max-w-[720px] bg-white text-slate-900 rounded-xl border border-slate-200 shadow-sm overflow-hidden", style: { fontFamily: "'Cairo',Arial,sans-serif", colorScheme: "light" } },
-            h20(
+            h21(
               "header",
               { className: "p-5 sm:p-6 text-center border-b border-slate-200" },
-              h20("img", { src: getBrandLogoDisplayUrl(settings), alt: "\u0627\u0644\u0634\u0639\u0627\u0631", className: "w-16 h-16 object-contain mx-auto mb-2" }),
-              h20("h2", { className: "text-xl font-black leading-tight" }, settings.storeName || "\u0643\u0627\u0634 \u062A\u0648\u0628 3"),
-              h20("div", { className: "text-[11px] text-violet-700 font-bold mt-1" }, "\u0641\u0627\u062A\u0648\u0631\u0629 \u0645\u0634\u062A\u0631\u064A\u0627\u062A \u0648\u062A\u0648\u0631\u064A\u062F"),
-              h20(
+              h21("img", { src: getBrandLogoDisplayUrl(settings), alt: "\u0627\u0644\u0634\u0639\u0627\u0631", className: "w-16 h-16 object-contain mx-auto mb-2" }),
+              h21("h2", { className: "text-xl font-black leading-tight" }, settings.storeName || "\u0643\u0627\u0634 \u062A\u0648\u0628 3"),
+              h21("div", { className: "text-[11px] text-violet-700 font-bold mt-1" }, "\u0641\u0627\u062A\u0648\u0631\u0629 \u0645\u0634\u062A\u0631\u064A\u0627\u062A \u0648\u062A\u0648\u0631\u064A\u062F"),
+              h21(
                 "div",
                 { className: "mt-2 text-[10px] text-slate-500 leading-5" },
-                settings.address ? h20("div", null, settings.address) : null,
-                h20("div", null, [settings.phone ? `\u0647\u0627\u062A\u0641: ${settings.phone}` : "", settings.taxNumber ? `\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0636\u0631\u064A\u0628\u064A: ${settings.taxNumber}` : ""].filter(Boolean).join("   \u2022   "))
+                settings.address ? h21("div", null, settings.address) : null,
+                h21("div", null, [settings.phone ? `\u0647\u0627\u062A\u0641: ${settings.phone}` : "", settings.taxNumber ? `\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0636\u0631\u064A\u0628\u064A: ${settings.taxNumber}` : ""].filter(Boolean).join("   \u2022   "))
               )
             ),
-            h20(
+            h21(
               "section",
               { className: "grid grid-cols-2 gap-x-5 gap-y-2 p-4 sm:p-5 text-[11px] border-b border-slate-200 bg-slate-50/70" },
-              h20("div", null, h20("span", { className: "text-slate-400" }, t("\u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629: ")), h20("b", { className: "font-mono" }, viewing.invoiceNumber || "-")),
-              h20("div", null, h20("span", { className: "text-slate-400" }, t("\u0627\u0644\u062A\u0627\u0631\u064A\u062E: ")), h20("b", null, safeDate2(viewing.date).toLocaleString("ar-EG"))),
-              viewing.supplierInvoiceNumber ? h20("div", null, h20("span", { className: "text-slate-400" }, "\u0641\u0627\u062A\u0648\u0631\u0629 \u0627\u0644\u0645\u0648\u0631\u062F: "), h20("b", { className: "font-mono" }, viewing.supplierInvoiceNumber)) : null,
-              h20("div", null, h20("span", { className: "text-slate-400" }, t("\u0627\u0644\u0645\u0648\u0631\u062F: ")), h20("b", null, viewing.supplierName || "\u0645\u0648\u0631\u062F")),
-              h20("div", null, h20("span", { className: "text-slate-400" }, t("\u0627\u0644\u0645\u062E\u0632\u0646: ")), h20("b", null, warehouses.find((w) => w.id === viewing.warehouseId)?.name || "-"))
+              h21("div", null, h21("span", { className: "text-slate-400" }, t("\u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629: ")), h21("b", { className: "font-mono" }, viewing.invoiceNumber || "-")),
+              h21("div", null, h21("span", { className: "text-slate-400" }, t("\u0627\u0644\u062A\u0627\u0631\u064A\u062E: ")), h21("b", null, safeDate2(viewing.date).toLocaleString("ar-EG"))),
+              viewing.supplierInvoiceNumber ? h21("div", null, h21("span", { className: "text-slate-400" }, "\u0641\u0627\u062A\u0648\u0631\u0629 \u0627\u0644\u0645\u0648\u0631\u062F: "), h21("b", { className: "font-mono" }, viewing.supplierInvoiceNumber)) : null,
+              h21("div", null, h21("span", { className: "text-slate-400" }, t("\u0627\u0644\u0645\u0648\u0631\u062F: ")), h21("b", null, viewing.supplierName || "\u0645\u0648\u0631\u062F")),
+              h21("div", null, h21("span", { className: "text-slate-400" }, t("\u0627\u0644\u0645\u062E\u0632\u0646: ")), h21("b", null, warehouses.find((w) => w.id === viewing.warehouseId)?.name || "-"))
             ),
-            h20(
+            h21(
               "div",
               { className: "p-3 sm:p-5" },
-              h20(
+              h21(
                 "table",
                 { className: "w-full text-[10px] sm:text-[11px] border-collapse" },
-                h20("thead", null, h20(
+                h21("thead", null, h21(
                   "tr",
                   { className: "bg-slate-100 border-y border-slate-200" },
-                  h20("th", { className: "p-2 text-right" }, t("\u0627\u0644\u0635\u0646\u0641")),
-                  h20("th", { className: "p-2 text-center" }, t("\u0627\u0644\u0648\u062D\u062F\u0629")),
-                  h20("th", { className: "p-2 text-center" }, t("\u0627\u0644\u0643\u0645\u064A\u0629")),
-                  h20("th", { className: "p-2 text-center" }, t("\u0627\u0644\u0633\u0639\u0631")),
-                  h20("th", { className: "p-2 text-left" }, t("\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A"))
+                  h21("th", { className: "p-2 text-right" }, t("\u0627\u0644\u0635\u0646\u0641")),
+                  h21("th", { className: "p-2 text-center" }, t("\u0627\u0644\u0648\u062D\u062F\u0629")),
+                  h21("th", { className: "p-2 text-center" }, t("\u0627\u0644\u0643\u0645\u064A\u0629")),
+                  h21("th", { className: "p-2 text-center" }, t("\u0627\u0644\u0633\u0639\u0631")),
+                  h21("th", { className: "p-2 text-left" }, t("\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A"))
                 )),
-                h20("tbody", null, ...(Array.isArray(viewing.items) ? viewing.items : []).map((it, i) => h20(
+                h21("tbody", null, ...(Array.isArray(viewing.items) ? viewing.items : []).map((it, i) => h21(
                   "tr",
                   { key: it?.id || `${it?.productId || "p"}-${i}`, className: "border-b border-slate-100" },
-                  h20("td", { className: "p-2 font-bold" }, it?.productName || "\u0635\u0646\u0641"),
-                  h20("td", { className: "p-2 text-center" }, it?.unitName || "-"),
-                  h20("td", { className: "p-2 text-center font-mono" }, num4(it?.quantity)),
-                  h20("td", { className: "p-2 text-center font-mono" }, money10(it?.unitPrice)),
-                  h20("td", { className: "p-2 text-left font-mono font-bold" }, money10(it?.total))
+                  h21("td", { className: "p-2 font-bold" }, it?.productName || "\u0635\u0646\u0641"),
+                  h21("td", { className: "p-2 text-center" }, it?.unitName || "-"),
+                  h21("td", { className: "p-2 text-center font-mono" }, num4(it?.quantity)),
+                  h21("td", { className: "p-2 text-center font-mono" }, money10(it?.unitPrice)),
+                  h21("td", { className: "p-2 text-left font-mono font-bold" }, money10(it?.total))
                 )))
               ),
-              h20(
+              h21(
                 "div",
                 { className: "mt-4 mr-auto w-full sm:w-72 text-[11px] space-y-2" },
-                h20("div", { className: "flex justify-between" }, h20("span", { className: "text-slate-500" }, "\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A \u0642\u0628\u0644 \u0627\u0644\u062E\u0635\u0645"), h20("b", { className: "font-mono" }, `${money10(viewing.subtotal)} ${settings.currencySymbol || ""}`)),
-                h20("div", { className: "flex justify-between" }, h20("span", { className: "text-slate-500" }, t("\u0627\u0644\u062E\u0635\u0645")), h20("b", { className: "font-mono text-rose-600" }, `${money10(viewing.discountTotal ?? viewing.discountAmount)} ${settings.currencySymbol || ""}`)),
-                h20("div", { className: "flex justify-between border-t pt-2 text-sm" }, h20("span", { className: "font-black" }, "\u0635\u0627\u0641\u064A \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629"), h20("b", { className: "font-mono text-violet-700" }, `${money10(viewing.grandTotal)} ${settings.currencySymbol || ""}`)),
-                h20("div", { className: "flex justify-between" }, h20("span", { className: "text-slate-500" }, t("\u0627\u0644\u0645\u0628\u0644\u063A \u0627\u0644\u0645\u062F\u0641\u0648\u0639")), h20("b", { className: "font-mono text-violet-700" }, `${money10(viewing.paidAmount)} ${settings.currencySymbol || ""}`)),
-                h20("div", { className: "flex justify-between" }, h20("span", { className: "text-slate-500" }, "\u0627\u0644\u0628\u0627\u0642\u064A \u062F\u064A\u0646"), h20("b", { className: "font-mono text-rose-600" }, `${money10(viewing.remainingAmount)} ${settings.currencySymbol || ""}`))
+                h21("div", { className: "flex justify-between" }, h21("span", { className: "text-slate-500" }, "\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A \u0642\u0628\u0644 \u0627\u0644\u062E\u0635\u0645"), h21("b", { className: "font-mono" }, `${money10(viewing.subtotal)} ${settings.currencySymbol || ""}`)),
+                h21("div", { className: "flex justify-between" }, h21("span", { className: "text-slate-500" }, t("\u0627\u0644\u062E\u0635\u0645")), h21("b", { className: "font-mono text-rose-600" }, `${money10(viewing.discountTotal ?? viewing.discountAmount)} ${settings.currencySymbol || ""}`)),
+                h21("div", { className: "flex justify-between border-t pt-2 text-sm" }, h21("span", { className: "font-black" }, "\u0635\u0627\u0641\u064A \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629"), h21("b", { className: "font-mono text-violet-700" }, `${money10(viewing.grandTotal)} ${settings.currencySymbol || ""}`)),
+                h21("div", { className: "flex justify-between" }, h21("span", { className: "text-slate-500" }, t("\u0627\u0644\u0645\u0628\u0644\u063A \u0627\u0644\u0645\u062F\u0641\u0648\u0639")), h21("b", { className: "font-mono text-violet-700" }, `${money10(viewing.paidAmount)} ${settings.currencySymbol || ""}`)),
+                h21("div", { className: "flex justify-between" }, h21("span", { className: "text-slate-500" }, "\u0627\u0644\u0628\u0627\u0642\u064A \u062F\u064A\u0646"), h21("b", { className: "font-mono text-rose-600" }, `${money10(viewing.remainingAmount)} ${settings.currencySymbol || ""}`))
               ),
-              viewing.notes ? h20("div", { className: "mt-4 p-3 rounded-lg bg-slate-50 border border-slate-100 text-[10px]" }, h20("b", null, t("\u0645\u0644\u0627\u062D\u0638\u0627\u062A: ")), viewing.notes) : null
+              viewing.notes ? h21("div", { className: "mt-4 p-3 rounded-lg bg-slate-50 border border-slate-100 text-[10px]" }, h21("b", null, t("\u0645\u0644\u0627\u062D\u0638\u0627\u062A: ")), viewing.notes) : null
             ),
-            h20("footer", { className: "px-5 py-4 text-center text-[9px] text-slate-400 border-t border-slate-200" }, settings.receiptFooterMessage || "\u0634\u0643\u0631\u0627\u064B \u0644\u062A\u0639\u0627\u0645\u0644\u0643\u0645 \u0645\u0639\u0646\u0627")
+            h21("footer", { className: "px-5 py-4 text-center text-[9px] text-slate-400 border-t border-slate-200" }, settings.receiptFooterMessage || "\u0634\u0643\u0631\u0627\u064B \u0644\u062A\u0639\u0627\u0645\u0644\u0643\u0645 \u0645\u0639\u0646\u0627")
           )
         ),
-        h20(
+        h21(
           "div",
           { className: "no-print shrink-0 p-3 bg-white dark:bg-slate-900 border-t dark:border-slate-800 flex flex-wrap items-center justify-center gap-2" },
-          h20("button", { type: "button", disabled: !!exporting, onClick: () => exportPurchase("pdf"), className: "min-w-[92px] inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-xs font-bold disabled:opacity-50" }, h20(FileDown, { className: "w-4 h-4" }), exporting === "pdf" ? "\u062C\u0627\u0631\u064A..." : "PDF"),
-          h20("button", { type: "button", disabled: !!exporting, onClick: () => exportPurchase("image"), className: "min-w-[92px] inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 text-xs font-bold disabled:opacity-50" }, h20(ImageIcon3, { className: "w-4 h-4" }), exporting === "image" ? "\u062C\u0627\u0631\u064A..." : t("\u0635\u0648\u0631\u0629")),
-          h20("button", { type: "button", disabled: !!exporting, onClick: () => exportPurchase("excel"), className: "min-w-[92px] inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-violet-200 bg-violet-50 text-violet-700 text-xs font-bold disabled:opacity-50" }, h20(FileSpreadsheet6, { className: "w-4 h-4" }), exporting === "excel" ? "\u062C\u0627\u0631\u064A..." : "Excel"),
-          h20("button", { type: "button", onClick: async () => {
+          h21("button", { type: "button", disabled: !!exporting, onClick: () => exportPurchase("pdf"), className: "min-w-[92px] inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-xs font-bold disabled:opacity-50" }, h21(FileDown, { className: "w-4 h-4" }), exporting === "pdf" ? "\u062C\u0627\u0631\u064A..." : "PDF"),
+          h21("button", { type: "button", disabled: !!exporting, onClick: () => exportPurchase("image"), className: "min-w-[92px] inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 text-xs font-bold disabled:opacity-50" }, h21(ImageIcon3, { className: "w-4 h-4" }), exporting === "image" ? "\u062C\u0627\u0631\u064A..." : t("\u0635\u0648\u0631\u0629")),
+          h21("button", { type: "button", disabled: !!exporting, onClick: () => exportPurchase("excel"), className: "min-w-[92px] inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-violet-200 bg-violet-50 text-violet-700 text-xs font-bold disabled:opacity-50" }, h21(FileSpreadsheet6, { className: "w-4 h-4" }), exporting === "excel" ? "\u062C\u0627\u0631\u064A..." : "Excel"),
+          h21("button", { type: "button", onClick: async () => {
             if (singleRef.current) {
               const ok = await printElementOnly(singleRef.current, settings.printerWidth || "80mm", `\u0641\u0627\u062A\u0648\u0631\u0629 \u0645\u0634\u062A\u0631\u064A\u0627\u062A ${viewing.invoiceNumber || ""}`);
               if (!ok) showToast?.("\u062A\u0639\u0630\u0631 \u062A\u062C\u0647\u064A\u0632 \u0627\u0644\u0637\u0628\u0627\u0639\u0629", "error");
             }
-          }, className: "min-w-[92px] inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-violet-600 text-white text-xs font-bold" }, h20(Printer3, { className: "w-4 h-4" }), t("\u0637\u0628\u0627\u0639\u0629"))
+          }, className: "min-w-[92px] inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-violet-600 text-white text-xs font-bold" }, h21(Printer3, { className: "w-4 h-4" }), t("\u0637\u0628\u0627\u0639\u0629"))
         )
       )
     ) : null,
-    deleting ? h20(ModalLayer, { className: "fixed inset-0 z-[60] bg-black/60 p-4 flex items-center justify-center" }, h20("div", { className: "w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl p-5 text-center space-y-3" }, h20(AlertTriangle4, { className: "w-9 h-9 text-rose-600 mx-auto" }), h20("div", { className: "font-black" }, "\u062D\u0630\u0641 \u0641\u0627\u062A\u0648\u0631\u0629 \u0627\u0644\u0645\u0634\u062A\u0631\u064A\u0627\u062A\u061F"), h20("div", { className: "flex gap-2" }, h20("button", { type: "button", onClick: () => setDeleting(null), className: "flex-1 py-2 border rounded-xl" }, t("\u0625\u0644\u063A\u0627\u0621")), h20("button", { type: "button", onClick: async () => {
+    deleting ? h21(ModalLayer, { className: "fixed inset-0 z-[60] bg-black/60 p-4 flex items-center justify-center" }, h21("div", { className: "w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl p-5 text-center space-y-3" }, h21(AlertTriangle4, { className: "w-9 h-9 text-rose-600 mx-auto" }), h21("div", { className: "font-black" }, "\u062D\u0630\u0641 \u0641\u0627\u062A\u0648\u0631\u0629 \u0627\u0644\u0645\u0634\u062A\u0631\u064A\u0627\u062A\u061F"), h21("div", { className: "flex gap-2" }, h21("button", { type: "button", onClick: () => setDeleting(null), className: "flex-1 py-2 border rounded-xl" }, t("\u0625\u0644\u063A\u0627\u0621")), h21("button", { type: "button", onClick: async () => {
       if (await deletePurchase?.(deleting)) {
         setDeleting(null);
         setViewing(null);
       }
     }, className: "flex-1 py-2 bg-rose-600 text-white rounded-xl" }, t("\u062D\u0630\u0641"))))) : null,
-    showQuickSupp ? h20(ModalLayer, { className: "fixed inset-0 z-[70] bg-black/60 p-4 flex items-center justify-center" }, h20("form", { onSubmit: addSupplier, className: "w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl p-4 space-y-3" }, h20("div", { className: "font-black" }, "\u0645\u0648\u0631\u062F \u062C\u062F\u064A\u062F"), h20("input", { required: true, value: quickName, onChange: (e) => setQuickName(e.target.value), placeholder: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0631\u062F", className: "w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700" }), h20("input", { value: quickPhone, onChange: (e) => setQuickPhone(e.target.value), placeholder: "\u0627\u0644\u0647\u0627\u062A\u0641", className: "w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700" }), h20("div", { className: "flex gap-2" }, h20("button", { type: "button", onClick: () => setShowQuickSupp(false), className: "flex-1 p-2 border rounded-lg" }, t("\u0625\u0644\u063A\u0627\u0621")), h20("button", { type: "submit", className: "flex-1 p-2 bg-violet-600 text-white rounded-lg" }, t("\u062D\u0641\u0638"))))) : null,
-    showQuickWarehouse ? h20(ModalLayer, { className: "fixed inset-0 z-[72] bg-black/60 p-4 flex items-center justify-center" }, h20("form", { onSubmit: addWarehouse, className: "w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl p-4 space-y-3 shadow-2xl" }, h20("div", { className: "font-black" }, "\u0625\u0636\u0627\u0641\u0629 \u0645\u062E\u0632\u0646 \u062C\u062F\u064A\u062F"), h20("input", { required: true, value: quickWarehouseName, onChange: (e) => setQuickWarehouseName(e.target.value), placeholder: "\u0627\u0633\u0645 \u0627\u0644\u0645\u062E\u0632\u0646", className: "w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700" }), h20("input", { value: quickWarehouseCode, onChange: (e) => setQuickWarehouseCode(e.target.value), placeholder: "\u0627\u0644\u0643\u0648\u062F (\u0627\u062E\u062A\u064A\u0627\u0631\u064A)", className: "w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700" }), h20("div", { className: "flex gap-2" }, h20("button", { type: "button", onClick: () => setShowQuickWarehouse(false), className: "flex-1 p-2 border rounded-lg" }, t("\u0625\u0644\u063A\u0627\u0621")), h20("button", { type: "submit", className: "flex-1 p-2 bg-violet-600 text-white rounded-lg font-bold" }, "\u062D\u0641\u0638 \u0648\u0627\u062E\u062A\u064A\u0627\u0631")))) : null
+    showQuickSupp ? h21(ModalLayer, { className: "fixed inset-0 z-[70] bg-black/60 p-4 flex items-center justify-center" }, h21("form", { onSubmit: addSupplier, className: "w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl p-4 space-y-3" }, h21("div", { className: "font-black" }, "\u0645\u0648\u0631\u062F \u062C\u062F\u064A\u062F"), h21("input", { required: true, value: quickName, onChange: (e) => setQuickName(e.target.value), placeholder: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0631\u062F", className: "w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700" }), h21("input", { value: quickPhone, onChange: (e) => setQuickPhone(e.target.value), placeholder: "\u0627\u0644\u0647\u0627\u062A\u0641", className: "w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700" }), h21("div", { className: "flex gap-2" }, h21("button", { type: "button", onClick: () => setShowQuickSupp(false), className: "flex-1 p-2 border rounded-lg" }, t("\u0625\u0644\u063A\u0627\u0621")), h21("button", { type: "submit", className: "flex-1 p-2 bg-violet-600 text-white rounded-lg" }, t("\u062D\u0641\u0638"))))) : null,
+    showQuickWarehouse ? h21(ModalLayer, { className: "fixed inset-0 z-[72] bg-black/60 p-4 flex items-center justify-center" }, h21("form", { onSubmit: addWarehouse, className: "w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl p-4 space-y-3 shadow-2xl" }, h21("div", { className: "font-black" }, "\u0625\u0636\u0627\u0641\u0629 \u0645\u062E\u0632\u0646 \u062C\u062F\u064A\u062F"), h21("input", { required: true, value: quickWarehouseName, onChange: (e) => setQuickWarehouseName(e.target.value), placeholder: "\u0627\u0633\u0645 \u0627\u0644\u0645\u062E\u0632\u0646", className: "w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700" }), h21("input", { value: quickWarehouseCode, onChange: (e) => setQuickWarehouseCode(e.target.value), placeholder: "\u0627\u0644\u0643\u0648\u062F (\u0627\u062E\u062A\u064A\u0627\u0631\u064A)", className: "w-full p-2 border rounded-lg bg-white dark:bg-slate-800 dark:border-slate-700" }), h21("div", { className: "flex gap-2" }, h21("button", { type: "button", onClick: () => setShowQuickWarehouse(false), className: "flex-1 p-2 border rounded-lg" }, t("\u0625\u0644\u063A\u0627\u0621")), h21("button", { type: "submit", className: "flex-1 p-2 bg-violet-600 text-white rounded-lg font-bold" }, "\u062D\u0641\u0638 \u0648\u0627\u062E\u062A\u064A\u0627\u0631")))) : null
   );
 };
 
 // app/components__products__ProductActions.js
 import React35, { useState as useState23, useEffect as useEffect21 } from "react";
 import { createPortal as createPortal14 } from "react-dom";
-import { MoreVertical as MoreVertical2, Eye as Eye4, Edit, Trash2 as Trash213, X as X17, Package as Package9 } from "lucide-react";
-var h21 = React35.createElement;
+import { MoreVertical as MoreVertical2, Eye as Eye4, Edit, Trash2 as Trash213, X as X18, Package as Package9 } from "lucide-react";
+var h22 = React35.createElement;
 function ProductActions({ product, onEdit, onDelete }) {
   const { settings, categories, getProductStock } = useApp();
   const [menu, setMenu] = useState23(null);
@@ -16727,36 +16801,36 @@ function ProductActions({ product, onEdit, onDelete }) {
     e.stopPropagation();
     setMenu(null);
   };
-  const field = (label, value) => h21("div", { className: "ct-info-field" }, h21("span", null, t(label)), h21("strong", null, value ?? "\u2014"));
-  return h21(React35.Fragment, null, h21("button", { type: "button", className: "ct-product-more", "aria-label": `\u0625\u062C\u0631\u0627\u0621\u0627\u062A ${product.name}`, "aria-expanded": !!menu, onClick: (e) => {
+  const field = (label, value) => h22("div", { className: "ct-info-field" }, h22("span", null, t(label)), h22("strong", null, value ?? "\u2014"));
+  return h22(React35.Fragment, null, h22("button", { type: "button", className: "ct-product-more", "aria-label": `\u0625\u062C\u0631\u0627\u0621\u0627\u062A ${product.name}`, "aria-expanded": !!menu, onClick: (e) => {
     e.stopPropagation();
     const r = e.currentTarget.getBoundingClientRect();
     setMenu({ top: Math.max(8, Math.min(r.bottom + 5, window.innerHeight - 150)), left: Math.max(8, Math.min(r.right - 180, window.innerWidth - 188)) });
-  } }, h21(MoreVertical2, { size: 18 })), menu && createPortal14(h21("div", { className: "ct-action-shield", onPointerDown: (e) => {
+  } }, h22(MoreVertical2, { size: 18 })), menu && createPortal14(h22("div", { className: "ct-action-shield", onPointerDown: (e) => {
     if (e.target === e.currentTarget) {
       e.preventDefault();
       e.stopPropagation();
     }
-  }, onClick: close }, h21("div", { className: "cash-action-menu ct-product-actions-menu", style: { position: "fixed", ...menu, width: 180 }, onClick: (e) => e.stopPropagation(), onPointerDown: (e) => e.stopPropagation() }, h21("button", { type: "button", onClick: () => {
+  }, onClick: close }, h22("div", { className: "cash-action-menu ct-product-actions-menu", style: { position: "fixed", ...menu, width: 180 }, onClick: (e) => e.stopPropagation(), onPointerDown: (e) => e.stopPropagation() }, h22("button", { type: "button", onClick: () => {
     setMenu(null);
     setView(true);
-  } }, h21(Eye4, { size: 16 }), t("\u0639\u0631\u0636 \u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A")), h21("button", { type: "button", onClick: () => {
+  } }, h22(Eye4, { size: 16 }), t("\u0639\u0631\u0636 \u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A")), h22("button", { type: "button", onClick: () => {
     setMenu(null);
     onEdit?.(product);
-  } }, h21(Edit, { size: 16 }), t("\u062A\u0639\u062F\u064A\u0644")), h21("button", { type: "button", className: "danger", onClick: () => {
+  } }, h22(Edit, { size: 16 }), t("\u062A\u0639\u062F\u064A\u0644")), h22("button", { type: "button", className: "danger", onClick: () => {
     setMenu(null);
     if (confirm(`\u062D\u0630\u0641 \u0627\u0644\u0635\u0646\u0641 \xAB${product.name}\xBB \u0648\u0646\u0642\u0644\u0647 \u0644\u0644\u0645\u062D\u0630\u0648\u0641\u0627\u062A\u061F`)) onDelete?.(product.id);
-  } }, h21(Trash213, { size: 16 }), t("\u062D\u0630\u0641")))), document.body), view && h21(ModalLayer, { className: "fixed inset-0 flex items-center justify-center p-4 bg-black/50", role: "dialog", "aria-modal": true, onClick: (e) => {
+  } }, h22(Trash213, { size: 16 }), t("\u062D\u0630\u0641")))), document.body), view && h22(ModalLayer, { className: "fixed inset-0 flex items-center justify-center p-4 bg-black/50", role: "dialog", "aria-modal": true, onClick: (e) => {
     e.stopPropagation();
     if (e.target === e.currentTarget) setView(false);
-  } }, h21("section", { className: "ct-product-info", onClick: (e) => e.stopPropagation() }, h21("header", null, h21(Package9, { size: 22 }), h21("div", null, h21("small", null, t("\u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0635\u0646\u0641")), h21("h3", null, product.name)), h21("button", { type: "button", onClick: () => setView(false), "aria-label": t("\u0625\u063A\u0644\u0627\u0642") }, h21(X17, { size: 18 }))), h21("div", { className: "ct-info-grid" }, field("\u0627\u0644\u062A\u0635\u0646\u064A\u0641", categories.find((c) => c.id === product.categoryId)?.name), field("\u0627\u0644\u0645\u062E\u0632\u0648\u0646", getProductStock(product.id, settings.activeWarehouseId)), field("\u0643\u0648\u062F \u0627\u0644\u0635\u0646\u0641", product.sku || product.internalCode), field("\u0627\u0644\u0639\u0644\u0627\u0645\u0629 \u0627\u0644\u062A\u062C\u0627\u0631\u064A\u0629", product.brand), field("\u0627\u0644\u0645\u0648\u0642\u0639", product.location), field("\u062D\u062F \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0637\u0644\u0628", product.reorderPoint), field("\u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0629", product.expiryDate), field("\u0645\u0644\u0627\u062D\u0638\u0627\u062A", product.notes || product.description)), h21("div", { className: "ct-unit-details" }, ...(product.units || []).map((u) => h21("div", { key: u.id }, h21("strong", null, u.name), h21("span", null, `\u0628\u064A\u0639: ${Number(u.salePrice || 0).toFixed(2)} ${settings.currencySymbol}`), h21("span", null, `\u0634\u0631\u0627\u0621: ${Number(u.costPrice || 0).toFixed(2)} ${settings.currencySymbol}`), h21("small", null, `\u0627\u0644\u0628\u0627\u0631\u0643\u0648\u062F: ${(u.barcodes || []).join("\u060C ") || "\u2014"}`)))))));
+  } }, h22("section", { className: "ct-product-info", onClick: (e) => e.stopPropagation() }, h22("header", null, h22(Package9, { size: 22 }), h22("div", null, h22("small", null, t("\u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0635\u0646\u0641")), h22("h3", null, product.name)), h22("button", { type: "button", onClick: () => setView(false), "aria-label": t("\u0625\u063A\u0644\u0627\u0642") }, h22(X18, { size: 18 }))), h22("div", { className: "ct-info-grid" }, field("\u0627\u0644\u062A\u0635\u0646\u064A\u0641", categories.find((c) => c.id === product.categoryId)?.name), field("\u0627\u0644\u0645\u062E\u0632\u0648\u0646", getProductStock(product.id, settings.activeWarehouseId)), field("\u0643\u0648\u062F \u0627\u0644\u0635\u0646\u0641", product.sku || product.internalCode), field("\u0627\u0644\u0639\u0644\u0627\u0645\u0629 \u0627\u0644\u062A\u062C\u0627\u0631\u064A\u0629", product.brand), field("\u0627\u0644\u0645\u0648\u0642\u0639", product.location), field("\u062D\u062F \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0637\u0644\u0628", product.reorderPoint), field("\u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0629", product.expiryDate), field("\u0645\u0644\u0627\u062D\u0638\u0627\u062A", product.notes || product.description)), h22("div", { className: "ct-unit-details" }, ...(product.units || []).map((u) => h22("div", { key: u.id }, h22("strong", null, u.name), h22("span", null, `\u0628\u064A\u0639: ${Number(u.salePrice || 0).toFixed(2)} ${settings.currencySymbol}`), h22("span", null, `\u0634\u0631\u0627\u0621: ${Number(u.costPrice || 0).toFixed(2)} ${settings.currencySymbol}`), h22("small", null, `\u0627\u0644\u0628\u0627\u0631\u0643\u0648\u062F: ${(u.barcodes || []).join("\u060C ") || "\u2014"}`)))))));
 }
 
 // app/components__products__ProductsView.js
 import { jsx as _jsx9, jsxs as _jsxs7 } from "react/jsx-runtime";
 import React36, { useState as useState24, useRef as useRef15, useEffect as useEffect22 } from "react";
-import { Plus as Plus7, Search as Search6, Trash2 as Trash214, Edit as Edit2, Layers as Layers2, FolderTree, X as X18, Download as Download3, Image as ImageIcon4, FileSpreadsheet as FileSpreadsheet7, Camera as Camera3, ChevronDown as ChevronDown5 } from "lucide-react";
-var h22 = React36.createElement;
+import { Plus as Plus7, Search as Search6, Trash2 as Trash214, Edit as Edit2, Layers as Layers2, FolderTree, X as X19, Download as Download3, Image as ImageIcon4, FileSpreadsheet as FileSpreadsheet7, Camera as Camera3, ChevronDown as ChevronDown5 } from "lucide-react";
+var h23 = React36.createElement;
 var normalizeArabicDigits = (value) => String(value ?? "").replace(/[٠-٩]/g, (d) => String("\u0660\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669".indexOf(d))).replace(/[۰-۹]/g, (d) => String("\u06F0\u06F1\u06F2\u06F3\u06F4\u06F5\u06F6\u06F7\u06F8\u06F9".indexOf(d))).replace(/[٫،]/g, ".").replace(/٬/g, "");
 var cleanDecimalInput = (value) => {
   let v = normalizeArabicDigits(value).replace(/[^0-9.]/g, "");
@@ -17240,11 +17314,11 @@ var ProductsView = () => {
     });
   };
   const renderUnitCard = (unit, idx, isBase, childUnit) => {
-    const numberInput = (label, field, extraClass = "") => h22(
+    const numberInput = (label, field, extraClass = "") => h23(
       "div",
       { className: "min-w-0" },
-      h22("label", { className: "text-[10px] text-slate-400 block mb-1" }, label),
-      h22("input", {
+      h23("label", { className: "text-[10px] text-slate-400 block mb-1" }, label),
+      h23("input", {
         type: "text",
         inputMode: "decimal",
         dir: "ltr",
@@ -17258,47 +17332,47 @@ var ProductsView = () => {
         className: `product-number-input w-full px-2.5 py-2 text-xs font-mono font-bold border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 focus:outline-none focus:border-violet-500 ${extraClass}`
       })
     );
-    return h22(
+    return h23(
       "div",
       { key: unit.id, className: `unit-editor-card p-3 rounded-xl border bg-white dark:bg-slate-900 space-y-3 min-w-0 overflow-hidden ${unit.isDefaultSale ? "border-violet-500 ring-1 ring-violet-500/20" : "border-slate-200 dark:border-slate-700"}` },
-      h22(
+      h23(
         "div",
         { className: "flex flex-col sm:flex-row sm:items-center justify-between gap-2 min-w-0" },
-        h22(
+        h23(
           "div",
           { className: "flex items-center gap-2 min-w-0 flex-1" },
-          h22("span", { className: "w-6 h-6 shrink-0 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold" }, idx + 1),
-          h22("input", {
+          h23("span", { className: "w-6 h-6 shrink-0 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold" }, idx + 1),
+          h23("input", {
             type: "text",
             value: unit.name || "",
             onChange: (e) => updateUnitField(unit.id, "name", e.target.value),
             placeholder: "\u0627\u0633\u0645 \u0627\u0644\u0648\u062D\u062F\u0629 (\u062D\u0628\u0629\u060C \u0643\u0631\u062A\u0648\u0646\u0629...)",
             className: "min-w-0 flex-1 sm:max-w-56 px-2.5 py-2 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:outline-none focus:border-violet-500"
           }),
-          isBase && h22("span", { className: "shrink-0 px-2 py-1 rounded-lg text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300" }, t("\u0648\u062D\u062F\u0629 \u0623\u0633\u0627\u0633\u064A\u0629"))
+          isBase && h23("span", { className: "shrink-0 px-2 py-1 rounded-lg text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300" }, t("\u0648\u062D\u062F\u0629 \u0623\u0633\u0627\u0633\u064A\u0629"))
         ),
-        h22(
+        h23(
           "div",
           { className: "flex items-center gap-2 shrink-0" },
-          h22(
+          h23(
             "label",
             { className: "flex items-center gap-1 text-[11px] font-semibold text-slate-600 dark:text-slate-400 cursor-pointer" },
-            h22("input", { type: "radio", name: "defaultSaleUnit", checked: !!unit.isDefaultSale, onChange: () => {
+            h23("input", { type: "radio", name: "defaultSaleUnit", checked: !!unit.isDefaultSale, onChange: () => {
               setEditingProduct((prev) => prev ? { ...prev, units: prev.units.map((u) => ({ ...u, isDefaultSale: u.id === unit.id })) } : prev);
             } }),
-            h22("span", null, "\u0627\u0641\u062A\u0631\u0627\u0636\u064A\u0629 \u0644\u0644\u0628\u064A\u0639")
+            h23("span", null, "\u0627\u0641\u062A\u0631\u0627\u0636\u064A\u0629 \u0644\u0644\u0628\u064A\u0639")
           ),
-          !isBase && h22("button", { type: "button", onClick: () => handleRemoveUnit(unit.id), className: "p-1.5 text-slate-400 hover:text-rose-500 rounded-lg", title: "\u062D\u0630\u0641 \u0647\u0630\u0647 \u0627\u0644\u0648\u062D\u062F\u0629" }, h22(Trash214, { className: "w-4 h-4" }))
+          !isBase && h23("button", { type: "button", onClick: () => handleRemoveUnit(unit.id), className: "p-1.5 text-slate-400 hover:text-rose-500 rounded-lg", title: "\u062D\u0630\u0641 \u0647\u0630\u0647 \u0627\u0644\u0648\u062D\u062F\u0629" }, h23(Trash214, { className: "w-4 h-4" }))
         )
       ),
-      !isBase && h22(
+      !isBase && h23(
         "div",
         { className: "unit-conversion-strip block w-full max-w-full min-w-0 overflow-x-auto overflow-y-hidden slim-scrollbar rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700" },
-        h22(
+        h23(
           "div",
           { className: "w-max min-w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-500 whitespace-nowrap" },
-          h22("span", { className: "font-bold text-slate-600 dark:text-slate-300" }, "\u062A\u062D\u062A\u0648\u064A \u0639\u0644\u0649"),
-          h22("input", {
+          h23("span", { className: "font-bold text-slate-600 dark:text-slate-300" }, "\u062A\u062D\u062A\u0648\u064A \u0639\u0644\u0649"),
+          h23("input", {
             type: "text",
             inputMode: "decimal",
             dir: "ltr",
@@ -17308,24 +17382,24 @@ var ProductsView = () => {
             onBlur: () => updateUnitField(unit.id, "multiplier", String(Math.max(1, toNumber(unit.multiplier, 1))), true),
             className: "w-16 px-2 py-1.5 text-center font-bold font-mono border border-amber-300 rounded-lg bg-white dark:bg-slate-900 focus:outline-none focus:border-violet-500"
           }),
-          h22("span", null, `\u0645\u0646 (${childUnit?.name || "\u0627\u0644\u0648\u062D\u062F\u0629 \u0627\u0644\u0633\u0627\u0628\u0642\u0629"})`),
-          h22("span", { className: "text-[11px] font-mono font-bold text-violet-600 px-2 py-1 rounded-md bg-violet-50 dark:bg-violet-950/40" }, `= ${unit.conversionToBase || 1} \u0648\u062D\u062F\u0629 \u0623\u0633\u0627\u0633\u064A\u0629`)
+          h23("span", null, `\u0645\u0646 (${childUnit?.name || "\u0627\u0644\u0648\u062D\u062F\u0629 \u0627\u0644\u0633\u0627\u0628\u0642\u0629"})`),
+          h23("span", { className: "text-[11px] font-mono font-bold text-violet-600 px-2 py-1 rounded-md bg-violet-50 dark:bg-violet-950/40" }, `= ${unit.conversionToBase || 1} \u0648\u062D\u062F\u0629 \u0623\u0633\u0627\u0633\u064A\u0629`)
         )
       ),
-      h22(
+      h23(
         "div",
         { className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 min-w-0" },
         numberInput("\u0633\u0639\u0631 \u0628\u064A\u0639 \u0645\u0641\u0631\u0642:", "salePrice"),
         numberInput("\u0627\u0644\u0643\u0645\u064A\u0629 \u0627\u0644\u0627\u0641\u062A\u062A\u0627\u062D\u064A\u0629:", "openingQuantity"),
         !isBase || (editingProduct?.units || []).length <= 1 ? numberInput("\u0633\u0639\u0631 \u0627\u0644\u0634\u0631\u0627\u0621 / \u0627\u0644\u062A\u0643\u0644\u0641\u0629:", "costPrice") : null,
-        h22(
+        h23(
           "div",
           { className: "min-w-0" },
-          h22("label", { className: "text-[10px] text-slate-400 block mb-1" }, "\u0628\u0627\u0631\u0643\u0648\u062F \u0627\u0644\u0648\u062D\u062F\u0629:"),
-          h22(
+          h23("label", { className: "text-[10px] text-slate-400 block mb-1" }, "\u0628\u0627\u0631\u0643\u0648\u062F \u0627\u0644\u0648\u062D\u062F\u0629:"),
+          h23(
             "div",
             { className: "flex items-center gap-1 min-w-0" },
-            h22("input", {
+            h23("input", {
               type: "text",
               inputMode: "numeric",
               dir: "ltr",
@@ -17335,10 +17409,10 @@ var ProductsView = () => {
               placeholder: "6251001, 6251002",
               className: "min-w-0 flex-1 px-2.5 py-2 text-xs font-mono border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 focus:outline-none focus:border-violet-500"
             }),
-            h22(
+            h23(
               "button",
               { type: "button", onClick: () => setBarcodeScanUnitId(unit.id), className: "barcode-camera-button shrink-0 w-10 h-9 rounded-lg border border-violet-200 bg-violet-50 text-violet-700 cursor-pointer active:scale-95 transition hover:bg-violet-100", style: { display: "flex", alignItems: "center", justifyContent: "center", padding: 0, lineHeight: 0 }, title: "\u0641\u062A\u062D \u0643\u0627\u0645\u064A\u0631\u0627 \u0633\u0631\u064A\u0639\u0629 \u0644\u0627\u0644\u062A\u0642\u0627\u0637 \u0627\u0644\u0628\u0627\u0631\u0643\u0648\u062F" },
-              h22(Camera3, { className: "w-5 h-5 block shrink-0" })
+              h23(Camera3, { className: "w-5 h-5 block shrink-0" })
             )
           )
         )
@@ -17347,17 +17421,17 @@ var ProductsView = () => {
   };
   const hasCurrentImage = !!(editingProduct && (imageDraft?.dataUrl || !imageRemoved && (editingProduct.imageData || editingProduct.imageUrl || editingProduct.imageTelegramFileId)));
   const editorImageProduct = editingProduct ? imageDraft?.dataUrl ? { ...editingProduct, imageData: imageDraft.dataUrl, imageTelegramFileId: "", imagePendingUpload: !!imageDraft?.queued } : editingProduct : null;
-  const editorImagePreview = h22(
+  const editorImagePreview = h23(
     "div",
     { className: "relative w-20 h-20 shrink-0" },
-    hasCurrentImage ? h22(ProductImage, { product: editorImageProduct, alt: t("\u0635\u0648\u0631\u0629 \u0627\u0644\u0635\u0646\u0641"), className: "w-20 h-20 rounded-xl object-cover border border-slate-200 bg-white" }) : h22("div", { className: "w-20 h-20 rounded-xl border border-dashed border-slate-300 bg-white text-slate-300", style: { display: "flex", alignItems: "center", justifyContent: "center" } }, h22(ImageIcon4, { className: "w-7 h-7", style: { display: "block", margin: "auto" } })),
-    imageSaving ? h22(
+    hasCurrentImage ? h23(ProductImage, { product: editorImageProduct, alt: t("\u0635\u0648\u0631\u0629 \u0627\u0644\u0635\u0646\u0641"), className: "w-20 h-20 rounded-xl object-cover border border-slate-200 bg-white" }) : h23("div", { className: "w-20 h-20 rounded-xl border border-dashed border-slate-300 bg-white text-slate-300", style: { display: "flex", alignItems: "center", justifyContent: "center" } }, h23(ImageIcon4, { className: "w-7 h-7", style: { display: "block", margin: "auto" } })),
+    imageSaving ? h23(
       "div",
       { className: "absolute inset-0 rounded-xl bg-white/85 dark:bg-slate-900/85 grid place-items-center border border-violet-200" },
-      h22(
+      h23(
         "div",
         { className: "flex flex-col items-center gap-1" },
-        h22("span", { className: "block w-9 h-9 rounded-full border-[3px] border-violet-100 border-t-violet-600 animate-spin" })
+        h23("span", { className: "block w-9 h-9 rounded-full border-[3px] border-violet-100 border-t-violet-600 animate-spin" })
       )
     ) : null
   );
@@ -17400,7 +17474,7 @@ var ProductsView = () => {
     const baseStock = getProductStock(prod.id, settings.activeWarehouseId);
     const cat = categories.find((c) => c.id === prod.categoryId);
     return _jsxs7("tr", { className: "hover:bg-slate-50/60 dark:hover:bg-slate-800/30", children: [_jsx9("td", { className: "p-3", children: _jsxs7("div", { className: "flex items-center gap-2.5 min-w-0", children: [_jsx9(ProductImage, { product: prod, alt: prod.name, className: "w-12 h-12 rounded-xl object-cover border border-slate-200 bg-white shrink-0", fallback: _jsx9("div", { className: "w-12 h-12 rounded-xl border border-slate-200 bg-slate-50 text-slate-300 shrink-0", style: { display: "flex", alignItems: "center", justifyContent: "center" }, children: _jsx9(ImageIcon4, { className: "w-5 h-5", style: { display: "block", margin: "auto" } }) }) }), _jsxs7("div", { className: "min-w-0", children: [_jsx9("div", { className: "font-bold text-slate-900 dark:text-white truncate max-w-[210px]", children: prod.name }), _jsxs7("div", { className: "text-[10px] text-slate-400 font-mono truncate max-w-[210px]", children: [prod.sku || prod.internalCode || "\u0635\u0646\u0641", " ", prod.brand && `\u2022 ${prod.brand}`] })] })] }) }), _jsx9("td", { className: "p-3", children: _jsx9("span", { className: "px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300", children: cat?.name || t("\u0639\u0627\u0645") }) }), _jsx9("td", { className: "p-3", children: _jsx9("div", { className: "flex flex-wrap items-center gap-1", children: prod.units.map((u, i) => _jsxs7("span", { className: `px-1.5 py-0.5 rounded text-[10px] font-mono font-medium flex items-center gap-1 ${u.isDefaultSale ? "bg-violet-50 dark:bg-violet-950 text-violet-700 dark:text-violet-300 border border-violet-300 dark:border-violet-800" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"}`, title: `\u0633\u0639\u0631 \u0627\u0644\u0628\u064A\u0639: ${u.salePrice} | \u0627\u0644\u0628\u0627\u0631\u0643\u0648\u062F: ${u.barcodes.join(", ")}`, children: [_jsx9("span", { children: u.name }), _jsx9("span", { className: "text-[9px] opacity-70", children: u.conversionToBase > 1 && `(\xD7${u.conversionToBase})` }), i < prod.units.length - 1 && _jsx9("span", { className: "opacity-40", children: "\u2190" })] }, u.id)) }) }), _jsxs7("td", { className: "p-3 text-left font-mono font-bold text-slate-900 dark:text-white", children: [prod.sellingPrice.toFixed(2), " ", settings.currencySymbol] }), _jsxs7("td", { className: "p-3 text-left font-mono text-slate-500", children: [prod.costPrice.toFixed(2), " ", settings.currencySymbol] }), _jsxs7("td", { className: "p-3 text-center", children: [_jsxs7("span", { className: `px-2 py-0.5 rounded font-mono font-bold text-xs ${baseStock <= (prod.reorderPoint || 0) ? "bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300" : "bg-violet-50 dark:bg-violet-950 text-violet-800 dark:text-violet-300"}`, title: formatStockInUnits(baseStock, prod.units), children: formatStockInUnits(baseStock, prod.units, prod.baseUnitName) }), _jsx9("div", { className: "text-[9px] text-slate-400 mt-0.5 truncate max-w-[140px]", children: formatStockInUnits(baseStock, prod.units) })] }), _jsx9("td", { className: "p-3 text-center", children: _jsx9(ProductActions, { product: prod, onEdit: handleOpenEdit, onDelete: softDeleteProduct }) })] }, prod.id);
-  }) })] }) }) }), _jsx9(Pagination, { pager: productsPager }), editingProduct && _jsx9(ModalLayer, { className: "product-editor-modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 overflow-y-auto animate-in fade-in", children: _jsxs7("form", { onSubmit: handleSaveModal, className: "product-editor-modal-panel w-full max-w-3xl rounded-2xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-right my-6", children: [_jsxs7("div", { className: "flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40", children: [_jsxs7("div", { className: "flex items-center gap-2", children: [_jsx9(FolderTree, { className: "w-5 h-5 text-violet-600" }), _jsxs7("div", { children: [_jsx9("h3", { className: "text-base font-black text-slate-900 dark:text-white", children: isNew ? "\u0625\u0636\u0627\u0641\u0629 \u0635\u0646\u0641 \u062C\u062F\u064A\u062F \u0645\u0639 \u0634\u062C\u0631\u0629 \u0648\u062D\u062F\u0627\u062A" : `\u062A\u0639\u062F\u064A\u0644 \u0635\u0646\u0641: ${editingProduct.name}` }), _jsx9("p", { className: "text-xs text-slate-500", children: "\u062D\u062F\u062F \u0627\u0644\u0648\u062D\u062F\u0629 \u0627\u0644\u0635\u063A\u0631\u0649 \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629 \u062B\u0645 \u0623\u0636\u0641 \u0627\u0644\u0648\u062D\u062F\u0627\u062A \u0627\u0644\u0623\u0643\u0628\u0631 (\u0628\u0627\u0643\u064A\u062A\u060C \u0643\u0631\u062A\u0648\u0646\u0629\u060C \u0645\u0634\u0637\u0627\u062D)" })] })] }), _jsx9("button", { type: "button", onClick: () => setEditingProduct(null), className: "p-1 rounded-lg text-slate-400 hover:text-slate-600", children: _jsx9(X18, { className: "w-5 h-5" }) })] }), _jsxs7("div", { className: "product-editor-body p-4 sm:p-5 space-y-5 max-h-[75vh] overflow-y-auto overflow-x-hidden custom-scrollbar", children: [productImageUploadEnabled ? _jsxs7("div", { className: "p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 flex items-center gap-3", children: [editorImagePreview, _jsxs7("div", { className: "flex-1 min-w-0", children: [_jsx9("div", { className: "text-xs font-black text-slate-800 dark:text-white", children: t("\u0635\u0648\u0631\u0629 \u0627\u0644\u0635\u0646\u0641") }), _jsxs7("div", { className: "flex items-center gap-2 mt-2 flex-wrap", children: [_jsx9("button", { type: "button", disabled: imageSaving, onClick: () => productImageRef.current?.click(), className: "px-3 py-1.5 rounded-lg bg-violet-600 disabled:opacity-60 text-white text-[10px] font-bold", children: hasCurrentImage ? "\u062A\u063A\u064A\u064A\u0631 \u0627\u0644\u0635\u0648\u0631\u0629" : t("\u0627\u062E\u062A\u064A\u0627\u0631 \u0635\u0648\u0631\u0629") }), _jsxs7("button", { type: "button", disabled: imageSaving, onClick: () => productCameraRef.current?.click(), className: "inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-violet-200 bg-white text-violet-700 disabled:opacity-60 text-[10px] font-bold", children: [_jsx9(Camera3, { className: "w-3.5 h-3.5" }), _jsx9("span", { children: t("\u0643\u0627\u0645\u064A\u0631\u0627") })] }), hasCurrentImage ? _jsx9("button", { type: "button", disabled: imageSaving, onClick: () => {
+  }) })] }) }) }), _jsx9(Pagination, { pager: productsPager }), editingProduct && _jsx9(ModalLayer, { className: "product-editor-modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 overflow-y-auto animate-in fade-in", children: _jsxs7("form", { onSubmit: handleSaveModal, className: "product-editor-modal-panel w-full max-w-3xl rounded-2xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-right my-6", children: [_jsxs7("div", { className: "flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40", children: [_jsxs7("div", { className: "flex items-center gap-2", children: [_jsx9(FolderTree, { className: "w-5 h-5 text-violet-600" }), _jsxs7("div", { children: [_jsx9("h3", { className: "text-base font-black text-slate-900 dark:text-white", children: isNew ? "\u0625\u0636\u0627\u0641\u0629 \u0635\u0646\u0641 \u062C\u062F\u064A\u062F \u0645\u0639 \u0634\u062C\u0631\u0629 \u0648\u062D\u062F\u0627\u062A" : `\u062A\u0639\u062F\u064A\u0644 \u0635\u0646\u0641: ${editingProduct.name}` }), _jsx9("p", { className: "text-xs text-slate-500", children: "\u062D\u062F\u062F \u0627\u0644\u0648\u062D\u062F\u0629 \u0627\u0644\u0635\u063A\u0631\u0649 \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629 \u062B\u0645 \u0623\u0636\u0641 \u0627\u0644\u0648\u062D\u062F\u0627\u062A \u0627\u0644\u0623\u0643\u0628\u0631 (\u0628\u0627\u0643\u064A\u062A\u060C \u0643\u0631\u062A\u0648\u0646\u0629\u060C \u0645\u0634\u0637\u0627\u062D)" })] })] }), _jsx9("button", { type: "button", onClick: () => setEditingProduct(null), className: "p-1 rounded-lg text-slate-400 hover:text-slate-600", children: _jsx9(X19, { className: "w-5 h-5" }) })] }), _jsxs7("div", { className: "product-editor-body p-4 sm:p-5 space-y-5 max-h-[75vh] overflow-y-auto overflow-x-hidden custom-scrollbar", children: [productImageUploadEnabled ? _jsxs7("div", { className: "p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 flex items-center gap-3", children: [editorImagePreview, _jsxs7("div", { className: "flex-1 min-w-0", children: [_jsx9("div", { className: "text-xs font-black text-slate-800 dark:text-white", children: t("\u0635\u0648\u0631\u0629 \u0627\u0644\u0635\u0646\u0641") }), _jsxs7("div", { className: "flex items-center gap-2 mt-2 flex-wrap", children: [_jsx9("button", { type: "button", disabled: imageSaving, onClick: () => productImageRef.current?.click(), className: "px-3 py-1.5 rounded-lg bg-violet-600 disabled:opacity-60 text-white text-[10px] font-bold", children: hasCurrentImage ? "\u062A\u063A\u064A\u064A\u0631 \u0627\u0644\u0635\u0648\u0631\u0629" : t("\u0627\u062E\u062A\u064A\u0627\u0631 \u0635\u0648\u0631\u0629") }), _jsxs7("button", { type: "button", disabled: imageSaving, onClick: () => productCameraRef.current?.click(), className: "inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-violet-200 bg-white text-violet-700 disabled:opacity-60 text-[10px] font-bold", children: [_jsx9(Camera3, { className: "w-3.5 h-3.5" }), _jsx9("span", { children: t("\u0643\u0627\u0645\u064A\u0631\u0627") })] }), hasCurrentImage ? _jsx9("button", { type: "button", disabled: imageSaving, onClick: () => {
     setImageDraft(null);
     setImageRemoved(true);
     setEditingProduct((prev) => prev ? { ...prev, imageData: "", imagePendingUpload: false } : prev);
@@ -17414,10 +17488,10 @@ var ProductsView = () => {
     const isBase = unit.id === editingProduct.baseUnitId;
     const childUnit = editingProduct.units.find((u) => u.id === unit.childUnitId);
     return renderUnitCard(unit, idx, isBase, childUnit);
-  }) })] }), _jsxs7("div", { className: "ct-product-extra pt-1", children: [_jsxs7("button", { type: "button", onClick: () => setAdditionalOptionsOpen((v) => !v), "aria-expanded": additionalOptionsOpen, className: "w-full px-4 py-3 flex items-center justify-between gap-3 text-right rounded-xl border border-violet-100 dark:border-slate-800 bg-violet-50/60 dark:bg-slate-800/40 hover:bg-violet-50 dark:hover:bg-slate-800 transition", children: [_jsx9("span", { className: "text-xs font-black text-slate-800 dark:text-white", children: t("\u062E\u064A\u0627\u0631\u0627\u062A \u0625\u0636\u0627\u0641\u064A\u0629") }), _jsx9(ChevronDown5, { className: `w-4 h-4 text-violet-600 transition-transform duration-200 ${additionalOptionsOpen ? "rotate-180" : ""}` })] }), additionalOptionsOpen ? _jsxs7("div", { className: "mt-3 px-1 grid grid-cols-1 sm:grid-cols-2 gap-3", children: [_jsxs7("div", { children: [_jsx9(SearchableDropdown, { id: "product-sales-channel", label: t("\u0645\u0643\u0627\u0646 \u0638\u0647\u0648\u0631 \u0627\u0644\u0635\u0646\u0641"), selectedId: editingProduct.salesChannel || "both", onSelect: (id) => setEditingProduct((prev) => prev ? { ...prev, salesChannel: id } : prev), options: [{ id: "shop", label: t("\u0627\u0644\u0645\u062D\u0644 / \u0627\u0644\u0643\u0627\u0634\u064A\u0631 \u0641\u0642\u0637") }, { id: "restaurant", label: t("\u0627\u0644\u0645\u0637\u0639\u0645 \u0648\u0627\u0644\u062C\u0631\u0633\u0648\u0646 \u0641\u0642\u0637") }, { id: "both", label: t("\u0627\u0644\u0645\u062D\u0644 \u0648\u0627\u0644\u0645\u0637\u0639\u0645 \u0645\u0639\u0627\u064B") }, { id: "raw_material", label: t("\u0645\u0627\u062F\u0629 \u062E\u0627\u0645 \u0641\u0642\u0637 - \u0644\u0644\u0648\u0635\u0641\u0627\u062A \u0648\u0627\u0644\u062A\u0635\u0646\u064A\u0639") }] })] }), _jsxs7("div", { children: [_jsx9("label", { className: "text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1", children: "\u0627\u0644\u0639\u0644\u0627\u0645\u0629 \u0627\u0644\u062A\u062C\u0627\u0631\u064A\u0629 (\u0627\u0644\u0645\u0627\u0631\u0643\u0629):" }), _jsx9("input", { type: "text", value: editingProduct.brand || "", onChange: (e) => setEditingProduct((prev) => prev ? { ...prev, brand: e.target.value } : prev), placeholder: "\u0645\u062B\u0627\u0644: \u0623\u0631\u0648\u0649\u060C \u0643\u0648\u0643\u0627\u0643\u0648\u0644\u0627\u060C \u0627\u0644\u062C\u0646\u064A\u062F\u064A", className: "w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900" })] }), _jsxs7("div", { children: [_jsx9("label", { className: "text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1", children: "\u0643\u0648\u062F \u0627\u0644\u0635\u0646\u0641 \u0627\u0644\u062F\u0627\u062E\u0644\u064A (SKU):" }), _jsx9("input", { type: "text", value: editingProduct.internalCode || "", onChange: (e) => setEditingProduct((prev) => prev ? { ...prev, internalCode: e.target.value } : prev), className: "w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono" })] }), _jsxs7("div", { children: [_jsx9("label", { className: "text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1", children: "\u062D\u062F \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0637\u0644\u0628 (\u062A\u0646\u0628\u064A\u0647 \u0627\u0644\u0646\u0648\u0627\u0642\u0635):" }), _jsx9("input", { type: "text", inputMode: "decimal", dir: "ltr", value: editingProduct.reorderPoint ?? "", onChange: (e) => setEditingProduct((prev) => prev ? { ...prev, reorderPoint: cleanDecimalInput(e.target.value) } : prev), className: "w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono" })] }), _jsxs7("div", { className: "sm:col-span-2", children: [_jsx9("label", { className: "text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1", children: "\u062A\u0627\u0631\u064A\u062E \u0627\u0646\u062A\u0647\u0627\u0621 \u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0629:" }), _jsx9("input", { type: "date", value: editingProduct.expiryDate || "", onChange: (e) => setEditingProduct((prev) => prev ? { ...prev, expiryDate: e.target.value } : prev), className: "w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900" })] })] }) : null] })] }), _jsxs7("div", { className: "p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 flex justify-between", children: [_jsx9("button", { type: "button", onClick: () => setEditingProduct(null), className: "px-4 py-2 text-xs font-bold text-slate-600 rounded-lg hover:bg-slate-200", children: t("\u0625\u0644\u063A\u0627\u0621") }), _jsx9("button", { type: "submit", id: "btn-save-product-modal", disabled: imageSaving, className: "px-6 py-2 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold rounded-xl shadow-md shadow-violet-600/20", children: imageSaving ? _jsx9("span", { className: "inline-block w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin" }) : t("\u062D\u0641\u0638 \u0627\u0644\u0635\u0646\u0641") })] })] }) }), quickCategoryOpen && editingProduct ? _jsx9(ModalLayer, { className: "fixed inset-0 flex items-center justify-center bg-black/65 p-3", style: { zIndex: 12e4 }, children: _jsxs7("form", { onSubmit: saveQuickCategory, className: "w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-right", children: [_jsxs7("div", { className: "flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800", children: [_jsxs7("div", { children: [_jsx9("h3", { className: "text-sm font-black text-slate-900 dark:text-white", children: "\u0625\u0636\u0627\u0641\u0629 \u062A\u0635\u0646\u064A\u0641 \u062C\u062F\u064A\u062F" }), _jsx9("p", { className: "text-[10px] text-slate-400 mt-1", children: "\u0633\u064A\u062A\u0645 \u0625\u0636\u0627\u0641\u062A\u0647 \u0648\u0627\u062E\u062A\u064A\u0627\u0631\u0647 \u0644\u0644\u0635\u0646\u0641 \u0645\u0628\u0627\u0634\u0631\u0629" })] }), _jsx9("button", { type: "button", onClick: () => setQuickCategoryOpen(false), className: "p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800", children: _jsx9(X18, { className: "w-5 h-5" }) })] }), _jsxs7("div", { className: "p-4 space-y-4", children: [_jsxs7("div", { children: [_jsx9("label", { className: "text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1", children: "\u0627\u0633\u0645 \u0627\u0644\u062A\u0635\u0646\u064A\u0641" }), _jsx9("input", { autoFocus: true, type: "text", required: true, value: quickCategoryName, onChange: (e) => setQuickCategoryName(e.target.value), placeholder: "\u0645\u062B\u0627\u0644: \u0645\u0634\u0631\u0648\u0628\u0627\u062A \u0648\u0639\u0635\u0627\u0626\u0631", className: "w-full px-3 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10" })] }), _jsxs7("div", { children: [_jsx9("label", { className: "text-xs font-bold text-slate-700 dark:text-slate-300 block mb-2", children: "\u0644\u0648\u0646 \u0627\u0644\u062A\u0635\u0646\u064A\u0641" }), _jsx9("div", { className: "flex flex-wrap gap-2", children: categoryPresetColors.map((c) => _jsx9("button", { type: "button", onClick: () => setQuickCategoryColor(c), className: `w-8 h-8 rounded-full border-2 transition-transform ${quickCategoryColor === c ? "scale-110 border-violet-700 ring-2 ring-violet-300" : "border-white dark:border-slate-900"}`, style: { backgroundColor: c }, title: c }, c)) })] })] }), _jsxs7("div", { className: "p-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2", children: [_jsx9("button", { type: "button", onClick: () => setQuickCategoryOpen(false), className: "px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800", children: t("\u0625\u0644\u063A\u0627\u0621") }), _jsx9("button", { type: "submit", className: "px-5 py-2 rounded-xl text-white text-xs font-black shadow-md active:scale-[.98] transition-transform", style: { backgroundColor: "#7C3AED", color: "#FFFFFF", border: "1px solid #6D28D9" }, children: "\u062D\u0641\u0638 \u0627\u0644\u062A\u0635\u0646\u064A\u0641" })] })] }) }) : null, unitDraft && editingProduct ? _jsx9(ModalLayer, { className: "fixed inset-0 flex items-center justify-center bg-black/70 p-3", style: { zIndex: 1e5 }, children: _jsxs7("div", { className: "w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-right", children: [_jsxs7("div", { className: "flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800", children: [_jsxs7("div", { children: [_jsx9("h3", { className: "text-sm font-black text-slate-900 dark:text-white", children: t("\u0648\u062D\u062F\u0629 \u0623\u0643\u0628\u0631") }), _jsx9("p", { className: "text-[10px] text-slate-400 mt-1", children: "\u0623\u062F\u062E\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0648\u062D\u062F\u0629 \u062B\u0645 \u0627\u0636\u063A\u0637 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0648\u062D\u062F\u0629" })] }), _jsx9("button", { type: "button", onClick: () => {
+  }) })] }), _jsxs7("div", { className: "ct-product-extra pt-1", children: [_jsxs7("button", { type: "button", onClick: () => setAdditionalOptionsOpen((v) => !v), "aria-expanded": additionalOptionsOpen, className: "w-full px-4 py-3 flex items-center justify-between gap-3 text-right rounded-xl border border-violet-100 dark:border-slate-800 bg-violet-50/60 dark:bg-slate-800/40 hover:bg-violet-50 dark:hover:bg-slate-800 transition", children: [_jsx9("span", { className: "text-xs font-black text-slate-800 dark:text-white", children: t("\u062E\u064A\u0627\u0631\u0627\u062A \u0625\u0636\u0627\u0641\u064A\u0629") }), _jsx9(ChevronDown5, { className: `w-4 h-4 text-violet-600 transition-transform duration-200 ${additionalOptionsOpen ? "rotate-180" : ""}` })] }), additionalOptionsOpen ? _jsxs7("div", { className: "mt-3 px-1 grid grid-cols-1 sm:grid-cols-2 gap-3", children: [_jsxs7("div", { children: [_jsx9(SearchableDropdown, { id: "product-sales-channel", label: t("\u0645\u0643\u0627\u0646 \u0638\u0647\u0648\u0631 \u0627\u0644\u0635\u0646\u0641"), selectedId: editingProduct.salesChannel || "both", onSelect: (id) => setEditingProduct((prev) => prev ? { ...prev, salesChannel: id } : prev), options: [{ id: "shop", label: t("\u0627\u0644\u0645\u062D\u0644 / \u0627\u0644\u0643\u0627\u0634\u064A\u0631 \u0641\u0642\u0637") }, { id: "restaurant", label: t("\u0627\u0644\u0645\u0637\u0639\u0645 \u0648\u0627\u0644\u062C\u0631\u0633\u0648\u0646 \u0641\u0642\u0637") }, { id: "both", label: t("\u0627\u0644\u0645\u062D\u0644 \u0648\u0627\u0644\u0645\u0637\u0639\u0645 \u0645\u0639\u0627\u064B") }, { id: "raw_material", label: t("\u0645\u0627\u062F\u0629 \u062E\u0627\u0645 \u0641\u0642\u0637 - \u0644\u0644\u0648\u0635\u0641\u0627\u062A \u0648\u0627\u0644\u062A\u0635\u0646\u064A\u0639") }] })] }), _jsxs7("div", { children: [_jsx9("label", { className: "text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1", children: "\u0627\u0644\u0639\u0644\u0627\u0645\u0629 \u0627\u0644\u062A\u062C\u0627\u0631\u064A\u0629 (\u0627\u0644\u0645\u0627\u0631\u0643\u0629):" }), _jsx9("input", { type: "text", value: editingProduct.brand || "", onChange: (e) => setEditingProduct((prev) => prev ? { ...prev, brand: e.target.value } : prev), placeholder: "\u0645\u062B\u0627\u0644: \u0623\u0631\u0648\u0649\u060C \u0643\u0648\u0643\u0627\u0643\u0648\u0644\u0627\u060C \u0627\u0644\u062C\u0646\u064A\u062F\u064A", className: "w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900" })] }), _jsxs7("div", { children: [_jsx9("label", { className: "text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1", children: "\u0643\u0648\u062F \u0627\u0644\u0635\u0646\u0641 \u0627\u0644\u062F\u0627\u062E\u0644\u064A (SKU):" }), _jsx9("input", { type: "text", value: editingProduct.internalCode || "", onChange: (e) => setEditingProduct((prev) => prev ? { ...prev, internalCode: e.target.value } : prev), className: "w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono" })] }), _jsxs7("div", { children: [_jsx9("label", { className: "text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1", children: "\u062D\u062F \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0637\u0644\u0628 (\u062A\u0646\u0628\u064A\u0647 \u0627\u0644\u0646\u0648\u0627\u0642\u0635):" }), _jsx9("input", { type: "text", inputMode: "decimal", dir: "ltr", value: editingProduct.reorderPoint ?? "", onChange: (e) => setEditingProduct((prev) => prev ? { ...prev, reorderPoint: cleanDecimalInput(e.target.value) } : prev), className: "w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono" })] }), _jsxs7("div", { className: "sm:col-span-2", children: [_jsx9("label", { className: "text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1", children: "\u062A\u0627\u0631\u064A\u062E \u0627\u0646\u062A\u0647\u0627\u0621 \u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0629:" }), _jsx9("input", { type: "date", value: editingProduct.expiryDate || "", onChange: (e) => setEditingProduct((prev) => prev ? { ...prev, expiryDate: e.target.value } : prev), className: "w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900" })] })] }) : null] })] }), _jsxs7("div", { className: "p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 flex justify-between", children: [_jsx9("button", { type: "button", onClick: () => setEditingProduct(null), className: "px-4 py-2 text-xs font-bold text-slate-600 rounded-lg hover:bg-slate-200", children: t("\u0625\u0644\u063A\u0627\u0621") }), _jsx9("button", { type: "submit", id: "btn-save-product-modal", disabled: imageSaving, className: "px-6 py-2 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold rounded-xl shadow-md shadow-violet-600/20", children: imageSaving ? _jsx9("span", { className: "inline-block w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin" }) : t("\u062D\u0641\u0638 \u0627\u0644\u0635\u0646\u0641") })] })] }) }), quickCategoryOpen && editingProduct ? _jsx9(ModalLayer, { className: "fixed inset-0 flex items-center justify-center bg-black/65 p-3", style: { zIndex: 12e4 }, children: _jsxs7("form", { onSubmit: saveQuickCategory, className: "w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-right", children: [_jsxs7("div", { className: "flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800", children: [_jsxs7("div", { children: [_jsx9("h3", { className: "text-sm font-black text-slate-900 dark:text-white", children: "\u0625\u0636\u0627\u0641\u0629 \u062A\u0635\u0646\u064A\u0641 \u062C\u062F\u064A\u062F" }), _jsx9("p", { className: "text-[10px] text-slate-400 mt-1", children: "\u0633\u064A\u062A\u0645 \u0625\u0636\u0627\u0641\u062A\u0647 \u0648\u0627\u062E\u062A\u064A\u0627\u0631\u0647 \u0644\u0644\u0635\u0646\u0641 \u0645\u0628\u0627\u0634\u0631\u0629" })] }), _jsx9("button", { type: "button", onClick: () => setQuickCategoryOpen(false), className: "p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800", children: _jsx9(X19, { className: "w-5 h-5" }) })] }), _jsxs7("div", { className: "p-4 space-y-4", children: [_jsxs7("div", { children: [_jsx9("label", { className: "text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1", children: "\u0627\u0633\u0645 \u0627\u0644\u062A\u0635\u0646\u064A\u0641" }), _jsx9("input", { autoFocus: true, type: "text", required: true, value: quickCategoryName, onChange: (e) => setQuickCategoryName(e.target.value), placeholder: "\u0645\u062B\u0627\u0644: \u0645\u0634\u0631\u0648\u0628\u0627\u062A \u0648\u0639\u0635\u0627\u0626\u0631", className: "w-full px-3 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10" })] }), _jsxs7("div", { children: [_jsx9("label", { className: "text-xs font-bold text-slate-700 dark:text-slate-300 block mb-2", children: "\u0644\u0648\u0646 \u0627\u0644\u062A\u0635\u0646\u064A\u0641" }), _jsx9("div", { className: "flex flex-wrap gap-2", children: categoryPresetColors.map((c) => _jsx9("button", { type: "button", onClick: () => setQuickCategoryColor(c), className: `w-8 h-8 rounded-full border-2 transition-transform ${quickCategoryColor === c ? "scale-110 border-violet-700 ring-2 ring-violet-300" : "border-white dark:border-slate-900"}`, style: { backgroundColor: c }, title: c }, c)) })] })] }), _jsxs7("div", { className: "p-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2", children: [_jsx9("button", { type: "button", onClick: () => setQuickCategoryOpen(false), className: "px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800", children: t("\u0625\u0644\u063A\u0627\u0621") }), _jsx9("button", { type: "submit", className: "px-5 py-2 rounded-xl text-white text-xs font-black shadow-md active:scale-[.98] transition-transform", style: { backgroundColor: "#7C3AED", color: "#FFFFFF", border: "1px solid #6D28D9" }, children: "\u062D\u0641\u0638 \u0627\u0644\u062A\u0635\u0646\u064A\u0641" })] })] }) }) : null, unitDraft && editingProduct ? _jsx9(ModalLayer, { className: "fixed inset-0 flex items-center justify-center bg-black/70 p-3", style: { zIndex: 1e5 }, children: _jsxs7("div", { className: "w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-right", children: [_jsxs7("div", { className: "flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800", children: [_jsxs7("div", { children: [_jsx9("h3", { className: "text-sm font-black text-slate-900 dark:text-white", children: t("\u0648\u062D\u062F\u0629 \u0623\u0643\u0628\u0631") }), _jsx9("p", { className: "text-[10px] text-slate-400 mt-1", children: "\u0623\u062F\u062E\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0648\u062D\u062F\u0629 \u062B\u0645 \u0627\u0636\u063A\u0637 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0648\u062D\u062F\u0629" })] }), _jsx9("button", { type: "button", onClick: () => {
     setUnitDraft(null);
     if ((editingProduct.units || []).length <= 1) setUnitEntryMode("single");
-  }, className: "p-1.5 rounded-lg text-slate-400 hover:bg-slate-100", children: _jsx9(X18, { className: "w-5 h-5" }) })] }), _jsxs7("div", { className: "p-4 space-y-3", children: [_jsxs7("div", { children: [_jsx9("label", { className: "text-xs font-bold text-slate-700 block mb-1", children: "\u0627\u0633\u0645 \u0627\u0644\u0648\u062D\u062F\u0629 \u0627\u0644\u0623\u0643\u0628\u0631" }), _jsx9("input", { type: "text", value: unitDraft.name || "", onChange: (e) => setUnitDraft((p) => p ? { ...p, name: e.target.value } : p), placeholder: "\u0645\u062B\u0627\u0644: \u0643\u0631\u062A\u0648\u0646\u0629", className: "w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white dark:bg-slate-800 text-xs font-bold focus:outline-none focus:border-violet-500" })] }), _jsxs7("div", { children: [_jsx9("label", { className: "text-xs font-bold text-slate-700 block mb-1", children: `\u0643\u0645 ${editingProduct.units.find((u) => u.id === unitDraft.childUnitId)?.name || editingProduct.baseUnitName || "\u0642\u0637\u0639\u0629"} \u0641\u064A ${unitDraft.name || t("\u0627\u0644\u0648\u062D\u062F\u0629")}\u061F` }), _jsx9("input", { type: "text", inputMode: "decimal", dir: "ltr", value: unitDraft.multiplier ?? "", onChange: (e) => setUnitDraft((p) => p ? { ...p, multiplier: cleanDecimalInput(e.target.value) } : p), placeholder: "12", className: "w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white dark:bg-slate-800 text-xs font-mono font-black focus:outline-none focus:border-violet-500" })] }), _jsxs7("div", { className: "grid grid-cols-2 gap-2", children: [_jsxs7("div", { children: [_jsx9("label", { className: "text-[11px] font-bold text-slate-600 block mb-1", children: `\u0633\u0639\u0631 \u0634\u0631\u0627\u0621 ${unitDraft.name || t("\u0627\u0644\u0648\u062D\u062F\u0629")}` }), _jsx9("input", { type: "text", inputMode: "decimal", dir: "ltr", value: unitDraft.costPrice ?? "", onChange: (e) => setUnitDraft((p) => p ? { ...p, costPrice: cleanDecimalInput(e.target.value) } : p), placeholder: "0", className: "w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-mono font-bold focus:outline-none focus:border-violet-500" })] }), _jsxs7("div", { children: [_jsx9("label", { className: "text-[11px] font-bold text-slate-600 block mb-1", children: `\u0633\u0639\u0631 \u0628\u064A\u0639 ${unitDraft.name || t("\u0627\u0644\u0648\u062D\u062F\u0629")}` }), _jsx9("input", { type: "text", inputMode: "decimal", dir: "ltr", value: unitDraft.salePrice ?? "", onChange: (e) => setUnitDraft((p) => p ? { ...p, salePrice: cleanDecimalInput(e.target.value) } : p), placeholder: "0", className: "w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-mono font-bold focus:outline-none focus:border-violet-500" })] })] }), _jsxs7("div", { children: [_jsx9("label", { className: "text-xs font-bold text-slate-700 block mb-1", children: `\u0628\u0627\u0631\u0643\u0648\u062F ${unitDraft.name || t("\u0627\u0644\u0648\u062D\u062F\u0629")}` }), _jsxs7("div", { className: "flex items-center gap-2", children: [_jsx9("input", { type: "text", inputMode: "numeric", dir: "ltr", value: (unitDraft.barcodes || []).join(", "), onChange: (e) => setUnitDraft((p) => p ? { ...p, barcodes: e.target.value.split(",").map((x) => normalizeArabicDigits(x).trim()).filter(Boolean) } : p), placeholder: "\u0627\u0645\u0633\u062D \u0623\u0648 \u0627\u0643\u062A\u0628 \u0627\u0644\u0628\u0627\u0631\u0643\u0648\u062F", className: "min-w-0 flex-1 px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-mono focus:outline-none focus:border-violet-500" }), _jsx9("button", { type: "button", onClick: () => setBarcodeScanUnitId("__unit_draft__"), className: "w-11 h-10 shrink-0 rounded-xl bg-violet-50 border border-violet-200 text-violet-700 flex items-center justify-center", title: "\u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0628\u0627\u0631\u0643\u0648\u062F \u0628\u0627\u0644\u0643\u0627\u0645\u064A\u0631\u0627", children: _jsx9(Camera3, { className: "w-5 h-5" }) })] })] }), _jsxs7("div", { className: "rounded-xl bg-violet-50 border border-violet-100 p-3 text-[10px] leading-5 text-violet-800 font-bold", children: ["\u0628\u0639\u062F \u0627\u0644\u0625\u0636\u0627\u0641\u0629 \u0633\u064A\u0628\u0642\u0649 \u0633\u0639\u0631 \u0628\u064A\u0639 \u0648\u0628\u0627\u0631\u0643\u0648\u062F \u0627\u0644\u0648\u062D\u062F\u0629 \u0627\u0644\u0623\u0635\u063A\u0631 \u0645\u0633\u062A\u0642\u0644\u064A\u0646\u060C \u0648\u0633\u0639\u0631 \u0634\u0631\u0627\u0626\u0647\u0627 \u0633\u064A\u064F\u062D\u0633\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0645\u0646 \u0633\u0639\u0631 \u0634\u0631\u0627\u0621 ", unitDraft.name || t("\u0627\u0644\u0648\u062D\u062F\u0629"), "."] })] }), _jsxs7("div", { className: "p-3 border-t border-slate-100 flex items-center justify-between gap-2", children: [_jsx9("button", { type: "button", onClick: () => {
+  }, className: "p-1.5 rounded-lg text-slate-400 hover:bg-slate-100", children: _jsx9(X19, { className: "w-5 h-5" }) })] }), _jsxs7("div", { className: "p-4 space-y-3", children: [_jsxs7("div", { children: [_jsx9("label", { className: "text-xs font-bold text-slate-700 block mb-1", children: "\u0627\u0633\u0645 \u0627\u0644\u0648\u062D\u062F\u0629 \u0627\u0644\u0623\u0643\u0628\u0631" }), _jsx9("input", { type: "text", value: unitDraft.name || "", onChange: (e) => setUnitDraft((p) => p ? { ...p, name: e.target.value } : p), placeholder: "\u0645\u062B\u0627\u0644: \u0643\u0631\u062A\u0648\u0646\u0629", className: "w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white dark:bg-slate-800 text-xs font-bold focus:outline-none focus:border-violet-500" })] }), _jsxs7("div", { children: [_jsx9("label", { className: "text-xs font-bold text-slate-700 block mb-1", children: `\u0643\u0645 ${editingProduct.units.find((u) => u.id === unitDraft.childUnitId)?.name || editingProduct.baseUnitName || "\u0642\u0637\u0639\u0629"} \u0641\u064A ${unitDraft.name || t("\u0627\u0644\u0648\u062D\u062F\u0629")}\u061F` }), _jsx9("input", { type: "text", inputMode: "decimal", dir: "ltr", value: unitDraft.multiplier ?? "", onChange: (e) => setUnitDraft((p) => p ? { ...p, multiplier: cleanDecimalInput(e.target.value) } : p), placeholder: "12", className: "w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white dark:bg-slate-800 text-xs font-mono font-black focus:outline-none focus:border-violet-500" })] }), _jsxs7("div", { className: "grid grid-cols-2 gap-2", children: [_jsxs7("div", { children: [_jsx9("label", { className: "text-[11px] font-bold text-slate-600 block mb-1", children: `\u0633\u0639\u0631 \u0634\u0631\u0627\u0621 ${unitDraft.name || t("\u0627\u0644\u0648\u062D\u062F\u0629")}` }), _jsx9("input", { type: "text", inputMode: "decimal", dir: "ltr", value: unitDraft.costPrice ?? "", onChange: (e) => setUnitDraft((p) => p ? { ...p, costPrice: cleanDecimalInput(e.target.value) } : p), placeholder: "0", className: "w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-mono font-bold focus:outline-none focus:border-violet-500" })] }), _jsxs7("div", { children: [_jsx9("label", { className: "text-[11px] font-bold text-slate-600 block mb-1", children: `\u0633\u0639\u0631 \u0628\u064A\u0639 ${unitDraft.name || t("\u0627\u0644\u0648\u062D\u062F\u0629")}` }), _jsx9("input", { type: "text", inputMode: "decimal", dir: "ltr", value: unitDraft.salePrice ?? "", onChange: (e) => setUnitDraft((p) => p ? { ...p, salePrice: cleanDecimalInput(e.target.value) } : p), placeholder: "0", className: "w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-mono font-bold focus:outline-none focus:border-violet-500" })] })] }), _jsxs7("div", { children: [_jsx9("label", { className: "text-xs font-bold text-slate-700 block mb-1", children: `\u0628\u0627\u0631\u0643\u0648\u062F ${unitDraft.name || t("\u0627\u0644\u0648\u062D\u062F\u0629")}` }), _jsxs7("div", { className: "flex items-center gap-2", children: [_jsx9("input", { type: "text", inputMode: "numeric", dir: "ltr", value: (unitDraft.barcodes || []).join(", "), onChange: (e) => setUnitDraft((p) => p ? { ...p, barcodes: e.target.value.split(",").map((x) => normalizeArabicDigits(x).trim()).filter(Boolean) } : p), placeholder: "\u0627\u0645\u0633\u062D \u0623\u0648 \u0627\u0643\u062A\u0628 \u0627\u0644\u0628\u0627\u0631\u0643\u0648\u062F", className: "min-w-0 flex-1 px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-mono focus:outline-none focus:border-violet-500" }), _jsx9("button", { type: "button", onClick: () => setBarcodeScanUnitId("__unit_draft__"), className: "w-11 h-10 shrink-0 rounded-xl bg-violet-50 border border-violet-200 text-violet-700 flex items-center justify-center", title: "\u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0628\u0627\u0631\u0643\u0648\u062F \u0628\u0627\u0644\u0643\u0627\u0645\u064A\u0631\u0627", children: _jsx9(Camera3, { className: "w-5 h-5" }) })] })] }), _jsxs7("div", { className: "rounded-xl bg-violet-50 border border-violet-100 p-3 text-[10px] leading-5 text-violet-800 font-bold", children: ["\u0628\u0639\u062F \u0627\u0644\u0625\u0636\u0627\u0641\u0629 \u0633\u064A\u0628\u0642\u0649 \u0633\u0639\u0631 \u0628\u064A\u0639 \u0648\u0628\u0627\u0631\u0643\u0648\u062F \u0627\u0644\u0648\u062D\u062F\u0629 \u0627\u0644\u0623\u0635\u063A\u0631 \u0645\u0633\u062A\u0642\u0644\u064A\u0646\u060C \u0648\u0633\u0639\u0631 \u0634\u0631\u0627\u0626\u0647\u0627 \u0633\u064A\u064F\u062D\u0633\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0645\u0646 \u0633\u0639\u0631 \u0634\u0631\u0627\u0621 ", unitDraft.name || t("\u0627\u0644\u0648\u062D\u062F\u0629"), "."] })] }), _jsxs7("div", { className: "p-3 border-t border-slate-100 flex items-center justify-between gap-2", children: [_jsx9("button", { type: "button", onClick: () => {
     setUnitDraft(null);
     if ((editingProduct.units || []).length <= 1) setUnitEntryMode("single");
   }, className: "px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100", children: t("\u0625\u0644\u063A\u0627\u0621") }), _jsx9("button", { type: "button", onClick: handleSaveUnitDraft, className: "px-5 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-black", children: "\u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0648\u062D\u062F\u0629" })] })] }) }) : null, _jsx9(BarcodeCameraModal, { open: !!barcodeScanUnitId, onClose: () => setBarcodeScanUnitId(null), onDetected: handleDetectedUnitBarcode, title: "\u0627\u0644\u062A\u0642\u0627\u0637 \u0628\u0627\u0631\u0643\u0648\u062F \u0627\u0644\u0648\u062D\u062F\u0629", autoClose: true })] });
@@ -17484,7 +17558,7 @@ import React39, { useState as useState27, useRef as useRef16 } from "react";
 // app/components__inventory__TransferForm.js
 import React38, { useMemo as useMemo9, useState as useState26 } from "react";
 import { ArrowLeftRight, Plus as Plus9, Trash2 as Trash216 } from "lucide-react";
-var h23 = React38.createElement;
+var h24 = React38.createElement;
 var makeRow = (products = []) => {
   const product = products.find((p) => !p.deletedAt) || null;
   const unit = product?.units?.find((u) => u.isDefaultSale) || product?.units?.[0] || null;
@@ -17525,47 +17599,47 @@ var TransferForm = () => {
     }
   };
   const whOptions = warehouses.map((w) => ({ id: w.id, label: w.name, subLabel: w.code || void 0 }));
-  return h23(
+  return h24(
     "form",
     { onSubmit: submit, className: "rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-xs max-w-3xl mx-auto space-y-4" },
-    h23(
+    h24(
       "div",
       { className: "border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between gap-3" },
-      h23(
+      h24(
         "div",
         { className: "flex items-center gap-2 min-w-0" },
-        h23(ArrowLeftRight, { className: "w-5 h-5 text-violet-600 shrink-0" }),
-        h23(
+        h24(ArrowLeftRight, { className: "w-5 h-5 text-violet-600 shrink-0" }),
+        h24(
           "div",
           { className: "min-w-0" },
-          h23("h3", { className: "text-sm font-black text-slate-900 dark:text-white" }, "\u062A\u062D\u0648\u064A\u0644 \u0623\u0635\u0646\u0627\u0641 \u0628\u064A\u0646 \u0627\u0644\u0645\u062E\u0627\u0632\u0646"),
-          h23("p", { className: "text-[11px] text-slate-500 mt-0.5" }, "\u064A\u0645\u0643\u0646 \u0625\u0636\u0627\u0641\u0629 \u0623\u0643\u062B\u0631 \u0645\u0646 \u0635\u0646\u0641 \u0641\u064A \u0646\u0641\u0633 \u0639\u0645\u0644\u064A\u0629 \u0627\u0644\u062A\u062D\u0648\u064A\u0644")
+          h24("h3", { className: "text-sm font-black text-slate-900 dark:text-white" }, "\u062A\u062D\u0648\u064A\u0644 \u0623\u0635\u0646\u0627\u0641 \u0628\u064A\u0646 \u0627\u0644\u0645\u062E\u0627\u0632\u0646"),
+          h24("p", { className: "text-[11px] text-slate-500 mt-0.5" }, "\u064A\u0645\u0643\u0646 \u0625\u0636\u0627\u0641\u0629 \u0623\u0643\u062B\u0631 \u0645\u0646 \u0635\u0646\u0641 \u0641\u064A \u0646\u0641\u0633 \u0639\u0645\u0644\u064A\u0629 \u0627\u0644\u062A\u062D\u0648\u064A\u0644")
         )
       ),
-      h23(
+      h24(
         "button",
         { type: "button", onClick: addRow, className: "shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-violet-600 text-white text-xs font-black hover:bg-violet-700" },
-        h23(Plus9, { className: "w-4 h-4" }),
-        h23("span", null, t("\u0625\u0636\u0627\u0641\u0629 \u0635\u0646\u0641"))
+        h24(Plus9, { className: "w-4 h-4" }),
+        h24("span", null, t("\u0625\u0636\u0627\u0641\u0629 \u0635\u0646\u0641"))
       )
     ),
-    h23(
+    h24(
       "div",
       { className: "grid grid-cols-1 sm:grid-cols-2 gap-3" },
-      h23(
+      h24(
         "div",
         null,
-        h23("label", { className: "text-xs font-semibold block mb-1" }, "\u0645\u0646 \u0645\u062E\u0632\u0646:"),
-        h23(SearchableDropdown, { id: "transfer-batch-from", options: whOptions, selectedId: fromId, onSelect: setFromId, placeholder: "\u0627\u062E\u062A\u0631 \u0645\u062E\u0632\u0646 \u0627\u0644\u0645\u0635\u062F\u0631..." })
+        h24("label", { className: "text-xs font-semibold block mb-1" }, "\u0645\u0646 \u0645\u062E\u0632\u0646:"),
+        h24(SearchableDropdown, { id: "transfer-batch-from", options: whOptions, selectedId: fromId, onSelect: setFromId, placeholder: "\u0627\u062E\u062A\u0631 \u0645\u062E\u0632\u0646 \u0627\u0644\u0645\u0635\u062F\u0631..." })
       ),
-      h23(
+      h24(
         "div",
         null,
-        h23("label", { className: "text-xs font-semibold block mb-1" }, "\u0625\u0644\u0649 \u0645\u062E\u0632\u0646:"),
-        h23(SearchableDropdown, { id: "transfer-batch-to", options: whOptions, selectedId: toId, onSelect: setToId, placeholder: "\u0627\u062E\u062A\u0631 \u0645\u062E\u0632\u0646 \u0627\u0644\u0645\u0633\u062A\u0644\u0645..." })
+        h24("label", { className: "text-xs font-semibold block mb-1" }, "\u0625\u0644\u0649 \u0645\u062E\u0632\u0646:"),
+        h24(SearchableDropdown, { id: "transfer-batch-to", options: whOptions, selectedId: toId, onSelect: setToId, placeholder: "\u0627\u062E\u062A\u0631 \u0645\u062E\u0632\u0646 \u0627\u0644\u0645\u0633\u062A\u0644\u0645..." })
       )
     ),
-    h23(
+    h24(
       "div",
       { className: "space-y-2" },
       ...rows.map((row2, index) => {
@@ -17575,23 +17649,23 @@ var TransferForm = () => {
           const stock = getProductStock(p.id, fromId);
           return { id: p.id, label: p.name, subLabel: `\u0627\u0644\u0645\u062A\u0648\u0641\u0631: ${formatStockInUnits(stock, p.units, p.baseUnitName)}` };
         });
-        return h23(
+        return h24(
           "div",
           { key: row2.id, className: "rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/30 p-3" },
-          h23(
+          h24(
             "div",
             { className: "flex items-center justify-between gap-2 mb-2" },
-            h23("span", { className: "text-[11px] font-black text-slate-600 dark:text-slate-300" }, `\u0627\u0644\u0635\u0646\u0641 ${rows.length - index}`),
-            h23("button", { type: "button", onClick: () => removeRow(row2.id), disabled: rows.length <= 1, className: "w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-30", title: "\u062D\u0630\u0641 \u0627\u0644\u0635\u0646\u0641 \u0645\u0646 \u0627\u0644\u062A\u062D\u0648\u064A\u0644" }, h23(Trash216, { className: "w-4 h-4" }))
+            h24("span", { className: "text-[11px] font-black text-slate-600 dark:text-slate-300" }, `\u0627\u0644\u0635\u0646\u0641 ${rows.length - index}`),
+            h24("button", { type: "button", onClick: () => removeRow(row2.id), disabled: rows.length <= 1, className: "w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-30", title: "\u062D\u0630\u0641 \u0627\u0644\u0635\u0646\u0641 \u0645\u0646 \u0627\u0644\u062A\u062D\u0648\u064A\u0644" }, h24(Trash216, { className: "w-4 h-4" }))
           ),
-          h23(
+          h24(
             "div",
             { className: "grid grid-cols-1 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_120px] gap-2.5" },
-            h23(
+            h24(
               "div",
               null,
-              h23("label", { className: "text-[11px] font-semibold block mb-1" }, t("\u0627\u0644\u0635\u0646\u0641:")),
-              h23(SearchableDropdown, {
+              h24("label", { className: "text-[11px] font-semibold block mb-1" }, t("\u0627\u0644\u0635\u0646\u0641:")),
+              h24(SearchableDropdown, {
                 id: `transfer-product-${row2.id}`,
                 options: productOptions,
                 selectedId: row2.productId,
@@ -17603,39 +17677,39 @@ var TransferForm = () => {
                 placeholder: "\u0627\u062E\u062A\u0631 \u0627\u0644\u0635\u0646\u0641..."
               })
             ),
-            h23(
+            h24(
               "div",
               null,
-              h23("label", { className: "text-[11px] font-semibold block mb-1" }, t("\u0627\u0644\u0648\u062D\u062F\u0629:")),
-              h23(SearchableDropdown, { id: `transfer-unit-${row2.id}`, options: unitOptions, selectedId: row2.unitId, onSelect: (unitId) => updateRow(row2.id, { unitId }), placeholder: "\u0627\u062E\u062A\u0631 \u0627\u0644\u0648\u062D\u062F\u0629..." })
+              h24("label", { className: "text-[11px] font-semibold block mb-1" }, t("\u0627\u0644\u0648\u062D\u062F\u0629:")),
+              h24(SearchableDropdown, { id: `transfer-unit-${row2.id}`, options: unitOptions, selectedId: row2.unitId, onSelect: (unitId) => updateRow(row2.id, { unitId }), placeholder: "\u0627\u062E\u062A\u0631 \u0627\u0644\u0648\u062D\u062F\u0629..." })
             ),
-            h23(
+            h24(
               "div",
               null,
-              h23("label", { className: "text-[11px] font-semibold block mb-1" }, t("\u0627\u0644\u0643\u0645\u064A\u0629:")),
-              h23("input", { type: "number", inputMode: "decimal", min: "0.001", step: "any", value: row2.quantity, onChange: (e) => updateRow(row2.id, { quantity: e.target.value }), className: "w-full px-3 py-2 text-xs border rounded-xl font-mono font-bold bg-white dark:bg-slate-900" })
+              h24("label", { className: "text-[11px] font-semibold block mb-1" }, t("\u0627\u0644\u0643\u0645\u064A\u0629:")),
+              h24("input", { type: "number", inputMode: "decimal", min: "0.001", step: "any", value: row2.quantity, onChange: (e) => updateRow(row2.id, { quantity: e.target.value }), className: "w-full px-3 py-2 text-xs border rounded-xl font-mono font-bold bg-white dark:bg-slate-900" })
             )
           )
         );
       })
     ),
-    h23(
+    h24(
       "div",
       null,
-      h23("label", { className: "text-xs font-semibold block mb-1" }, "\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u062A\u062D\u0648\u064A\u0644:"),
-      h23("input", { type: "text", value: notes, onChange: (e) => setNotes(e.target.value), placeholder: "\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u062E\u062A\u064A\u0627\u0631\u064A\u0629...", className: "w-full px-3 py-2 text-xs border rounded-xl bg-white dark:bg-slate-900" })
+      h24("label", { className: "text-xs font-semibold block mb-1" }, "\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u062A\u062D\u0648\u064A\u0644:"),
+      h24("input", { type: "text", value: notes, onChange: (e) => setNotes(e.target.value), placeholder: "\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u062E\u062A\u064A\u0627\u0631\u064A\u0629...", className: "w-full px-3 py-2 text-xs border rounded-xl bg-white dark:bg-slate-900" })
     ),
-    h23(
+    h24(
       "div",
       { className: "flex items-center justify-between gap-3 pt-1" },
-      h23("button", { type: "button", onClick: addRow, className: "inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-violet-200 text-violet-700 text-xs font-black hover:bg-violet-50" }, h23(Plus9, { className: "w-4 h-4" }), h23("span", null, "\u0625\u0636\u0627\u0641\u0629 \u0635\u0646\u0641 \u0622\u062E\u0631")),
-      h23("button", { type: "submit", disabled: busy, className: "px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white text-xs font-black shadow-md" }, busy ? "\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0648\u064A\u0644..." : `\u062A\u0623\u0643\u064A\u062F \u0627\u0644\u062A\u062D\u0648\u064A\u0644 (${rows.length})`)
+      h24("button", { type: "button", onClick: addRow, className: "inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-violet-200 text-violet-700 text-xs font-black hover:bg-violet-50" }, h24(Plus9, { className: "w-4 h-4" }), h24("span", null, "\u0625\u0636\u0627\u0641\u0629 \u0635\u0646\u0641 \u0622\u062E\u0631")),
+      h24("button", { type: "submit", disabled: busy, className: "px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white text-xs font-black shadow-md" }, busy ? "\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0648\u064A\u0644..." : `\u062A\u0623\u0643\u064A\u062F \u0627\u0644\u062A\u062D\u0648\u064A\u0644 (${rows.length})`)
     )
   );
 };
 
 // app/components__inventory__InventoryView.js
-import { ArrowLeftRight as ArrowLeftRight2, Building2 as Building25, Download as Download4, Search as Search7, Image as ImageIcon5, FileSpreadsheet as FileSpreadsheet8, Trash2 as Trash217, Camera as Camera4, X as X19 } from "lucide-react";
+import { ArrowLeftRight as ArrowLeftRight2, Building2 as Building25, Download as Download4, Search as Search7, Image as ImageIcon5, FileSpreadsheet as FileSpreadsheet8, Trash2 as Trash217, Camera as Camera4, X as X20 } from "lucide-react";
 var InventoryView = () => {
   const { products, warehouses, settings, getProductStock, adjustStockCount, transferStock, recordDamagedStock, showToast } = useApp();
   const [activeSubTab, setActiveSubTab] = useState27("balance");
@@ -17848,7 +17922,7 @@ var InventoryView = () => {
       }
       await recordDamagedStock(prod.id, selectedWarehouseId, qty);
     }, className: "inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 font-bold text-[10px]", children: [_jsx11(Trash217, { className: "w-3.5 h-3.5" }), "\u062A\u0627\u0644\u0641"] }) })] }, prod.id);
-  }) })] }) }) })] }), activeSubTab === "balance" && _jsx11(Pagination, { pager: inventoryPager }), activeSubTab === "count" && _jsxs9("div", { className: "rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-xs space-y-4", children: [_jsxs9("div", { className: "flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3 border-slate-100 dark:border-slate-800", children: [_jsxs9("div", { children: [_jsx11("h3", { className: "text-sm font-bold text-slate-900 dark:text-white", children: "\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062C\u0631\u062F \u0627\u0644\u0641\u0639\u0644\u064A \u0648\u0645\u0637\u0627\u0628\u0642\u0629 \u0627\u0644\u0641\u0631\u0648\u0642\u0627\u062A" }), _jsx11("p", { className: "text-xs text-slate-500", children: "\u0623\u062F\u062E\u0644 \u0627\u0644\u0643\u0645\u064A\u0629 \u0627\u0644\u0641\u0639\u0644\u064A\u0629 \u0627\u0644\u0645\u0648\u062C\u0648\u062F\u0629 \u0639\u0644\u0649 \u0627\u0644\u0631\u0641. \u0633\u064A\u062A\u0645 \u0627\u062D\u062A\u0633\u0627\u0628 \u0627\u0644\u0639\u062C\u0632 \u0648\u0627\u0644\u0641\u0627\u0626\u0636 \u0648\u062A\u0633\u0648\u064A\u0629 \u0627\u0644\u0642\u064A\u0648\u062F \u0641\u0648\u0631\u0627\u064B." })] }), _jsxs9("div", { className: "flex items-center gap-2 flex-wrap", children: [_jsxs9("button", { type: "button", onClick: handleExportCountPDF, className: "flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-slate-700 dark:text-slate-300 text-xs font-semibold", title: "\u062A\u0646\u0632\u064A\u0644 \u0643\u0640 PDF", children: [_jsx11(Download4, { className: "w-3.5 h-3.5 text-rose-600" }), _jsx11("span", { children: "PDF" })] }), _jsxs9("button", { type: "button", onClick: handleExportCountImage, className: "flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-slate-700 dark:text-slate-300 text-xs font-semibold", title: "\u062A\u0646\u0632\u064A\u0644 \u0643\u0635\u0648\u0631\u0629", children: [_jsx11(ImageIcon5, { className: "w-3.5 h-3.5 text-blue-600" }), _jsx11("span", { children: t("\u0635\u0648\u0631\u0629") })] }), _jsxs9("div", { className: "flex items-center gap-1.5 mr-2", children: [_jsx11("span", { className: "text-xs font-semibold", children: "\u0645\u062E\u0632\u0646 \u0627\u0644\u062C\u0631\u062F:" }), _jsx11("div", { className: "min-w-[190px]", children: _jsx11(SearchableDropdown, { id: "count-warehouse", options: warehouses.map((w) => ({ id: w.id, label: w.name, subLabel: w.code || void 0 })), selectedId: selectedWarehouseId, onSelect: setSelectedWarehouseId, placeholder: "\u0627\u0628\u062D\u062B \u0639\u0646 \u0627\u0644\u0645\u062E\u0632\u0646..." }) })] })] })] }), _jsxs9("div", { className: "flex items-center gap-2", children: [_jsxs9("div", { className: "relative flex-1", children: [_jsx11(Search7, { className: "absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" }), _jsx11("input", { type: "search", value: countSearch, onChange: (e) => setCountSearch(e.target.value), placeholder: "\u0627\u0628\u062D\u062B \u0628\u0627\u0633\u0645 \u0627\u0644\u0635\u0646\u0641 \u0623\u0648 \u0627\u0644\u0643\u0648\u062F \u0623\u0648 \u0627\u0644\u0628\u0627\u0631\u0643\u0648\u062F...", className: "w-full h-11 pr-10 pl-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-bold focus:outline-none focus:border-violet-500" }), countSearch ? _jsx11("button", { type: "button", onClick: () => setCountSearch(""), className: "absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 grid place-items-center rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700", title: "\u0645\u0633\u062D \u0627\u0644\u0628\u062D\u062B", children: _jsx11(X19, { className: "w-3.5 h-3.5" }) }) : null] }), _jsxs9("button", { type: "button", onClick: () => setCountScannerOpen(true), className: "h-11 px-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-black inline-flex items-center gap-1.5 shadow-sm active:scale-[.98] transition-transform", children: [_jsx11(Camera4, { className: "w-4 h-4" }), _jsx11("span", { className: "hidden sm:inline", children: "\u0645\u0633\u062D \u0628\u0627\u0631\u0643\u0648\u062F" })] })] }), _jsx11("div", { id: "stock-count-table-card", ref: countTableRef, className: "overflow-x-auto max-w-full slim-scrollbar border rounded-xl", children: _jsxs9("table", { className: "w-full text-xs text-right min-w-[920px]", children: [_jsx11("thead", { children: _jsxs9("tr", { className: "bg-slate-50 dark:bg-slate-800/60 border-b text-slate-500", children: [_jsx11("th", { className: "p-2.5", children: t("\u0627\u0644\u0635\u0646\u0641") }), _jsx11("th", { className: "p-2.5 text-center", children: "\u0627\u0644\u0631\u0635\u064A\u062F \u0627\u0644\u062F\u0641\u062A\u0631\u064A \u0627\u0644\u0645\u0633\u062C\u0644" }), _jsx11("th", { className: "p-2.5 text-center", children: "\u0627\u0644\u062C\u0631\u062F \u0627\u0644\u0641\u0639\u0644\u064A \u062D\u0633\u0628 \u062C\u0645\u064A\u0639 \u0627\u0644\u0648\u062D\u062F\u0627\u062A" }), _jsx11("th", { className: "p-2.5 text-center", children: "\u0627\u0644\u0641\u0631\u0642 (\u0639\u062C\u0632 / \u0641\u0627\u0626\u0636)" }), _jsx11("th", { className: "p-2.5 text-left", children: "\u0642\u064A\u0645\u0629 \u0627\u0644\u0641\u0631\u0642 \u0627\u0644\u0645\u0627\u0644\u064A\u0629" })] }) }), _jsx11("tbody", { className: "divide-y", children: !countPager.pageItems.length ? React39.createElement("tr", null, React39.createElement("td", { colSpan: 20 }, React39.createElement(EmptyState, { message: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0645\u0646\u062A\u062C\u0627\u062A" }))) : countPager.pageItems.map((prod) => {
+  }) })] }) }) })] }), activeSubTab === "balance" && _jsx11(Pagination, { pager: inventoryPager }), activeSubTab === "count" && _jsxs9("div", { className: "rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 shadow-xs space-y-4", children: [_jsxs9("div", { className: "flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3 border-slate-100 dark:border-slate-800", children: [_jsxs9("div", { children: [_jsx11("h3", { className: "text-sm font-bold text-slate-900 dark:text-white", children: "\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062C\u0631\u062F \u0627\u0644\u0641\u0639\u0644\u064A \u0648\u0645\u0637\u0627\u0628\u0642\u0629 \u0627\u0644\u0641\u0631\u0648\u0642\u0627\u062A" }), _jsx11("p", { className: "text-xs text-slate-500", children: "\u0623\u062F\u062E\u0644 \u0627\u0644\u0643\u0645\u064A\u0629 \u0627\u0644\u0641\u0639\u0644\u064A\u0629 \u0627\u0644\u0645\u0648\u062C\u0648\u062F\u0629 \u0639\u0644\u0649 \u0627\u0644\u0631\u0641. \u0633\u064A\u062A\u0645 \u0627\u062D\u062A\u0633\u0627\u0628 \u0627\u0644\u0639\u062C\u0632 \u0648\u0627\u0644\u0641\u0627\u0626\u0636 \u0648\u062A\u0633\u0648\u064A\u0629 \u0627\u0644\u0642\u064A\u0648\u062F \u0641\u0648\u0631\u0627\u064B." })] }), _jsxs9("div", { className: "flex items-center gap-2 flex-wrap", children: [_jsxs9("button", { type: "button", onClick: handleExportCountPDF, className: "flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-slate-700 dark:text-slate-300 text-xs font-semibold", title: "\u062A\u0646\u0632\u064A\u0644 \u0643\u0640 PDF", children: [_jsx11(Download4, { className: "w-3.5 h-3.5 text-rose-600" }), _jsx11("span", { children: "PDF" })] }), _jsxs9("button", { type: "button", onClick: handleExportCountImage, className: "flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 text-slate-700 dark:text-slate-300 text-xs font-semibold", title: "\u062A\u0646\u0632\u064A\u0644 \u0643\u0635\u0648\u0631\u0629", children: [_jsx11(ImageIcon5, { className: "w-3.5 h-3.5 text-blue-600" }), _jsx11("span", { children: t("\u0635\u0648\u0631\u0629") })] }), _jsxs9("div", { className: "flex items-center gap-1.5 mr-2", children: [_jsx11("span", { className: "text-xs font-semibold", children: "\u0645\u062E\u0632\u0646 \u0627\u0644\u062C\u0631\u062F:" }), _jsx11("div", { className: "min-w-[190px]", children: _jsx11(SearchableDropdown, { id: "count-warehouse", options: warehouses.map((w) => ({ id: w.id, label: w.name, subLabel: w.code || void 0 })), selectedId: selectedWarehouseId, onSelect: setSelectedWarehouseId, placeholder: "\u0627\u0628\u062D\u062B \u0639\u0646 \u0627\u0644\u0645\u062E\u0632\u0646..." }) })] })] })] }), _jsxs9("div", { className: "flex items-center gap-2", children: [_jsxs9("div", { className: "relative flex-1", children: [_jsx11(Search7, { className: "absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" }), _jsx11("input", { type: "search", value: countSearch, onChange: (e) => setCountSearch(e.target.value), placeholder: "\u0627\u0628\u062D\u062B \u0628\u0627\u0633\u0645 \u0627\u0644\u0635\u0646\u0641 \u0623\u0648 \u0627\u0644\u0643\u0648\u062F \u0623\u0648 \u0627\u0644\u0628\u0627\u0631\u0643\u0648\u062F...", className: "w-full h-11 pr-10 pl-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-bold focus:outline-none focus:border-violet-500" }), countSearch ? _jsx11("button", { type: "button", onClick: () => setCountSearch(""), className: "absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 grid place-items-center rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700", title: "\u0645\u0633\u062D \u0627\u0644\u0628\u062D\u062B", children: _jsx11(X20, { className: "w-3.5 h-3.5" }) }) : null] }), _jsxs9("button", { type: "button", onClick: () => setCountScannerOpen(true), className: "h-11 px-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-black inline-flex items-center gap-1.5 shadow-sm active:scale-[.98] transition-transform", children: [_jsx11(Camera4, { className: "w-4 h-4" }), _jsx11("span", { className: "hidden sm:inline", children: "\u0645\u0633\u062D \u0628\u0627\u0631\u0643\u0648\u062F" })] })] }), _jsx11("div", { id: "stock-count-table-card", ref: countTableRef, className: "overflow-x-auto max-w-full slim-scrollbar border rounded-xl", children: _jsxs9("table", { className: "w-full text-xs text-right min-w-[920px]", children: [_jsx11("thead", { children: _jsxs9("tr", { className: "bg-slate-50 dark:bg-slate-800/60 border-b text-slate-500", children: [_jsx11("th", { className: "p-2.5", children: t("\u0627\u0644\u0635\u0646\u0641") }), _jsx11("th", { className: "p-2.5 text-center", children: "\u0627\u0644\u0631\u0635\u064A\u062F \u0627\u0644\u062F\u0641\u062A\u0631\u064A \u0627\u0644\u0645\u0633\u062C\u0644" }), _jsx11("th", { className: "p-2.5 text-center", children: "\u0627\u0644\u062C\u0631\u062F \u0627\u0644\u0641\u0639\u0644\u064A \u062D\u0633\u0628 \u062C\u0645\u064A\u0639 \u0627\u0644\u0648\u062D\u062F\u0627\u062A" }), _jsx11("th", { className: "p-2.5 text-center", children: "\u0627\u0644\u0641\u0631\u0642 (\u0639\u062C\u0632 / \u0641\u0627\u0626\u0636)" }), _jsx11("th", { className: "p-2.5 text-left", children: "\u0642\u064A\u0645\u0629 \u0627\u0644\u0641\u0631\u0642 \u0627\u0644\u0645\u0627\u0644\u064A\u0629" })] }) }), _jsx11("tbody", { className: "divide-y", children: !countPager.pageItems.length ? React39.createElement("tr", null, React39.createElement("td", { colSpan: 20 }, React39.createElement(EmptyState, { message: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0645\u0646\u062A\u062C\u0627\u062A" }))) : countPager.pageItems.map((prod) => {
     const state = countStateFor(prod);
     const diff = state.actualBase - state.currentStock;
     const diffVal = diff * (prod.costPrice || 0);
@@ -17870,15 +17944,15 @@ var InventoryView = () => {
 import React40 from "react";
 function StatementTable({ customer, invoices, vouchers }) {
   const model = customerStatementModel(customer, invoices, vouchers);
-  const h41 = React40.createElement;
-  return h41("div", { className: "ct-statement-scroll" }, h41("table", { className: "ct-statement-table" }, h41("thead", null, h41("tr", null, ...statementHeaders.map((x) => h41("th", { key: x }, x)))), h41("tbody", null, ...model.rows.map((r, i) => h41("tr", { key: i }, ...r.map((v, j) => h41("td", { key: j, className: j === 3 ? "ct-statement-description" : "" }, typeof v === "number" && j >= 4 ? v.toFixed(2) : v)))))));
+  const h42 = React40.createElement;
+  return h42("div", { className: "ct-statement-scroll" }, h42("table", { className: "ct-statement-table" }, h42("thead", null, h42("tr", null, ...statementHeaders.map((x) => h42("th", { key: x }, x)))), h42("tbody", null, ...model.rows.map((r, i) => h42("tr", { key: i }, ...r.map((v, j) => h42("td", { key: j, className: j === 3 ? "ct-statement-description" : "" }, typeof v === "number" && j >= 4 ? v.toFixed(2) : v)))))));
 }
 
 // app/components__customers__CustomersView.js
 import { jsx as _jsx12, jsxs as _jsxs10 } from "react/jsx-runtime";
 import React41, { useState as useState28, useRef as useRef17, useEffect as useEffect23 } from "react";
 import { createPortal as createPortal15 } from "react-dom";
-import { Plus as Plus10, Search as Search8, FileText as FileText3, DollarSign, Download as Download5, Printer as Printer4, Trash2 as Trash218, X as X20, Edit as Edit4, Image as ImageIcon6, FileSpreadsheet as FileSpreadsheet9, Link2, QrCode, Copy, MoreVertical as MoreVertical3, Eye as Eye5, Phone, MapPin as MapPin2 } from "lucide-react";
+import { Plus as Plus10, Search as Search8, FileText as FileText3, DollarSign, Download as Download5, Printer as Printer4, Trash2 as Trash218, X as X21, Edit as Edit4, Image as ImageIcon6, FileSpreadsheet as FileSpreadsheet9, Link2, QrCode, Copy, MoreVertical as MoreVertical3, Eye as Eye5, Phone, MapPin as MapPin2 } from "lucide-react";
 var normalizeOpeningBalanceInput = (value) => {
   let raw = String(value ?? "").replace(/[٠-٩]/g, (d) => String("\u0660\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669".indexOf(d))).replace(/[۰-۹]/g, (d) => String("\u06F0\u06F1\u06F2\u06F3\u06F4\u06F5\u06F6\u06F7\u06F8\u06F9".indexOf(d))).replace(/[٫،,]/g, ".").replace(/[^0-9.]/g, "");
   const dot = raw.indexOf(".");
@@ -18107,9 +18181,9 @@ var CustomersView = () => {
     const id = customerActionMenu.customer.id;
     setCustomerActionMenu(null);
     softDeleteCustomer(id);
-  }, children: [_jsx12(Trash218, { className: "w-4 h-4" }), _jsx12("span", { children: t("\u062D\u0630\u0641") })] })] }), document.body) : null, selectedCustomerDetail && _jsx12(ModalLayer, { className: "customer-detail-overlay fixed inset-0 flex items-center justify-center bg-black/50 p-4", children: _jsxs10("section", { className: "customer-detail-panel w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden", children: [_jsxs10("header", { className: "native-modal-topbar", children: [_jsx12("span", { className: "native-modal-spacer" }), _jsx12("h3", { children: t("\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0639\u0645\u064A\u0644") }), _jsx12("button", { type: "button", className: "native-modal-close", onClick: () => setSelectedCustomerDetail(null), title: t("\u0625\u063A\u0644\u0627\u0642"), children: _jsx12(X20, { className: "w-5 h-5" }) })] }), _jsxs10("div", { className: "customer-detail-body", children: [_jsxs10("div", { className: "customer-detail-name", children: [_jsx12("strong", { children: selectedCustomerDetail.name }), _jsx12("small", { children: selectedCustomerDetail.balance > 0 ? `\u0644\u0646\u0627 ${Number(selectedCustomerDetail.balance).toFixed(2)} ${settings.currencySymbol}` : selectedCustomerDetail.balance < 0 ? `\u0639\u0644\u064A\u0646\u0627 ${Math.abs(Number(selectedCustomerDetail.balance)).toFixed(2)} ${settings.currencySymbol}` : "\u0627\u0644\u0631\u0635\u064A\u062F \u062E\u0627\u0644\u0635" })] }), React41.createElement("div", { className: "ct-customer-summary" }, React41.createElement("div", null, React41.createElement("span", null, t("\u0627\u0644\u0631\u0635\u064A\u062F \u0627\u0644\u062D\u0627\u0644\u064A")), React41.createElement("strong", null, `${Math.abs(Number(selectedCustomerDetail.balance) || 0).toFixed(2)} ${settings.currencySymbol}`)), React41.createElement("div", null, React41.createElement("span", null, t("\u062D\u062F \u0627\u0644\u0627\u0626\u062A\u0645\u0627\u0646")), React41.createElement("strong", null, `${Number(selectedCustomerDetail.creditLimit || 0).toFixed(2)} ${settings.currencySymbol}`)), React41.createElement("div", null, React41.createElement("span", null, t("\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0623\u0633\u0639\u0627\u0631")), React41.createElement("strong", null, selectedCustomerDetail.priceList === "wholesale" ? t("\u062C\u0645\u0644\u0629") : t("\u0642\u0637\u0627\u0639\u064A")))), _jsxs10("div", { className: "customer-detail-list", children: [_jsxs10("div", { children: [_jsx12(Phone, { className: "w-4 h-4" }), _jsx12("span", { children: selectedCustomerDetail.phone || t("\u0644\u0627 \u064A\u0648\u062C\u062F \u0631\u0642\u0645 \u0647\u0627\u062A\u0641") })] }), _jsxs10("div", { children: [_jsx12(MapPin2, { className: "w-4 h-4" }), _jsx12("span", { children: selectedCustomerDetail.address || t("\u0644\u0627 \u064A\u0648\u062C\u062F \u0639\u0646\u0648\u0627\u0646") })] }), _jsxs10("div", { children: [_jsx12(FileText3, { className: "w-4 h-4" }), _jsx12("span", { children: selectedCustomerDetail.notes || t("\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0644\u0627\u062D\u0638\u0627\u062A") })] })] })] })] }) }), portalModal && _jsx12(ModalLayer, { className: "fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/45 backdrop-blur-sm p-4 animate-in fade-in", onMouseDown: (e) => {
+  }, children: [_jsx12(Trash218, { className: "w-4 h-4" }), _jsx12("span", { children: t("\u062D\u0630\u0641") })] })] }), document.body) : null, selectedCustomerDetail && _jsx12(ModalLayer, { className: "customer-detail-overlay fixed inset-0 flex items-center justify-center bg-black/50 p-4", children: _jsxs10("section", { className: "customer-detail-panel w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden", children: [_jsxs10("header", { className: "native-modal-topbar", children: [_jsx12("span", { className: "native-modal-spacer" }), _jsx12("h3", { children: t("\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0639\u0645\u064A\u0644") }), _jsx12("button", { type: "button", className: "native-modal-close", onClick: () => setSelectedCustomerDetail(null), title: t("\u0625\u063A\u0644\u0627\u0642"), children: _jsx12(X21, { className: "w-5 h-5" }) })] }), _jsxs10("div", { className: "customer-detail-body", children: [_jsxs10("div", { className: "customer-detail-name", children: [_jsx12("strong", { children: selectedCustomerDetail.name }), _jsx12("small", { children: selectedCustomerDetail.balance > 0 ? `\u0644\u0646\u0627 ${Number(selectedCustomerDetail.balance).toFixed(2)} ${settings.currencySymbol}` : selectedCustomerDetail.balance < 0 ? `\u0639\u0644\u064A\u0646\u0627 ${Math.abs(Number(selectedCustomerDetail.balance)).toFixed(2)} ${settings.currencySymbol}` : "\u0627\u0644\u0631\u0635\u064A\u062F \u062E\u0627\u0644\u0635" })] }), React41.createElement("div", { className: "ct-customer-summary" }, React41.createElement("div", null, React41.createElement("span", null, t("\u0627\u0644\u0631\u0635\u064A\u062F \u0627\u0644\u062D\u0627\u0644\u064A")), React41.createElement("strong", null, `${Math.abs(Number(selectedCustomerDetail.balance) || 0).toFixed(2)} ${settings.currencySymbol}`)), React41.createElement("div", null, React41.createElement("span", null, t("\u062D\u062F \u0627\u0644\u0627\u0626\u062A\u0645\u0627\u0646")), React41.createElement("strong", null, `${Number(selectedCustomerDetail.creditLimit || 0).toFixed(2)} ${settings.currencySymbol}`)), React41.createElement("div", null, React41.createElement("span", null, t("\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0623\u0633\u0639\u0627\u0631")), React41.createElement("strong", null, selectedCustomerDetail.priceList === "wholesale" ? t("\u062C\u0645\u0644\u0629") : t("\u0642\u0637\u0627\u0639\u064A")))), _jsxs10("div", { className: "customer-detail-list", children: [_jsxs10("div", { children: [_jsx12(Phone, { className: "w-4 h-4" }), _jsx12("span", { children: selectedCustomerDetail.phone || t("\u0644\u0627 \u064A\u0648\u062C\u062F \u0631\u0642\u0645 \u0647\u0627\u062A\u0641") })] }), _jsxs10("div", { children: [_jsx12(MapPin2, { className: "w-4 h-4" }), _jsx12("span", { children: selectedCustomerDetail.address || t("\u0644\u0627 \u064A\u0648\u062C\u062F \u0639\u0646\u0648\u0627\u0646") })] }), _jsxs10("div", { children: [_jsx12(FileText3, { className: "w-4 h-4" }), _jsx12("span", { children: selectedCustomerDetail.notes || t("\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0644\u0627\u062D\u0638\u0627\u062A") })] })] })] })] }) }), portalModal && _jsx12(ModalLayer, { className: "fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/45 backdrop-blur-sm p-4 animate-in fade-in", onMouseDown: (e) => {
     if (e.target === e.currentTarget) setPortalModal(null);
-  }, children: _jsxs10("div", { className: "w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-right", children: [_jsxs10("div", { className: "flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-800", children: [_jsxs10("div", { className: "min-w-0", children: [_jsx12("h3", { className: "text-sm font-black text-slate-900 dark:text-white truncate", children: ["\u0631\u0627\u0628\u0637 \u0627\u0644\u0639\u0645\u064A\u0644: ", portalModal.customer?.name || ""] }), _jsx12("p", { className: "text-[10px] text-slate-500 mt-0.5", children: "\u0627\u0645\u0633\u062D QR \u0644\u0641\u062A\u062D \u0635\u0641\u062D\u0629 \u0627\u0644\u0639\u0645\u064A\u0644\u060C \u0648\u0645\u0646\u0647\u0627 \u064A\u0645\u0643\u0646\u0647 \u0645\u0631\u0627\u062C\u0639\u0629 \u062D\u0633\u0627\u0628\u0647 \u0648\u0627\u0644\u0636\u063A\u0637 \u0639\u0644\u0649 \u0633\u062F\u0627\u062F \u0627\u0644\u062F\u064A\u0646" })] }), _jsx12("button", { type: "button", onClick: () => setPortalModal(null), className: "p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800", title: t("\u0625\u063A\u0644\u0627\u0642"), children: _jsx12(X20, { className: "w-4 h-4" }) })] }), _jsxs10("div", { className: "p-5 flex flex-col items-center gap-4", children: [_jsx12("div", { className: "w-full max-w-[310px] aspect-square rounded-2xl bg-white border border-slate-200 shadow-sm p-3 flex items-center justify-center", children: _jsx12("img", { src: portalModal.qrDataUrl, alt: `QR ${portalModal.customer?.name || ""}`, className: "w-full h-full object-contain", draggable: false }) }), _jsxs10("div", { className: "w-full rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 px-3 py-2", children: [_jsx12("div", { className: "text-[10px] font-bold text-slate-500 mb-1", children: "\u0631\u0627\u0628\u0637 \u0627\u0644\u0639\u0645\u064A\u0644" }), _jsx12("div", { dir: "ltr", className: "text-[10px] font-mono text-slate-600 dark:text-slate-300 truncate select-text", title: portalModal.url, children: portalModal.url })] }), _jsxs10("div", { className: "w-full grid grid-cols-1 sm:grid-cols-2 gap-2", children: [_jsxs10("button", { type: "button", onClick: handleCopyPortalLink, className: "w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-black shadow-lg active:scale-[.98] transition", style: { background: "linear-gradient(135deg,#7C3AED,#6D28D9)", color: "#ffffff", minHeight: "50px" }, children: [_jsx12(Copy, { className: "w-5 h-5" }), _jsx12("span", { children: "\u0646\u0633\u062E \u0631\u0627\u0628\u0637 \u0635\u0641\u062D\u0629 \u0627\u0644\u0639\u0645\u064A\u0644" })] }), _jsxs10("button", { type: "button", onClick: handleOpenPortalPage, className: "w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl border border-violet-200 bg-violet-50 text-violet-700 text-sm font-black active:scale-[.98] transition", children: [_jsx12(Link2, { className: "w-5 h-5" }), _jsx12("span", { children: "\u0641\u062A\u062D \u0635\u0641\u062D\u0629 \u0627\u0644\u0639\u0645\u064A\u0644" })] })] })] })] }) }), statementCustomer && _jsx12(ModalLayer, { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in", children: _jsxs10("div", { id: "customer-statement-modal", ref: statementModalRef, className: "ct-statement-modal w-full max-w-2xl rounded-2xl bg-white dark:bg-slate-900 shadow-2xl p-5 space-y-4 border text-right max-h-[85vh] flex flex-col", children: [_jsxs10("div", { className: "flex justify-between items-center border-b pb-3", children: [_jsxs10("div", { children: [_jsxs10("h3", { className: "text-sm font-bold text-slate-900 dark:text-white", children: ["\u0643\u0634\u0641 \u062D\u0633\u0627\u0628 \u0627\u0644\u0639\u0645\u064A\u0644: ", statementCustomer.name] }), _jsxs10("span", { className: `${statementCustomer.balance < 0 ? "text-violet-600" : statementCustomer.balance > 0 ? "text-rose-600" : "text-slate-500"} text-xs font-bold`, children: [statementCustomer.balance > 0 ? "\u0644\u0646\u0627 \u0639\u0646\u062F \u0627\u0644\u0639\u0645\u064A\u0644: " : statementCustomer.balance < 0 ? "\u0639\u0644\u064A\u0646\u0627 \u0644\u0644\u0639\u0645\u064A\u0644: " : t("\u0627\u0644\u0631\u0635\u064A\u062F: "), Math.abs(statementCustomer.balance).toFixed(2), " ", settings.currencySymbol] })] }), _jsx12("button", { onClick: () => setStatementCustomer(null), className: "p-1", children: _jsx12(X20, { className: "w-4 h-4" }) })] }), statementReady === statementCustomer.id ? _jsx12(StatementTable, { customer: statementCustomer, invoices: currentYearInvoices, vouchers: currentYearVouchers }) : _jsx12("p", { role: "status", children: statementError || "\u062C\u0627\u0631\u064D \u062A\u062D\u0645\u064A\u0644 \u0643\u0634\u0641 \u0627\u0644\u062D\u0633\u0627\u0628..." }), _jsxs10("div", { className: "flex justify-between items-center gap-2 pt-2 border-t flex-wrap", children: [_jsxs10("div", { className: "flex items-center gap-1.5", children: [_jsxs10("button", { type: "button", disabled: statementReady !== statementCustomer.id, onClick: async () => {
+  }, children: _jsxs10("div", { className: "w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden text-right", children: [_jsxs10("div", { className: "flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-800", children: [_jsxs10("div", { className: "min-w-0", children: [_jsx12("h3", { className: "text-sm font-black text-slate-900 dark:text-white truncate", children: ["\u0631\u0627\u0628\u0637 \u0627\u0644\u0639\u0645\u064A\u0644: ", portalModal.customer?.name || ""] }), _jsx12("p", { className: "text-[10px] text-slate-500 mt-0.5", children: "\u0627\u0645\u0633\u062D QR \u0644\u0641\u062A\u062D \u0635\u0641\u062D\u0629 \u0627\u0644\u0639\u0645\u064A\u0644\u060C \u0648\u0645\u0646\u0647\u0627 \u064A\u0645\u0643\u0646\u0647 \u0645\u0631\u0627\u062C\u0639\u0629 \u062D\u0633\u0627\u0628\u0647 \u0648\u0627\u0644\u0636\u063A\u0637 \u0639\u0644\u0649 \u0633\u062F\u0627\u062F \u0627\u0644\u062F\u064A\u0646" })] }), _jsx12("button", { type: "button", onClick: () => setPortalModal(null), className: "p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800", title: t("\u0625\u063A\u0644\u0627\u0642"), children: _jsx12(X21, { className: "w-4 h-4" }) })] }), _jsxs10("div", { className: "p-5 flex flex-col items-center gap-4", children: [_jsx12("div", { className: "w-full max-w-[310px] aspect-square rounded-2xl bg-white border border-slate-200 shadow-sm p-3 flex items-center justify-center", children: _jsx12("img", { src: portalModal.qrDataUrl, alt: `QR ${portalModal.customer?.name || ""}`, className: "w-full h-full object-contain", draggable: false }) }), _jsxs10("div", { className: "w-full rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 px-3 py-2", children: [_jsx12("div", { className: "text-[10px] font-bold text-slate-500 mb-1", children: "\u0631\u0627\u0628\u0637 \u0627\u0644\u0639\u0645\u064A\u0644" }), _jsx12("div", { dir: "ltr", className: "text-[10px] font-mono text-slate-600 dark:text-slate-300 truncate select-text", title: portalModal.url, children: portalModal.url })] }), _jsxs10("div", { className: "w-full grid grid-cols-1 sm:grid-cols-2 gap-2", children: [_jsxs10("button", { type: "button", onClick: handleCopyPortalLink, className: "w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-black shadow-lg active:scale-[.98] transition", style: { background: "linear-gradient(135deg,#7C3AED,#6D28D9)", color: "#ffffff", minHeight: "50px" }, children: [_jsx12(Copy, { className: "w-5 h-5" }), _jsx12("span", { children: "\u0646\u0633\u062E \u0631\u0627\u0628\u0637 \u0635\u0641\u062D\u0629 \u0627\u0644\u0639\u0645\u064A\u0644" })] }), _jsxs10("button", { type: "button", onClick: handleOpenPortalPage, className: "w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl border border-violet-200 bg-violet-50 text-violet-700 text-sm font-black active:scale-[.98] transition", children: [_jsx12(Link2, { className: "w-5 h-5" }), _jsx12("span", { children: "\u0641\u062A\u062D \u0635\u0641\u062D\u0629 \u0627\u0644\u0639\u0645\u064A\u0644" })] })] })] })] }) }), statementCustomer && _jsx12(ModalLayer, { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in", children: _jsxs10("div", { id: "customer-statement-modal", ref: statementModalRef, className: "ct-statement-modal w-full max-w-2xl rounded-2xl bg-white dark:bg-slate-900 shadow-2xl p-5 space-y-4 border text-right max-h-[85vh] flex flex-col", children: [_jsxs10("div", { className: "flex justify-between items-center border-b pb-3", children: [_jsxs10("div", { children: [_jsxs10("h3", { className: "text-sm font-bold text-slate-900 dark:text-white", children: ["\u0643\u0634\u0641 \u062D\u0633\u0627\u0628 \u0627\u0644\u0639\u0645\u064A\u0644: ", statementCustomer.name] }), _jsxs10("span", { className: `${statementCustomer.balance < 0 ? "text-violet-600" : statementCustomer.balance > 0 ? "text-rose-600" : "text-slate-500"} text-xs font-bold`, children: [statementCustomer.balance > 0 ? "\u0644\u0646\u0627 \u0639\u0646\u062F \u0627\u0644\u0639\u0645\u064A\u0644: " : statementCustomer.balance < 0 ? "\u0639\u0644\u064A\u0646\u0627 \u0644\u0644\u0639\u0645\u064A\u0644: " : t("\u0627\u0644\u0631\u0635\u064A\u062F: "), Math.abs(statementCustomer.balance).toFixed(2), " ", settings.currencySymbol] })] }), _jsx12("button", { onClick: () => setStatementCustomer(null), className: "p-1", children: _jsx12(X21, { className: "w-4 h-4" }) })] }), statementReady === statementCustomer.id ? _jsx12(StatementTable, { customer: statementCustomer, invoices: currentYearInvoices, vouchers: currentYearVouchers }) : _jsx12("p", { role: "status", children: statementError || "\u062C\u0627\u0631\u064D \u062A\u062D\u0645\u064A\u0644 \u0643\u0634\u0641 \u0627\u0644\u062D\u0633\u0627\u0628..." }), _jsxs10("div", { className: "flex justify-between items-center gap-2 pt-2 border-t flex-wrap", children: [_jsxs10("div", { className: "flex items-center gap-1.5", children: [_jsxs10("button", { type: "button", disabled: statementReady !== statementCustomer.id, onClick: async () => {
     try {
       const ok = await downloadProfessionalCustomerStatementPDF(statementCustomer, currentYearInvoices, currentYearVouchers, settings, `\u0643\u0634\u0641_\u062D\u0633\u0627\u0628_${statementCustomer.name}_${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.pdf`);
       if (ok === false) throw new Error("\u062A\u0639\u0630\u0631 \u0625\u0646\u0634\u0627\u0621 \u0645\u0644\u0641 \u0627\u0644\u0643\u0634\u0641");
@@ -18139,8 +18213,8 @@ var CustomersView = () => {
 // app/components__pricegroups__PriceGroupsView.js
 import React42, { useEffect as useEffect24, useMemo as useMemo10, useState as useState29 } from "react";
 import { createPortal as createPortal16 } from "react-dom";
-import { Search as Search9, Plus as Plus11, Percent as Percent5, Users as Users8, Package as Package10, Trash2 as Trash219, Save as Save2, RotateCcw as RotateCcw5, Tag as Tag3, CheckCircle2 as CheckCircle23, X as X21 } from "lucide-react";
-var h24 = React42.createElement;
+import { Search as Search9, Plus as Plus11, Percent as Percent5, Users as Users8, Package as Package10, Trash2 as Trash219, Save as Save2, RotateCcw as RotateCcw5, Tag as Tag3, CheckCircle2 as CheckCircle23, X as X22 } from "lucide-react";
+var h25 = React42.createElement;
 var n3 = (v) => {
   const x = Number(v);
   return Number.isFinite(x) ? x : 0;
@@ -18164,22 +18238,22 @@ var readManual = (group, productId, unitId) => {
   return v === "" || v == null ? "" : Number.isFinite(Number(v)) ? Number(v) : "";
 };
 var PriceGroupModal = ({ title, subtitle, onClose, children, footer }) => createPortal16(
-  h24(
+  h25(
     "div",
     { className: "price-group-modal-overlay", onMouseDown: (e) => {
       if (e.target === e.currentTarget) onClose?.();
     } },
-    h24(
+    h25(
       "section",
       { className: "price-group-modal-panel", dir: "rtl", onMouseDown: (e) => e.stopPropagation() },
-      h24(
+      h25(
         "header",
         { className: "price-group-modal-head" },
-        h24("div", { className: "min-w-0" }, h24("h3", null, title), subtitle ? h24("p", null, subtitle) : null),
-        h24("button", { type: "button", onClick: onClose, "aria-label": "\u0625\u063A\u0644\u0627\u0642" }, h24(X21, { size: 20 }))
+        h25("div", { className: "min-w-0" }, h25("h3", null, title), subtitle ? h25("p", null, subtitle) : null),
+        h25("button", { type: "button", onClick: onClose, "aria-label": "\u0625\u063A\u0644\u0627\u0642" }, h25(X22, { size: 20 }))
       ),
-      h24("div", { className: "price-group-modal-body" }, children),
-      footer ? h24("footer", { className: "price-group-modal-foot" }, footer) : null
+      h25("div", { className: "price-group-modal-body" }, children),
+      footer ? h25("footer", { className: "price-group-modal-foot" }, footer) : null
     )
   ),
   document.body
@@ -18366,108 +18440,108 @@ function PriceGroupsView() {
     if (activePriceGroupId === g.id) setActivePriceGroupId("");
     if (editing?.id === g.id) setEditing(null);
   };
-  const customerModal = customerModalOpen && editing ? h24(PriceGroupModal, {
+  const customerModal = customerModalOpen && editing ? h25(PriceGroupModal, {
     title: `\u0639\u0645\u0644\u0627\u0621 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629 \u2014 ${editing.name || "\u0645\u062C\u0645\u0648\u0639\u0629 \u062C\u062F\u064A\u062F\u0629"}`,
     subtitle: "\u0627\u0628\u062D\u062B \u0648\u062D\u062F\u062F \u0627\u0644\u0639\u0645\u0644\u0627\u0621. \u0627\u0644\u0639\u0645\u064A\u0644 \u0644\u0627 \u064A\u0643\u0648\u0646 \u0625\u0644\u0627 \u0641\u064A \u0645\u062C\u0645\u0648\u0639\u0629 \u0623\u0633\u0639\u0627\u0631 \u0648\u0627\u062D\u062F\u0629.",
     onClose: closeCustomerModal,
-    footer: h24(
+    footer: h25(
       React42.Fragment,
       null,
-      h24("button", { type: "button", className: "price-group-modal-cancel", onClick: closeCustomerModal }, "\u0625\u0644\u063A\u0627\u0621"),
-      h24("button", { type: "button", disabled: saving, className: "price-group-modal-save", onClick: saveCustomerModal }, h24(Save2, { size: 16 }), saving ? "\u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638..." : "\u062D\u0641\u0638 \u0627\u0644\u0639\u0645\u0644\u0627\u0621")
+      h25("button", { type: "button", className: "price-group-modal-cancel", onClick: closeCustomerModal }, "\u0625\u0644\u063A\u0627\u0621"),
+      h25("button", { type: "button", disabled: saving, className: "price-group-modal-save", onClick: saveCustomerModal }, h25(Save2, { size: 16 }), saving ? "\u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638..." : "\u062D\u0641\u0638 \u0627\u0644\u0639\u0645\u0644\u0627\u0621")
     )
-  }, h24(
+  }, h25(
     React42.Fragment,
     null,
-    h24("div", { className: "price-group-modal-search" }, h24(Search9, { size: 18 }), h24("input", { autoFocus: true, value: customerSearch, onChange: (e) => setCustomerSearch(e.target.value), placeholder: "\u0628\u062D\u062B \u0628\u0627\u0633\u0645 \u0627\u0644\u0639\u0645\u064A\u0644 \u0623\u0648 \u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641..." })),
-    h24("div", { className: "price-group-customer-list" }, ...filteredCustomers.map((c) => {
+    h25("div", { className: "price-group-modal-search" }, h25(Search9, { size: 18 }), h25("input", { autoFocus: true, value: customerSearch, onChange: (e) => setCustomerSearch(e.target.value), placeholder: "\u0628\u062D\u062B \u0628\u0627\u0633\u0645 \u0627\u0644\u0639\u0645\u064A\u0644 \u0623\u0648 \u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641..." })),
+    h25("div", { className: "price-group-customer-list" }, ...filteredCustomers.map((c) => {
       const checked = (editing.customerIds || []).includes(c.id);
       const currentGroup = groups.find((g) => g.id !== editing.id && (g.customerIds || []).includes(c.id));
-      return h24("button", { key: c.id, type: "button", onClick: () => toggleCustomer(c.id), className: "price-group-select-row" + (checked ? " selected" : "") }, h24("span", { className: "price-group-check" }, checked ? "\u2713" : ""), h24("span", { className: "price-group-select-copy" }, h24("b", null, c.name), h24("small", null, currentGroup ? `\u062D\u0627\u0644\u064A\u0627\u064B \u0636\u0645\u0646: ${currentGroup.name}` : c.phone || "\u0628\u062F\u0648\u0646 \u0631\u0642\u0645 \u0647\u0627\u062A\u0641")));
-    }), !filteredCustomers.length ? h24("div", { className: "price-group-modal-empty" }, "\u0644\u0627 \u064A\u0648\u062C\u062F \u0639\u0645\u0644\u0627\u0621 \u0645\u0637\u0627\u0628\u0642\u0648\u0646 \u0644\u0644\u0628\u062D\u062B.") : null)
+      return h25("button", { key: c.id, type: "button", onClick: () => toggleCustomer(c.id), className: "price-group-select-row" + (checked ? " selected" : "") }, h25("span", { className: "price-group-check" }, checked ? "\u2713" : ""), h25("span", { className: "price-group-select-copy" }, h25("b", null, c.name), h25("small", null, currentGroup ? `\u062D\u0627\u0644\u064A\u0627\u064B \u0636\u0645\u0646: ${currentGroup.name}` : c.phone || "\u0628\u062F\u0648\u0646 \u0631\u0642\u0645 \u0647\u0627\u062A\u0641")));
+    }), !filteredCustomers.length ? h25("div", { className: "price-group-modal-empty" }, "\u0644\u0627 \u064A\u0648\u062C\u062F \u0639\u0645\u0644\u0627\u0621 \u0645\u0637\u0627\u0628\u0642\u0648\u0646 \u0644\u0644\u0628\u062D\u062B.") : null)
   )) : null;
-  const priceModal = priceModalOpen && editing ? h24(PriceGroupModal, {
+  const priceModal = priceModalOpen && editing ? h25(PriceGroupModal, {
     title: `\u0623\u0633\u0639\u0627\u0631 \u0627\u0644\u0648\u062D\u062F\u0627\u062A \u2014 ${editing.name || "\u0645\u062C\u0645\u0648\u0639\u0629 \u062C\u062F\u064A\u062F\u0629"}`,
     subtitle: "\u0627\u0628\u062D\u062B \u0639\u0646 \u0627\u0644\u0635\u0646\u0641 \u062B\u0645 \u0636\u0639 \u0633\u0639\u0631\u0627\u064B \u062E\u0627\u0635\u0627\u064B \u0644\u0623\u064A \u0648\u062D\u062F\u0629. \u0627\u062A\u0631\u0643 \u0627\u0644\u062D\u0642\u0644 \u0641\u0627\u0631\u063A\u0627\u064B \u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0633\u0639\u0631 \u0627\u0644\u0623\u0633\u0627\u0633\u064A \u0644\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u0645\u0633\u062C\u0644.",
     onClose: closePriceModal,
-    footer: h24(
+    footer: h25(
       React42.Fragment,
       null,
-      h24("button", { type: "button", className: "price-group-modal-cancel", onClick: closePriceModal }, "\u0625\u0644\u063A\u0627\u0621"),
-      h24("button", { type: "button", disabled: saving, className: "price-group-modal-save", onClick: savePriceModal }, h24(Save2, { size: 16 }), saving ? "\u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638..." : "\u062D\u0641\u0638 \u0627\u0644\u0623\u0633\u0639\u0627\u0631")
+      h25("button", { type: "button", className: "price-group-modal-cancel", onClick: closePriceModal }, "\u0625\u0644\u063A\u0627\u0621"),
+      h25("button", { type: "button", disabled: saving, className: "price-group-modal-save", onClick: savePriceModal }, h25(Save2, { size: 16 }), saving ? "\u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638..." : "\u062D\u0641\u0638 \u0627\u0644\u0623\u0633\u0639\u0627\u0631")
     )
-  }, h24(
+  }, h25(
     React42.Fragment,
     null,
-    h24(
+    h25(
       "div",
       { className: "price-group-modal-tools" },
-      h24("div", { className: "price-group-modal-search" }, h24(Search9, { size: 18 }), h24("input", { autoFocus: true, value: productSearch, onChange: (e) => setProductSearch(e.target.value), placeholder: "\u0628\u062D\u062B \u0628\u0627\u0633\u0645 \u0627\u0644\u0635\u0646\u0641 \u0623\u0648 \u0627\u0644\u0643\u0648\u062F \u0623\u0648 \u0627\u0644\u0628\u0627\u0631\u0643\u0648\u062F..." })),
-      h24("div", { className: "price-group-modal-tool-buttons" }, h24("button", { type: "button", onClick: fillByPercentage }, h24(Percent5, { size: 15 }), "\u062A\u0639\u0628\u0626\u0629 \u062D\u0633\u0628 \u0627\u0644\u0646\u0633\u0628\u0629"), h24("button", { type: "button", onClick: clearManualPrices }, h24(RotateCcw5, { size: 15 }), "\u0645\u0633\u062D \u0627\u0644\u0623\u0633\u0639\u0627\u0631"))
+      h25("div", { className: "price-group-modal-search" }, h25(Search9, { size: 18 }), h25("input", { autoFocus: true, value: productSearch, onChange: (e) => setProductSearch(e.target.value), placeholder: "\u0628\u062D\u062B \u0628\u0627\u0633\u0645 \u0627\u0644\u0635\u0646\u0641 \u0623\u0648 \u0627\u0644\u0643\u0648\u062F \u0623\u0648 \u0627\u0644\u0628\u0627\u0631\u0643\u0648\u062F..." })),
+      h25("div", { className: "price-group-modal-tool-buttons" }, h25("button", { type: "button", onClick: fillByPercentage }, h25(Percent5, { size: 15 }), "\u062A\u0639\u0628\u0626\u0629 \u062D\u0633\u0628 \u0627\u0644\u0646\u0633\u0628\u0629"), h25("button", { type: "button", onClick: clearManualPrices }, h25(RotateCcw5, { size: 15 }), "\u0645\u0633\u062D \u0627\u0644\u0623\u0633\u0639\u0627\u0631"))
     ),
-    h24("div", { className: "price-group-product-list" }, ...filteredProducts.slice(0, 150).map((p) => h24("article", { key: p.id, className: "price-group-product-card" }, h24("div", { className: "price-group-product-title" }, p.name), h24("div", { className: "price-group-unit-grid" }, ...(p.units || []).map((u) => {
+    h25("div", { className: "price-group-product-list" }, ...filteredProducts.slice(0, 150).map((p) => h25("article", { key: p.id, className: "price-group-product-card" }, h25("div", { className: "price-group-product-title" }, p.name), h25("div", { className: "price-group-unit-grid" }, ...(p.units || []).map((u) => {
       const base = n3(u.salePrice ?? p.sellingPrice);
       const auto = calcPercentPrice(base, editing);
       const manual = readManual(editing, p.id, u.id);
-      return h24("label", { key: u.id, className: "price-group-unit-edit" }, h24("span", { className: "price-group-unit-name" }, u.name), h24("small", null, `\u0623\u0633\u0627\u0633\u064A ${base} \u2022 \u0646\u0633\u0628\u0629 ${auto}`), h24("input", { type: "number", min: 0, step: 1, value: manual, placeholder: String(auto), onChange: (e) => setUnitPrice(p.id, u.id, e.target.value) }));
+      return h25("label", { key: u.id, className: "price-group-unit-edit" }, h25("span", { className: "price-group-unit-name" }, u.name), h25("small", null, `\u0623\u0633\u0627\u0633\u064A ${base} \u2022 \u0646\u0633\u0628\u0629 ${auto}`), h25("input", { type: "number", min: 0, step: 1, value: manual, placeholder: String(auto), onChange: (e) => setUnitPrice(p.id, u.id, e.target.value) }));
     }))))),
-    filteredProducts.length > 150 ? h24("div", { className: "price-group-modal-note" }, "\u062A\u0645 \u0639\u0631\u0636 \u0623\u0648\u0644 150 \u0635\u0646\u0641. \u0627\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u0628\u062D\u062B \u0644\u0644\u0648\u0635\u0648\u0644 \u0644\u0628\u0642\u064A\u0629 \u0627\u0644\u0623\u0635\u0646\u0627\u0641.") : null,
-    !filteredProducts.length ? h24(EmptyState, { message: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0645\u0646\u062A\u062C\u0627\u062A" }) : null
+    filteredProducts.length > 150 ? h25("div", { className: "price-group-modal-note" }, "\u062A\u0645 \u0639\u0631\u0636 \u0623\u0648\u0644 150 \u0635\u0646\u0641. \u0627\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u0628\u062D\u062B \u0644\u0644\u0648\u0635\u0648\u0644 \u0644\u0628\u0642\u064A\u0629 \u0627\u0644\u0623\u0635\u0646\u0627\u0641.") : null,
+    !filteredProducts.length ? h25(EmptyState, { message: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0645\u0646\u062A\u062C\u0627\u062A" }) : null
   )) : null;
-  return h24(
+  return h25(
     React42.Fragment,
     null,
-    h24(
+    h25(
       "div",
       { className: "price-groups-shell p-3 sm:p-5 space-y-4 text-right" },
-      h24(
+      h25(
         "div",
         { className: "flex flex-wrap items-center justify-between gap-3" },
-        h24("div", null, h24("h2", { className: "text-lg sm:text-xl font-black text-slate-900 flex items-center gap-2" }, h24(Percent5, { className: "w-5 h-5 text-violet-600" }), "\u0645\u062C\u0645\u0648\u0639\u0627\u062A \u0627\u0644\u0623\u0633\u0639\u0627\u0631 \u0648\u0627\u0644\u0639\u0645\u0644\u0627\u0621"), h24("p", { className: "text-xs text-slate-500 mt-1" }, "\u0627\u0644\u0646\u0633\u0628\u0629 \u062A\u064F\u0642\u0631\u0628 \u0644\u0631\u0642\u0645 \u0635\u062D\u064A\u062D\u060C \u0648\u0627\u0644\u0623\u0633\u0639\u0627\u0631 \u0627\u0644\u062E\u0627\u0635\u0629 \u0644\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u0645\u0633\u062C\u0644 \u062A\u062A\u0642\u062F\u0645 \u0639\u0644\u0649 \u0627\u0644\u0646\u0633\u0628\u0629.")),
-        h24("button", { type: "button", onClick: openNew, className: "px-4 py-2.5 rounded-xl bg-violet-600 text-white text-xs font-black inline-flex items-center gap-2 shadow-sm" }, h24(Plus11, { className: "w-4 h-4" }), "\u0645\u062C\u0645\u0648\u0639\u0629 \u062C\u062F\u064A\u062F\u0629")
+        h25("div", null, h25("h2", { className: "text-lg sm:text-xl font-black text-slate-900 flex items-center gap-2" }, h25(Percent5, { className: "w-5 h-5 text-violet-600" }), "\u0645\u062C\u0645\u0648\u0639\u0627\u062A \u0627\u0644\u0623\u0633\u0639\u0627\u0631 \u0648\u0627\u0644\u0639\u0645\u0644\u0627\u0621"), h25("p", { className: "text-xs text-slate-500 mt-1" }, "\u0627\u0644\u0646\u0633\u0628\u0629 \u062A\u064F\u0642\u0631\u0628 \u0644\u0631\u0642\u0645 \u0635\u062D\u064A\u062D\u060C \u0648\u0627\u0644\u0623\u0633\u0639\u0627\u0631 \u0627\u0644\u062E\u0627\u0635\u0629 \u0644\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u0645\u0633\u062C\u0644 \u062A\u062A\u0642\u062F\u0645 \u0639\u0644\u0649 \u0627\u0644\u0646\u0633\u0628\u0629.")),
+        h25("button", { type: "button", onClick: openNew, className: "px-4 py-2.5 rounded-xl bg-violet-600 text-white text-xs font-black inline-flex items-center gap-2 shadow-sm" }, h25(Plus11, { className: "w-4 h-4" }), "\u0645\u062C\u0645\u0648\u0639\u0629 \u062C\u062F\u064A\u062F\u0629")
       ),
-      h24(
+      h25(
         "div",
         { className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" },
-        ...groups.map((g) => h24(
+        ...groups.map((g) => h25(
           "div",
           { key: g.id, className: `rounded-2xl border p-4 bg-white shadow-sm ${activePriceGroupId === g.id ? "border-violet-500 ring-2 ring-violet-100" : "border-slate-200"}` },
-          h24("div", { className: "flex items-start justify-between gap-2" }, h24("div", { className: "min-w-0" }, h24("div", { className: "font-black text-sm truncate" }, g.name), h24("div", { className: "text-[11px] text-violet-700 font-bold mt-1" }, `${g.percentageMode === "increase" ? "\u0632\u064A\u0627\u062F\u0629" : "\u062E\u0635\u0645"} ${n3(g.percentage)}% \u2022 \u062A\u0642\u0631\u064A\u0628 \u0644\u0631\u0642\u0645 \u0635\u062D\u064A\u062D`)), activePriceGroupId === g.id ? h24("span", { className: "text-[9px] bg-violet-600 text-white rounded-full px-2 py-1 font-black" }, "\u0645\u0641\u0639\u0644\u0629") : null),
-          h24("div", { className: "grid grid-cols-2 gap-2 mt-3 text-[10px]" }, h24("div", { className: "rounded-lg bg-slate-50 p-2" }, h24(Users8, { className: "w-3.5 h-3.5 text-violet-600 inline ml-1" }), `${(g.customerIds || []).length} \u0639\u0645\u064A\u0644`), h24("div", { className: "rounded-lg bg-slate-50 p-2" }, h24(Tag3, { className: "w-3.5 h-3.5 text-violet-600 inline ml-1" }), `${Object.values(g.unitPrices || {}).reduce((s, row2) => s + Object.keys(row2 || {}).length, 0)} \u0633\u0639\u0631 \u062E\u0627\u0635`)),
-          h24(
+          h25("div", { className: "flex items-start justify-between gap-2" }, h25("div", { className: "min-w-0" }, h25("div", { className: "font-black text-sm truncate" }, g.name), h25("div", { className: "text-[11px] text-violet-700 font-bold mt-1" }, `${g.percentageMode === "increase" ? "\u0632\u064A\u0627\u062F\u0629" : "\u062E\u0635\u0645"} ${n3(g.percentage)}% \u2022 \u062A\u0642\u0631\u064A\u0628 \u0644\u0631\u0642\u0645 \u0635\u062D\u064A\u062D`)), activePriceGroupId === g.id ? h25("span", { className: "text-[9px] bg-violet-600 text-white rounded-full px-2 py-1 font-black" }, "\u0645\u0641\u0639\u0644\u0629") : null),
+          h25("div", { className: "grid grid-cols-2 gap-2 mt-3 text-[10px]" }, h25("div", { className: "rounded-lg bg-slate-50 p-2" }, h25(Users8, { className: "w-3.5 h-3.5 text-violet-600 inline ml-1" }), `${(g.customerIds || []).length} \u0639\u0645\u064A\u0644`), h25("div", { className: "rounded-lg bg-slate-50 p-2" }, h25(Tag3, { className: "w-3.5 h-3.5 text-violet-600 inline ml-1" }), `${Object.values(g.unitPrices || {}).reduce((s, row2) => s + Object.keys(row2 || {}).length, 0)} \u0633\u0639\u0631 \u062E\u0627\u0635`)),
+          h25(
             "div",
             { className: "price-group-card-actions" },
-            h24("button", { type: "button", onClick: () => openEdit(g) }, "\u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629"),
-            h24("button", { type: "button", onClick: () => openCustomers(g, "card") }, "\u0627\u0644\u0639\u0645\u0644\u0627\u0621"),
-            h24("button", { type: "button", onClick: () => openPrices(g, "card") }, "\u0627\u0644\u0623\u0633\u0639\u0627\u0631"),
-            h24("button", { type: "button", onClick: () => setActivePriceGroupId(activePriceGroupId === g.id ? "" : g.id) }, activePriceGroupId === g.id ? "\u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u062A\u0641\u0639\u064A\u0644" : "\u062A\u0641\u0639\u064A\u0644"),
-            h24("button", { type: "button", onClick: () => remove(g), "aria-label": "\u062D\u0630\u0641 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629" }, h24(Trash219, { size: 16 }))
+            h25("button", { type: "button", onClick: () => openEdit(g) }, "\u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629"),
+            h25("button", { type: "button", onClick: () => openCustomers(g, "card") }, "\u0627\u0644\u0639\u0645\u0644\u0627\u0621"),
+            h25("button", { type: "button", onClick: () => openPrices(g, "card") }, "\u0627\u0644\u0623\u0633\u0639\u0627\u0631"),
+            h25("button", { type: "button", onClick: () => setActivePriceGroupId(activePriceGroupId === g.id ? "" : g.id) }, activePriceGroupId === g.id ? "\u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u062A\u0641\u0639\u064A\u0644" : "\u062A\u0641\u0639\u064A\u0644"),
+            h25("button", { type: "button", onClick: () => remove(g), "aria-label": "\u062D\u0630\u0641 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629" }, h25(Trash219, { size: 16 }))
           )
         )),
-        !groups.length ? h24(EmptyState, { message: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0645\u062C\u0645\u0648\u0639\u0627\u062A \u0623\u0633\u0639\u0627\u0631" }) : null
+        !groups.length ? h25(EmptyState, { message: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0645\u062C\u0645\u0648\u0639\u0627\u062A \u0623\u0633\u0639\u0627\u0631" }) : null
       ),
-      editing && !customerModalOpen && !priceModalOpen ? h24(
+      editing && !customerModalOpen && !priceModalOpen ? h25(
         "form",
         { onSubmit: saveMain, className: "rounded-2xl border border-violet-200 bg-white shadow-sm overflow-hidden" },
-        h24("div", { className: "p-4 sm:p-5 border-b border-slate-100 bg-violet-50/40 flex items-center justify-between gap-3" }, h24("div", null, h24("h3", { className: "font-black text-base" }, groups.some((g) => g.id === editing.id) ? "\u062A\u0639\u062F\u064A\u0644 \u0645\u062C\u0645\u0648\u0639\u0629 \u0627\u0644\u0623\u0633\u0639\u0627\u0631" : "\u0625\u0646\u0634\u0627\u0621 \u0645\u062C\u0645\u0648\u0639\u0629 \u0623\u0633\u0639\u0627\u0631 \u062C\u062F\u064A\u062F\u0629"), h24("p", { className: "text-[11px] text-slate-500 mt-1" }, "\u0627\u062D\u0641\u0638 \u0627\u0644\u0627\u0633\u0645 \u0648\u0627\u0644\u0646\u0633\u0628\u0629\u060C \u0648\u0627\u0641\u062A\u062D \u0627\u0644\u0639\u0645\u0644\u0627\u0621 \u0648\u0627\u0644\u0623\u0633\u0639\u0627\u0631 \u0643\u0644 \u0648\u0627\u062D\u062F \u0641\u064A \u0646\u0627\u0641\u0630\u0629 \u0645\u0633\u062A\u0642\u0644\u0629.")), h24(CheckCircle23, { className: "w-6 h-6 text-violet-600" })),
-        h24(
+        h25("div", { className: "p-4 sm:p-5 border-b border-slate-100 bg-violet-50/40 flex items-center justify-between gap-3" }, h25("div", null, h25("h3", { className: "font-black text-base" }, groups.some((g) => g.id === editing.id) ? "\u062A\u0639\u062F\u064A\u0644 \u0645\u062C\u0645\u0648\u0639\u0629 \u0627\u0644\u0623\u0633\u0639\u0627\u0631" : "\u0625\u0646\u0634\u0627\u0621 \u0645\u062C\u0645\u0648\u0639\u0629 \u0623\u0633\u0639\u0627\u0631 \u062C\u062F\u064A\u062F\u0629"), h25("p", { className: "text-[11px] text-slate-500 mt-1" }, "\u0627\u062D\u0641\u0638 \u0627\u0644\u0627\u0633\u0645 \u0648\u0627\u0644\u0646\u0633\u0628\u0629\u060C \u0648\u0627\u0641\u062A\u062D \u0627\u0644\u0639\u0645\u0644\u0627\u0621 \u0648\u0627\u0644\u0623\u0633\u0639\u0627\u0631 \u0643\u0644 \u0648\u0627\u062D\u062F \u0641\u064A \u0646\u0627\u0641\u0630\u0629 \u0645\u0633\u062A\u0642\u0644\u0629.")), h25(CheckCircle23, { className: "w-6 h-6 text-violet-600" })),
+        h25(
           "div",
           { className: "p-4 sm:p-5 space-y-5" },
-          h24(
+          h25(
             "div",
             { className: "grid grid-cols-1 md:grid-cols-3 gap-3" },
-            h24("label", { className: "text-xs font-bold text-slate-700" }, "\u0627\u0633\u0645 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629", h24("input", { required: true, value: editing.name, onChange: (e) => setEditing({ ...editing, name: e.target.value }), placeholder: "\u0645\u062B\u0627\u0644: \u062C\u0645\u0644\u0629 30%", className: "mt-1 w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-violet-500" })),
-            h24("label", { className: "text-xs font-bold text-slate-700" }, "\u0646\u0648\u0639 \u0627\u0644\u0646\u0633\u0628\u0629", h24("select", { value: editing.percentageMode || "discount", onChange: (e) => setEditing({ ...editing, percentageMode: e.target.value }), className: "mt-1 w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm" }, h24("option", { value: "discount" }, "\u062E\u0635\u0645 \u0645\u0646 \u0633\u0639\u0631 \u0627\u0644\u0628\u064A\u0639"), h24("option", { value: "increase" }, "\u0632\u064A\u0627\u062F\u0629 \u0639\u0644\u0649 \u0633\u0639\u0631 \u0627\u0644\u0628\u064A\u0639"))),
-            h24("label", { className: "text-xs font-bold text-slate-700" }, "\u0627\u0644\u0646\u0633\u0628\u0629 \u0627\u0644\u0645\u0626\u0648\u064A\u0629 %", h24("input", { type: "number", min: 0, max: editing.percentageMode === "increase" ? 500 : 100, step: "1", value: editing.percentage, onChange: (e) => setEditing({ ...editing, percentage: e.target.value }), className: "mt-1 w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm font-mono" }))
+            h25("label", { className: "text-xs font-bold text-slate-700" }, "\u0627\u0633\u0645 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629", h25("input", { required: true, value: editing.name, onChange: (e) => setEditing({ ...editing, name: e.target.value }), placeholder: "\u0645\u062B\u0627\u0644: \u062C\u0645\u0644\u0629 30%", className: "mt-1 w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-violet-500" })),
+            h25("label", { className: "text-xs font-bold text-slate-700" }, "\u0646\u0648\u0639 \u0627\u0644\u0646\u0633\u0628\u0629", h25("select", { value: editing.percentageMode || "discount", onChange: (e) => setEditing({ ...editing, percentageMode: e.target.value }), className: "mt-1 w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm" }, h25("option", { value: "discount" }, "\u062E\u0635\u0645 \u0645\u0646 \u0633\u0639\u0631 \u0627\u0644\u0628\u064A\u0639"), h25("option", { value: "increase" }, "\u0632\u064A\u0627\u062F\u0629 \u0639\u0644\u0649 \u0633\u0639\u0631 \u0627\u0644\u0628\u064A\u0639"))),
+            h25("label", { className: "text-xs font-bold text-slate-700" }, "\u0627\u0644\u0646\u0633\u0628\u0629 \u0627\u0644\u0645\u0626\u0648\u064A\u0629 %", h25("input", { type: "number", min: 0, max: editing.percentageMode === "increase" ? 500 : 100, step: "1", value: editing.percentage, onChange: (e) => setEditing({ ...editing, percentage: e.target.value }), className: "mt-1 w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm font-mono" }))
           ),
-          h24(
+          h25(
             "div",
             { className: "price-group-editor-shortcuts" },
-            h24("button", { type: "button", onClick: () => openCustomers(editing, "editor") }, h24(Users8, { size: 18 }), h24("span", null, h24("b", null, "\u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0639\u0645\u0644\u0627\u0621"), h24("small", null, `${(editing.customerIds || []).length} \u0639\u0645\u064A\u0644 \u0645\u062D\u062F\u062F`))),
-            h24("button", { type: "button", onClick: () => openPrices(editing, "editor") }, h24(Package10, { size: 18 }), h24("span", null, h24("b", null, "\u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0623\u0633\u0639\u0627\u0631"), h24("small", null, `${Object.values(editing.unitPrices || {}).reduce((s, row2) => s + Object.keys(row2 || {}).length, 0)} \u0633\u0639\u0631 \u062E\u0627\u0635`)))
+            h25("button", { type: "button", onClick: () => openCustomers(editing, "editor") }, h25(Users8, { size: 18 }), h25("span", null, h25("b", null, "\u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0639\u0645\u0644\u0627\u0621"), h25("small", null, `${(editing.customerIds || []).length} \u0639\u0645\u064A\u0644 \u0645\u062D\u062F\u062F`))),
+            h25("button", { type: "button", onClick: () => openPrices(editing, "editor") }, h25(Package10, { size: 18 }), h25("span", null, h25("b", null, "\u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0623\u0633\u0639\u0627\u0631"), h25("small", null, `${Object.values(editing.unitPrices || {}).reduce((s, row2) => s + Object.keys(row2 || {}).length, 0)} \u0633\u0639\u0631 \u062E\u0627\u0635`)))
           ),
-          h24("div", { className: "rounded-xl border border-violet-100 bg-violet-50/50 p-3 text-[11px] leading-6 text-violet-900" }, h24("strong", null, "\u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u062A\u0637\u0628\u064A\u0642: "), "\u0627\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u0645\u0636\u0627\u0641 \u0644\u0644\u0645\u062C\u0645\u0648\u0639\u0629 \u064A\u0623\u062E\u0630 \u0627\u0644\u0633\u0639\u0631 \u0627\u0644\u062E\u0627\u0635 \u0627\u0644\u0630\u064A \u0648\u0636\u0639\u062A\u0647 \u0644\u0644\u0648\u062D\u062F\u0629. \u0648\u0625\u0630\u0627 \u0644\u0645 \u064A\u0643\u0646 \u0627\u0644\u0639\u0645\u064A\u0644 \u0645\u0636\u0627\u0641\u0627\u064B \u0644\u0644\u0645\u062C\u0645\u0648\u0639\u0629 \u062A\u0637\u0628\u0642 \u0627\u0644\u0646\u0633\u0628\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0648\u064A\u0642\u0631\u0628 \u0627\u0644\u0633\u0639\u0631 \u0644\u0623\u0642\u0631\u0628 \u0631\u0642\u0645 \u0635\u062D\u064A\u062D."),
-          h24("div", { className: "flex flex-wrap justify-end gap-2 pt-3 border-t border-slate-100" }, h24("button", { type: "button", onClick: () => setEditing(null), className: "px-4 py-2 rounded-lg bg-slate-100 text-slate-600 text-xs font-bold" }, "\u0625\u0644\u063A\u0627\u0621"), h24("button", { type: "submit", disabled: saving, className: "px-5 py-2 rounded-lg bg-violet-600 text-white text-xs font-black inline-flex items-center gap-2 disabled:opacity-60" }, h24(Save2, { className: "w-4 h-4" }), saving ? "\u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638..." : "\u062D\u0641\u0638 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629"))
+          h25("div", { className: "rounded-xl border border-violet-100 bg-violet-50/50 p-3 text-[11px] leading-6 text-violet-900" }, h25("strong", null, "\u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u062A\u0637\u0628\u064A\u0642: "), "\u0627\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u0645\u0636\u0627\u0641 \u0644\u0644\u0645\u062C\u0645\u0648\u0639\u0629 \u064A\u0623\u062E\u0630 \u0627\u0644\u0633\u0639\u0631 \u0627\u0644\u062E\u0627\u0635 \u0627\u0644\u0630\u064A \u0648\u0636\u0639\u062A\u0647 \u0644\u0644\u0648\u062D\u062F\u0629. \u0648\u0625\u0630\u0627 \u0644\u0645 \u064A\u0643\u0646 \u0627\u0644\u0639\u0645\u064A\u0644 \u0645\u0636\u0627\u0641\u0627\u064B \u0644\u0644\u0645\u062C\u0645\u0648\u0639\u0629 \u062A\u0637\u0628\u0642 \u0627\u0644\u0646\u0633\u0628\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0648\u064A\u0642\u0631\u0628 \u0627\u0644\u0633\u0639\u0631 \u0644\u0623\u0642\u0631\u0628 \u0631\u0642\u0645 \u0635\u062D\u064A\u062D."),
+          h25("div", { className: "flex flex-wrap justify-end gap-2 pt-3 border-t border-slate-100" }, h25("button", { type: "button", onClick: () => setEditing(null), className: "px-4 py-2 rounded-lg bg-slate-100 text-slate-600 text-xs font-bold" }, "\u0625\u0644\u063A\u0627\u0621"), h25("button", { type: "submit", disabled: saving, className: "px-5 py-2 rounded-lg bg-violet-600 text-white text-xs font-black inline-flex items-center gap-2 disabled:opacity-60" }, h25(Save2, { className: "w-4 h-4" }), saving ? "\u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638..." : "\u062D\u0641\u0638 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629"))
         )
       ) : null
     ),
@@ -18479,7 +18553,7 @@ function PriceGroupsView() {
 // app/components__suppliers__SuppliersView.js
 import { jsx as _jsx13, jsxs as _jsxs11 } from "react/jsx-runtime";
 import React43, { useEffect as useEffect25, useState as useState30, useRef as useRef18 } from "react";
-import { Plus as Plus12, Search as Search10, FileText as FileText4, DollarSign as DollarSign2, Download as Download6, Printer as Printer5, Trash2 as Trash220, X as X22, Edit as Edit5, Image as ImageIcon7, FileSpreadsheet as FileSpreadsheet10 } from "lucide-react";
+import { Plus as Plus12, Search as Search10, FileText as FileText4, DollarSign as DollarSign2, Download as Download6, Printer as Printer5, Trash2 as Trash220, X as X23, Edit as Edit5, Image as ImageIcon7, FileSpreadsheet as FileSpreadsheet10 } from "lucide-react";
 var normalizeOpeningBalanceInput2 = (value) => {
   let raw = String(value ?? "").replace(/[٠-٩]/g, (d) => String("\u0660\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669".indexOf(d))).replace(/[۰-۹]/g, (d) => String("\u06F0\u06F1\u06F2\u06F3\u06F4\u06F5\u06F6\u06F7\u06F8\u06F9".indexOf(d))).replace(/[٫،,]/g, ".").replace(/[^0-9.]/g, "");
   const dot = raw.indexOf(".");
@@ -18573,13 +18647,13 @@ var SuppliersView = () => {
   return _jsxs11("div", { id: "suppliers-screen", className: "p-4 sm:p-6 space-y-4 max-w-7xl mx-auto text-right select-none", children: [_jsxs11("div", { className: "flex flex-col sm:flex-row sm:items-center justify-between gap-4", children: [_jsxs11("div", { children: [_jsx13("h2", { className: "text-xl font-black text-slate-900 dark:text-white", children: "\u0627\u0644\u0645\u0648\u0631\u062F\u0648\u0646 \u0648\u0645\u0633\u062A\u062D\u0642\u0627\u062A \u0627\u0644\u062A\u0648\u0631\u064A\u062F" }), _jsxs11("p", { className: "text-xs text-slate-500 mt-0.5", children: ["\u0625\u062C\u0645\u0627\u0644\u064A \u0645\u0633\u062A\u062D\u0642\u0627\u062A \u0627\u0644\u0645\u0648\u0631\u062F\u064A\u0646:", " ", _jsxs11("strong", { className: "text-rose-600 font-mono text-sm", children: [totalPayables.toFixed(2), " ", settings.currencySymbol] })] })] }), _jsxs11("div", { className: "flex items-center gap-2 flex-wrap", children: [_jsxs11("button", { onClick: handleSuppliersPDF, className: "flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-xs font-bold hover:bg-slate-50 transition shadow-xs", title: "\u062A\u0646\u0632\u064A\u0644 \u0643\u0640 PDF", children: [_jsx13(Download6, { className: "w-4 h-4 text-rose-600" }), _jsx13("span", { children: "PDF" })] }), _jsxs11("button", { onClick: handleSuppliersImage, className: "flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-xs font-bold hover:bg-slate-50 transition shadow-xs", title: "\u062A\u0646\u0632\u064A\u0644 \u0643\u0635\u0648\u0631\u0629", children: [_jsx13(ImageIcon7, { className: "w-4 h-4 text-blue-600" }), _jsx13("span", { children: t("\u0635\u0648\u0631\u0629") })] }), _jsxs11("button", { onClick: handleExportCSV, className: "flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-xs font-bold hover:bg-slate-50 shadow-xs", children: [_jsx13(FileSpreadsheet10, { className: "w-4 h-4 text-violet-600" }), _jsx13("span", { children: "Excel" })] }), _jsxs11("button", { onClick: handleOpenAdd, className: "flex items-center gap-1.5 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold transition shadow-xs", children: [_jsx13(Plus12, { className: "w-4 h-4" }), _jsx13("span", { children: "\u0625\u0636\u0627\u0641\u0629 \u0645\u0648\u0631\u062F \u062C\u062F\u064A\u062F" })] })] })] }), _jsx13("div", { className: "p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between gap-3", children: _jsxs11("div", { className: "flex-1 max-w-md relative", children: [_jsx13(Search10, { className: "absolute right-3 top-2.5 w-4 h-4 text-slate-400" }), _jsx13("input", { type: "text", value: search, onChange: (e) => setSearch(e.target.value), placeholder: "\u0628\u062D\u062B \u0628\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0631\u062F\u060C \u0627\u0644\u0634\u0631\u0643\u0629\u060C \u0627\u0644\u0647\u0627\u062A\u0641...", className: "w-full pr-9 pl-3 py-1.5 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800" })] }) }), _jsx13("div", { id: "suppliers-table-card", ref: suppliersTableRef, className: "rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden", children: _jsx13("div", { className: "overflow-x-auto max-w-full slim-scrollbar", children: filteredSuppliers.length === 0 ? _jsx13("div", { className: "p-12 text-center text-xs text-slate-400", children: React43.createElement(EmptyState, { message: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0645\u0648\u0631\u062F\u064A\u0646" }) }) : _jsxs11("table", { className: "w-full text-xs text-right whitespace-nowrap min-w-[700px]", children: [_jsx13("thead", { children: _jsxs11("tr", { className: "border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 text-slate-500 font-semibold", children: [_jsx13("th", { className: "p-3", children: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0631\u062F" }), _jsx13("th", { className: "p-3", children: "\u0627\u0644\u0634\u0631\u0643\u0629 / \u0627\u0644\u0646\u0634\u0627\u0637" }), _jsx13("th", { className: "p-3", children: t("\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641") }), _jsx13("th", { className: "p-3 text-left", children: t("\u0627\u0644\u0631\u0635\u064A\u062F \u0627\u0644\u062D\u0627\u0644\u064A") }), _jsx13("th", { className: "p-3 text-center", children: t("\u0625\u062C\u0631\u0627\u0621\u0627\u062A") })] }) }), _jsx13("tbody", { className: "divide-y divide-slate-100 dark:divide-slate-800", children: suppliersPager.pageItems.map((supp) => _jsxs11("tr", { className: "hover:bg-slate-50/50", children: [_jsx13("td", { className: "p-3 font-bold text-slate-900 dark:text-white", children: supp.name }), _jsx13("td", { className: "p-3 text-slate-500", children: supp.company || "-" }), _jsx13("td", { className: "p-3 font-mono text-slate-500", children: supp.phone || "-" }), _jsx13("td", { className: "p-3 text-left font-mono font-bold", children: supp.balance > 0 ? _jsxs11("span", { className: "text-rose-600", children: [t("\u0639\u0644\u064A\u0646\u0627 "), supp.balance.toFixed(2), " ", settings.currencySymbol] }) : supp.balance < 0 ? _jsxs11("span", { className: "text-violet-600", children: [t("\u0644\u0646\u0627 "), Math.abs(supp.balance).toFixed(2), " ", settings.currencySymbol] }) : _jsx13("span", { className: "text-slate-400", children: "\u062E\u0627\u0644\u0635 (0.00)" }) }), _jsx13("td", { className: "p-3 text-center", children: _jsxs11("div", { className: "flex items-center justify-center gap-1.5", children: [supp.balance > 0 && _jsxs11("button", { onClick: () => {
     setPaySupplier(supp);
     setPayAmount(supp.balance);
-  }, className: "flex items-center gap-1 px-2 py-1 rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 text-[11px] font-bold", title: "\u0633\u0646\u062F \u0635\u0631\u0641 \u0648\u0633\u062F\u0627\u062F \u062F\u0641\u0639\u0629 \u0644\u0644\u0645\u0648\u0631\u062F", children: [_jsx13(DollarSign2, { className: "w-3 h-3" }), _jsx13("span", { children: "\u0633\u062F\u0627\u062F \u062F\u0641\u0639\u0629" })] }), _jsx13("button", { onClick: () => setStatementSupplier(supp), className: "p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50", title: "\u0643\u0634\u0641 \u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u0648\u0631\u062F", children: _jsx13(FileText4, { className: "w-3.5 h-3.5" }) }), _jsx13("button", { onClick: () => setEditingSupplier(supp), className: "p-1.5 rounded-lg text-slate-400 hover:text-violet-600", children: _jsx13(Edit5, { className: "w-3.5 h-3.5" }) }), _jsx13("button", { onClick: () => softDeleteSupplier(supp.id), className: "p-1.5 rounded-lg text-slate-400 hover:text-rose-600", children: _jsx13(Trash220, { className: "w-3.5 h-3.5" }) })] }) })] }, supp.id)) })] }) }) }), _jsx13(Pagination, { pager: suppliersPager }), statementSupplier && _jsx13(ModalLayer, { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in", children: _jsxs11("div", { className: "w-full max-w-2xl rounded-2xl bg-white dark:bg-slate-900 shadow-2xl p-5 space-y-4 border text-right max-h-[85vh] flex flex-col", children: [_jsxs11("div", { className: "flex justify-between items-center border-b pb-3", children: [_jsxs11("div", { children: [_jsxs11("h3", { className: "text-sm font-bold text-slate-900 dark:text-white", children: ["\u0643\u0634\u0641 \u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u0648\u0631\u062F: ", statementSupplier.name] }), _jsxs11("span", { className: `${statementSupplier.balance < 0 ? "text-violet-600" : statementSupplier.balance > 0 ? "text-rose-600" : "text-slate-500"} text-xs font-bold`, children: [statementSupplier.balance > 0 ? "\u0639\u0644\u064A\u0646\u0627 \u0644\u0644\u0645\u0648\u0631\u062F: " : statementSupplier.balance < 0 ? "\u0644\u0646\u0627 \u0639\u0646\u062F \u0627\u0644\u0645\u0648\u0631\u062F: " : t("\u0627\u0644\u0631\u0635\u064A\u062F: "), Math.abs(statementSupplier.balance).toFixed(2), " ", settings.currencySymbol] })] }), _jsx13("button", { onClick: () => setStatementSupplier(null), className: "p-1", children: _jsx13(X22, { className: "w-4 h-4" }) })] }), _jsx13("div", { className: "flex-1 overflow-y-auto space-y-2", children: _jsxs11("table", { className: "w-full text-xs text-right", children: [_jsx13("thead", { children: _jsxs11("tr", { className: "border-b bg-slate-50 dark:bg-slate-800 text-slate-500", children: [_jsx13("th", { className: "p-2", children: t("\u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629") }), _jsx13("th", { className: "p-2", children: t("\u0627\u0644\u062A\u0627\u0631\u064A\u062E") }), _jsx13("th", { className: "p-2 text-left", children: t("\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A") }), _jsx13("th", { className: "p-2 text-left", children: t("\u0627\u0644\u0645\u062F\u0641\u0648\u0639") }), _jsx13("th", { className: "p-2 text-left", children: "\u0627\u0644\u0645\u062A\u0628\u0642\u064A \u0644\u0647" })] }) }), _jsx13("tbody", { className: "divide-y", children: supplierPurchases.length === 0 ? _jsx13("tr", { children: _jsx13("td", { colSpan: 5, className: "p-6 text-center text-slate-400", children: React43.createElement(EmptyState, { message: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0641\u0648\u0627\u062A\u064A\u0631 \u0645\u0634\u062A\u0631\u064A\u0627\u062A" }) }) }) : supplierStatementPager.pageItems.map((pur) => _jsxs11("tr", { children: [_jsx13("td", { className: "p-2 font-mono font-bold", children: pur.invoiceNumber }), _jsx13("td", { className: "p-2 text-slate-500", children: new Date(pur.date).toLocaleDateString("ar-EG") }), _jsx13("td", { className: "p-2 text-left font-mono", children: pur.grandTotal.toFixed(2) }), _jsx13("td", { className: "p-2 text-left font-mono text-violet-600", children: pur.paidAmount.toFixed(2) }), _jsx13("td", { className: "p-2 text-left font-mono font-bold text-rose-600", children: pur.remainingAmount.toFixed(2) })] }, pur.id)) })] }) }), _jsx13(Pagination, { pager: supplierStatementPager }), _jsxs11("div", { className: "flex justify-between pt-2 border-t", children: [_jsxs11("button", { onClick: () => printReceiptElement("\u0643\u0634\u0641 \u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u0648\u0631\u062F " + statementSupplier.name), className: "flex items-center gap-1 px-3 py-1.5 bg-violet-600 text-white text-xs font-bold rounded-lg", children: [_jsx13(Printer5, { className: "w-3.5 h-3.5" }), _jsx13("span", { children: "\u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u0643\u0634\u0641" })] }), _jsx13("button", { onClick: () => setStatementSupplier(null), className: "px-4 py-1.5 bg-slate-200 dark:bg-slate-700 text-xs font-bold rounded-lg", children: t("\u0625\u063A\u0644\u0627\u0642") })] })] }) }), paySupplier && _jsx13(ModalLayer, { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in", children: _jsxs11("form", { onSubmit: handleConfirmPaySupplier, className: "w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 shadow-2xl p-5 space-y-4 border text-right", children: [_jsxs11("h3", { className: "text-sm font-bold text-slate-900 dark:text-white", children: ["\u0633\u0646\u062F \u0635\u0631\u0641 \u0648\u0633\u062F\u0627\u062F \u062F\u0641\u0639\u0629 \u0644\u0644\u0645\u0648\u0631\u062F: ", paySupplier.name] }), _jsxs11("div", { children: [_jsx13("label", { className: "text-xs font-semibold block mb-1", children: "\u0627\u0644\u0645\u0628\u0644\u063A \u0627\u0644\u0645\u0635\u0631\u0648\u0641:" }), _jsx13("input", { type: "number", step: "any", min: "0.01", required: true, value: payAmount, onChange: (e) => setPayAmount(parseFloat(e.target.value) || 0), className: "w-full px-3 py-2 text-sm font-mono font-bold border rounded-lg" }), _jsxs11("span", { className: "text-[11px] text-slate-400 mt-0.5 block", children: ["\u0627\u0644\u0645\u0633\u062A\u062D\u0642 \u0644\u0647: ", paySupplier.balance.toFixed(2), " ", settings.currencySymbol] })] }), _jsxs11("div", { children: [_jsx13(SearchableDropdown, { label: "\u0633\u062F\u0627\u062F \u0645\u0646 \u0627\u0644\u062D\u0633\u0627\u0628:", id: "supplier-pay-account", options: accounts.map((acc) => ({ id: acc.id, label: acc.name, subLabel: `\u0627\u0644\u0631\u0635\u064A\u062F: ${acc.balance} ${settings.currencySymbol}` })), selectedId: payAccountId, onSelect: setPayAccountId, placeholder: "\u0627\u0628\u062D\u062B \u0639\u0646 \u0627\u0644\u062D\u0633\u0627\u0628..." })] }), _jsxs11("div", { children: [_jsx13("label", { className: "text-xs font-semibold block mb-1", children: "\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u0633\u0646\u062F:" }), _jsx13("input", { type: "text", placeholder: "\u062F\u0641\u0639\u0629 \u0645\u0646 \u062D\u0633\u0627\u0628 \u0641\u0627\u062A\u0648\u0631\u0629...", value: payNotes, onChange: (e) => setPayNotes(e.target.value), className: "w-full px-3 py-1.5 text-xs border rounded-lg" })] }), _jsxs11("div", { className: "flex justify-between pt-2 border-t", children: [_jsx13("button", { type: "button", onClick: () => setPaySupplier(null), className: "px-3 py-1.5 text-xs text-slate-500", children: t("\u0625\u0644\u063A\u0627\u0621") }), _jsx13("button", { type: "submit", className: "px-5 py-2 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold rounded-xl shadow-md", children: "\u062A\u0623\u0643\u064A\u062F \u0627\u0644\u0635\u0631\u0641 \u0648\u062A\u062E\u0641\u064A\u0636 \u0627\u0644\u062F\u064A\u0646" })] })] }) }), editingSupplier && _jsx13(ModalLayer, { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in", children: _jsxs11("form", { onSubmit: handleSaveSupplier, className: "w-full max-w-md max-h-[90dvh] overflow-y-auto rounded-2xl bg-white dark:bg-slate-900 shadow-2xl p-5 space-y-4 border text-right", children: [_jsx13("h3", { className: "text-sm font-bold text-slate-900 dark:text-white", children: "\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0648\u0631\u062F" }), _jsxs11("div", { children: [_jsx13("label", { className: "text-xs font-semibold block mb-1", children: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0631\u062F *" }), _jsx13("input", { type: "text", required: true, value: editingSupplier.name, onChange: (e) => setEditingSupplier({ ...editingSupplier, name: e.target.value }), className: "w-full px-3 py-2 text-xs border rounded-lg" })] }), _jsxs11("div", { children: [_jsx13("label", { className: "text-xs font-semibold block mb-1", children: "\u0627\u0644\u0634\u0631\u0643\u0629 \u0623\u0648 \u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u062A\u062C\u0627\u0631\u064A" }), _jsx13("input", { type: "text", value: editingSupplier.company || "", onChange: (e) => setEditingSupplier({ ...editingSupplier, company: e.target.value }), className: "w-full px-3 py-2 text-xs border rounded-lg" })] }), _jsxs11("div", { children: [_jsx13("label", { className: "text-xs font-semibold block mb-1", children: t("\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641") }), _jsx13("input", { type: "text", value: editingSupplier.phone || "", onChange: (e) => setEditingSupplier({ ...editingSupplier, phone: e.target.value }), className: "w-full px-3 py-2 text-xs border rounded-lg font-mono" })] }), _jsxs11("div", { className: "rounded-xl border border-violet-100 dark:border-violet-900/60 bg-violet-50/40 dark:bg-violet-950/20 p-3 space-y-2", children: [_jsxs11("div", { className: "flex items-center justify-between gap-2", children: [_jsx13("label", { className: "text-xs font-bold text-slate-800 dark:text-slate-100", children: t("\u0627\u0644\u0631\u0635\u064A\u062F \u0627\u0644\u0627\u0641\u062A\u062A\u0627\u062D\u064A") }), _jsx13("span", { className: "text-[10px] text-slate-400", children: t("\u0627\u062E\u062A\u064A\u0627\u0631\u064A") })] }), _jsxs11("div", { className: "grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2", children: [_jsxs11("div", { className: "relative", children: [_jsx13("input", { type: "text", inputMode: "decimal", value: editingSupplier.openingBalanceAmount ?? "", onChange: (e) => setEditingSupplier({ ...editingSupplier, openingBalanceAmount: normalizeOpeningBalanceInput2(e.target.value) }), className: "w-full px-3 py-2 pl-14 text-sm font-mono font-bold border rounded-lg bg-white dark:bg-slate-800", placeholder: "0.00" }), _jsx13("span", { className: "absolute left-3 top-2.5 text-[11px] text-slate-400 font-bold", children: settings.currencySymbol })] }), _jsxs11("div", { className: "grid grid-cols-2 gap-1 p-1 rounded-lg bg-white dark:bg-slate-800 border", children: [_jsx13("button", { type: "button", onClick: () => setEditingSupplier({ ...editingSupplier, openingBalanceSide: "ours" }), className: `px-4 py-1.5 rounded-md text-xs font-black transition ${editingSupplier.openingBalanceSide === "ours" ? "bg-violet-600 text-white shadow-sm" : "text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700"}`, children: t("\u0644\u0646\u0627") }), _jsx13("button", { type: "button", onClick: () => setEditingSupplier({ ...editingSupplier, openingBalanceSide: "theirs" }), className: `px-4 py-1.5 rounded-md text-xs font-black transition ${(editingSupplier.openingBalanceSide || "theirs") === "theirs" ? "bg-rose-600 text-white shadow-sm" : "text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700"}`, children: t("\u0639\u0644\u064A\u0646\u0627") })] })] }), _jsx13("p", { className: "text-[10px] leading-5 text-slate-500", children: editingSupplier.openingBalanceSide === "ours" ? "\u0644\u0646\u0627 \u0645\u0628\u0644\u063A \u0639\u0646\u062F \u0647\u0630\u0627 \u0627\u0644\u0645\u0648\u0631\u062F \u0642\u0628\u0644 \u0628\u062F\u0621 \u0627\u0644\u0639\u0645\u0644 \u0639\u0644\u0649 \u0627\u0644\u0646\u0638\u0627\u0645." : "\u0639\u0644\u064A\u0646\u0627 \u0645\u0628\u0644\u063A \u0644\u0647\u0630\u0627 \u0627\u0644\u0645\u0648\u0631\u062F \u0642\u0628\u0644 \u0628\u062F\u0621 \u0627\u0644\u0639\u0645\u0644 \u0639\u0644\u0649 \u0627\u0644\u0646\u0638\u0627\u0645." })] }), _jsxs11("div", { className: "flex justify-end gap-2 pt-2 border-t", children: [_jsx13("button", { type: "button", onClick: () => setEditingSupplier(null), className: "px-3 py-1.5 text-xs text-slate-500", children: t("\u0625\u0644\u063A\u0627\u0621") }), _jsx13("button", { type: "submit", className: "px-4 py-2 bg-violet-600 text-white text-xs font-bold rounded-lg", children: "\u062D\u0641\u0638 \u0627\u0644\u0645\u0648\u0631\u062F" })] })] }) })] });
+  }, className: "flex items-center gap-1 px-2 py-1 rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 text-[11px] font-bold", title: "\u0633\u0646\u062F \u0635\u0631\u0641 \u0648\u0633\u062F\u0627\u062F \u062F\u0641\u0639\u0629 \u0644\u0644\u0645\u0648\u0631\u062F", children: [_jsx13(DollarSign2, { className: "w-3 h-3" }), _jsx13("span", { children: "\u0633\u062F\u0627\u062F \u062F\u0641\u0639\u0629" })] }), _jsx13("button", { onClick: () => setStatementSupplier(supp), className: "p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50", title: "\u0643\u0634\u0641 \u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u0648\u0631\u062F", children: _jsx13(FileText4, { className: "w-3.5 h-3.5" }) }), _jsx13("button", { onClick: () => setEditingSupplier(supp), className: "p-1.5 rounded-lg text-slate-400 hover:text-violet-600", children: _jsx13(Edit5, { className: "w-3.5 h-3.5" }) }), _jsx13("button", { onClick: () => softDeleteSupplier(supp.id), className: "p-1.5 rounded-lg text-slate-400 hover:text-rose-600", children: _jsx13(Trash220, { className: "w-3.5 h-3.5" }) })] }) })] }, supp.id)) })] }) }) }), _jsx13(Pagination, { pager: suppliersPager }), statementSupplier && _jsx13(ModalLayer, { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in", children: _jsxs11("div", { className: "w-full max-w-2xl rounded-2xl bg-white dark:bg-slate-900 shadow-2xl p-5 space-y-4 border text-right max-h-[85vh] flex flex-col", children: [_jsxs11("div", { className: "flex justify-between items-center border-b pb-3", children: [_jsxs11("div", { children: [_jsxs11("h3", { className: "text-sm font-bold text-slate-900 dark:text-white", children: ["\u0643\u0634\u0641 \u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u0648\u0631\u062F: ", statementSupplier.name] }), _jsxs11("span", { className: `${statementSupplier.balance < 0 ? "text-violet-600" : statementSupplier.balance > 0 ? "text-rose-600" : "text-slate-500"} text-xs font-bold`, children: [statementSupplier.balance > 0 ? "\u0639\u0644\u064A\u0646\u0627 \u0644\u0644\u0645\u0648\u0631\u062F: " : statementSupplier.balance < 0 ? "\u0644\u0646\u0627 \u0639\u0646\u062F \u0627\u0644\u0645\u0648\u0631\u062F: " : t("\u0627\u0644\u0631\u0635\u064A\u062F: "), Math.abs(statementSupplier.balance).toFixed(2), " ", settings.currencySymbol] })] }), _jsx13("button", { onClick: () => setStatementSupplier(null), className: "p-1", children: _jsx13(X23, { className: "w-4 h-4" }) })] }), _jsx13("div", { className: "flex-1 overflow-y-auto space-y-2", children: _jsxs11("table", { className: "w-full text-xs text-right", children: [_jsx13("thead", { children: _jsxs11("tr", { className: "border-b bg-slate-50 dark:bg-slate-800 text-slate-500", children: [_jsx13("th", { className: "p-2", children: t("\u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629") }), _jsx13("th", { className: "p-2", children: t("\u0627\u0644\u062A\u0627\u0631\u064A\u062E") }), _jsx13("th", { className: "p-2 text-left", children: t("\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A") }), _jsx13("th", { className: "p-2 text-left", children: t("\u0627\u0644\u0645\u062F\u0641\u0648\u0639") }), _jsx13("th", { className: "p-2 text-left", children: "\u0627\u0644\u0645\u062A\u0628\u0642\u064A \u0644\u0647" })] }) }), _jsx13("tbody", { className: "divide-y", children: supplierPurchases.length === 0 ? _jsx13("tr", { children: _jsx13("td", { colSpan: 5, className: "p-6 text-center text-slate-400", children: React43.createElement(EmptyState, { message: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0641\u0648\u0627\u062A\u064A\u0631 \u0645\u0634\u062A\u0631\u064A\u0627\u062A" }) }) }) : supplierStatementPager.pageItems.map((pur) => _jsxs11("tr", { children: [_jsx13("td", { className: "p-2 font-mono font-bold", children: pur.invoiceNumber }), _jsx13("td", { className: "p-2 text-slate-500", children: new Date(pur.date).toLocaleDateString("ar-EG") }), _jsx13("td", { className: "p-2 text-left font-mono", children: pur.grandTotal.toFixed(2) }), _jsx13("td", { className: "p-2 text-left font-mono text-violet-600", children: pur.paidAmount.toFixed(2) }), _jsx13("td", { className: "p-2 text-left font-mono font-bold text-rose-600", children: pur.remainingAmount.toFixed(2) })] }, pur.id)) })] }) }), _jsx13(Pagination, { pager: supplierStatementPager }), _jsxs11("div", { className: "flex justify-between pt-2 border-t", children: [_jsxs11("button", { onClick: () => printReceiptElement("\u0643\u0634\u0641 \u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u0648\u0631\u062F " + statementSupplier.name), className: "flex items-center gap-1 px-3 py-1.5 bg-violet-600 text-white text-xs font-bold rounded-lg", children: [_jsx13(Printer5, { className: "w-3.5 h-3.5" }), _jsx13("span", { children: "\u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u0643\u0634\u0641" })] }), _jsx13("button", { onClick: () => setStatementSupplier(null), className: "px-4 py-1.5 bg-slate-200 dark:bg-slate-700 text-xs font-bold rounded-lg", children: t("\u0625\u063A\u0644\u0627\u0642") })] })] }) }), paySupplier && _jsx13(ModalLayer, { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in", children: _jsxs11("form", { onSubmit: handleConfirmPaySupplier, className: "w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 shadow-2xl p-5 space-y-4 border text-right", children: [_jsxs11("h3", { className: "text-sm font-bold text-slate-900 dark:text-white", children: ["\u0633\u0646\u062F \u0635\u0631\u0641 \u0648\u0633\u062F\u0627\u062F \u062F\u0641\u0639\u0629 \u0644\u0644\u0645\u0648\u0631\u062F: ", paySupplier.name] }), _jsxs11("div", { children: [_jsx13("label", { className: "text-xs font-semibold block mb-1", children: "\u0627\u0644\u0645\u0628\u0644\u063A \u0627\u0644\u0645\u0635\u0631\u0648\u0641:" }), _jsx13("input", { type: "number", step: "any", min: "0.01", required: true, value: payAmount, onChange: (e) => setPayAmount(parseFloat(e.target.value) || 0), className: "w-full px-3 py-2 text-sm font-mono font-bold border rounded-lg" }), _jsxs11("span", { className: "text-[11px] text-slate-400 mt-0.5 block", children: ["\u0627\u0644\u0645\u0633\u062A\u062D\u0642 \u0644\u0647: ", paySupplier.balance.toFixed(2), " ", settings.currencySymbol] })] }), _jsxs11("div", { children: [_jsx13(SearchableDropdown, { label: "\u0633\u062F\u0627\u062F \u0645\u0646 \u0627\u0644\u062D\u0633\u0627\u0628:", id: "supplier-pay-account", options: accounts.map((acc) => ({ id: acc.id, label: acc.name, subLabel: `\u0627\u0644\u0631\u0635\u064A\u062F: ${acc.balance} ${settings.currencySymbol}` })), selectedId: payAccountId, onSelect: setPayAccountId, placeholder: "\u0627\u0628\u062D\u062B \u0639\u0646 \u0627\u0644\u062D\u0633\u0627\u0628..." })] }), _jsxs11("div", { children: [_jsx13("label", { className: "text-xs font-semibold block mb-1", children: "\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u0633\u0646\u062F:" }), _jsx13("input", { type: "text", placeholder: "\u062F\u0641\u0639\u0629 \u0645\u0646 \u062D\u0633\u0627\u0628 \u0641\u0627\u062A\u0648\u0631\u0629...", value: payNotes, onChange: (e) => setPayNotes(e.target.value), className: "w-full px-3 py-1.5 text-xs border rounded-lg" })] }), _jsxs11("div", { className: "flex justify-between pt-2 border-t", children: [_jsx13("button", { type: "button", onClick: () => setPaySupplier(null), className: "px-3 py-1.5 text-xs text-slate-500", children: t("\u0625\u0644\u063A\u0627\u0621") }), _jsx13("button", { type: "submit", className: "px-5 py-2 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold rounded-xl shadow-md", children: "\u062A\u0623\u0643\u064A\u062F \u0627\u0644\u0635\u0631\u0641 \u0648\u062A\u062E\u0641\u064A\u0636 \u0627\u0644\u062F\u064A\u0646" })] })] }) }), editingSupplier && _jsx13(ModalLayer, { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in", children: _jsxs11("form", { onSubmit: handleSaveSupplier, className: "w-full max-w-md max-h-[90dvh] overflow-y-auto rounded-2xl bg-white dark:bg-slate-900 shadow-2xl p-5 space-y-4 border text-right", children: [_jsx13("h3", { className: "text-sm font-bold text-slate-900 dark:text-white", children: "\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0648\u0631\u062F" }), _jsxs11("div", { children: [_jsx13("label", { className: "text-xs font-semibold block mb-1", children: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0631\u062F *" }), _jsx13("input", { type: "text", required: true, value: editingSupplier.name, onChange: (e) => setEditingSupplier({ ...editingSupplier, name: e.target.value }), className: "w-full px-3 py-2 text-xs border rounded-lg" })] }), _jsxs11("div", { children: [_jsx13("label", { className: "text-xs font-semibold block mb-1", children: "\u0627\u0644\u0634\u0631\u0643\u0629 \u0623\u0648 \u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u062A\u062C\u0627\u0631\u064A" }), _jsx13("input", { type: "text", value: editingSupplier.company || "", onChange: (e) => setEditingSupplier({ ...editingSupplier, company: e.target.value }), className: "w-full px-3 py-2 text-xs border rounded-lg" })] }), _jsxs11("div", { children: [_jsx13("label", { className: "text-xs font-semibold block mb-1", children: t("\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641") }), _jsx13("input", { type: "text", value: editingSupplier.phone || "", onChange: (e) => setEditingSupplier({ ...editingSupplier, phone: e.target.value }), className: "w-full px-3 py-2 text-xs border rounded-lg font-mono" })] }), _jsxs11("div", { className: "rounded-xl border border-violet-100 dark:border-violet-900/60 bg-violet-50/40 dark:bg-violet-950/20 p-3 space-y-2", children: [_jsxs11("div", { className: "flex items-center justify-between gap-2", children: [_jsx13("label", { className: "text-xs font-bold text-slate-800 dark:text-slate-100", children: t("\u0627\u0644\u0631\u0635\u064A\u062F \u0627\u0644\u0627\u0641\u062A\u062A\u0627\u062D\u064A") }), _jsx13("span", { className: "text-[10px] text-slate-400", children: t("\u0627\u062E\u062A\u064A\u0627\u0631\u064A") })] }), _jsxs11("div", { className: "grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2", children: [_jsxs11("div", { className: "relative", children: [_jsx13("input", { type: "text", inputMode: "decimal", value: editingSupplier.openingBalanceAmount ?? "", onChange: (e) => setEditingSupplier({ ...editingSupplier, openingBalanceAmount: normalizeOpeningBalanceInput2(e.target.value) }), className: "w-full px-3 py-2 pl-14 text-sm font-mono font-bold border rounded-lg bg-white dark:bg-slate-800", placeholder: "0.00" }), _jsx13("span", { className: "absolute left-3 top-2.5 text-[11px] text-slate-400 font-bold", children: settings.currencySymbol })] }), _jsxs11("div", { className: "grid grid-cols-2 gap-1 p-1 rounded-lg bg-white dark:bg-slate-800 border", children: [_jsx13("button", { type: "button", onClick: () => setEditingSupplier({ ...editingSupplier, openingBalanceSide: "ours" }), className: `px-4 py-1.5 rounded-md text-xs font-black transition ${editingSupplier.openingBalanceSide === "ours" ? "bg-violet-600 text-white shadow-sm" : "text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700"}`, children: t("\u0644\u0646\u0627") }), _jsx13("button", { type: "button", onClick: () => setEditingSupplier({ ...editingSupplier, openingBalanceSide: "theirs" }), className: `px-4 py-1.5 rounded-md text-xs font-black transition ${(editingSupplier.openingBalanceSide || "theirs") === "theirs" ? "bg-rose-600 text-white shadow-sm" : "text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700"}`, children: t("\u0639\u0644\u064A\u0646\u0627") })] })] }), _jsx13("p", { className: "text-[10px] leading-5 text-slate-500", children: editingSupplier.openingBalanceSide === "ours" ? "\u0644\u0646\u0627 \u0645\u0628\u0644\u063A \u0639\u0646\u062F \u0647\u0630\u0627 \u0627\u0644\u0645\u0648\u0631\u062F \u0642\u0628\u0644 \u0628\u062F\u0621 \u0627\u0644\u0639\u0645\u0644 \u0639\u0644\u0649 \u0627\u0644\u0646\u0638\u0627\u0645." : "\u0639\u0644\u064A\u0646\u0627 \u0645\u0628\u0644\u063A \u0644\u0647\u0630\u0627 \u0627\u0644\u0645\u0648\u0631\u062F \u0642\u0628\u0644 \u0628\u062F\u0621 \u0627\u0644\u0639\u0645\u0644 \u0639\u0644\u0649 \u0627\u0644\u0646\u0638\u0627\u0645." })] }), _jsxs11("div", { className: "flex justify-end gap-2 pt-2 border-t", children: [_jsx13("button", { type: "button", onClick: () => setEditingSupplier(null), className: "px-3 py-1.5 text-xs text-slate-500", children: t("\u0625\u0644\u063A\u0627\u0621") }), _jsx13("button", { type: "submit", className: "px-4 py-2 bg-violet-600 text-white text-xs font-bold rounded-lg", children: "\u062D\u0641\u0638 \u0627\u0644\u0645\u0648\u0631\u062F" })] })] }) })] });
 };
 
 // app/components__accounts__AccountsView.js
 import { jsx as _jsx14, jsxs as _jsxs12, Fragment as _Fragment } from "react/jsx-runtime";
 import React44, { useState as useState31 } from "react";
-import { Wallet as Wallet7, ArrowLeftRight as ArrowLeftRight3, Plus as Plus13, Lock, Unlock, Edit2 as Edit22, Trash2 as Trash221, History as History2, X as X23, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
+import { Wallet as Wallet7, ArrowLeftRight as ArrowLeftRight3, Plus as Plus13, Lock, Unlock, Edit2 as Edit22, Trash2 as Trash221, History as History2, X as X24, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 var num5 = (value) => {
   const n4 = Number(value);
   return Number.isFinite(n4) ? n4 : 0;
@@ -18724,14 +18798,14 @@ var AccountsView = () => {
     const ops = getAccountOperations(ledgerAccount.id);
     const totalIn = ops.reduce((s, r) => s + r.incoming, 0);
     const totalOut = ops.reduce((s, r) => s + r.outgoing, 0);
-    return _jsx14(ModalLayer, { className: "fixed inset-0 z-[85] flex items-center justify-center bg-black/65 p-2 sm:p-4 animate-in fade-in", children: _jsxs12("div", { className: "w-full max-w-4xl max-h-[90vh] rounded-2xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col text-right", children: [_jsxs12("div", { className: "p-4 border-b dark:border-slate-800 flex items-center justify-between gap-3", children: [_jsxs12("div", { children: [_jsxs12("h3", { className: "font-black text-base", children: ["\u0633\u062C\u0644 \u0627\u0644\u0635\u0627\u062F\u0631 \u0648\u0627\u0644\u0648\u0627\u0631\u062F \u2014 ", ledgerAccount.name] }), _jsxs12("p", { className: "text-[11px] text-slate-500 mt-1", children: [t("\u0627\u0644\u0631\u0635\u064A\u062F \u0627\u0644\u062D\u0627\u0644\u064A: "), _jsxs12("b", { className: "font-mono text-violet-600", children: [money11(ledgerAccount.balance), " ", settings.currencySymbol] })] })] }), _jsx14("button", { type: "button", onClick: () => setLedgerAccount(null), className: "p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800", children: _jsx14(X23, { className: "w-5 h-5" }) })] }), _jsxs12("div", { className: "grid grid-cols-2 gap-3 p-4 border-b dark:border-slate-800", children: [_jsxs12("div", { className: "rounded-xl bg-violet-50 dark:bg-violet-950/30 p-3", children: [_jsxs12("div", { className: "flex items-center gap-2 text-violet-700 text-xs font-bold", children: [_jsx14(ArrowDownCircle, { className: "w-4 h-4" }), t("\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0648\u0627\u0631\u062F")] }), _jsxs12("div", { className: "font-mono font-black text-lg text-violet-700 mt-1", children: [money11(totalIn), " ", settings.currencySymbol] })] }), _jsxs12("div", { className: "rounded-xl bg-rose-50 dark:bg-rose-950/30 p-3", children: [_jsxs12("div", { className: "flex items-center gap-2 text-rose-700 text-xs font-bold", children: [_jsx14(ArrowUpCircle, { className: "w-4 h-4" }), t("\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0635\u0627\u062F\u0631")] }), _jsxs12("div", { className: "font-mono font-black text-lg text-rose-700 mt-1", children: [money11(totalOut), " ", settings.currencySymbol] })] })] }), _jsx14("div", { className: "flex-1 overflow-auto", children: _jsxs12("table", { className: "w-full text-xs min-w-[680px]", children: [_jsx14("thead", { className: "sticky top-0 bg-slate-50 dark:bg-slate-800 text-slate-500", children: _jsxs12("tr", { children: [_jsx14("th", { className: "p-3 text-right", children: t("\u0627\u0644\u062A\u0627\u0631\u064A\u062E") }), _jsx14("th", { className: "p-3 text-right", children: t("\u0627\u0644\u0639\u0645\u0644\u064A\u0629") }), _jsx14("th", { className: "p-3 text-center", children: t("\u0627\u0644\u0645\u0631\u062C\u0639") }), _jsx14("th", { className: "p-3 text-left text-violet-700", children: t("\u0648\u0627\u0631\u062F") }), _jsx14("th", { className: "p-3 text-left text-rose-700", children: t("\u0635\u0627\u062F\u0631") })] }) }), _jsx14("tbody", { children: ops.length ? ops.map((r) => _jsxs12("tr", { className: "border-t border-slate-100 dark:border-slate-800", children: [_jsx14("td", { className: "p-3 text-slate-500 whitespace-nowrap", children: new Date(r.date).toLocaleString("ar-EG") }), _jsx14("td", { className: "p-3 font-bold", children: r.description }), _jsx14("td", { className: "p-3 text-center font-mono text-[10px] text-slate-500", children: r.reference || "-" }), _jsx14("td", { className: "p-3 text-left font-mono font-black text-violet-700", children: r.incoming > 0 ? `${money11(r.incoming)} ${settings.currencySymbol}` : "-" }), _jsx14("td", { className: "p-3 text-left font-mono font-black text-rose-600", children: r.outgoing > 0 ? `${money11(r.outgoing)} ${settings.currencySymbol}` : "-" })] }, r.id)) : _jsx14("tr", { children: _jsx14("td", { colSpan: 5, className: "p-8 text-center text-slate-400", children: React44.createElement(EmptyState, { message: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0639\u0645\u0644\u064A\u0627\u062A" }) }) }) })] }) })] }) });
+    return _jsx14(ModalLayer, { className: "fixed inset-0 z-[85] flex items-center justify-center bg-black/65 p-2 sm:p-4 animate-in fade-in", children: _jsxs12("div", { className: "w-full max-w-4xl max-h-[90vh] rounded-2xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col text-right", children: [_jsxs12("div", { className: "p-4 border-b dark:border-slate-800 flex items-center justify-between gap-3", children: [_jsxs12("div", { children: [_jsxs12("h3", { className: "font-black text-base", children: ["\u0633\u062C\u0644 \u0627\u0644\u0635\u0627\u062F\u0631 \u0648\u0627\u0644\u0648\u0627\u0631\u062F \u2014 ", ledgerAccount.name] }), _jsxs12("p", { className: "text-[11px] text-slate-500 mt-1", children: [t("\u0627\u0644\u0631\u0635\u064A\u062F \u0627\u0644\u062D\u0627\u0644\u064A: "), _jsxs12("b", { className: "font-mono text-violet-600", children: [money11(ledgerAccount.balance), " ", settings.currencySymbol] })] })] }), _jsx14("button", { type: "button", onClick: () => setLedgerAccount(null), className: "p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800", children: _jsx14(X24, { className: "w-5 h-5" }) })] }), _jsxs12("div", { className: "grid grid-cols-2 gap-3 p-4 border-b dark:border-slate-800", children: [_jsxs12("div", { className: "rounded-xl bg-violet-50 dark:bg-violet-950/30 p-3", children: [_jsxs12("div", { className: "flex items-center gap-2 text-violet-700 text-xs font-bold", children: [_jsx14(ArrowDownCircle, { className: "w-4 h-4" }), t("\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0648\u0627\u0631\u062F")] }), _jsxs12("div", { className: "font-mono font-black text-lg text-violet-700 mt-1", children: [money11(totalIn), " ", settings.currencySymbol] })] }), _jsxs12("div", { className: "rounded-xl bg-rose-50 dark:bg-rose-950/30 p-3", children: [_jsxs12("div", { className: "flex items-center gap-2 text-rose-700 text-xs font-bold", children: [_jsx14(ArrowUpCircle, { className: "w-4 h-4" }), t("\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0635\u0627\u062F\u0631")] }), _jsxs12("div", { className: "font-mono font-black text-lg text-rose-700 mt-1", children: [money11(totalOut), " ", settings.currencySymbol] })] })] }), _jsx14("div", { className: "flex-1 overflow-auto", children: _jsxs12("table", { className: "w-full text-xs min-w-[680px]", children: [_jsx14("thead", { className: "sticky top-0 bg-slate-50 dark:bg-slate-800 text-slate-500", children: _jsxs12("tr", { children: [_jsx14("th", { className: "p-3 text-right", children: t("\u0627\u0644\u062A\u0627\u0631\u064A\u062E") }), _jsx14("th", { className: "p-3 text-right", children: t("\u0627\u0644\u0639\u0645\u0644\u064A\u0629") }), _jsx14("th", { className: "p-3 text-center", children: t("\u0627\u0644\u0645\u0631\u062C\u0639") }), _jsx14("th", { className: "p-3 text-left text-violet-700", children: t("\u0648\u0627\u0631\u062F") }), _jsx14("th", { className: "p-3 text-left text-rose-700", children: t("\u0635\u0627\u062F\u0631") })] }) }), _jsx14("tbody", { children: ops.length ? ops.map((r) => _jsxs12("tr", { className: "border-t border-slate-100 dark:border-slate-800", children: [_jsx14("td", { className: "p-3 text-slate-500 whitespace-nowrap", children: new Date(r.date).toLocaleString("ar-EG") }), _jsx14("td", { className: "p-3 font-bold", children: r.description }), _jsx14("td", { className: "p-3 text-center font-mono text-[10px] text-slate-500", children: r.reference || "-" }), _jsx14("td", { className: "p-3 text-left font-mono font-black text-violet-700", children: r.incoming > 0 ? `${money11(r.incoming)} ${settings.currencySymbol}` : "-" }), _jsx14("td", { className: "p-3 text-left font-mono font-black text-rose-600", children: r.outgoing > 0 ? `${money11(r.outgoing)} ${settings.currencySymbol}` : "-" })] }, r.id)) : _jsx14("tr", { children: _jsx14("td", { colSpan: 5, className: "p-8 text-center text-slate-400", children: React44.createElement(EmptyState, { message: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0639\u0645\u0644\u064A\u0627\u062A" }) }) }) })] }) })] }) });
   })(), editingAccount && _jsx14(ModalLayer, { className: "fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-3 sm:p-4 animate-in fade-in", children: _jsxs12("form", { onSubmit: handleSaveAccount, className: "w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 shadow-2xl p-5 space-y-4 border border-slate-200 dark:border-slate-800 text-right", children: [_jsxs12("div", { className: "flex items-center justify-between", children: [_jsxs12("div", { children: [_jsx14("h3", { className: "text-base font-black text-slate-900 dark:text-white", children: editingAccount.name ? "\u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u062D\u0633\u0627\u0628 / \u0627\u0644\u0635\u0646\u062F\u0648\u0642" : "\u0625\u0636\u0627\u0641\u0629 \u0635\u0646\u062F\u0648\u0642 / \u062D\u0633\u0627\u0628 \u062C\u062F\u064A\u062F" }), _jsx14("p", { className: "text-[11px] text-slate-500 mt-0.5", children: "\u0623\u0636\u0641 \u0635\u0646\u062F\u0648\u0642\u0627\u064B \u0646\u0642\u062F\u064A\u0627\u064B \u0623\u0648 \u062D\u0633\u0627\u0628\u0627\u064B \u0628\u0646\u0643\u064A\u0627\u064B \u0648\u062D\u062F\u062F \u0627\u0644\u062D\u0633\u0627\u0628 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A \u0628\u0627\u0644\u0646\u062C\u0645\u0629." })] }), _jsx14("button", { type: "button", onClick: () => setEditingAccount(null), className: "px-2 py-1 rounded-lg text-slate-400 hover:bg-slate-100 text-xl", children: "\xD7" })] }), _jsxs12("div", { children: [_jsx14("label", { className: "text-xs font-bold block mb-1", children: "\u0627\u0633\u0645 \u0627\u0644\u062D\u0633\u0627\u0628 / \u0627\u0644\u0635\u0646\u062F\u0648\u0642" }), _jsx14("input", { autoFocus: true, type: "text", required: true, value: editingAccount.name || "", onChange: (e) => setEditingAccount({ ...editingAccount, name: e.target.value }), placeholder: "\u0645\u062B\u0627\u0644: \u0627\u0644\u0635\u0646\u062F\u0648\u0642 \u0627\u0644\u0631\u0626\u064A\u0633\u064A", className: "w-full px-3 py-2.5 text-sm border rounded-xl bg-white dark:bg-slate-800 dark:border-slate-700" })] }), _jsxs12("div", { children: [_jsx14(SearchableDropdown, { label: t("\u0646\u0648\u0639 \u0627\u0644\u062D\u0633\u0627\u0628"), id: "account-editor-type", options: [{ id: "cash", label: t("\u0635\u0646\u062F\u0648\u0642 \u0646\u0642\u062F\u064A") }, { id: "bank", label: t("\u062D\u0633\u0627\u0628 \u0628\u0646\u0643\u064A") }, { id: "wallet", label: t("\u0645\u062D\u0641\u0638\u0629 \u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A\u0629") }], selectedId: editingAccount.type || "cash", onSelect: (id) => setEditingAccount({ ...editingAccount, type: id }), placeholder: t("\u0627\u062E\u062A\u0631 \u0627\u0644\u0646\u0648\u0639") })] }), _jsxs12("div", { children: [_jsx14("label", { className: "text-xs font-bold block mb-1", children: "\u0627\u0644\u0631\u0635\u064A\u062F \u0627\u0644\u062D\u0627\u0644\u064A / \u0627\u0644\u0627\u0641\u062A\u062A\u0627\u062D\u064A" }), _jsx14("input", { type: "number", inputMode: "decimal", step: "any", value: editingAccount.balance ?? 0, onChange: (e) => setEditingAccount({ ...editingAccount, balance: Number(e.target.value) || 0 }), className: "w-full px-3 py-2.5 text-sm font-mono font-bold border rounded-xl bg-white dark:bg-slate-800 dark:border-slate-700" })] }), _jsxs12("button", { type: "button", onClick: () => setEditingAccount({ ...editingAccount, isDefault: !editingAccount.isDefault }), className: `w-full flex items-center justify-between gap-3 p-3 rounded-xl border ${editingAccount.isDefault ? "border-amber-200 bg-amber-50 text-amber-800" : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"}`, children: [_jsxs12("div", { className: "text-right", children: [_jsx14("div", { className: "text-xs font-black", children: t("\u0627\u0644\u062D\u0633\u0627\u0628 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A") }), _jsx14("div", { className: "text-[10px] opacity-75", children: "\u0633\u064A\u0638\u0647\u0631 \u0645\u062D\u062F\u062F\u0627\u064B \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0641\u064A \u0642\u0648\u0627\u0626\u0645 \u0627\u0644\u062F\u0641\u0639 \u0648\u0627\u0644\u0633\u0646\u062F\u0627\u062A \u0648\u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A." })] }), _jsx14("span", { className: `text-2xl ${editingAccount.isDefault ? "text-amber-500" : "text-slate-300"}`, children: "\u2605" })] }), _jsxs12("div", { className: "flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800", children: [_jsx14("button", { type: "button", onClick: () => setEditingAccount(null), className: "px-4 py-2 text-xs font-bold text-slate-500 rounded-xl hover:bg-slate-100", children: t("\u0625\u0644\u063A\u0627\u0621") }), _jsx14("button", { type: "submit", className: "px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-black", children: t("\u062D\u0641\u0638 \u0627\u0644\u062D\u0633\u0627\u0628") })] })] }) }), showTransferModal && _jsx14(ModalLayer, { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in", children: _jsxs12("form", { onSubmit: handleConfirmTransfer, className: "w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 shadow-2xl p-5 space-y-4 border text-right", children: [_jsx14("h3", { className: "text-sm font-bold", children: "\u062A\u062D\u0648\u064A\u0644 \u0646\u0642\u062F\u064A\u0629 \u0628\u064A\u0646 \u0627\u0644\u062D\u0633\u0627\u0628\u0627\u062A" }), _jsxs12("div", { children: [_jsx14(SearchableDropdown, { label: "\u0645\u0646 \u062D\u0633\u0627\u0628 (\u0627\u0644\u0645\u0635\u062F\u0631):", id: "account-transfer-from", options: accounts.map((a) => ({ id: a.id, label: a.name, subLabel: `\u0627\u0644\u0631\u0635\u064A\u062F: ${a.balance} ${settings.currencySymbol}` })), selectedId: transferFrom, onSelect: setTransferFrom, placeholder: "\u0627\u0628\u062D\u062B \u0639\u0646 \u0627\u0644\u062D\u0633\u0627\u0628..." })] }), _jsxs12("div", { children: [_jsx14(SearchableDropdown, { label: "\u0625\u0644\u0649 \u062D\u0633\u0627\u0628 (\u0627\u0644\u0645\u0633\u062A\u0644\u0645):", id: "account-transfer-to", options: accounts.map((a) => ({ id: a.id, label: a.name, subLabel: `\u0627\u0644\u0631\u0635\u064A\u062F: ${a.balance} ${settings.currencySymbol}` })), selectedId: transferTo, onSelect: setTransferTo, placeholder: "\u0627\u0628\u062D\u062B \u0639\u0646 \u0627\u0644\u062D\u0633\u0627\u0628..." })] }), _jsxs12("div", { children: [_jsx14("label", { className: "text-xs font-semibold block mb-1", children: "\u0645\u0628\u0644\u063A \u0627\u0644\u062A\u062D\u0648\u064A\u0644:" }), _jsx14("input", { type: "number", step: "any", min: "0.01", required: true, value: transferAmount, onChange: (e) => setTransferAmount(parseFloat(e.target.value) || 0), className: "w-full px-3 py-2 text-xs font-mono font-bold border rounded-lg" })] }), _jsxs12("div", { children: [_jsx14("label", { className: "text-xs font-semibold block mb-1", children: "\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u062A\u062D\u0648\u064A\u0644:" }), _jsx14("input", { type: "text", placeholder: "\u0645\u062B\u0627\u0644: \u062A\u0648\u0631\u064A\u062F \u0646\u0642\u062F\u064A \u0644\u0644\u0628\u0646\u0643...", value: transferNotes, onChange: (e) => setTransferNotes(e.target.value), className: "w-full px-3 py-1.5 text-xs border rounded-lg" })] }), _jsxs12("div", { className: "flex justify-between pt-2 border-t", children: [_jsx14("button", { type: "button", onClick: () => setShowTransferModal(false), className: "px-3 py-1.5 text-xs text-slate-500", children: t("\u0625\u0644\u063A\u0627\u0621") }), _jsx14("button", { type: "submit", className: "px-4 py-2 bg-violet-600 text-white text-xs font-bold rounded-xl shadow-md", children: t("\u062A\u0623\u0643\u064A\u062F \u0627\u0644\u062A\u062D\u0648\u064A\u0644") })] })] }) }), showCloseShiftModal && activeShift && _jsx14(ModalLayer, { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-in fade-in", children: _jsxs12("form", { onSubmit: handleCloseShift, className: "w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 shadow-2xl p-5 space-y-4 border text-right", children: [_jsx14("h3", { className: "text-sm font-bold text-slate-900 dark:text-white", children: "\u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u0648\u0631\u062F\u064A\u0629 \u0648\u0645\u0637\u0627\u0628\u0642\u0629 \u0627\u0644\u0646\u0642\u062F\u064A\u0629 (Z-Report)" }), _jsx14("div", { className: "p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 text-xs space-y-1 font-mono", children: _jsxs12("div", { className: "flex justify-between", children: [_jsx14("span", { children: "\u0627\u0644\u0646\u0642\u062F\u064A\u0629 \u0627\u0644\u0645\u062A\u0648\u0642\u0639\u0629 \u062F\u0641\u062A\u0631\u064A\u0627\u064B:" }), _jsxs12("strong", { className: "text-violet-600", children: [money11(activeShift?.expectedCash), " ", settings.currencySymbol] })] }) }), _jsxs12("div", { children: [_jsx14("label", { className: "text-xs font-semibold block mb-1", children: "\u0627\u0644\u0646\u0642\u062F\u064A\u0629 \u0627\u0644\u0641\u0639\u0644\u064A\u0629 \u0628\u0639\u062F \u0639\u062F \u0627\u0644\u0646\u0642\u0648\u062F \u0641\u064A \u0627\u0644\u062F\u0631\u062C:" }), _jsx14("input", { type: "number", step: "any", min: "0", required: true, value: closingCashInput, onChange: (e) => setClosingCashInput(parseFloat(e.target.value) || 0), className: "w-full px-3 py-2 text-sm font-mono font-bold border rounded-lg" }), _jsxs12("span", { className: "text-[11px] text-slate-500 block mt-1", children: ["\u0627\u0644\u0641\u0631\u0642:", " ", _jsxs12("strong", { className: num5(closingCashInput) - num5(activeShift?.expectedCash) === 0 ? "text-slate-400" : num5(closingCashInput) - num5(activeShift?.expectedCash) > 0 ? "text-violet-600" : "text-rose-600", children: [money11(num5(closingCashInput) - num5(activeShift?.expectedCash)), " ", settings.currencySymbol, " ", num5(closingCashInput) - num5(activeShift?.expectedCash) === 0 ? "(\u0645\u0637\u0627\u0628\u0642)" : num5(closingCashInput) - num5(activeShift?.expectedCash) > 0 ? "(\u0632\u064A\u0627\u062F\u0629 \u0641\u064A \u0627\u0644\u062F\u0631\u062C)" : "(\u0639\u062C\u0632 \u0646\u0642\u062F\u064A\u0629)"] })] })] }), _jsxs12("div", { children: [_jsx14("label", { className: "text-xs font-semibold block mb-1", children: "\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u0625\u063A\u0644\u0627\u0642:" }), _jsx14("input", { type: "text", placeholder: "\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0646\u0647\u0627\u064A\u0629 \u0627\u0644\u0648\u0631\u062F\u064A\u0629...", value: shiftNotes, onChange: (e) => setShiftNotes(e.target.value), className: "w-full px-3 py-1.5 text-xs border rounded-lg" })] }), _jsxs12("div", { className: "flex justify-between pt-2 border-t", children: [_jsx14("button", { type: "button", onClick: () => setShowCloseShiftModal(false), className: "px-3 py-1.5 text-xs text-slate-500", children: t("\u0625\u0644\u063A\u0627\u0621") }), _jsx14("button", { type: "submit", className: "px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-md", children: "\u062A\u0623\u0643\u064A\u062F \u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u0648\u0631\u062F\u064A\u0629 \u0648\u0627\u0644\u062A\u0631\u062D\u064A\u0644" })] })] }) })] });
 };
 
 // app/components__expenses__ExpensesView.js
 import React45, { useEffect as useEffect26, useMemo as useMemo11, useRef as useRef19, useState as useState32 } from "react";
-import { Plus as Plus14, Search as Search11, Trash2 as Trash222, Edit2 as Edit23, FileSpreadsheet as FileSpreadsheet11, FileText as FileText5, Settings2 as Settings22, UsersRound, Receipt as Receipt7, WalletCards as WalletCards2, X as X24 } from "lucide-react";
-var h25 = React45.createElement;
+import { Plus as Plus14, Search as Search11, Trash2 as Trash222, Edit2 as Edit23, FileSpreadsheet as FileSpreadsheet11, FileText as FileText5, Settings2 as Settings22, UsersRound, Receipt as Receipt7, WalletCards as WalletCards2, X as X25 } from "lucide-react";
+var h26 = React45.createElement;
 var DEFAULT_EXPENSE_CATEGORIES = [
   "\u0646\u062B\u0631\u064A\u0627\u062A \u0648\u0636\u064A\u0627\u0641\u0629",
   "\u0643\u0647\u0631\u0628\u0627\u0621 \u0648\u0645\u064A\u0627\u0647",
@@ -19143,7 +19217,7 @@ var ExpensesView = () => {
     if (category === name) setCategory(next[0]);
     if (selectedCategory === name) setSelectedCategory("all");
   };
-  const modeButton = (id, label, Icon) => h25("button", {
+  const modeButton = (id, label, Icon) => h26("button", {
     type: "button",
     onClick: () => {
       setMode(id);
@@ -19152,142 +19226,142 @@ var ExpensesView = () => {
       setSelectedReceiptClass("all");
     },
     className: `flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition ${mode === id ? "bg-violet-600 text-white border-violet-600 shadow-sm" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`
-  }, h25(Icon, { className: "w-4 h-4" }), label);
-  const expenseRows = filteredExpenses.map((exp) => h25(
+  }, h26(Icon, { className: "w-4 h-4" }), label);
+  const expenseRows = filteredExpenses.map((exp) => h26(
     "tr",
     { key: exp.id, className: "border-b border-slate-100 hover:bg-slate-50/70" },
-    h25("td", { className: "p-3 text-slate-500" }, new Date(exp.date).toLocaleString("ar-EG")),
-    h25("td", { className: "p-3 font-bold" }, exp.category || "-"),
-    h25("td", { className: "p-3 font-mono font-black text-rose-600" }, `${money12(exp.amount)} ${settings.currencySymbol}`),
-    h25("td", { className: "p-3" }, exp.accountName || "-"),
-    h25("td", { className: "p-3 max-w-[260px] truncate", title: exp.notes || "" }, exp.notes || "-"),
-    h25("td", { className: "p-3" }, h25(
+    h26("td", { className: "p-3 text-slate-500" }, new Date(exp.date).toLocaleString("ar-EG")),
+    h26("td", { className: "p-3 font-bold" }, exp.category || "-"),
+    h26("td", { className: "p-3 font-mono font-black text-rose-600" }, `${money12(exp.amount)} ${settings.currencySymbol}`),
+    h26("td", { className: "p-3" }, exp.accountName || "-"),
+    h26("td", { className: "p-3 max-w-[260px] truncate", title: exp.notes || "" }, exp.notes || "-"),
+    h26("td", { className: "p-3" }, h26(
       "div",
       { className: "flex gap-1 justify-end" },
-      h25("button", { type: "button", onClick: () => editExpense(exp), className: "p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50", title: t("\u062A\u0639\u062F\u064A\u0644") }, h25(Edit23, { className: "w-3.5 h-3.5" })),
-      h25("button", { type: "button", onClick: () => deleteVisibleExpense(exp), className: "p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50", title: t("\u062D\u0630\u0641") }, h25(Trash222, { className: "w-3.5 h-3.5" }))
+      h26("button", { type: "button", onClick: () => editExpense(exp), className: "p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50", title: t("\u062A\u0639\u062F\u064A\u0644") }, h26(Edit23, { className: "w-3.5 h-3.5" })),
+      h26("button", { type: "button", onClick: () => deleteVisibleExpense(exp), className: "p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50", title: t("\u062D\u0630\u0641") }, h26(Trash222, { className: "w-3.5 h-3.5" }))
     ))
   ));
-  const receiptRows = receiptPager.pageItems.map((v) => h25(
+  const receiptRows = receiptPager.pageItems.map((v) => h26(
     "tr",
     { key: v.id, className: "border-b border-slate-100 hover:bg-slate-50/70" },
-    h25("td", { className: "p-3 font-mono font-bold" }, v.reference || "-"),
-    h25("td", { className: "p-3 text-slate-500" }, new Date(v.date).toLocaleString("ar-EG")),
-    h25("td", { className: "p-3" }, h25("span", { className: "px-2 py-1 rounded-lg bg-violet-50 text-violet-700 font-bold" }, paymentClassLabel(v.classId))),
-    h25("td", { className: "p-3 font-bold" }, v.partyName || "-"),
-    h25("td", { className: "p-3 font-mono font-black text-violet-700" }, `${money12(v.amount)} ${settings.currencySymbol}`),
-    h25("td", { className: "p-3" }, v.method || "-"),
-    h25("td", { className: "p-3" }, v.accountName || "\u062D\u0633\u0627\u0628 \u0645\u0627\u0644\u064A"),
-    h25("td", { className: "p-3 max-w-[260px] truncate", title: v.notes || "" }, v.notes || "-")
+    h26("td", { className: "p-3 font-mono font-bold" }, v.reference || "-"),
+    h26("td", { className: "p-3 text-slate-500" }, new Date(v.date).toLocaleString("ar-EG")),
+    h26("td", { className: "p-3" }, h26("span", { className: "px-2 py-1 rounded-lg bg-violet-50 text-violet-700 font-bold" }, paymentClassLabel(v.classId))),
+    h26("td", { className: "p-3 font-bold" }, v.partyName || "-"),
+    h26("td", { className: "p-3 font-mono font-black text-violet-700" }, `${money12(v.amount)} ${settings.currencySymbol}`),
+    h26("td", { className: "p-3" }, v.method || "-"),
+    h26("td", { className: "p-3" }, v.accountName || "\u062D\u0633\u0627\u0628 \u0645\u0627\u0644\u064A"),
+    h26("td", { className: "p-3 max-w-[260px] truncate", title: v.notes || "" }, v.notes || "-")
   ));
-  return h25(
+  return h26(
     "div",
     { id: "expenses-screen", className: "p-4 sm:p-6 space-y-4 max-w-7xl mx-auto text-right select-none" },
-    h25(AuditFilters, { value: audit, onChange: setAudit }),
-    h25(
+    h26(
       "div",
       { className: "flex flex-col lg:flex-row lg:items-center justify-between gap-3" },
-      h25(
+      h26(
         "div",
         null,
-        h25("h2", { className: "text-xl font-black text-slate-900" }, "\u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A \u0648\u0627\u0644\u0643\u0634\u0648\u0641\u0627\u062A"),
-        h25("p", { className: "text-xs text-slate-500 mt-1" }, "\u0643\u0634\u0648\u0641\u0627\u062A \u0645\u0635\u0646\u0641\u0629 \u062D\u0633\u0628 \u0627\u0644\u0646\u0648\u0639 \u0648\u0627\u0644\u0641\u062A\u0631\u0629 \u0648\u0627\u0644\u0641\u0644\u062A\u0631\u0629\u060C \u0645\u0639 \u062A\u0646\u0632\u064A\u0644 PDF \u0648Excel \u0627\u062D\u062A\u0631\u0627\u0641\u064A")
+        h26("h2", { className: "text-xl font-black text-slate-900" }, "\u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A \u0648\u0627\u0644\u0643\u0634\u0648\u0641\u0627\u062A"),
+        h26("p", { className: "text-xs text-slate-500 mt-1" }, "\u0643\u0634\u0648\u0641\u0627\u062A \u0645\u0635\u0646\u0641\u0629 \u062D\u0633\u0628 \u0627\u0644\u0646\u0648\u0639 \u0648\u0627\u0644\u0641\u062A\u0631\u0629 \u0648\u0627\u0644\u0641\u0644\u062A\u0631\u0629\u060C \u0645\u0639 \u062A\u0646\u0632\u064A\u0644 PDF \u0648Excel \u0627\u062D\u062A\u0631\u0627\u0641\u064A")
       ),
-      h25(
+      h26(
         "div",
         { className: "flex flex-wrap items-center gap-2" },
-        mode !== "receipts" && h25("button", { type: "button", onClick: openNewExpense, className: "flex items-center gap-1.5 px-4 py-2 rounded-xl bg-violet-600 text-white text-xs font-bold shadow-sm" }, h25(Plus14, { className: "w-4 h-4" }), t("\u062A\u0633\u062C\u064A\u0644 \u0645\u0635\u0631\u0648\u0641")),
-        mode === "expenses" && h25("button", { type: "button", onClick: () => setShowTypeManager(true), className: "flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-bold" }, h25(Settings22, { className: "w-4 h-4" }), "\u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0645\u0635\u0631\u0648\u0641"),
-        h25("button", { type: "button", onClick: exportPDF, className: "flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold" }, h25(FileText5, { className: "w-4 h-4 text-rose-600" }), "PDF"),
-        h25("button", { type: "button", onClick: exportExcel, className: "flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold" }, h25(FileSpreadsheet11, { className: "w-4 h-4 text-violet-600" }), "Excel")
+        h26(AuditFilters, { value: audit, onChange: setAudit }),
+        mode !== "receipts" && h26("button", { type: "button", onClick: openNewExpense, className: "flex items-center gap-1.5 px-4 py-2 rounded-xl bg-violet-600 text-white text-xs font-bold shadow-sm" }, h26(Plus14, { className: "w-4 h-4" }), t("\u062A\u0633\u062C\u064A\u0644 \u0645\u0635\u0631\u0648\u0641")),
+        mode === "expenses" && h26("button", { type: "button", onClick: () => setShowTypeManager(true), className: "flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-bold" }, h26(Settings22, { className: "w-4 h-4" }), "\u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0645\u0635\u0631\u0648\u0641"),
+        h26("button", { type: "button", onClick: exportPDF, className: "flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold" }, h26(FileText5, { className: "w-4 h-4 text-rose-600" }), "PDF"),
+        h26("button", { type: "button", onClick: exportExcel, className: "flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold" }, h26(FileSpreadsheet11, { className: "w-4 h-4 text-violet-600" }), "Excel")
       )
     ),
-    h25(
+    h26(
       "div",
       { className: "grid grid-cols-3 gap-2" },
       modeButton("expenses", "\u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A", Receipt7),
       modeButton("labor", "\u0643\u0634\u0641 \u0627\u0644\u0639\u0645\u0627\u0644 / \u0627\u0644\u0623\u062C\u0648\u0631", UsersRound),
       modeButton("receipts", "\u0627\u0644\u062F\u0641\u0639\u0627\u062A \u0627\u0644\u0645\u062F\u062E\u0644\u0629", WalletCards2)
     ),
-    h25(
+    h26(
       "div",
       { className: "rounded-2xl bg-white border border-slate-200 shadow-sm p-3 space-y-3" },
-      h25(
+      h26(
         "div",
         { className: "expense-filter-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 items-end" },
-        h25(
+        h26(
           "div",
           { className: "relative lg:col-span-2" },
-          h25("label", { className: "block text-[10px] text-slate-500 font-bold mb-1" }, "\u0628\u062D\u062B \u062F\u0627\u062E\u0644 \u0627\u0644\u0643\u0634\u0641"),
-          h25(Search11, { className: "absolute right-3 top-8 w-4 h-4 text-slate-400" }),
-          h25("input", { value: search, onChange: (e) => setSearch(e.target.value), placeholder: mode === "receipts" ? "\u0627\u0628\u062D\u062B \u0628\u0627\u0644\u062C\u0647\u0629 \u0623\u0648 \u0631\u0642\u0645 \u0627\u0644\u0633\u0646\u062F \u0623\u0648 \u0627\u0644\u0628\u064A\u0627\u0646..." : "\u0627\u0628\u062D\u062B \u0628\u0627\u0644\u0646\u0648\u0639 \u0623\u0648 \u0627\u0644\u0628\u064A\u0627\u0646 \u0623\u0648 \u0627\u0644\u062D\u0633\u0627\u0628...", className: "w-full pr-9 pl-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50" })
+          h26("label", { className: "block text-[10px] text-slate-500 font-bold mb-1" }, "\u0628\u062D\u062B \u062F\u0627\u062E\u0644 \u0627\u0644\u0643\u0634\u0641"),
+          h26(Search11, { className: "absolute right-3 top-8 w-4 h-4 text-slate-400" }),
+          h26("input", { value: search, onChange: (e) => setSearch(e.target.value), placeholder: mode === "receipts" ? "\u0627\u0628\u062D\u062B \u0628\u0627\u0644\u062C\u0647\u0629 \u0623\u0648 \u0631\u0642\u0645 \u0627\u0644\u0633\u0646\u062F \u0623\u0648 \u0627\u0644\u0628\u064A\u0627\u0646..." : "\u0627\u0628\u062D\u062B \u0628\u0627\u0644\u0646\u0648\u0639 \u0623\u0648 \u0627\u0644\u0628\u064A\u0627\u0646 \u0623\u0648 \u0627\u0644\u062D\u0633\u0627\u0628...", className: "w-full pr-9 pl-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50" })
         ),
-        mode === "receipts" ? h25("div", null, h25("label", { className: "block text-[10px] text-slate-500 font-bold mb-1" }, "\u062A\u0635\u0646\u064A\u0641 \u0627\u0644\u062F\u0641\u0639\u0629"), h25(SearchableDropdown, { id: "receipt-class-filter", options: [{ id: "all", label: "\u0643\u0644 \u0627\u0644\u062F\u0641\u0639\u0627\u062A" }, { id: "sales", label: "\u062F\u0641\u0639\u0627\u062A \u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A" }, { id: "customer", label: "\u0633\u0646\u062F\u0627\u062A \u0642\u0628\u0636 \u0627\u0644\u0639\u0645\u0644\u0627\u0621" }, { id: "supplier", label: "\u0633\u0646\u062F\u0627\u062A \u0642\u0628\u0636 \u0627\u0644\u0645\u0648\u0631\u062F\u064A\u0646" }, { id: "other", label: "\u062F\u0641\u0639\u0627\u062A \u0623\u062E\u0631\u0649" }], selectedId: selectedReceiptClass, onSelect: setSelectedReceiptClass, placeholder: t("\u0627\u0644\u062A\u0635\u0646\u064A\u0641") })) : h25("div", null, h25("label", { className: "block text-[10px] text-slate-500 font-bold mb-1" }, "\u0646\u0648\u0639 \u0627\u0644\u0645\u0635\u0631\u0648\u0641"), h25(SearchableDropdown, { id: "expense-category-filter", options: [{ id: "all", label: mode === "labor" ? "\u0643\u0644 \u0628\u0646\u0648\u062F \u0627\u0644\u0639\u0645\u0627\u0644 \u0648\u0627\u0644\u0623\u062C\u0648\u0631" : "\u0643\u0644 \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A" }, ...filterCategories.filter((c) => mode !== "labor" || isLaborCategory(c)).map((c) => ({ id: c, label: c }))], selectedId: selectedCategory, onSelect: setSelectedCategory, placeholder: "\u0646\u0648\u0639 \u0627\u0644\u0645\u0635\u0631\u0648\u0641" })),
-        h25("div", null, h25("label", { className: "block text-[10px] text-slate-500 font-bold mb-1" }, t("\u0645\u0646 \u062A\u0627\u0631\u064A\u062E")), h25("input", { type: "date", value: dateFrom, onChange: (e) => setDateFrom(e.target.value), className: "w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white" })),
-        h25("div", null, h25("label", { className: "block text-[10px] text-slate-500 font-bold mb-1" }, t("\u0625\u0644\u0649 \u062A\u0627\u0631\u064A\u062E")), h25("input", { type: "date", value: dateTo, onChange: (e) => setDateTo(e.target.value), className: "w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white" }))
+        mode === "receipts" ? h26("div", null, h26("label", { className: "block text-[10px] text-slate-500 font-bold mb-1" }, "\u062A\u0635\u0646\u064A\u0641 \u0627\u0644\u062F\u0641\u0639\u0629"), h26(SearchableDropdown, { id: "receipt-class-filter", options: [{ id: "all", label: "\u0643\u0644 \u0627\u0644\u062F\u0641\u0639\u0627\u062A" }, { id: "sales", label: "\u062F\u0641\u0639\u0627\u062A \u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A" }, { id: "customer", label: "\u0633\u0646\u062F\u0627\u062A \u0642\u0628\u0636 \u0627\u0644\u0639\u0645\u0644\u0627\u0621" }, { id: "supplier", label: "\u0633\u0646\u062F\u0627\u062A \u0642\u0628\u0636 \u0627\u0644\u0645\u0648\u0631\u062F\u064A\u0646" }, { id: "other", label: "\u062F\u0641\u0639\u0627\u062A \u0623\u062E\u0631\u0649" }], selectedId: selectedReceiptClass, onSelect: setSelectedReceiptClass, placeholder: t("\u0627\u0644\u062A\u0635\u0646\u064A\u0641") })) : h26("div", null, h26("label", { className: "block text-[10px] text-slate-500 font-bold mb-1" }, "\u0646\u0648\u0639 \u0627\u0644\u0645\u0635\u0631\u0648\u0641"), h26(SearchableDropdown, { id: "expense-category-filter", options: [{ id: "all", label: mode === "labor" ? "\u0643\u0644 \u0628\u0646\u0648\u062F \u0627\u0644\u0639\u0645\u0627\u0644 \u0648\u0627\u0644\u0623\u062C\u0648\u0631" : "\u0643\u0644 \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A" }, ...filterCategories.filter((c) => mode !== "labor" || isLaborCategory(c)).map((c) => ({ id: c, label: c }))], selectedId: selectedCategory, onSelect: setSelectedCategory, placeholder: "\u0646\u0648\u0639 \u0627\u0644\u0645\u0635\u0631\u0648\u0641" })),
+        h26("div", null, h26("label", { className: "block text-[10px] text-slate-500 font-bold mb-1" }, t("\u0645\u0646 \u062A\u0627\u0631\u064A\u062E")), h26("input", { type: "date", value: dateFrom, onChange: (e) => setDateFrom(e.target.value), className: "w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white" })),
+        h26("div", null, h26("label", { className: "block text-[10px] text-slate-500 font-bold mb-1" }, t("\u0625\u0644\u0649 \u062A\u0627\u0631\u064A\u062E")), h26("input", { type: "date", value: dateTo, onChange: (e) => setDateTo(e.target.value), className: "w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white" }))
       ),
-      h25(
+      h26(
         "div",
         { className: "flex flex-wrap gap-2 justify-between items-center border-t border-slate-100 pt-3" },
-        h25(
+        h26(
           "div",
           { className: "flex gap-1.5" },
-          h25("button", { type: "button", onClick: () => setQuickRange("today"), className: "px-3 py-1.5 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600" }, t("\u0627\u0644\u064A\u0648\u0645")),
-          h25("button", { type: "button", onClick: () => setQuickRange("month"), className: "px-3 py-1.5 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600" }, t("\u0647\u0630\u0627 \u0627\u0644\u0634\u0647\u0631")),
-          h25("button", { type: "button", onClick: () => setQuickRange("all"), className: "px-3 py-1.5 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600" }, t("\u0643\u0644 \u0627\u0644\u0641\u062A\u0631\u0627\u062A"))
+          h26("button", { type: "button", onClick: () => setQuickRange("today"), className: "px-3 py-1.5 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600" }, t("\u0627\u0644\u064A\u0648\u0645")),
+          h26("button", { type: "button", onClick: () => setQuickRange("month"), className: "px-3 py-1.5 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600" }, t("\u0647\u0630\u0627 \u0627\u0644\u0634\u0647\u0631")),
+          h26("button", { type: "button", onClick: () => setQuickRange("all"), className: "px-3 py-1.5 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600" }, t("\u0643\u0644 \u0627\u0644\u0641\u062A\u0631\u0627\u062A"))
         ),
-        h25("div", { className: "text-xs font-bold text-slate-600" }, `${periodLabel} \u2022 ${count} \u062D\u0631\u0643\u0629 \u2022 \u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A: `, h25("span", { className: mode === "receipts" ? "text-violet-700 font-mono" : "text-rose-600 font-mono" }, `${money12(total)} ${settings.currencySymbol}`))
+        h26("div", { className: "text-xs font-bold text-slate-600" }, `${periodLabel} \u2022 ${count} \u062D\u0631\u0643\u0629 \u2022 \u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A: `, h26("span", { className: mode === "receipts" ? "text-violet-700 font-mono" : "text-rose-600 font-mono" }, `${money12(total)} ${settings.currencySymbol}`))
       )
     ),
-    mode === "receipts" && h25(
+    mode === "receipts" && h26(
       "div",
       { className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" },
-      [["sales", "\u062F\u0641\u0639\u0627\u062A \u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A"], ["customer", "\u0633\u0646\u062F\u0627\u062A \u0642\u0628\u0636 \u0627\u0644\u0639\u0645\u0644\u0627\u0621"], ["supplier", "\u0633\u0646\u062F\u0627\u062A \u0642\u0628\u0636 \u0627\u0644\u0645\u0648\u0631\u062F\u064A\u0646"], ["other", "\u062F\u0641\u0639\u0627\u062A \u0623\u062E\u0631\u0649"]].map(([key3, label]) => h25("button", { key: key3, onClick: () => setSelectedReceiptClass(key3), className: `text-right p-3 rounded-2xl border bg-white shadow-sm ${selectedReceiptClass === key3 ? "border-violet-500 ring-1 ring-violet-100" : "border-slate-200"}` }, h25("div", { className: "text-[11px] text-slate-500 font-bold" }, label), h25("div", { className: "mt-1 text-lg font-black font-mono text-violet-700" }, `${money12(receiptSummary[key3])} ${settings.currencySymbol}`)))
+      [["sales", "\u062F\u0641\u0639\u0627\u062A \u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A"], ["customer", "\u0633\u0646\u062F\u0627\u062A \u0642\u0628\u0636 \u0627\u0644\u0639\u0645\u0644\u0627\u0621"], ["supplier", "\u0633\u0646\u062F\u0627\u062A \u0642\u0628\u0636 \u0627\u0644\u0645\u0648\u0631\u062F\u064A\u0646"], ["other", "\u062F\u0641\u0639\u0627\u062A \u0623\u062E\u0631\u0649"]].map(([key3, label]) => h26("button", { key: key3, onClick: () => setSelectedReceiptClass(key3), className: `text-right p-3 rounded-2xl border bg-white shadow-sm ${selectedReceiptClass === key3 ? "border-violet-500 ring-1 ring-violet-100" : "border-slate-200"}` }, h26("div", { className: "text-[11px] text-slate-500 font-bold" }, label), h26("div", { className: "mt-1 text-lg font-black font-mono text-violet-700" }, `${money12(receiptSummary[key3])} ${settings.currencySymbol}`)))
     ),
-    h25(
+    h26(
       "div",
       { className: "rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden" },
-      h25(
+      h26(
         "div",
         { className: "overflow-x-auto slim-scrollbar" },
-        count === 0 ? h25("div", { className: "p-12 text-center text-xs text-slate-400" }, h25(EmptyState, { message: "\u0644\u0627 \u064A\u0648\u062C\u062F \u062D\u0631\u0643\u0627\u062A" })) : mode === "receipts" ? h25(
+        count === 0 ? h26("div", { className: "p-12 text-center text-xs text-slate-400" }, h26(EmptyState, { message: "\u0644\u0627 \u064A\u0648\u062C\u062F \u062D\u0631\u0643\u0627\u062A" })) : mode === "receipts" ? h26(
           "table",
           { className: "w-full text-xs text-right whitespace-nowrap min-w-[1050px]" },
-          h25("thead", null, h25("tr", { className: "bg-slate-50 text-slate-500 border-b" }, ["\u0627\u0644\u0645\u0631\u062C\u0639", "\u0627\u0644\u062A\u0627\u0631\u064A\u062E", "\u0627\u0644\u062A\u0635\u0646\u064A\u0641", "\u0627\u0644\u062C\u0647\u0629", "\u0627\u0644\u0645\u0628\u0644\u063A", "\u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u062F\u0641\u0639", "\u0627\u0644\u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u0648\u062F\u0639 \u0641\u064A\u0647", "\u0627\u0644\u0628\u064A\u0627\u0646"].map((x) => h25("th", { key: x, className: "p-3" }, x)))),
-          h25("tbody", null, receiptRows)
-        ) : h25(
+          h26("thead", null, h26("tr", { className: "bg-slate-50 text-slate-500 border-b" }, ["\u0627\u0644\u0645\u0631\u062C\u0639", "\u0627\u0644\u062A\u0627\u0631\u064A\u062E", "\u0627\u0644\u062A\u0635\u0646\u064A\u0641", "\u0627\u0644\u062C\u0647\u0629", "\u0627\u0644\u0645\u0628\u0644\u063A", "\u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u062F\u0641\u0639", "\u0627\u0644\u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u0648\u062F\u0639 \u0641\u064A\u0647", "\u0627\u0644\u0628\u064A\u0627\u0646"].map((x) => h26("th", { key: x, className: "p-3" }, x)))),
+          h26("tbody", null, receiptRows)
+        ) : h26(
           "table",
           { className: "w-full text-xs text-right whitespace-nowrap min-w-[850px]" },
-          h25("thead", null, h25("tr", { className: "bg-slate-50 text-slate-500 border-b" }, ["\u0627\u0644\u062A\u0627\u0631\u064A\u062E", "\u0646\u0648\u0639 \u0627\u0644\u0645\u0635\u0631\u0648\u0641", "\u0627\u0644\u0645\u0628\u0644\u063A", "\u0627\u0644\u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u0633\u062F\u062F \u0645\u0646\u0647", "\u0627\u0644\u0628\u064A\u0627\u0646", "\u0625\u062C\u0631\u0627\u0621\u0627\u062A"].map((x) => h25("th", { key: x, className: "p-3" }, x)))),
-          h25("tbody", null, expenseRows)
+          h26("thead", null, h26("tr", { className: "bg-slate-50 text-slate-500 border-b" }, ["\u0627\u0644\u062A\u0627\u0631\u064A\u062E", "\u0646\u0648\u0639 \u0627\u0644\u0645\u0635\u0631\u0648\u0641", "\u0627\u0644\u0645\u0628\u0644\u063A", "\u0627\u0644\u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u0633\u062F\u062F \u0645\u0646\u0647", "\u0627\u0644\u0628\u064A\u0627\u0646", "\u0625\u062C\u0631\u0627\u0621\u0627\u062A"].map((x) => h26("th", { key: x, className: "p-3" }, x)))),
+          h26("tbody", null, expenseRows)
         )
       ),
-      h25(Pagination, { pager: mode === "receipts" ? receiptPager : expensePager })
+      h26(Pagination, { pager: mode === "receipts" ? receiptPager : expensePager })
     ),
-    mode === "receipts" && h25("div", { className: "flex justify-end" }, h25("button", { type: "button", onClick: () => setActiveTab?.("vouchers"), className: "text-xs font-bold text-violet-700 hover:underline" }, "\u0641\u062A\u062D \u0633\u0646\u062F\u0627\u062A \u0627\u0644\u0642\u0628\u0636 \u0648\u0627\u0644\u0635\u0631\u0641 \u2190")),
-    showAddModal && h25(
+    mode === "receipts" && h26("div", { className: "flex justify-end" }, h26("button", { type: "button", onClick: () => setActiveTab?.("vouchers"), className: "text-xs font-bold text-violet-700 hover:underline" }, "\u0641\u062A\u062D \u0633\u0646\u062F\u0627\u062A \u0627\u0644\u0642\u0628\u0636 \u0648\u0627\u0644\u0635\u0631\u0641 \u2190")),
+    showAddModal && h26(
       ModalLayer,
       { className: "expense-entry-overlay fixed inset-0 z-[120] bg-slate-950/65 p-3 flex items-center justify-center overflow-y-auto", onDismiss: () => setShowAddModal(false), onClick: () => setShowAddModal(false) },
-      h25(
+      h26(
         "form",
         { onSubmit: saveExpense, onClick: (e) => e.stopPropagation(), className: "expense-entry-modal relative z-[1] w-full max-w-md rounded-2xl bg-white shadow-2xl p-5 space-y-4 text-right max-h-[calc(100dvh-24px)] overflow-y-auto" },
-        h25("div", { className: "flex justify-between items-center" }, h25("h3", { className: "text-sm font-black" }, editingExpense ? t("\u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0645\u0635\u0631\u0648\u0641") : "\u062A\u0633\u062C\u064A\u0644 \u0645\u0635\u0631\u0648\u0641 \u062C\u062F\u064A\u062F"), h25("button", { type: "button", onClick: () => setShowAddModal(false), className: "p-1.5 rounded-lg hover:bg-slate-100" }, h25(X24, { className: "w-4 h-4" }))),
-        h25("div", null, h25("label", { className: "text-xs font-bold block mb-1" }, t("\u0627\u0644\u0645\u0628\u0644\u063A *")), h25("input", { type: "number", step: "any", min: "0.01", required: true, value: amount, onChange: (e) => setAmount(e.target.value), className: "w-full px-3 py-2 text-sm font-mono font-bold border rounded-xl" })),
-        h25("div", null, h25("label", { className: "text-xs font-bold block mb-1" }, "\u0646\u0648\u0639 \u0627\u0644\u0645\u0635\u0631\u0648\u0641 *"), h25(SearchableDropdown, { id: "expense-category-editor", options: configuredCategories.map((c) => ({ id: c, label: c })), selectedId: category, onSelect: setCategory, placeholder: "\u0627\u062E\u062A\u0631 \u0646\u0648\u0639 \u0627\u0644\u0645\u0635\u0631\u0648\u0641" })),
-        h25("div", null, h25("label", { className: "text-xs font-bold block mb-1" }, "\u0635\u0631\u0641 \u0645\u0646 \u0627\u0644\u062D\u0633\u0627\u0628 *"), h25(SearchableDropdown, { id: "expense-account-editor", options: accounts.map((a) => ({ id: a.id, label: a.name, subLabel: `\u0627\u0644\u0631\u0635\u064A\u062F: ${money12(a.balance)} ${settings.currencySymbol}` })), selectedId: accountId, onSelect: setAccountId, placeholder: t("\u0627\u062E\u062A\u0631 \u0627\u0644\u062D\u0633\u0627\u0628") })),
-        h25("div", null, h25("label", { className: "text-xs font-bold block mb-1" }, "\u0627\u0644\u0628\u064A\u0627\u0646 / \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A"), h25("input", { type: "text", value: notes, onChange: (e) => setNotes(e.target.value), placeholder: "\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0635\u0631\u0648\u0641...", className: "w-full px-3 py-2 text-xs border rounded-xl" })),
-        h25("div", { className: "flex justify-between pt-2 border-t" }, h25("button", { type: "button", onClick: () => setShowAddModal(false), className: "px-3 py-2 text-xs text-slate-500" }, t("\u0625\u0644\u063A\u0627\u0621")), h25("button", { type: "submit", className: "px-5 py-2 rounded-xl bg-violet-600 text-white text-xs font-bold" }, editingExpense ? t("\u062D\u0641\u0638 \u0627\u0644\u062A\u0639\u062F\u064A\u0644") : "\u062A\u0623\u0643\u064A\u062F \u0627\u0644\u062A\u0633\u062C\u064A\u0644"))
+        h26("div", { className: "flex justify-between items-center" }, h26("h3", { className: "text-sm font-black" }, editingExpense ? t("\u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0645\u0635\u0631\u0648\u0641") : "\u062A\u0633\u062C\u064A\u0644 \u0645\u0635\u0631\u0648\u0641 \u062C\u062F\u064A\u062F"), h26("button", { type: "button", onClick: () => setShowAddModal(false), className: "p-1.5 rounded-lg hover:bg-slate-100" }, h26(X25, { className: "w-4 h-4" }))),
+        h26("div", null, h26("label", { className: "text-xs font-bold block mb-1" }, t("\u0627\u0644\u0645\u0628\u0644\u063A *")), h26("input", { type: "number", step: "any", min: "0.01", required: true, value: amount, onChange: (e) => setAmount(e.target.value), className: "w-full px-3 py-2 text-sm font-mono font-bold border rounded-xl" })),
+        h26("div", null, h26("label", { className: "text-xs font-bold block mb-1" }, "\u0646\u0648\u0639 \u0627\u0644\u0645\u0635\u0631\u0648\u0641 *"), h26(SearchableDropdown, { id: "expense-category-editor", options: configuredCategories.map((c) => ({ id: c, label: c })), selectedId: category, onSelect: setCategory, placeholder: "\u0627\u062E\u062A\u0631 \u0646\u0648\u0639 \u0627\u0644\u0645\u0635\u0631\u0648\u0641" })),
+        h26("div", null, h26("label", { className: "text-xs font-bold block mb-1" }, "\u0635\u0631\u0641 \u0645\u0646 \u0627\u0644\u062D\u0633\u0627\u0628 *"), h26(SearchableDropdown, { id: "expense-account-editor", options: accounts.map((a) => ({ id: a.id, label: a.name, subLabel: `\u0627\u0644\u0631\u0635\u064A\u062F: ${money12(a.balance)} ${settings.currencySymbol}` })), selectedId: accountId, onSelect: setAccountId, placeholder: t("\u0627\u062E\u062A\u0631 \u0627\u0644\u062D\u0633\u0627\u0628") })),
+        h26("div", null, h26("label", { className: "text-xs font-bold block mb-1" }, "\u0627\u0644\u0628\u064A\u0627\u0646 / \u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A"), h26("input", { type: "text", value: notes, onChange: (e) => setNotes(e.target.value), placeholder: "\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0635\u0631\u0648\u0641...", className: "w-full px-3 py-2 text-xs border rounded-xl" })),
+        h26("div", { className: "flex justify-between pt-2 border-t" }, h26("button", { type: "button", onClick: () => setShowAddModal(false), className: "px-3 py-2 text-xs text-slate-500" }, t("\u0625\u0644\u063A\u0627\u0621")), h26("button", { type: "submit", className: "px-5 py-2 rounded-xl bg-violet-600 text-white text-xs font-bold" }, editingExpense ? t("\u062D\u0641\u0638 \u0627\u0644\u062A\u0639\u062F\u064A\u0644") : "\u062A\u0623\u0643\u064A\u062F \u0627\u0644\u062A\u0633\u062C\u064A\u0644"))
       )
     ),
-    showTypeManager && h25(
+    showTypeManager && h26(
       ModalLayer,
       { className: "expense-types-overlay fixed inset-0 z-[130] bg-slate-950/65 p-3 flex items-center justify-center overflow-y-auto", onDismiss: () => setShowTypeManager(false), onClick: () => setShowTypeManager(false) },
-      h25(
+      h26(
         "div",
         { onClick: (e) => e.stopPropagation(), className: "expense-types-modal-panel relative z-[1] w-full max-w-md rounded-2xl bg-white shadow-2xl text-right overflow-hidden flex flex-col max-h-[calc(100dvh-24px)]" },
-        h25("div", { className: "shrink-0 flex justify-between items-center p-4 border-b border-slate-100 bg-white" }, h25("div", null, h25("h3", { className: "text-sm font-black" }, "\u0625\u062F\u0627\u0631\u0629 \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0645\u0635\u0631\u0648\u0641"), h25("p", { className: "text-[10px] text-slate-500 mt-1" }, "\u0627\u0644\u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u062C\u062F\u064A\u062F\u0629 \u062A\u062A\u0632\u0627\u0645\u0646 \u0636\u0645\u0646 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0634\u0631\u0643\u0629\u060C \u0648\u0627\u0644\u062D\u0631\u0643\u0627\u062A \u0627\u0644\u0642\u062F\u064A\u0645\u0629 \u062A\u0628\u0642\u0649 \u0645\u062D\u0641\u0648\u0638\u0629.")), h25("button", { type: "button", onClick: () => setShowTypeManager(false), className: "p-1.5 rounded-lg hover:bg-slate-100" }, h25(X24, { className: "w-4 h-4" }))),
-        h25("form", { onSubmit: addExpenseType, className: "shrink-0 flex gap-2 p-4 border-b border-slate-100" }, h25("input", { value: newType, onChange: (e) => setNewType(e.target.value), placeholder: "\u0645\u062B\u0627\u0644: \u0648\u0642\u0648\u062F\u060C \u0645\u0648\u0627\u0635\u0644\u0627\u062A\u060C \u0623\u062C\u0648\u0631 \u064A\u0648\u0645\u064A\u0629...", className: "flex-1 min-w-0 px-3 py-2 text-xs border rounded-xl" }), h25("button", { type: "submit", className: "shrink-0 px-4 py-2 rounded-xl bg-violet-600 text-white text-xs font-bold" }, "\u0625\u0636\u0627\u0641\u0629")),
-        h25("div", { className: "expense-types-modal-scroll flex-1 min-h-0 overflow-y-auto p-4 space-y-2 custom-scrollbar" }, configuredCategories.map((name) => h25("div", { key: name, className: "flex justify-between items-center p-2.5 rounded-xl border border-slate-200 bg-slate-50" }, h25("span", { className: "text-xs font-bold" }, name), h25("button", { type: "button", onClick: () => removeExpenseType(name), className: "p-1.5 rounded-lg text-rose-600 hover:bg-rose-50", title: "\u062D\u0630\u0641 \u0627\u0644\u0646\u0648\u0639 \u0645\u0646 \u0627\u0644\u0642\u0627\u0626\u0645\u0629" }, h25(Trash222, { className: "w-3.5 h-3.5" })))))
+        h26("div", { className: "shrink-0 flex justify-between items-center p-4 border-b border-slate-100 bg-white" }, h26("div", null, h26("h3", { className: "text-sm font-black" }, "\u0625\u062F\u0627\u0631\u0629 \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0645\u0635\u0631\u0648\u0641"), h26("p", { className: "text-[10px] text-slate-500 mt-1" }, "\u0627\u0644\u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u062C\u062F\u064A\u062F\u0629 \u062A\u062A\u0632\u0627\u0645\u0646 \u0636\u0645\u0646 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0634\u0631\u0643\u0629\u060C \u0648\u0627\u0644\u062D\u0631\u0643\u0627\u062A \u0627\u0644\u0642\u062F\u064A\u0645\u0629 \u062A\u0628\u0642\u0649 \u0645\u062D\u0641\u0648\u0638\u0629.")), h26("button", { type: "button", onClick: () => setShowTypeManager(false), className: "p-1.5 rounded-lg hover:bg-slate-100" }, h26(X25, { className: "w-4 h-4" }))),
+        h26("form", { onSubmit: addExpenseType, className: "shrink-0 flex gap-2 p-4 border-b border-slate-100" }, h26("input", { value: newType, onChange: (e) => setNewType(e.target.value), placeholder: "\u0645\u062B\u0627\u0644: \u0648\u0642\u0648\u062F\u060C \u0645\u0648\u0627\u0635\u0644\u0627\u062A\u060C \u0623\u062C\u0648\u0631 \u064A\u0648\u0645\u064A\u0629...", className: "flex-1 min-w-0 px-3 py-2 text-xs border rounded-xl" }), h26("button", { type: "submit", className: "shrink-0 px-4 py-2 rounded-xl bg-violet-600 text-white text-xs font-bold" }, "\u0625\u0636\u0627\u0641\u0629")),
+        h26("div", { className: "expense-types-modal-scroll flex-1 min-h-0 overflow-y-auto p-4 space-y-2 custom-scrollbar" }, configuredCategories.map((name) => h26("div", { key: name, className: "flex justify-between items-center p-2.5 rounded-xl border border-slate-200 bg-slate-50" }, h26("span", { className: "text-xs font-bold" }, name), h26("button", { type: "button", onClick: () => removeExpenseType(name), className: "p-1.5 rounded-lg text-rose-600 hover:bg-rose-50", title: "\u062D\u0630\u0641 \u0627\u0644\u0646\u0648\u0639 \u0645\u0646 \u0627\u0644\u0642\u0627\u0626\u0645\u0629" }, h26(Trash222, { className: "w-3.5 h-3.5" })))))
       )
     )
   );
@@ -19296,8 +19370,8 @@ var ExpensesView = () => {
 // app/components__vouchers__VouchersView.js
 import React46, { useEffect as useEffect27, useRef as useRef20, useState as useState33 } from "react";
 import { createPortal as createPortal17 } from "react-dom";
-import { FileSpreadsheet as FileSpreadsheet12, ArrowDownLeft, ArrowUpRight, Search as Search12, Trash2 as Trash223, Printer as Printer6, Download as Download7, Image as ImageIcon8, FileText as FileText6, CreditCard as CreditCard4, User as User3, Building2 as Building26, AlertCircle as AlertCircle5, Eye as Eye6, X as X25 } from "lucide-react";
-var h26 = React46.createElement;
+import { FileSpreadsheet as FileSpreadsheet12, ArrowDownLeft, ArrowUpRight, Search as Search12, Trash2 as Trash223, Printer as Printer6, Download as Download7, Image as ImageIcon8, FileText as FileText6, CreditCard as CreditCard4, User as User3, Building2 as Building26, AlertCircle as AlertCircle5, Eye as Eye6, X as X26 } from "lucide-react";
+var h27 = React46.createElement;
 var money13 = (v) => (Number(v) || 0).toFixed(2);
 var VouchersView = () => {
   const [audit, setAudit] = useState33({});
@@ -19429,7 +19503,7 @@ var VouchersView = () => {
   };
   const paperPreviewWidth = voucherPaperSize === "58mm" ? "219px" : voucherPaperSize === "a4" ? "min(794px,100%)" : "302px";
   const logo = getBrandLogoDataUrl(settings);
-  const voucherPaper = viewingVoucher ? h26(
+  const voucherPaper = viewingVoucher ? h27(
     "div",
     {
       ref: voucherPrintRef,
@@ -19439,157 +19513,157 @@ var VouchersView = () => {
       className: "voucher-paper bg-white text-black border border-slate-200 rounded-xl shadow-sm text-right overflow-hidden",
       style: { width: paperPreviewWidth, maxWidth: "100%", fontFamily: "'Cairo',Arial,sans-serif", padding: voucherPaperSize === "a4" ? "28px" : voucherPaperSize === "58mm" ? "10px" : "14px" }
     },
-    h26(
+    h27(
       "div",
       { className: "text-center pb-3 border-b border-dashed border-gray-300" },
-      h26("img", { src: logo, alt: "\u0627\u0644\u0634\u0639\u0627\u0631", className: "h-12 max-w-[120px] mx-auto mb-1 object-contain" }),
-      h26("h3", { className: "text-base font-black leading-tight" }, settings.storeName || "\u0643\u0627\u0634 \u062A\u0648\u0628 3"),
-      h26("p", { className: "text-[10px] text-gray-500 font-semibold" }, settings.subtitle || "\u0646\u0638\u0627\u0645 \u0645\u062D\u0627\u0633\u0628\u0629 \u0648\u0643\u0627\u0634\u064A\u0631"),
-      settings.address ? h26("p", { className: "text-[9px] text-gray-500" }, settings.address) : null,
-      settings.phone ? h26("p", { className: "text-[9px] text-gray-500" }, `\u0647\u0627\u062A\u0641: ${settings.phone}`) : null,
-      settings.taxNumber ? h26("p", { className: "text-[9px] text-gray-500" }, `\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0636\u0631\u064A\u0628\u064A: ${settings.taxNumber}`) : null
+      h27("img", { src: logo, alt: "\u0627\u0644\u0634\u0639\u0627\u0631", className: "h-12 max-w-[120px] mx-auto mb-1 object-contain" }),
+      h27("h3", { className: "text-base font-black leading-tight" }, settings.storeName || "\u0643\u0627\u0634 \u062A\u0648\u0628 3"),
+      h27("p", { className: "text-[10px] text-gray-500 font-semibold" }, settings.subtitle || "\u0646\u0638\u0627\u0645 \u0645\u062D\u0627\u0633\u0628\u0629 \u0648\u0643\u0627\u0634\u064A\u0631"),
+      settings.address ? h27("p", { className: "text-[9px] text-gray-500" }, settings.address) : null,
+      settings.phone ? h27("p", { className: "text-[9px] text-gray-500" }, `\u0647\u0627\u062A\u0641: ${settings.phone}`) : null,
+      settings.taxNumber ? h27("p", { className: "text-[9px] text-gray-500" }, `\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0636\u0631\u064A\u0628\u064A: ${settings.taxNumber}`) : null
     ),
-    h26(
+    h27(
       "div",
       { className: "py-3 text-center border-b border-dashed border-gray-300" },
-      h26("div", { className: `inline-block px-3 py-1 rounded-md text-xs font-black ${viewingVoucher.type === "receipt" ? "bg-violet-100 text-violet-800" : "bg-amber-100 text-amber-800"}` }, viewingVoucher.type === "receipt" ? "\u0633\u0646\u062F \u0642\u0628\u0636 \u0645\u0627\u0644\u064A" : "\u0633\u0646\u062F \u0635\u0631\u0641 \u0645\u0627\u0644\u064A"),
-      h26("div", { className: "text-xs font-black text-gray-800 mt-1" }, `\u0631\u0642\u0645 \u0627\u0644\u0633\u0646\u062F: #${viewingVoucher.voucherNumber}`),
-      h26("div", { className: "text-[9px] text-gray-500" }, new Date(viewingVoucher.date).toLocaleString("ar-EG"))
+      h27("div", { className: `inline-block px-3 py-1 rounded-md text-xs font-black ${viewingVoucher.type === "receipt" ? "bg-violet-100 text-violet-800" : "bg-amber-100 text-amber-800"}` }, viewingVoucher.type === "receipt" ? "\u0633\u0646\u062F \u0642\u0628\u0636 \u0645\u0627\u0644\u064A" : "\u0633\u0646\u062F \u0635\u0631\u0641 \u0645\u0627\u0644\u064A"),
+      h27("div", { className: "text-xs font-black text-gray-800 mt-1" }, `\u0631\u0642\u0645 \u0627\u0644\u0633\u0646\u062F: #${viewingVoucher.voucherNumber}`),
+      h27("div", { className: "text-[9px] text-gray-500" }, new Date(viewingVoucher.date).toLocaleString("ar-EG"))
     ),
-    h26(
+    h27(
       "div",
       { className: "py-3 space-y-2 border-b border-dashed border-gray-300 text-[11px]" },
-      h26("div", { className: "flex justify-between gap-3" }, h26("span", { className: "text-gray-500" }, viewingVoucher.type === "receipt" ? "\u0627\u0633\u062A\u0644\u0645\u0646\u0627 \u0645\u0646:" : "\u0635\u0631\u0641\u0646\u0627 \u0625\u0644\u0649:"), h26("span", { className: "font-black text-gray-900 text-left" }, viewingVoucher.partyName || "-")),
-      h26("div", { className: "flex justify-between gap-3" }, h26("span", { className: "text-gray-500" }, viewingVoucher.type === "receipt" ? "\u0641\u064A \u062D\u0633\u0627\u0628:" : "\u0645\u0646 \u062D\u0633\u0627\u0628:"), h26("span", { className: "font-bold text-gray-800 text-left" }, viewingVoucher.sourceType === "account" ? viewingVoucher.accountName || "\u062D\u0633\u0627\u0628 \u0645\u0627\u0644\u064A" : "\u0628\u062F\u0648\u0646 \u062D\u0633\u0627\u0628")),
-      h26("div", { className: "flex justify-between items-center gap-3 bg-slate-50 p-2.5 rounded-lg border border-gray-200" }, h26("span", { className: "font-black text-gray-700" }, t("\u0627\u0644\u0645\u0628\u0644\u063A:")), h26("span", { className: "text-lg font-black text-violet-700 font-mono", dir: "ltr" }, `${money13(viewingVoucher.amount)} ${settings.currencySymbol || ""}`)),
-      viewingVoucher.notes ? h26("div", { className: "pt-1" }, h26("span", { className: "text-gray-500 block text-[9px]" }, "\u0627\u0644\u0628\u064A\u0627\u0646:"), h26("div", { className: "text-[10px] font-semibold bg-gray-50 p-2 rounded border border-gray-100" }, viewingVoucher.notes)) : null
+      h27("div", { className: "flex justify-between gap-3" }, h27("span", { className: "text-gray-500" }, viewingVoucher.type === "receipt" ? "\u0627\u0633\u062A\u0644\u0645\u0646\u0627 \u0645\u0646:" : "\u0635\u0631\u0641\u0646\u0627 \u0625\u0644\u0649:"), h27("span", { className: "font-black text-gray-900 text-left" }, viewingVoucher.partyName || "-")),
+      h27("div", { className: "flex justify-between gap-3" }, h27("span", { className: "text-gray-500" }, viewingVoucher.type === "receipt" ? "\u0641\u064A \u062D\u0633\u0627\u0628:" : "\u0645\u0646 \u062D\u0633\u0627\u0628:"), h27("span", { className: "font-bold text-gray-800 text-left" }, viewingVoucher.sourceType === "account" ? viewingVoucher.accountName || "\u062D\u0633\u0627\u0628 \u0645\u0627\u0644\u064A" : "\u0628\u062F\u0648\u0646 \u062D\u0633\u0627\u0628")),
+      h27("div", { className: "flex justify-between items-center gap-3 bg-slate-50 p-2.5 rounded-lg border border-gray-200" }, h27("span", { className: "font-black text-gray-700" }, t("\u0627\u0644\u0645\u0628\u0644\u063A:")), h27("span", { className: "text-lg font-black text-violet-700 font-mono", dir: "ltr" }, `${money13(viewingVoucher.amount)} ${settings.currencySymbol || ""}`)),
+      viewingVoucher.notes ? h27("div", { className: "pt-1" }, h27("span", { className: "text-gray-500 block text-[9px]" }, "\u0627\u0644\u0628\u064A\u0627\u0646:"), h27("div", { className: "text-[10px] font-semibold bg-gray-50 p-2 rounded border border-gray-100" }, viewingVoucher.notes)) : null
     ),
-    h26(
+    h27(
       "div",
       { className: "pt-4 grid grid-cols-2 text-center text-[9px] text-gray-500 gap-3" },
-      h26("div", null, h26("span", null, "\u0627\u0644\u0645\u0633\u062A\u0644\u0645"), h26("div", { className: "mt-6 border-b border-gray-300" })),
-      h26("div", null, h26("span", null, "\u0623\u0645\u064A\u0646 \u0627\u0644\u0635\u0646\u062F\u0648\u0642 / \u0627\u0644\u0643\u0627\u0634\u064A\u0631"), h26("div", { className: "mt-6 border-b border-gray-300" }), h26("span", { className: "text-[8px] text-gray-400 block mt-1" }, viewingVoucher.userName || "\u0627\u0644\u0645\u062F\u064A\u0631"))
+      h27("div", null, h27("span", null, "\u0627\u0644\u0645\u0633\u062A\u0644\u0645"), h27("div", { className: "mt-6 border-b border-gray-300" })),
+      h27("div", null, h27("span", null, "\u0623\u0645\u064A\u0646 \u0627\u0644\u0635\u0646\u062F\u0648\u0642 / \u0627\u0644\u0643\u0627\u0634\u064A\u0631"), h27("div", { className: "mt-6 border-b border-gray-300" }), h27("span", { className: "text-[8px] text-gray-400 block mt-1" }, viewingVoucher.userName || "\u0627\u0644\u0645\u062F\u064A\u0631"))
     ),
-    h26("div", { className: "mt-5 text-center text-[8px] text-gray-400" }, `\u0646\u0638\u0627\u0645 ${settings.storeName || "\u0643\u0627\u0634 \u062A\u0648\u0628 3"} - \u0633\u0646\u062F \u0645\u0627\u0644\u064A \u0631\u0633\u0645\u064A`)
+    h27("div", { className: "mt-5 text-center text-[8px] text-gray-400" }, `\u0646\u0638\u0627\u0645 ${settings.storeName || "\u0643\u0627\u0634 \u062A\u0648\u0628 3"} - \u0633\u0646\u062F \u0645\u0627\u0644\u064A \u0631\u0633\u0645\u064A`)
   ) : null;
-  return h26(
+  return h27(
     "div",
     { id: "vouchers-view-container", className: "p-3 sm:p-5 space-y-4 max-w-7xl mx-auto select-none min-h-full" },
-    h26(AuditFilters, { value: audit, onChange: setAudit }),
-    h26(
+    h27(
       "div",
       { className: "flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800" },
-      h26("div", null, h26("div", { className: "flex items-center gap-2" }, h26(FileSpreadsheet12, { className: "w-5 h-5 text-violet-600" }), h26("h2", { className: "text-lg font-black" }, t("\u0633\u0646\u062F\u0627\u062A \u0627\u0644\u0642\u0628\u0636 \u0648\u0627\u0644\u0635\u0631\u0641")))),
-      h26(
+      h27("div", null, h27("div", { className: "flex items-center gap-2" }, h27(FileSpreadsheet12, { className: "w-5 h-5 text-violet-600" }), h27("h2", { className: "text-lg font-black" }, t("\u0633\u0646\u062F\u0627\u062A \u0627\u0644\u0642\u0628\u0636 \u0648\u0627\u0644\u0635\u0631\u0641")))),
+      h27(
         "div",
         { id: "voucher-create-actions", className: "flex gap-2 flex-wrap" },
-        h26("button", { type: "button", disabled: !canManageVouchers, onClick: () => openNew("receipt"), className: "px-3 py-2 rounded-xl bg-violet-600 text-white text-xs font-black flex items-center gap-1.5" }, h26(ArrowDownLeft, { className: "w-4 h-4" }), "\u0633\u0646\u062F \u0642\u0628\u0636"),
-        h26("button", { type: "button", disabled: !canManageVouchers, onClick: () => openNew("payment"), className: "px-3 py-2 rounded-xl bg-amber-600 text-white text-xs font-black flex items-center gap-1.5" }, h26(ArrowUpRight, { className: "w-4 h-4" }), "\u0633\u0646\u062F \u0635\u0631\u0641")
+        h27(AuditFilters, { value: audit, onChange: setAudit }),
+        h27("button", { type: "button", disabled: !canManageVouchers, onClick: () => openNew("receipt"), className: "px-3 py-2 rounded-xl bg-violet-600 text-white text-xs font-black flex items-center gap-1.5" }, h27(ArrowDownLeft, { className: "w-4 h-4" }), "\u0633\u0646\u062F \u0642\u0628\u0636"),
+        h27("button", { type: "button", disabled: !canManageVouchers, onClick: () => openNew("payment"), className: "px-3 py-2 rounded-xl bg-amber-600 text-white text-xs font-black flex items-center gap-1.5" }, h27(ArrowUpRight, { className: "w-4 h-4" }), "\u0633\u0646\u062F \u0635\u0631\u0641")
       )
     ),
-    h26(
+    h27(
       "div",
       { className: "grid grid-cols-3 gap-2" },
-      h26("div", { className: "p-3 rounded-xl bg-white border text-center" }, h26("div", { className: "text-[10px] text-slate-500" }, "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0642\u0628\u0636"), h26("div", { className: "font-black text-violet-600 font-mono" }, `${money13(totalReceipts)} ${settings.currencySymbol}`)),
-      h26("div", { className: "p-3 rounded-xl bg-white border text-center" }, h26("div", { className: "text-[10px] text-slate-500" }, "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0635\u0631\u0641"), h26("div", { className: "font-black text-amber-600 font-mono" }, `${money13(totalPayments)} ${settings.currencySymbol}`)),
-      h26("div", { className: "p-3 rounded-xl bg-white border text-center" }, h26("div", { className: "text-[10px] text-slate-500" }, "\u0627\u0644\u0635\u0627\u0641\u064A"), h26("div", { className: "font-black text-slate-900 font-mono" }, `${money13(totalReceipts - totalPayments)} ${settings.currencySymbol}`))
+      h27("div", { className: "p-3 rounded-xl bg-white border text-center" }, h27("div", { className: "text-[10px] text-slate-500" }, "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0642\u0628\u0636"), h27("div", { className: "font-black text-violet-600 font-mono" }, `${money13(totalReceipts)} ${settings.currencySymbol}`)),
+      h27("div", { className: "p-3 rounded-xl bg-white border text-center" }, h27("div", { className: "text-[10px] text-slate-500" }, "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0635\u0631\u0641"), h27("div", { className: "font-black text-amber-600 font-mono" }, `${money13(totalPayments)} ${settings.currencySymbol}`)),
+      h27("div", { className: "p-3 rounded-xl bg-white border text-center" }, h27("div", { className: "text-[10px] text-slate-500" }, "\u0627\u0644\u0635\u0627\u0641\u064A"), h27("div", { className: "font-black text-slate-900 font-mono" }, `${money13(totalReceipts - totalPayments)} ${settings.currencySymbol}`))
     ),
-    h26(
+    h27(
       "div",
       { className: "flex flex-wrap items-center gap-2" },
-      ...[["all", "\u0627\u0644\u0643\u0644"], ["receipt", "\u0642\u0628\u0636"], ["payment", "\u0635\u0631\u0641"]].map(([id, label]) => h26("button", { key: id, type: "button", onClick: () => setActiveTabFilter(id), className: `px-3 py-1.5 rounded-lg text-xs font-bold ${activeTabFilter === id ? "bg-slate-900 text-white" : "bg-white border text-slate-600"}` }, label)),
-      h26("div", { className: "relative flex-1 min-w-[180px]" }, h26(Search12, { className: "absolute right-2.5 top-2.5 w-4 h-4 text-slate-400" }), h26("input", { value: searchTerm, onChange: (e) => setSearchTerm(e.target.value), placeholder: "\u0628\u062D\u062B \u0641\u064A \u0627\u0644\u0633\u0646\u062F\u0627\u062A...", className: "w-full pr-8 pl-3 py-2 text-xs border rounded-xl bg-white" })),
-      h26("button", { type: "button", onClick: exportTableImage, className: "p-2 rounded-lg bg-white border", title: t("\u0635\u0648\u0631\u0629") }, h26(ImageIcon8, { className: "w-4 h-4 text-blue-600" })),
-      h26("button", { type: "button", onClick: exportTablePDF, className: "p-2 rounded-lg bg-white border", title: "PDF" }, h26(Download7, { className: "w-4 h-4 text-rose-600" })),
-      h26("button", { type: "button", onClick: exportCSV, className: "p-2 rounded-lg bg-white border", title: "Excel/CSV" }, h26(FileSpreadsheet12, { className: "w-4 h-4 text-violet-600" }))
+      ...[["all", "\u0627\u0644\u0643\u0644"], ["receipt", "\u0642\u0628\u0636"], ["payment", "\u0635\u0631\u0641"]].map(([id, label]) => h27("button", { key: id, type: "button", onClick: () => setActiveTabFilter(id), className: `px-3 py-1.5 rounded-lg text-xs font-bold ${activeTabFilter === id ? "bg-slate-900 text-white" : "bg-white border text-slate-600"}` }, label)),
+      h27("div", { className: "relative flex-1 min-w-[180px]" }, h27(Search12, { className: "absolute right-2.5 top-2.5 w-4 h-4 text-slate-400" }), h27("input", { value: searchTerm, onChange: (e) => setSearchTerm(e.target.value), placeholder: "\u0628\u062D\u062B \u0641\u064A \u0627\u0644\u0633\u0646\u062F\u0627\u062A...", className: "w-full pr-8 pl-3 py-2 text-xs border rounded-xl bg-white" })),
+      h27("button", { type: "button", onClick: exportTableImage, className: "p-2 rounded-lg bg-white border", title: t("\u0635\u0648\u0631\u0629") }, h27(ImageIcon8, { className: "w-4 h-4 text-blue-600" })),
+      h27("button", { type: "button", onClick: exportTablePDF, className: "p-2 rounded-lg bg-white border", title: "PDF" }, h27(Download7, { className: "w-4 h-4 text-rose-600" })),
+      h27("button", { type: "button", onClick: exportCSV, className: "p-2 rounded-lg bg-white border", title: "Excel/CSV" }, h27(FileSpreadsheet12, { className: "w-4 h-4 text-violet-600" }))
     ),
-    h26(
+    h27(
       "div",
       { ref: tableContainerRef, id: "vouchers-table-card", className: "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 overflow-x-auto" },
-      h26(
+      h27(
         "table",
         { className: "w-full text-xs text-right min-w-[760px]" },
-        h26("thead", { className: "bg-slate-50 text-slate-500" }, h26("tr", null, ...["#", "\u0627\u0644\u0646\u0648\u0639", "\u0627\u0644\u062A\u0627\u0631\u064A\u062E", "\u0627\u0644\u062C\u0647\u0629", "\u0627\u0644\u0645\u0628\u0644\u063A", "\u0627\u0644\u062D\u0633\u0627\u0628/\u0627\u0644\u0645\u0635\u062F\u0631", "\u0627\u0644\u0628\u064A\u0627\u0646", ""].map((x, i) => h26("th", { key: i, className: "p-3" }, x)))),
-        h26("tbody", { className: "divide-y" }, ...vouchersPager.totalItems ? vouchersPager.pageItems.map((v) => h26(
+        h27("thead", { className: "bg-slate-50 text-slate-500" }, h27("tr", null, ...["#", "\u0627\u0644\u0646\u0648\u0639", "\u0627\u0644\u062A\u0627\u0631\u064A\u062E", "\u0627\u0644\u062C\u0647\u0629", "\u0627\u0644\u0645\u0628\u0644\u063A", "\u0627\u0644\u062D\u0633\u0627\u0628/\u0627\u0644\u0645\u0635\u062F\u0631", "\u0627\u0644\u0628\u064A\u0627\u0646", ""].map((x, i) => h27("th", { key: i, className: "p-3" }, x)))),
+        h27("tbody", { className: "divide-y" }, ...vouchersPager.totalItems ? vouchersPager.pageItems.map((v) => h27(
           "tr",
           { key: v.id, className: "hover:bg-slate-50" },
-          h26("td", { className: "p-3 font-mono font-bold" }, v.voucherNumber),
-          h26("td", { className: "p-3" }, h26("span", { className: `px-2 py-1 rounded-lg font-bold ${v.type === "receipt" ? "bg-violet-50 text-violet-700" : "bg-amber-50 text-amber-700"}` }, v.type === "receipt" ? "\u0642\u0628\u0636" : "\u0635\u0631\u0641")),
-          h26("td", { className: "p-3 text-slate-500" }, new Date(v.date).toLocaleDateString("ar-EG")),
-          h26("td", { className: "p-3 font-bold" }, v.partyName || "-"),
-          h26("td", { className: "p-3 font-mono font-black" }, `${money13(v.amount)} ${settings.currencySymbol}`),
-          h26("td", { className: "p-3" }, v.sourceType === "account" ? v.accountName || "\u062D\u0633\u0627\u0628 \u0645\u0627\u0644\u064A" : "\u0628\u062F\u0648\u0646 \u062D\u0633\u0627\u0628"),
-          h26("td", { className: "p-3 text-slate-500 max-w-[220px] truncate" }, v.notes || "-"),
-          h26("td", { className: "p-3" }, h26("div", { className: "flex gap-1" }, h26("button", { type: "button", onClick: () => {
+          h27("td", { className: "p-3 font-mono font-bold" }, v.voucherNumber),
+          h27("td", { className: "p-3" }, h27("span", { className: `px-2 py-1 rounded-lg font-bold ${v.type === "receipt" ? "bg-violet-50 text-violet-700" : "bg-amber-50 text-amber-700"}` }, v.type === "receipt" ? "\u0642\u0628\u0636" : "\u0635\u0631\u0641")),
+          h27("td", { className: "p-3 text-slate-500" }, new Date(v.date).toLocaleDateString("ar-EG")),
+          h27("td", { className: "p-3 font-bold" }, v.partyName || "-"),
+          h27("td", { className: "p-3 font-mono font-black" }, `${money13(v.amount)} ${settings.currencySymbol}`),
+          h27("td", { className: "p-3" }, v.sourceType === "account" ? v.accountName || "\u062D\u0633\u0627\u0628 \u0645\u0627\u0644\u064A" : "\u0628\u062F\u0648\u0646 \u062D\u0633\u0627\u0628"),
+          h27("td", { className: "p-3 text-slate-500 max-w-[220px] truncate" }, v.notes || "-"),
+          h27("td", { className: "p-3" }, h27("div", { className: "flex gap-1" }, h27("button", { type: "button", onClick: () => {
             setViewingVoucher(v);
             setVoucherPaperSize(settings.printerWidth || "80mm");
-          }, className: "p-1.5 rounded-lg hover:bg-violet-50 text-violet-700" }, h26(Eye6, { className: "w-4 h-4" })), h26("button", { type: "button", onClick: () => setDeleteConfirmId(v.id), className: "p-1.5 rounded-lg hover:bg-rose-50 text-rose-600" }, h26(Trash223, { className: "w-4 h-4" }))))
-        )) : [h26("tr", { key: "empty" }, h26("td", { colSpan: 8, className: "p-8 text-center text-slate-400" }, h26(EmptyState, { message: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0633\u0646\u062F\u0627\u062A" })))])
+          }, className: "p-1.5 rounded-lg hover:bg-violet-50 text-violet-700" }, h27(Eye6, { className: "w-4 h-4" })), h27("button", { type: "button", onClick: () => setDeleteConfirmId(v.id), className: "p-1.5 rounded-lg hover:bg-rose-50 text-rose-600" }, h27(Trash223, { className: "w-4 h-4" }))))
+        )) : [h27("tr", { key: "empty" }, h27("td", { colSpan: 8, className: "p-8 text-center text-slate-400" }, h27(EmptyState, { message: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0633\u0646\u062F\u0627\u062A" })))])
       ),
-      h26(Pagination, { pager: vouchersPager })
+      h27(Pagination, { pager: vouchersPager })
     ),
-    isModalOpen ? createPortal17(h26(
+    isModalOpen ? createPortal17(h27(
       "div",
       { className: "voucher-editor-overlay fixed inset-0 oscar-bounded-modal z-[100] bg-black/60 p-0 flex items-stretch justify-center overflow-hidden" },
-      h26(
+      h27(
         "div",
         { className: "voucher-editor-stage w-screen h-full overflow-y-auto custom-scrollbar flex items-center justify-center p-3" },
-        h26(
+        h27(
           "form",
           { onSubmit: submitVoucher, className: "voucher-editor-panel w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-4 sm:p-5 space-y-4 text-right" },
-          h26("div", { className: "flex items-center justify-between" }, h26("h3", { className: "font-black" }, formType === "receipt" ? "\u0625\u0636\u0627\u0641\u0629 \u0633\u0646\u062F \u0642\u0628\u0636" : "\u0625\u0636\u0627\u0641\u0629 \u0633\u0646\u062F \u0635\u0631\u0641"), h26("button", { type: "button", onClick: () => setIsModalOpen(false), className: "p-1 text-slate-400" }, h26(X25, { className: "w-5 h-5" }))),
-          h26(
+          h27("div", { className: "flex items-center justify-between" }, h27("h3", { className: "font-black" }, formType === "receipt" ? "\u0625\u0636\u0627\u0641\u0629 \u0633\u0646\u062F \u0642\u0628\u0636" : "\u0625\u0636\u0627\u0641\u0629 \u0633\u0646\u062F \u0635\u0631\u0641"), h27("button", { type: "button", onClick: () => setIsModalOpen(false), className: "p-1 text-slate-400" }, h27(X26, { className: "w-5 h-5" }))),
+          h27(
             "div",
             { className: "grid grid-cols-2 gap-3" },
-            h26("div", null, h26(SearchableDropdown, { id: "voucher-party-type", label: "\u0646\u0648\u0639 \u0627\u0644\u062C\u0647\u0629", options: [{ id: "customer", label: "\u0639\u0645\u064A\u0644" }, { id: "supplier", label: "\u0645\u0648\u0631\u062F" }, { id: "other", label: "\u062C\u0647\u0629 \u0623\u062E\u0631\u0649" }], selectedId: formPartyType, onSelect: (id) => {
+            h27("div", null, h27(SearchableDropdown, { id: "voucher-party-type", label: "\u0646\u0648\u0639 \u0627\u0644\u062C\u0647\u0629", options: [{ id: "customer", label: "\u0639\u0645\u064A\u0644" }, { id: "supplier", label: "\u0645\u0648\u0631\u062F" }, { id: "other", label: "\u062C\u0647\u0629 \u0623\u062E\u0631\u0649" }], selectedId: formPartyType, onSelect: (id) => {
               setFormPartyType(id);
               setFormPartyId(id === "customer" ? customers[0]?.id || "" : id === "supplier" ? suppliers[0]?.id || "" : "");
             }, placeholder: "\u0627\u062E\u062A\u0631 \u0627\u0644\u062C\u0647\u0629" })),
-            h26("div", null, h26("label", { className: "text-xs font-bold block mb-1" }, t("\u0627\u0644\u062A\u0627\u0631\u064A\u062E")), h26("input", { type: "date", value: formDate, onChange: (e) => setFormDate(e.target.value), className: "w-full px-3 py-2 text-xs border rounded-xl" }))
+            h27("div", null, h27("label", { className: "text-xs font-bold block mb-1" }, t("\u0627\u0644\u062A\u0627\u0631\u064A\u062E")), h27("input", { type: "date", value: formDate, onChange: (e) => setFormDate(e.target.value), className: "w-full px-3 py-2 text-xs border rounded-xl" }))
           ),
-          formPartyType === "customer" ? h26(SearchableDropdown, { id: "voucher-customer", label: t("\u0627\u0644\u0639\u0645\u064A\u0644"), options: customers.map((c) => ({ id: c.id, label: c.name, subLabel: c.phone || "" })), selectedId: formPartyId, onSelect: setFormPartyId, placeholder: "\u0627\u062E\u062A\u0631 \u0627\u0644\u0639\u0645\u064A\u0644" }) : formPartyType === "supplier" ? h26(SearchableDropdown, { id: "voucher-supplier", label: t("\u0627\u0644\u0645\u0648\u0631\u062F"), options: suppliers.map((s) => ({ id: s.id, label: s.name, subLabel: s.phone || "" })), selectedId: formPartyId, onSelect: setFormPartyId, placeholder: "\u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0648\u0631\u062F" }) : h26("div", null, h26("label", { className: "text-xs font-bold block mb-1" }, "\u0627\u0633\u0645 \u0627\u0644\u062C\u0647\u0629"), h26("input", { value: formPartyCustomName, onChange: (e) => setFormPartyCustomName(e.target.value), className: "w-full px-3 py-2 text-xs border rounded-xl" })),
-          h26("div", null, h26("label", { className: "text-xs font-bold block mb-1" }, t("\u0627\u0644\u0645\u0628\u0644\u063A")), h26("input", { type: "number", inputMode: "decimal", step: "any", min: "0.01", required: true, value: formAmount, onChange: (e) => setFormAmount(e.target.value), className: "w-full px-3 py-2 text-sm font-mono font-black border rounded-xl" })),
-          formType === "payment" ? h26("div", null, h26("label", { className: "text-xs font-bold block mb-1" }, "\u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u0635\u0631\u0641"), h26(SearchableDropdown, { id: "voucher-source-type", options: [{ id: "account", label: "\u0645\u0646 \u062D\u0633\u0627\u0628" }, { id: "debt_without_account", label: "\u0628\u062F\u0648\u0646 \u062D\u0633\u0627\u0628" }], selectedId: formSourceType, onSelect: setFormSourceType, placeholder: "\u0627\u062E\u062A\u0631 \u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u0635\u0631\u0641" })) : null,
-          formType === "receipt" || formSourceType === "account" ? h26(SearchableDropdown, { id: "voucher-account", label: formType === "receipt" ? "\u0641\u064A \u062D\u0633\u0627\u0628" : "\u0645\u0646 \u062D\u0633\u0627\u0628", options: accounts.map((a) => ({ id: a.id, label: a.name, subLabel: `\u0627\u0644\u0631\u0635\u064A\u062F: ${money13(a.balance)} ${settings.currencySymbol}` })), selectedId: formAccountId, onSelect: setFormAccountId, placeholder: t("\u0627\u062E\u062A\u0631 \u0627\u0644\u062D\u0633\u0627\u0628") }) : null,
-          h26("div", null, h26("label", { className: "text-xs font-bold block mb-1" }, "\u0627\u0644\u0628\u064A\u0627\u0646 / \u0645\u0644\u0627\u062D\u0638\u0627\u062A"), h26("textarea", { rows: 2, value: formNotes, onChange: (e) => setFormNotes(e.target.value), className: "w-full px-3 py-2 text-xs border rounded-xl" })),
-          h26("div", { className: "flex justify-end gap-2 pt-2 border-t" }, h26("button", { type: "button", onClick: () => setIsModalOpen(false), className: "px-4 py-2 text-xs font-bold text-slate-500" }, t("\u0625\u0644\u063A\u0627\u0621")), h26("button", { type: "submit", className: `px-5 py-2 rounded-xl text-white text-xs font-black ${formType === "receipt" ? "bg-violet-600" : "bg-amber-600"}` }, formType === "receipt" ? "\u062D\u0641\u0638 \u0633\u0646\u062F \u0627\u0644\u0642\u0628\u0636" : "\u062D\u0641\u0638 \u0633\u0646\u062F \u0627\u0644\u0635\u0631\u0641"))
+          formPartyType === "customer" ? h27(SearchableDropdown, { id: "voucher-customer", label: t("\u0627\u0644\u0639\u0645\u064A\u0644"), options: customers.map((c) => ({ id: c.id, label: c.name, subLabel: c.phone || "" })), selectedId: formPartyId, onSelect: setFormPartyId, placeholder: "\u0627\u062E\u062A\u0631 \u0627\u0644\u0639\u0645\u064A\u0644" }) : formPartyType === "supplier" ? h27(SearchableDropdown, { id: "voucher-supplier", label: t("\u0627\u0644\u0645\u0648\u0631\u062F"), options: suppliers.map((s) => ({ id: s.id, label: s.name, subLabel: s.phone || "" })), selectedId: formPartyId, onSelect: setFormPartyId, placeholder: "\u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0648\u0631\u062F" }) : h27("div", null, h27("label", { className: "text-xs font-bold block mb-1" }, "\u0627\u0633\u0645 \u0627\u0644\u062C\u0647\u0629"), h27("input", { value: formPartyCustomName, onChange: (e) => setFormPartyCustomName(e.target.value), className: "w-full px-3 py-2 text-xs border rounded-xl" })),
+          h27("div", null, h27("label", { className: "text-xs font-bold block mb-1" }, t("\u0627\u0644\u0645\u0628\u0644\u063A")), h27("input", { type: "number", inputMode: "decimal", step: "any", min: "0.01", required: true, value: formAmount, onChange: (e) => setFormAmount(e.target.value), className: "w-full px-3 py-2 text-sm font-mono font-black border rounded-xl" })),
+          formType === "payment" ? h27("div", null, h27("label", { className: "text-xs font-bold block mb-1" }, "\u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u0635\u0631\u0641"), h27(SearchableDropdown, { id: "voucher-source-type", options: [{ id: "account", label: "\u0645\u0646 \u062D\u0633\u0627\u0628" }, { id: "debt_without_account", label: "\u0628\u062F\u0648\u0646 \u062D\u0633\u0627\u0628" }], selectedId: formSourceType, onSelect: setFormSourceType, placeholder: "\u0627\u062E\u062A\u0631 \u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u0635\u0631\u0641" })) : null,
+          formType === "receipt" || formSourceType === "account" ? h27(SearchableDropdown, { id: "voucher-account", label: formType === "receipt" ? "\u0641\u064A \u062D\u0633\u0627\u0628" : "\u0645\u0646 \u062D\u0633\u0627\u0628", options: accounts.map((a) => ({ id: a.id, label: a.name, subLabel: `\u0627\u0644\u0631\u0635\u064A\u062F: ${money13(a.balance)} ${settings.currencySymbol}` })), selectedId: formAccountId, onSelect: setFormAccountId, placeholder: t("\u0627\u062E\u062A\u0631 \u0627\u0644\u062D\u0633\u0627\u0628") }) : null,
+          h27("div", null, h27("label", { className: "text-xs font-bold block mb-1" }, "\u0627\u0644\u0628\u064A\u0627\u0646 / \u0645\u0644\u0627\u062D\u0638\u0627\u062A"), h27("textarea", { rows: 2, value: formNotes, onChange: (e) => setFormNotes(e.target.value), className: "w-full px-3 py-2 text-xs border rounded-xl" })),
+          h27("div", { className: "flex justify-end gap-2 pt-2 border-t" }, h27("button", { type: "button", onClick: () => setIsModalOpen(false), className: "px-4 py-2 text-xs font-bold text-slate-500" }, t("\u0625\u0644\u063A\u0627\u0621")), h27("button", { type: "submit", className: `px-5 py-2 rounded-xl text-white text-xs font-black ${formType === "receipt" ? "bg-violet-600" : "bg-amber-600"}` }, formType === "receipt" ? "\u062D\u0641\u0638 \u0633\u0646\u062F \u0627\u0644\u0642\u0628\u0636" : "\u062D\u0641\u0638 \u0633\u0646\u062F \u0627\u0644\u0635\u0631\u0641"))
         )
       )
     ), document.body) : null,
-    viewingVoucher ? createPortal17(h26(
+    viewingVoucher ? createPortal17(h27(
       "div",
       { className: "fixed inset-x-0 oscar-bounded-modal z-[120] bg-black/70 backdrop-blur-[2px] p-2 sm:p-3 flex items-stretch justify-center overflow-hidden" },
-      h26(
+      h27(
         "div",
         { className: `w-full ${voucherPaperSize === "a4" ? "max-w-4xl" : "max-w-md"} h-full max-h-full bg-slate-100 dark:bg-slate-950 rounded-2xl shadow-2xl p-2 sm:p-3 flex flex-col overflow-hidden` },
-        h26(
+        h27(
           "div",
           { className: "no-print flex flex-wrap items-center justify-between gap-2 bg-white rounded-xl p-2 border mb-2 shrink-0" },
-          h26("div", { className: "flex items-center gap-1" }, ...["80mm", "58mm", "a4"].map((id) => h26("button", { key: id, type: "button", onClick: () => setVoucherPaperSize(id), className: `px-2.5 py-1.5 rounded-lg text-[11px] font-black ${voucherPaperSize === id ? "bg-violet-600 text-white" : "bg-slate-100 text-slate-600"}` }, id === "80mm" ? "80 \u0645\u0644\u0645" : id === "58mm" ? "58 \u0645\u0644\u0645" : "A4"))),
-          h26(
+          h27("div", { className: "flex items-center gap-1" }, ...["80mm", "58mm", "a4"].map((id) => h27("button", { key: id, type: "button", onClick: () => setVoucherPaperSize(id), className: `px-2.5 py-1.5 rounded-lg text-[11px] font-black ${voucherPaperSize === id ? "bg-violet-600 text-white" : "bg-slate-100 text-slate-600"}` }, id === "80mm" ? "80 \u0645\u0644\u0645" : id === "58mm" ? "58 \u0645\u0644\u0645" : "A4"))),
+          h27(
             "div",
             { className: "flex items-center gap-1" },
-            h26("button", { type: "button", onClick: async () => {
+            h27("button", { type: "button", onClick: async () => {
               const ok = await printElementOnly(voucherPrintRef.current, voucherPaperSize, `\u0633\u0646\u062F ${viewingVoucher.voucherNumber}`);
               if (!ok) showToast("\u062A\u0639\u0630\u0631 \u062A\u062C\u0647\u064A\u0632 \u0627\u0644\u0637\u0628\u0627\u0639\u0629", "error");
-            }, className: "px-2.5 py-1.5 rounded-lg bg-violet-600 text-white text-[11px] font-black flex items-center gap-1" }, h26(Printer6, { className: "w-3.5 h-3.5" }), t("\u0637\u0628\u0627\u0639\u0629")),
-            h26("button", { type: "button", onClick: async () => {
+            }, className: "px-2.5 py-1.5 rounded-lg bg-violet-600 text-white text-[11px] font-black flex items-center gap-1" }, h27(Printer6, { className: "w-3.5 h-3.5" }), t("\u0637\u0628\u0627\u0639\u0629")),
+            h27("button", { type: "button", onClick: async () => {
               const ok = await downloadProfessionalVoucherImage(viewingVoucher, settings, `\u0633\u0646\u062F-${viewingVoucher.voucherNumber}.png`, voucherPaperSize);
               if (!ok) showToast("\u062A\u0639\u0630\u0631 \u062D\u0641\u0638 \u0635\u0648\u0631\u0629 \u0627\u0644\u0633\u0646\u062F", "error");
               else showToast("\u062A\u0645 \u062A\u062C\u0647\u064A\u0632 \u0635\u0648\u0631\u0629 \u0627\u0644\u0633\u0646\u062F", "success");
-            }, className: "p-2 rounded-lg bg-white border", title: "\u062D\u0641\u0638 \u0635\u0648\u0631\u0629" }, h26(ImageIcon8, { className: "w-4 h-4 text-blue-600" })),
-            h26("button", { type: "button", onClick: async () => {
+            }, className: "p-2 rounded-lg bg-white border", title: "\u062D\u0641\u0638 \u0635\u0648\u0631\u0629" }, h27(ImageIcon8, { className: "w-4 h-4 text-blue-600" })),
+            h27("button", { type: "button", onClick: async () => {
               const ok = await downloadProfessionalVoucherPDF(viewingVoucher, settings, `\u0633\u0646\u062F-${viewingVoucher.voucherNumber}.pdf`, voucherPaperSize);
               if (!ok) showToast("\u062A\u0639\u0630\u0631 \u062D\u0641\u0638 PDF", "error");
               else showToast("\u062A\u0645 \u062A\u062C\u0647\u064A\u0632 PDF", "success");
-            }, className: "p-2 rounded-lg bg-white border", title: "PDF" }, h26(Download7, { className: "w-4 h-4 text-rose-600" })),
-            h26("button", { type: "button", onClick: () => setViewingVoucher(null), className: "p-2 rounded-lg bg-slate-100 text-slate-500" }, h26(X25, { className: "w-4 h-4" }))
+            }, className: "p-2 rounded-lg bg-white border", title: "PDF" }, h27(Download7, { className: "w-4 h-4 text-rose-600" })),
+            h27("button", { type: "button", onClick: () => setViewingVoucher(null), className: "p-2 rounded-lg bg-slate-100 text-slate-500" }, h27(X26, { className: "w-4 h-4" }))
           )
         ),
-        h26("div", { className: "flex-1 min-h-0 overflow-y-auto overflow-x-auto overscroll-contain touch-pan-y custom-scrollbar flex justify-center items-start p-2" }, voucherPaper)
+        h27("div", { className: "flex-1 min-h-0 overflow-y-auto overflow-x-auto overscroll-contain touch-pan-y custom-scrollbar flex justify-center items-start p-2" }, voucherPaper)
       )
     ), document.body) : null,
-    deleteConfirmId ? h26("div", { className: "fixed inset-0 z-[130] bg-black/60 p-4 flex items-center justify-center" }, h26("div", { className: "w-full max-w-sm bg-white rounded-2xl p-5 text-right" }, h26("div", { className: "flex items-center gap-2 text-rose-600 mb-2" }, h26(AlertCircle5, { className: "w-5 h-5" }), h26("h3", { className: "font-black" }, "\u062D\u0630\u0641 \u0627\u0644\u0633\u0646\u062F\u061F")), h26("p", { className: "text-xs text-slate-500" }, "\u0633\u064A\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0633\u0646\u062F \u0648\u0625\u0644\u063A\u0627\u0621 \u0623\u062B\u0631\u0647 \u0627\u0644\u0645\u0627\u0644\u064A."), h26("div", { className: "flex justify-end gap-2 mt-4" }, h26("button", { type: "button", onClick: () => setDeleteConfirmId(null), className: "px-3 py-2 text-xs font-bold" }, "\u062A\u0631\u0627\u062C\u0639"), h26("button", { type: "button", onClick: async () => {
+    deleteConfirmId ? h27("div", { className: "fixed inset-0 z-[130] bg-black/60 p-4 flex items-center justify-center" }, h27("div", { className: "w-full max-w-sm bg-white rounded-2xl p-5 text-right" }, h27("div", { className: "flex items-center gap-2 text-rose-600 mb-2" }, h27(AlertCircle5, { className: "w-5 h-5" }), h27("h3", { className: "font-black" }, "\u062D\u0630\u0641 \u0627\u0644\u0633\u0646\u062F\u061F")), h27("p", { className: "text-xs text-slate-500" }, "\u0633\u064A\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0633\u0646\u062F \u0648\u0625\u0644\u063A\u0627\u0621 \u0623\u062B\u0631\u0647 \u0627\u0644\u0645\u0627\u0644\u064A."), h27("div", { className: "flex justify-end gap-2 mt-4" }, h27("button", { type: "button", onClick: () => setDeleteConfirmId(null), className: "px-3 py-2 text-xs font-bold" }, "\u062A\u0631\u0627\u062C\u0639"), h27("button", { type: "button", onClick: async () => {
       await deleteVoucher(deleteConfirmId);
       setDeleteConfirmId(null);
     }, className: "px-4 py-2 bg-rose-600 text-white text-xs font-black rounded-xl" }, t("\u062D\u0630\u0641"))))) : null
@@ -19610,9 +19684,9 @@ import {
   ChefHat as ChefHat5,
   LayoutGrid as LayoutGrid5,
   Scale as Scale5,
-  X as X26
+  X as X27
 } from "lucide-react";
-var h27 = React47.createElement;
+var h28 = React47.createElement;
 var defaultPermissions = {
   // صلاحيات العمليات داخل الصفحات
   canDiscount: true,
@@ -19785,15 +19859,15 @@ var EmployeesView = () => {
     }
   };
   const togglePermission = (key3) => setPermissions((p) => ({ ...p, [key3]: !p[key3] }));
-  const permissionRow = (key3, label, tone = "emerald", icon = null) => h27(
+  const permissionRow = (key3, label, tone = "emerald", icon = null) => h28(
     "label",
     {
       key: key3,
       className: "employee-permission-row flex items-center gap-2 p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer"
     },
-    h27("input", { type: "checkbox", checked: !!permissions2[key3], onChange: () => togglePermission(key3), className: "employee-permission-check rounded accent-violet-600" }),
-    icon ? h27(icon, { className: `w-4 h-4 text-${tone}-600 shrink-0` }) : null,
-    h27("span", { className: "employee-permission-text text-slate-700 font-bold text-[11px]" }, label)
+    h28("input", { type: "checkbox", checked: !!permissions2[key3], onChange: () => togglePermission(key3), className: "employee-permission-check rounded accent-violet-600" }),
+    icon ? h28(icon, { className: `w-4 h-4 text-${tone}-600 shrink-0` }) : null,
+    h28("span", { className: "employee-permission-text text-slate-700 font-bold text-[11px]" }, label)
   );
   const actionPermissions = [
     ["canDiscount", "\u0645\u0646\u062D \u062E\u0635\u0645 \u0641\u064A \u0627\u0644\u0633\u0644\u0629"],
@@ -19807,134 +19881,134 @@ var EmployeesView = () => {
   ];
   const pagePermissions = GENERAL_PAGE_PERMISSIONS;
   const employeesPager = usePagination((employees || []).filter((e) => e.role !== "sales_rep"), 50, "employees");
-  return h27(
+  return h28(
     "div",
     { id: "employees-view-container", className: "p-3 sm:p-5 space-y-4 max-w-7xl mx-auto select-none min-h-[calc(100vh-4rem)] text-right", dir: "rtl" },
-    h27(
+    h28(
       "div",
       { className: "flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm" },
-      h27(
+      h28(
         "div",
         null,
-        h27(
+        h28(
           "div",
           { className: "flex items-center gap-2" },
-          h27("div", { className: "p-2 rounded-xl bg-violet-50 text-violet-600" }, h27(Users9, { className: "w-5 h-5" })),
-          h27("h1", { className: "text-lg font-black text-slate-900" }, "\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646 \u0648\u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0627\u062A")
+          h28("div", { className: "p-2 rounded-xl bg-violet-50 text-violet-600" }, h28(Users9, { className: "w-5 h-5" })),
+          h28("h1", { className: "text-lg font-black text-slate-900" }, "\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646 \u0648\u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0627\u062A")
         ),
-        h27("p", { className: "text-xs text-slate-500 mt-1" }, "\u062D\u062F\u062F \u0627\u0644\u0635\u0641\u062D\u0627\u062A \u0627\u0644\u062A\u064A \u064A\u0633\u062A\u0637\u064A\u0639 \u0627\u0644\u0645\u0648\u0638\u0641 \u062F\u062E\u0648\u0644\u0647\u0627 \u0648\u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0627\u0644\u0639\u0645\u0644\u064A\u0627\u062A \u062F\u0627\u062E\u0644 \u0643\u0644 \u0635\u0641\u062D\u0629.")
+        h28("p", { className: "text-xs text-slate-500 mt-1" }, "\u062D\u062F\u062F \u0627\u0644\u0635\u0641\u062D\u0627\u062A \u0627\u0644\u062A\u064A \u064A\u0633\u062A\u0637\u064A\u0639 \u0627\u0644\u0645\u0648\u0638\u0641 \u062F\u062E\u0648\u0644\u0647\u0627 \u0648\u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0627\u0644\u0639\u0645\u0644\u064A\u0627\u062A \u062F\u0627\u062E\u0644 \u0643\u0644 \u0635\u0641\u062D\u0629.")
       ),
-      !employeeCreationLocked && h27("button", { onClick: openAdd, className: "flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-black shadow-sm" }, h27(UserPlus4, { className: "w-4 h-4" }), t("\u0625\u0636\u0627\u0641\u0629 \u0645\u0648\u0638\u0641 \u062C\u062F\u064A\u062F"))
+      !employeeCreationLocked && h28("button", { onClick: openAdd, className: "flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-black shadow-sm" }, h28(UserPlus4, { className: "w-4 h-4" }), t("\u0625\u0636\u0627\u0641\u0629 \u0645\u0648\u0638\u0641 \u062C\u062F\u064A\u062F"))
     ),
-    activeEmployee && h27(
+    activeEmployee && h28(
       "div",
       { className: "p-3.5 rounded-2xl bg-violet-50 border border-violet-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3" },
-      h27(
+      h28(
         "div",
         { className: "flex items-center gap-3" },
-        h27("div", { className: "w-10 h-10 rounded-xl bg-violet-600 text-white flex items-center justify-center" }, h27(UserCheck5, { className: "w-5 h-5" })),
-        h27("div", null, h27("div", { className: "text-[10px] text-violet-700 font-black" }, t("\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u0646\u0634\u0637")), h27("div", { className: "font-black text-slate-900 text-sm" }, activeEmployee.name), h27("div", { className: "text-[10px] text-slate-500" }, activeEmployee.roleName))
+        h28("div", { className: "w-10 h-10 rounded-xl bg-violet-600 text-white flex items-center justify-center" }, h28(UserCheck5, { className: "w-5 h-5" })),
+        h28("div", null, h28("div", { className: "text-[10px] text-violet-700 font-black" }, t("\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u0646\u0634\u0637")), h28("div", { className: "font-black text-slate-900 text-sm" }, activeEmployee.name), h28("div", { className: "text-[10px] text-slate-500" }, activeEmployee.roleName))
       )
     ),
-    h27(
+    h28(
       "div",
       { className: "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3" },
-      !employeesPager.pageItems.length ? h27(EmptyState, { message: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0645\u0648\u0638\u0641\u064A\u0646" }) : employeesPager.pageItems.map((emp) => {
+      !employeesPager.pageItems.length ? h28(EmptyState, { message: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0645\u0648\u0638\u0641\u064A\u0646" }) : employeesPager.pageItems.map((emp) => {
         const perms = { ...defaultPermissions, ...emp.permissions || {} };
         const allowedPages = [
           ...GENERAL_PAGE_PERMISSIONS.filter(([key3]) => perms[key3]).map(([, , label]) => label),
           ...RESTAURANT_PAGE_PERMISSIONS.filter(([key3]) => perms[key3]).map(([, , label]) => label)
         ];
         const isCurrent = activeEmployee?.id === emp.id;
-        return h27(
+        return h28(
           "div",
           { key: emp.id, className: `rounded-2xl border bg-white p-4 shadow-sm ${isCurrent ? "border-violet-400 ring-1 ring-violet-100" : "border-slate-200"}` },
-          h27(
+          h28(
             "div",
             { className: "flex items-start justify-between gap-3" },
-            h27(
+            h28(
               "div",
               { className: "min-w-0" },
-              h27("div", { className: "font-black text-sm text-slate-900 truncate" }, emp.name),
-              h27("div", { className: "text-[10px] text-slate-500 mt-0.5" }, `${emp.roleName || t("\u0645\u0648\u0638\u0641")}${emp.phone ? " \u2022 " + emp.phone : ""}`)
+              h28("div", { className: "font-black text-sm text-slate-900 truncate" }, emp.name),
+              h28("div", { className: "text-[10px] text-slate-500 mt-0.5" }, `${emp.roleName || t("\u0645\u0648\u0638\u0641")}${emp.phone ? " \u2022 " + emp.phone : ""}`)
             ),
-            h27("span", { className: `shrink-0 px-2 py-1 rounded-lg text-[10px] font-black ${emp.active === false ? "bg-rose-50 text-rose-700" : "bg-violet-50 text-violet-700"}` }, emp.active === false ? t("\u0645\u0648\u0642\u0648\u0641") : t("\u0646\u0634\u0637"))
+            h28("span", { className: `shrink-0 px-2 py-1 rounded-lg text-[10px] font-black ${emp.active === false ? "bg-rose-50 text-rose-700" : "bg-violet-50 text-violet-700"}` }, emp.active === false ? t("\u0645\u0648\u0642\u0648\u0641") : t("\u0646\u0634\u0637"))
           ),
-          h27(
+          h28(
             "div",
             { className: "mt-3 min-h-10 flex flex-wrap gap-1" },
-            allowedPages.length ? allowedPages.slice(0, 6).map((label) => h27("span", { key: label, className: "px-2 py-1 rounded-lg bg-violet-50 border border-violet-100 text-violet-800 text-[9px] font-black" }, label)) : h27("span", { className: "text-[10px] text-slate-400" }, "\u0644\u0627 \u062A\u0648\u062C\u062F \u0635\u0641\u062D\u0627\u062A \u0645\u0633\u0645\u0648\u062D\u0629"),
-            allowedPages.length > 6 ? h27("span", { className: "px-2 py-1 rounded-lg bg-slate-100 text-slate-600 text-[9px] font-black" }, `+${allowedPages.length - 6}`) : null
+            allowedPages.length ? allowedPages.slice(0, 6).map((label) => h28("span", { key: label, className: "px-2 py-1 rounded-lg bg-violet-50 border border-violet-100 text-violet-800 text-[9px] font-black" }, label)) : h28("span", { className: "text-[10px] text-slate-400" }, "\u0644\u0627 \u062A\u0648\u062C\u062F \u0635\u0641\u062D\u0627\u062A \u0645\u0633\u0645\u0648\u062D\u0629"),
+            allowedPages.length > 6 ? h28("span", { className: "px-2 py-1 rounded-lg bg-slate-100 text-slate-600 text-[9px] font-black" }, `+${allowedPages.length - 6}`) : null
           ),
-          h27(
+          h28(
             "div",
             { className: "mt-3 pt-3 border-t border-slate-100 flex flex-wrap gap-1.5" },
-            h27("button", { onClick: () => switchEmployee(emp), className: `px-2.5 py-1.5 rounded-lg text-[10px] font-black ${isCurrent ? "bg-violet-100 text-violet-800" : "bg-slate-100 text-slate-700"}` }, isCurrent ? t("\u0627\u0644\u062D\u0633\u0627\u0628 \u0627\u0644\u062D\u0627\u0644\u064A") : "\u062A\u0628\u062F\u064A\u0644 \u0644\u0644\u062D\u0633\u0627\u0628"),
-            h27("button", { onClick: () => openEdit(emp), className: "p-1.5 rounded-lg border border-slate-200 text-slate-600", title: t("\u062A\u0639\u062F\u064A\u0644") }, h27(Edit24, { className: "w-4 h-4" })),
-            h27("button", { onClick: () => downloadLoginFile(emp, true), className: "p-1.5 rounded-lg border text-violet-600", title: "\u0646\u0633\u062E \u0634\u0641\u0631\u0629 \u0627\u0644\u062F\u062E\u0648\u0644" }, "\u0646\u0633\u062E \u0627\u0644\u0634\u0641\u0631\u0629"),
-            h27("button", { onClick: () => downloadLoginFile(emp), className: "p-1.5 rounded-lg border border-blue-200 text-blue-600", title: "\u062A\u0646\u0632\u064A\u0644 \u0645\u0644\u0641 \u0627\u0644\u062F\u062E\u0648\u0644" }, h27(Download8, { className: "w-4 h-4" })),
-            h27("button", { onClick: () => removeEmployee(emp), className: "p-1.5 rounded-lg border border-rose-200 text-rose-600", title: t("\u062D\u0630\u0641") }, h27(Trash224, { className: "w-4 h-4" }))
+            h28("button", { onClick: () => switchEmployee(emp), className: `px-2.5 py-1.5 rounded-lg text-[10px] font-black ${isCurrent ? "bg-violet-100 text-violet-800" : "bg-slate-100 text-slate-700"}` }, isCurrent ? t("\u0627\u0644\u062D\u0633\u0627\u0628 \u0627\u0644\u062D\u0627\u0644\u064A") : "\u062A\u0628\u062F\u064A\u0644 \u0644\u0644\u062D\u0633\u0627\u0628"),
+            h28("button", { onClick: () => openEdit(emp), className: "p-1.5 rounded-lg border border-slate-200 text-slate-600", title: t("\u062A\u0639\u062F\u064A\u0644") }, h28(Edit24, { className: "w-4 h-4" })),
+            h28("button", { onClick: () => downloadLoginFile(emp, true), className: "p-1.5 rounded-lg border text-violet-600", title: "\u0646\u0633\u062E \u0634\u0641\u0631\u0629 \u0627\u0644\u062F\u062E\u0648\u0644" }, "\u0646\u0633\u062E \u0627\u0644\u0634\u0641\u0631\u0629"),
+            h28("button", { onClick: () => downloadLoginFile(emp), className: "p-1.5 rounded-lg border border-blue-200 text-blue-600", title: "\u062A\u0646\u0632\u064A\u0644 \u0645\u0644\u0641 \u0627\u0644\u062F\u062E\u0648\u0644" }, h28(Download8, { className: "w-4 h-4" })),
+            h28("button", { onClick: () => removeEmployee(emp), className: "p-1.5 rounded-lg border border-rose-200 text-rose-600", title: t("\u062D\u0630\u0641") }, h28(Trash224, { className: "w-4 h-4" }))
           )
         );
       })
     ),
-    h27(Pagination, { pager: employeesPager }),
-    isModalOpen && h27(
+    h28(Pagination, { pager: employeesPager }),
+    isModalOpen && h28(
       ModalLayer,
       { onDismiss: () => setIsModalOpen(false), style: { zIndex: 2e5 }, className: "oscar-employee-modal-overlay fixed bg-black/55 flex justify-center" },
-      h27(
+      h28(
         "div",
         { className: "oscar-employee-modal-panel w-full max-w-2xl bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col" },
-        h27(
+        h28(
           "div",
           { className: "p-4 border-b border-slate-100 flex items-center justify-between shrink-0" },
-          h27("div", { className: "flex items-center gap-2" }, h27(ShieldCheck, { className: "w-5 h-5 text-violet-600" }), h27("div", null, h27("div", { className: "font-black text-slate-900 text-sm" }, editingEmployee ? "\u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0645\u0648\u0638\u0641 \u0648\u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0627\u062A" : t("\u0625\u0636\u0627\u0641\u0629 \u0645\u0648\u0638\u0641 \u062C\u062F\u064A\u062F")), h27("div", { className: "text-[10px] text-slate-500" }, "\u062D\u062F\u062F \u0627\u0644\u0635\u0641\u062D\u0627\u062A \u0648\u0627\u0644\u0639\u0645\u0644\u064A\u0627\u062A \u0627\u0644\u0645\u0633\u0645\u0648\u062D\u0629 \u0644\u0644\u0645\u0648\u0638\u0641"))),
-          h27("button", { type: "button", onClick: () => setIsModalOpen(false), className: "w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500" }, h27(X26, { className: "w-4 h-4" }))
+          h28("div", { className: "flex items-center gap-2" }, h28(ShieldCheck, { className: "w-5 h-5 text-violet-600" }), h28("div", null, h28("div", { className: "font-black text-slate-900 text-sm" }, editingEmployee ? "\u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0645\u0648\u0638\u0641 \u0648\u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0627\u062A" : t("\u0625\u0636\u0627\u0641\u0629 \u0645\u0648\u0638\u0641 \u062C\u062F\u064A\u062F")), h28("div", { className: "text-[10px] text-slate-500" }, "\u062D\u062F\u062F \u0627\u0644\u0635\u0641\u062D\u0627\u062A \u0648\u0627\u0644\u0639\u0645\u0644\u064A\u0627\u062A \u0627\u0644\u0645\u0633\u0645\u0648\u062D\u0629 \u0644\u0644\u0645\u0648\u0638\u0641"))),
+          h28("button", { type: "button", onClick: () => setIsModalOpen(false), className: "w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500" }, h28(X27, { className: "w-4 h-4" }))
         ),
-        h27(
+        h28(
           "form",
           { onSubmit: submit, className: "ct-employee-form" },
-          h27(
+          h28(
             "div",
             { className: "ct-employee-fields" },
-            h27(
+            h28(
               "div",
               { className: "oscar-mobile-form-grid grid grid-cols-2 gap-2.5 sm:gap-3" },
-              h27("div", null, h27("label", { className: "block text-[11px] font-black text-slate-700 mb-1" }, "\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641 *"), h27("input", { required: true, value: name, onChange: (e) => setName(e.target.value), className: "w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm outline-none focus:border-violet-500" })),
-              h27("div", null, h27("label", { className: "block text-[11px] font-black text-slate-700 mb-1" }, t("\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641")), h27("input", { value: phone, onChange: (e) => setPhone(e.target.value), className: "w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm outline-none focus:border-violet-500" })),
-              h27("div", null, h27("label", { className: "block text-[11px] font-black text-slate-700 mb-1" }, "\u0627\u0644\u062F\u0648\u0631 / \u0627\u0644\u0642\u0627\u0644\u0628 \u0627\u0644\u062C\u0627\u0647\u0632"), h27(
+              h28("div", null, h28("label", { className: "block text-[11px] font-black text-slate-700 mb-1" }, "\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641 *"), h28("input", { required: true, value: name, onChange: (e) => setName(e.target.value), className: "w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm outline-none focus:border-violet-500" })),
+              h28("div", null, h28("label", { className: "block text-[11px] font-black text-slate-700 mb-1" }, t("\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641")), h28("input", { value: phone, onChange: (e) => setPhone(e.target.value), className: "w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm outline-none focus:border-violet-500" })),
+              h28("div", null, h28("label", { className: "block text-[11px] font-black text-slate-700 mb-1" }, "\u0627\u0644\u062F\u0648\u0631 / \u0627\u0644\u0642\u0627\u0644\u0628 \u0627\u0644\u062C\u0627\u0647\u0632"), h28(
                 "select",
                 { value: role, onChange: (e) => changeRole(e.target.value), className: "w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold outline-none" },
-                h27("option", { value: "cashier" }, "\u0643\u0627\u0634\u064A\u0631"),
-                h27("option", { value: "waiter" }, "\u062C\u0631\u0633\u0648\u0646"),
-                h27("option", { value: "kitchen" }, "\u0645\u0648\u0638\u0641 \u0645\u0637\u0628\u062E"),
-                h27("option", { value: "admin" }, "\u0645\u062F\u064A\u0631 \u0639\u0627\u0645 \u2014 \u0643\u0644 \u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0627\u062A"),
-                h27("option", { value: "accountant" }, t("\u0645\u062D\u0627\u0633\u0628")),
-                h27("option", { value: "inventory_mgr" }, t("\u0645\u0633\u0624\u0648\u0644 \u0645\u062E\u0632\u0648\u0646")),
-                h27("option", { value: "custom" }, t("\u0645\u062E\u0635\u0635"))
+                h28("option", { value: "cashier" }, "\u0643\u0627\u0634\u064A\u0631"),
+                h28("option", { value: "waiter" }, "\u062C\u0631\u0633\u0648\u0646"),
+                h28("option", { value: "kitchen" }, "\u0645\u0648\u0638\u0641 \u0645\u0637\u0628\u062E"),
+                h28("option", { value: "admin" }, "\u0645\u062F\u064A\u0631 \u0639\u0627\u0645 \u2014 \u0643\u0644 \u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0627\u062A"),
+                h28("option", { value: "accountant" }, t("\u0645\u062D\u0627\u0633\u0628")),
+                h28("option", { value: "inventory_mgr" }, t("\u0645\u0633\u0624\u0648\u0644 \u0645\u062E\u0632\u0648\u0646")),
+                h28("option", { value: "custom" }, t("\u0645\u062E\u0635\u0635"))
               )),
-              h27("div", null, h27("label", { className: "block text-[11px] font-black text-slate-700 mb-1" }, "PIN"), h27("input", { type: "password", maxLength: 6, value: pin, onChange: (e) => setPin(e.target.value), className: "w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-center outline-none" })),
-              h27("div", { className: "min-w-0" }, h27("label", { className: "block text-[11px] font-black text-slate-700 mb-1" }, t("\u0627\u0644\u0645\u0633\u0645\u0649 \u0627\u0644\u0648\u0638\u064A\u0641\u064A")), h27("input", { value: roleName, onChange: (e) => setRoleName(e.target.value), className: "w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm outline-none" }))
+              h28("div", null, h28("label", { className: "block text-[11px] font-black text-slate-700 mb-1" }, "PIN"), h28("input", { type: "password", maxLength: 6, value: pin, onChange: (e) => setPin(e.target.value), className: "w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-center outline-none" })),
+              h28("div", { className: "min-w-0" }, h28("label", { className: "block text-[11px] font-black text-slate-700 mb-1" }, t("\u0627\u0644\u0645\u0633\u0645\u0649 \u0627\u0644\u0648\u0638\u064A\u0641\u064A")), h28("input", { value: roleName, onChange: (e) => setRoleName(e.target.value), className: "w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm outline-none" }))
             ),
-            role !== "sales_rep" && h27(
+            role !== "sales_rep" && h28(
               "section",
               { className: "p-3 rounded-2xl border border-violet-200 bg-violet-50/40" },
-              h27("div", { className: "font-black text-xs text-violet-900" }, "\u0635\u0644\u0627\u062D\u064A\u0627\u062A \u062F\u062E\u0648\u0644 \u0627\u0644\u0635\u0641\u062D\u0627\u062A"),
-              h27("div", { className: "text-[10px] text-violet-700 mt-0.5 mb-2" }, "\u0623\u064A \u0635\u0641\u062D\u0629 \u063A\u064A\u0631 \u0645\u062D\u062F\u062F\u0629 \u0644\u0646 \u062A\u0638\u0647\u0631 \u0644\u0644\u0645\u0648\u0638\u0641 \u0648\u0644\u0646 \u064A\u0633\u062A\u0637\u064A\u0639 \u0641\u062A\u062D\u0647\u0627 \u062D\u062A\u0649 \u0644\u0648 \u062D\u0627\u0648\u0644 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u064A\u0647\u0627 \u0645\u0628\u0627\u0634\u0631\u0629."),
-              h27("div", { className: "employee-permission-grid grid grid-cols-1 sm:grid-cols-2 gap-2" }, pagePermissions.map(([key3, , label]) => permissionRow(key3, label)))
+              h28("div", { className: "font-black text-xs text-violet-900" }, "\u0635\u0644\u0627\u062D\u064A\u0627\u062A \u062F\u062E\u0648\u0644 \u0627\u0644\u0635\u0641\u062D\u0627\u062A"),
+              h28("div", { className: "text-[10px] text-violet-700 mt-0.5 mb-2" }, "\u0623\u064A \u0635\u0641\u062D\u0629 \u063A\u064A\u0631 \u0645\u062D\u062F\u062F\u0629 \u0644\u0646 \u062A\u0638\u0647\u0631 \u0644\u0644\u0645\u0648\u0638\u0641 \u0648\u0644\u0646 \u064A\u0633\u062A\u0637\u064A\u0639 \u0641\u062A\u062D\u0647\u0627 \u062D\u062A\u0649 \u0644\u0648 \u062D\u0627\u0648\u0644 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u064A\u0647\u0627 \u0645\u0628\u0627\u0634\u0631\u0629."),
+              h28("div", { className: "employee-permission-grid grid grid-cols-1 sm:grid-cols-2 gap-2" }, pagePermissions.map(([key3, , label]) => permissionRow(key3, label)))
             ),
-            role !== "sales_rep" && h27(
+            role !== "sales_rep" && h28(
               "section",
               { className: "p-3 rounded-2xl border border-slate-200 bg-slate-50" },
-              h27("div", { className: "font-black text-xs text-slate-900 mb-2" }, "\u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0627\u0644\u0639\u0645\u0644\u064A\u0627\u062A \u062F\u0627\u062E\u0644 \u0627\u0644\u0635\u0641\u062D\u0627\u062A"),
-              h27("div", { className: "employee-permission-grid grid grid-cols-1 sm:grid-cols-2 gap-2" }, actionPermissions.map(([key3, label]) => permissionRow(key3, label)))
+              h28("div", { className: "font-black text-xs text-slate-900 mb-2" }, "\u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0627\u0644\u0639\u0645\u0644\u064A\u0627\u062A \u062F\u0627\u062E\u0644 \u0627\u0644\u0635\u0641\u062D\u0627\u062A"),
+              h28("div", { className: "employee-permission-grid grid grid-cols-1 sm:grid-cols-2 gap-2" }, actionPermissions.map(([key3, label]) => permissionRow(key3, label)))
             ),
-            role !== "sales_rep" && h27(
+            role !== "sales_rep" && h28(
               "section",
               { className: "p-3 rounded-2xl border border-amber-200 bg-amber-50/50" },
-              h27("div", { className: "font-black text-xs text-amber-900" }, "\u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0627\u0644\u0645\u0637\u0639\u0645 \u0648\u0627\u0644\u0643\u0627\u0641\u064A\u0647 \u2014 \u0643\u0644 \u0635\u0641\u062D\u0629 \u0645\u0633\u062A\u0642\u0644\u0629"),
-              h27("div", { className: "text-[10px] text-amber-700 mt-0.5 mb-2" }, "\u0627\u0644\u0635\u0641\u062D\u0629 \u0627\u0644\u062A\u064A \u0644\u0627 \u062A\u0641\u0639\u0651\u0644\u0647\u0627 \u0644\u0646 \u062A\u0638\u0647\u0631 \u0644\u0644\u0645\u0648\u0638\u0641 \u0648\u0644\u0646 \u064A\u0633\u062A\u0637\u064A\u0639 \u0641\u062A\u062D\u0647\u0627."),
-              h27(
+              h28("div", { className: "font-black text-xs text-amber-900" }, "\u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0627\u0644\u0645\u0637\u0639\u0645 \u0648\u0627\u0644\u0643\u0627\u0641\u064A\u0647 \u2014 \u0643\u0644 \u0635\u0641\u062D\u0629 \u0645\u0633\u062A\u0642\u0644\u0629"),
+              h28("div", { className: "text-[10px] text-amber-700 mt-0.5 mb-2" }, "\u0627\u0644\u0635\u0641\u062D\u0629 \u0627\u0644\u062A\u064A \u0644\u0627 \u062A\u0641\u0639\u0651\u0644\u0647\u0627 \u0644\u0646 \u062A\u0638\u0647\u0631 \u0644\u0644\u0645\u0648\u0638\u0641 \u0648\u0644\u0646 \u064A\u0633\u062A\u0637\u064A\u0639 \u0641\u062A\u062D\u0647\u0627."),
+              h28(
                 "div",
                 { className: "employee-permission-grid grid grid-cols-1 sm:grid-cols-2 gap-2" },
                 permissionRow("canAccessRestaurantTables", "\u0627\u0644\u0637\u0627\u0648\u0644\u0627\u062A \u0648\u0627\u0644\u0635\u0627\u0644\u0627\u062A", "amber", LayoutGrid5),
@@ -19943,18 +20017,18 @@ var EmployeesView = () => {
                 permissionRow("canAccessRestaurantWaste", "\u0627\u0644\u0648\u0635\u0641\u0627\u062A \u0648\u0627\u0644\u0647\u0627\u0644\u0643", "amber", Scale5)
               )
             ),
-            h27(
+            h28(
               "label",
               { className: "flex items-center gap-2 p-3 rounded-xl border border-slate-200 bg-white cursor-pointer" },
-              h27("input", { type: "checkbox", checked: active3, onChange: (e) => setActive(e.target.checked), className: "accent-violet-600" }),
-              h27("span", { className: "text-xs font-black text-slate-700" }, "\u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u0648\u0638\u0641 \u0646\u0634\u0637 \u0648\u064A\u0645\u0643\u0646\u0647 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644")
+              h28("input", { type: "checkbox", checked: active3, onChange: (e) => setActive(e.target.checked), className: "accent-violet-600" }),
+              h28("span", { className: "text-xs font-black text-slate-700" }, "\u062D\u0633\u0627\u0628 \u0627\u0644\u0645\u0648\u0638\u0641 \u0646\u0634\u0637 \u0648\u064A\u0645\u0643\u0646\u0647 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644")
             )
           ),
-          h27(
+          h28(
             "div",
             { className: "ct-employee-footer flex items-center justify-end gap-2" },
-            h27("button", { type: "button", onClick: () => setIsModalOpen(false), className: "px-4 py-2 rounded-xl border border-slate-200 text-xs font-black text-slate-600" }, t("\u0625\u0644\u063A\u0627\u0621")),
-            h27("button", { type: "submit", className: "px-5 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-black shadow-sm" }, "\u062D\u0641\u0638 \u0627\u0644\u0645\u0648\u0638\u0641 \u0648\u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0627\u062A")
+            h28("button", { type: "button", onClick: () => setIsModalOpen(false), className: "px-4 py-2 rounded-xl border border-slate-200 text-xs font-black text-slate-600" }, t("\u0625\u0644\u063A\u0627\u0621")),
+            h28("button", { type: "submit", className: "px-5 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-black shadow-sm" }, "\u062D\u0641\u0638 \u0627\u0644\u0645\u0648\u0638\u0641 \u0648\u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0627\u062A")
           )
         )
       )
@@ -19965,11 +20039,11 @@ var EmployeesView = () => {
 // app/components__barcodes__BarcodesView.js
 import React48, { useEffect as useEffect28, useState as useState35 } from "react";
 import { Printer as Printer7, Barcode as BarcodeIcon } from "lucide-react";
-var h28 = React48.createElement;
+var h29 = React48.createElement;
 var BarcodeSvg = ({ value, compact = false }) => {
   const g = code128Geometry(value);
   const height = compact ? 34 : 44;
-  return h28("svg", {
+  return h29("svg", {
     viewBox: `0 0 ${g.width} ${height}`,
     width: "100%",
     height,
@@ -19977,7 +20051,7 @@ var BarcodeSvg = ({ value, compact = false }) => {
     role: "img",
     "aria-label": `CODE128 ${g.text}`,
     style: { display: "block", background: "#fff", shapeRendering: "crispEdges" }
-  }, ...g.rects.map((r, i) => h28("rect", { key: i, x: r.x, y: 0, width: r.width, height, fill: "#000" })));
+  }, ...g.rects.map((r, i) => h29("rect", { key: i, x: r.x, y: 0, width: r.width, height, fill: "#000" })));
 };
 var BarcodesView = () => {
   const { products, settings, showToast } = useApp();
@@ -19998,38 +20072,38 @@ var BarcodesView = () => {
   };
   const productOptions = activeProducts.map((p) => ({ id: p.id, label: p.name, subLabel: p.sku || p.internalCode || "\u0635\u0646\u0641" }));
   const unitOptions = (selectedProduct?.units || []).map((u) => ({ id: u.id, label: u.name, subLabel: `${u.salePrice || 0} ${settings.currencySymbol} \xB7 ${u.barcodes?.[0] || "\u0628\u062F\u0648\u0646 \u0628\u0627\u0631\u0643\u0648\u062F"}` }));
-  return h28(
+  return h29(
     "div",
     { id: "barcodes-screen", className: "p-4 sm:p-6 space-y-4 max-w-5xl mx-auto text-right select-none" },
-    h28("div", { className: "flex items-center justify-end" }, h28("button", { onClick: printNow, className: "flex items-center gap-2 px-5 py-2.5 rounded-xl bg-violet-600 text-white text-xs font-bold shadow" }, h28(Printer7, { className: "w-4 h-4" }), "\u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u0645\u0644\u0635\u0642\u0627\u062A")),
-    h28(
+    h29("div", { className: "flex items-center justify-end" }, h29("button", { onClick: printNow, className: "flex items-center gap-2 px-5 py-2.5 rounded-xl bg-violet-600 text-white text-xs font-bold shadow" }, h29(Printer7, { className: "w-4 h-4" }), "\u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u0645\u0644\u0635\u0642\u0627\u062A")),
+    h29(
       "div",
       { className: "grid grid-cols-1 sm:grid-cols-4 gap-3 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm" },
-      h28("div", { className: "sm:col-span-2" }, h28(SearchableDropdown, { id: "barcode-product", label: t("\u0627\u0644\u0635\u0646\u0641:"), options: productOptions, selectedId: selectedProductId, onSelect: (id) => {
+      h29("div", { className: "sm:col-span-2" }, h29(SearchableDropdown, { id: "barcode-product", label: t("\u0627\u0644\u0635\u0646\u0641:"), options: productOptions, selectedId: selectedProductId, onSelect: (id) => {
         setSelectedProductId(id);
         const p = activeProducts.find((x) => x.id === id);
         setSelectedUnitId(p?.units?.[0]?.id || "");
       }, placeholder: "\u0627\u0628\u062D\u062B \u0628\u0627\u0633\u0645 \u0627\u0644\u0635\u0646\u0641 \u0623\u0648 \u0627\u0644\u0643\u0648\u062F..." })),
-      h28("div", {}, h28(SearchableDropdown, { id: "barcode-unit", label: t("\u0627\u0644\u0648\u062D\u062F\u0629:"), options: unitOptions, selectedId: selectedUnitId, onSelect: setSelectedUnitId, placeholder: "\u0627\u0628\u062D\u062B \u0639\u0646 \u0627\u0644\u0648\u062D\u062F\u0629..." })),
-      h28("div", {}, h28("label", { className: "text-xs font-bold block mb-1" }, "\u0639\u062F\u062F \u0627\u0644\u0646\u0633\u062E:"), h28("input", { type: "number", min: 1, max: 100, value: copies, onChange: (e) => setCopies(Math.max(1, parseInt(e.target.value) || 1)), className: "w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-mono font-bold text-center" }))
+      h29("div", {}, h29(SearchableDropdown, { id: "barcode-unit", label: t("\u0627\u0644\u0648\u062D\u062F\u0629:"), options: unitOptions, selectedId: selectedUnitId, onSelect: setSelectedUnitId, placeholder: "\u0627\u0628\u062D\u062B \u0639\u0646 \u0627\u0644\u0648\u062D\u062F\u0629..." })),
+      h29("div", {}, h29("label", { className: "text-xs font-bold block mb-1" }, "\u0639\u062F\u062F \u0627\u0644\u0646\u0633\u062E:"), h29("input", { type: "number", min: 1, max: 100, value: copies, onChange: (e) => setCopies(Math.max(1, parseInt(e.target.value) || 1)), className: "w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-mono font-bold text-center" }))
     ),
-    h28(
+    h29(
       "div",
       { className: "flex items-center gap-2" },
-      h28("button", { onClick: () => setLabelType("shelf"), className: `px-3 py-2 rounded-xl text-xs font-bold border ${labelType === "shelf" ? "bg-violet-600 text-white border-violet-600" : "bg-white border-slate-200"}` }, "\u0628\u0637\u0627\u0642\u0629 \u0631\u0641"),
-      h28("button", { onClick: () => setLabelType("item"), className: `px-3 py-2 rounded-xl text-xs font-bold border ${labelType === "item" ? "bg-violet-600 text-white border-violet-600" : "bg-white border-slate-200"}` }, "\u0645\u0644\u0635\u0642 \u0635\u0646\u0641")
+      h29("button", { onClick: () => setLabelType("shelf"), className: `px-3 py-2 rounded-xl text-xs font-bold border ${labelType === "shelf" ? "bg-violet-600 text-white border-violet-600" : "bg-white border-slate-200"}` }, "\u0628\u0637\u0627\u0642\u0629 \u0631\u0641"),
+      h29("button", { onClick: () => setLabelType("item"), className: `px-3 py-2 rounded-xl text-xs font-bold border ${labelType === "item" ? "bg-violet-600 text-white border-violet-600" : "bg-white border-slate-200"}` }, "\u0645\u0644\u0635\u0642 \u0635\u0646\u0641")
     ),
-    h28(
+    h29(
       "div",
       { className: "p-4 rounded-2xl bg-slate-50 border border-slate-200" },
-      h28("div", { className: "flex items-center gap-2 text-xs font-bold text-slate-500 mb-3" }, h28(BarcodeIcon, { className: "w-4 h-4" }), `\u0645\u0639\u0627\u064A\u0646\u0629 ${copies} \u0645\u0644\u0635\u0642 \u2014 CODE128 \u0642\u0627\u0628\u0644 \u0644\u0644\u0645\u0633\u062D`),
-      h28(
+      h29("div", { className: "flex items-center gap-2 text-xs font-bold text-slate-500 mb-3" }, h29(BarcodeIcon, { className: "w-4 h-4" }), `\u0645\u0639\u0627\u064A\u0646\u0629 ${copies} \u0645\u0644\u0635\u0642 \u2014 CODE128 \u0642\u0627\u0628\u0644 \u0644\u0644\u0645\u0633\u062D`),
+      h29(
         "div",
         { id: "barcode-print-area", className: "grid grid-cols-2 sm:grid-cols-3 gap-3 bg-white p-2" },
-        ...Array.from({ length: copies }).map((_, idx) => h28(
+        ...Array.from({ length: copies }).map((_, idx) => h29(
           "div",
           { key: idx, className: `bg-white text-black border border-slate-300 rounded-lg p-2 flex flex-col justify-between text-center ${labelType === "shelf" ? "min-h-36" : "min-h-28"}` },
-          labelType === "shelf" ? [h28("div", { key: "a" }, h28("div", { className: "text-[9px] font-bold" }, settings.storeName), h28("div", { className: "text-[11px] font-black leading-tight" }, selectedProduct?.name || "\u2014"), h28("div", { className: "text-[9px] text-slate-600" }, `\u0627\u0644\u0648\u062D\u062F\u0629: ${selectedUnit?.name || "\u2014"}`)), h28("div", { key: "b", className: "text-2xl font-black font-mono" }, `${Number(selectedUnit?.salePrice || 0).toFixed(2)} ${settings.currencySymbol}`), h28("div", { key: "c", className: "flex flex-col items-center gap-0.5" }, h28(BarcodeSvg, { value: barcodeValue }), h28("div", { className: "text-[9px] font-mono tracking-wide" }, barcodeValue))] : [h28("div", { key: "a", className: "text-[10px] font-bold leading-tight" }, selectedProduct?.name || "\u2014"), h28("div", { key: "b", className: "flex justify-center" }, h28(BarcodeSvg, { value: barcodeValue, compact: true })), h28("div", { key: "c", className: "flex justify-between text-[9px] font-mono font-bold" }, h28("span", {}, barcodeValue), h28("span", { className: "text-violet-700" }, `${selectedUnit?.salePrice || 0} ${settings.currencySymbol}`))]
+          labelType === "shelf" ? [h29("div", { key: "a" }, h29("div", { className: "text-[9px] font-bold" }, settings.storeName), h29("div", { className: "text-[11px] font-black leading-tight" }, selectedProduct?.name || "\u2014"), h29("div", { className: "text-[9px] text-slate-600" }, `\u0627\u0644\u0648\u062D\u062F\u0629: ${selectedUnit?.name || "\u2014"}`)), h29("div", { key: "b", className: "text-2xl font-black font-mono" }, `${Number(selectedUnit?.salePrice || 0).toFixed(2)} ${settings.currencySymbol}`), h29("div", { key: "c", className: "flex flex-col items-center gap-0.5" }, h29(BarcodeSvg, { value: barcodeValue }), h29("div", { className: "text-[9px] font-mono tracking-wide" }, barcodeValue))] : [h29("div", { key: "a", className: "text-[10px] font-bold leading-tight" }, selectedProduct?.name || "\u2014"), h29("div", { key: "b", className: "flex justify-center" }, h29(BarcodeSvg, { value: barcodeValue, compact: true })), h29("div", { key: "c", className: "flex justify-between text-[9px] font-mono font-bold" }, h29("span", {}, barcodeValue), h29("span", { className: "text-violet-700" }, `${selectedUnit?.salePrice || 0} ${settings.currencySymbol}`))]
         ))
       )
     )
@@ -20039,7 +20113,7 @@ var BarcodesView = () => {
 // app/components__reports__ReportsView.js
 import React49, { useEffect as useEffect29, useMemo as useMemo12, useState as useState36 } from "react";
 import { Download as Download9, ReceiptText as ReceiptText5, Package as Package11, Users as Users10, Truck as Truck7, WalletCards as WalletCards3, CalendarDays as CalendarDays2, CircleDollarSign, FileText as FileText7, Image as ImageIcon9, TrendingUp as TrendingUp2 } from "lucide-react";
-var h29 = React49.createElement;
+var h30 = React49.createElement;
 var num6 = (v) => {
   const n4 = Number(v);
   return Number.isFinite(n4) ? n4 : 0;
@@ -20056,32 +20130,32 @@ var endOfDay2 = (d) => {
   x.setHours(23, 59, 59, 999);
   return x;
 };
-var Metric = ({ label, value, sub, tone = "slate", icon: Icon }) => h29(
+var Metric = ({ label, value, sub, tone = "slate", icon: Icon }) => h30(
   "div",
   {
     className: `ct-report-metric rounded-2xl border p-4 bg-white dark:bg-slate-900 shadow-xs ${tone === "emerald" ? "border-violet-200 dark:border-violet-900" : tone === "rose" ? "border-rose-200 dark:border-rose-900" : tone === "blue" ? "border-blue-200 dark:border-blue-900" : "border-slate-200 dark:border-slate-800"}`
   },
-  h29(
+  h30(
     "div",
     { className: "flex items-center justify-between gap-2" },
-    h29("div", { className: "text-[11px] font-bold text-slate-500" }, label),
-    Icon ? h29("div", { className: `shrink-0 w-8 h-8 rounded-xl flex items-center justify-center ${tone === "emerald" ? "bg-violet-50 dark:bg-violet-950/40 text-violet-600" : tone === "rose" ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600" : tone === "blue" ? "bg-blue-50 dark:bg-blue-950/40 text-blue-600" : "bg-slate-100 dark:bg-slate-800 text-slate-500"}` }, h29(Icon, { className: "w-4 h-4" })) : null
+    h30("div", { className: "text-[11px] font-bold text-slate-500" }, label),
+    Icon ? h30("div", { className: `shrink-0 w-8 h-8 rounded-xl flex items-center justify-center ${tone === "emerald" ? "bg-violet-50 dark:bg-violet-950/40 text-violet-600" : tone === "rose" ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600" : tone === "blue" ? "bg-blue-50 dark:bg-blue-950/40 text-blue-600" : "bg-slate-100 dark:bg-slate-800 text-slate-500"}` }, h30(Icon, { className: "w-4 h-4" })) : null
   ),
-  h29("div", { className: `mt-1 text-xl font-black font-mono ${tone === "emerald" ? "text-violet-700 dark:text-violet-400" : tone === "rose" ? "text-rose-600" : tone === "blue" ? "text-blue-700 dark:text-blue-400" : "text-slate-900 dark:text-white"}` }, value),
-  sub ? h29("div", { className: "mt-1 text-[10px] text-slate-400" }, sub) : null
+  h30("div", { className: `mt-1 text-xl font-black font-mono ${tone === "emerald" ? "text-violet-700 dark:text-violet-400" : tone === "rose" ? "text-rose-600" : tone === "blue" ? "text-blue-700 dark:text-blue-400" : "text-slate-900 dark:text-white"}` }, value),
+  sub ? h30("div", { className: "mt-1 text-[10px] text-slate-400" }, sub) : null
 );
-var Section = ({ icon: Icon, title, subtitle, children }) => h29(
+var Section = ({ icon: Icon, title, subtitle, children }) => h30(
   "section",
   { className: "rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 p-3 sm:p-5 space-y-4" },
-  h29(
+  h30(
     "div",
     { className: "flex items-start gap-3" },
-    h29("div", { className: "p-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800" }, h29(Icon, { className: "w-5 h-5 text-violet-600" })),
-    h29(
+    h30("div", { className: "p-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800" }, h30(Icon, { className: "w-5 h-5 text-violet-600" })),
+    h30(
       "div",
       null,
-      h29("h3", { className: "font-black text-base text-slate-900 dark:text-white" }, title),
-      subtitle ? h29("p", { className: "text-[11px] text-slate-500 mt-0.5" }, subtitle) : null
+      h30("h3", { className: "font-black text-base text-slate-900 dark:text-white" }, title),
+      subtitle ? h30("p", { className: "text-[11px] text-slate-500 mt-0.5" }, subtitle) : null
     )
   ),
   children
@@ -20286,130 +20360,118 @@ var ReportsView = () => {
   };
   const exportProfessionalPdf = () => exportReport("pdf");
   const exportProfessionalImage = () => exportReport("image");
-  if (!reportReady) return h29("div", { className: "p-6 text-center", role: "status" }, reportError || "\u062C\u0627\u0631\u064A \u062A\u062C\u0647\u064A\u0632 \u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631 \u0627\u0644\u0643\u0627\u0645\u0644\u0629\u2026");
-  return h29(
+  if (!reportReady) return h30("div", { className: "p-6 text-center", role: "status" }, reportError || "\u062C\u0627\u0631\u064A \u062A\u062C\u0647\u064A\u0632 \u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631 \u0627\u0644\u0643\u0627\u0645\u0644\u0629\u2026");
+  return h30(
     "div",
     { id: "reports-screen", className: "p-3 sm:p-6 space-y-5 max-w-7xl mx-auto text-right select-none" },
-    h29(
+    h30(
       "div",
       { className: "flex flex-col xl:flex-row xl:items-end justify-between gap-4" },
-      h29(
+      h30(
         "div",
         null,
-        h29("h2", { className: "text-xl font-black text-slate-900 dark:text-white" }, t("\u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631 \u0627\u0644\u0634\u0627\u0645\u0644\u0629")),
-        h29("p", { className: "text-xs text-slate-500 mt-1" }, `\u062A\u0642\u0627\u0631\u064A\u0631 \u0627\u0644\u0641\u0648\u0627\u062A\u064A\u0631 \u0648\u0627\u0644\u0645\u062E\u0627\u0632\u0646 \u0648\u0627\u0644\u0639\u0645\u0644\u0627\u0621 \u0648\u0627\u0644\u0645\u0648\u0631\u062F\u064A\u0646 \u0648\u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A \u2014 \u0627\u0644\u0641\u062A\u0631\u0629: ${periodLabel}`)
+        h30("h2", { className: "text-xl font-black text-slate-900 dark:text-white" }, t("\u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631 \u0627\u0644\u0634\u0627\u0645\u0644\u0629")),
+        h30("p", { className: "text-xs text-slate-500 mt-1" }, `\u062A\u0642\u0627\u0631\u064A\u0631 \u0627\u0644\u0641\u0648\u0627\u062A\u064A\u0631 \u0648\u0627\u0644\u0645\u062E\u0627\u0632\u0646 \u0648\u0627\u0644\u0639\u0645\u0644\u0627\u0621 \u0648\u0627\u0644\u0645\u0648\u0631\u062F\u064A\u0646 \u0648\u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A \u2014 \u0627\u0644\u0641\u062A\u0631\u0629: ${periodLabel}`)
       ),
-      h29(
+      h30(
         "div",
         { className: "flex flex-wrap items-end gap-2" },
-        h29(AuditFilters, { value: audit, onChange: (v) => {
-          setAudit(v);
-          if (v.from || v.to) setPeriod("all");
+        h30(AuditFilters, { periods: true, value: { ...audit, period, from: audit.from || (fromDate ? fromDate + "T00:00" : ""), to: audit.to || (toDate ? toDate + "T23:59" : "") }, onChange: (v) => {
+          setAudit({ actorId: v.actorId, from: v.from || "", to: v.to || "" });
+          setFromDate("");
+          setToDate("");
+          setPeriod(v.from || v.to ? "all" : v.period || "all");
         } }),
-        h29("div", { className: "flex gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800" }, ...periodButtons.map(([id, label]) => h29("button", {
-          key: id,
-          type: "button",
-          onClick: () => setPeriod(id),
-          className: `px-3 py-2 rounded-lg text-[11px] font-black ${period === id ? "bg-white dark:bg-slate-900 text-violet-600 shadow-sm" : "text-slate-500"}`
-        }, t(label)))),
-        h29("label", { className: "text-[10px] font-bold text-slate-500" }, t("\u0645\u0646 \u062A\u0627\u0631\u064A\u062E"), h29("input", { type: "date", value: fromDate, onChange: (e) => {
-          setFromDate(e.target.value);
-          setPeriod("custom");
-        }, className: "block mt-1 px-2 py-1.5 rounded-lg border bg-white dark:bg-slate-900 dark:border-slate-700 text-xs" })),
-        h29("label", { className: "text-[10px] font-bold text-slate-500" }, t("\u0625\u0644\u0649 \u062A\u0627\u0631\u064A\u062E"), h29("input", { type: "date", value: toDate, onChange: (e) => {
-          setToDate(e.target.value);
-          setPeriod("custom");
-        }, className: "block mt-1 px-2 py-1.5 rounded-lg border bg-white dark:bg-slate-900 dark:border-slate-700 text-xs" })),
-        h29("button", { type: "button", onClick: exportSummary, className: "inline-flex items-center gap-2 px-3 py-2 rounded-xl border bg-white dark:bg-slate-900 dark:border-slate-700 text-xs font-bold" }, h29(Download9, { className: "w-4 h-4 text-violet-600" }), "Excel"),
-        h29("button", { type: "button", onClick: exportProfessionalPdf, className: "inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-violet-600 text-white text-xs font-black shadow-sm" }, h29(FileText7, { className: "w-4 h-4" }), "PDF \u0627\u062D\u062A\u0631\u0627\u0641\u064A"),
-        h29("button", { type: "button", onClick: exportProfessionalImage, className: "inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-black shadow-sm" }, h29(ImageIcon9, { className: "w-4 h-4" }), "\u0635\u0648\u0631\u0629 \u0627\u0644\u062A\u0642\u0631\u064A\u0631")
+        h30("button", { type: "button", onClick: exportSummary, className: "inline-flex items-center gap-2 px-3 py-2 rounded-xl border bg-white dark:bg-slate-900 dark:border-slate-700 text-xs font-bold" }, h30(Download9, { className: "w-4 h-4 text-violet-600" }), "Excel"),
+        h30("button", { type: "button", onClick: exportProfessionalPdf, className: "inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-violet-600 text-white text-xs font-black shadow-sm" }, h30(FileText7, { className: "w-4 h-4" }), "PDF \u0627\u062D\u062A\u0631\u0627\u0641\u064A"),
+        h30("button", { type: "button", onClick: exportProfessionalImage, className: "inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-black shadow-sm" }, h30(ImageIcon9, { className: "w-4 h-4" }), "\u0635\u0648\u0631\u0629 \u0627\u0644\u062A\u0642\u0631\u064A\u0631")
       )
     ),
-    h29("section", { className: "ct-income-overview" }, h29(Metric, { label: "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u062F\u062E\u0644 \u0627\u0644\u0645\u0642\u0628\u0648\u0636", value: money14(incomeTotal) + " " + currency, sub: "\u062F\u0641\u0639\u0627\u062A \u0627\u0644\u0628\u064A\u0639 + \u0633\u0646\u062F\u0627\u062A \u0627\u0644\u0642\u0628\u0636 \u2212 \u0627\u0644\u0645\u0628\u0627\u0644\u063A \u0627\u0644\u0645\u0633\u062A\u0631\u062F\u0629", tone: "emerald", icon: WalletCards3 }), h29(Metric, { label: "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0625\u064A\u0631\u0627\u062F\u0627\u062A", value: money14(revenueTotal) + " " + currency, sub: "\u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A \u2212 \u0627\u0644\u0645\u0631\u062A\u062C\u0639\u0627\u062A\u060C \u0634\u0627\u0645\u0644 \u0627\u0644\u0636\u0631\u064A\u0628\u0629\u061B \u062F\u0648\u0646 \u062A\u0643\u0631\u0627\u0631 \u0633\u062F\u0627\u062F \u0627\u0644\u062F\u064A\u0648\u0646", tone: "blue", icon: TrendingUp2 })),
-    h29(
+    h30("section", { className: "ct-income-overview" }, h30(Metric, { label: "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u062F\u062E\u0644 \u0627\u0644\u0645\u0642\u0628\u0648\u0636", value: money14(incomeTotal) + " " + currency, sub: "\u062F\u0641\u0639\u0627\u062A \u0627\u0644\u0628\u064A\u0639 + \u0633\u0646\u062F\u0627\u062A \u0627\u0644\u0642\u0628\u0636 \u2212 \u0627\u0644\u0645\u0628\u0627\u0644\u063A \u0627\u0644\u0645\u0633\u062A\u0631\u062F\u0629", tone: "emerald", icon: WalletCards3 }), h30(Metric, { label: "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0625\u064A\u0631\u0627\u062F\u0627\u062A", value: money14(revenueTotal) + " " + currency, sub: "\u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A \u2212 \u0627\u0644\u0645\u0631\u062A\u062C\u0639\u0627\u062A\u060C \u0634\u0627\u0645\u0644 \u0627\u0644\u0636\u0631\u064A\u0628\u0629\u061B \u062F\u0648\u0646 \u062A\u0643\u0631\u0627\u0631 \u0633\u062F\u0627\u062F \u0627\u0644\u062F\u064A\u0648\u0646", tone: "blue", icon: TrendingUp2 })),
+    h30(
       Section,
       { icon: ReceiptText5, title: "\u0642\u0633\u0645 \u062A\u0642\u0627\u0631\u064A\u0631 \u0627\u0644\u0641\u0648\u0627\u062A\u064A\u0631", subtitle: "\u0639\u062F\u062F \u0627\u0644\u0641\u0648\u0627\u062A\u064A\u0631\u060C \u0627\u0644\u0645\u0633\u062F\u062F\u060C \u0627\u0644\u0622\u062C\u0644/\u0627\u0644\u062C\u0632\u0626\u064A\u060C \u0648\u0627\u0644\u0645\u0628\u0627\u0644\u063A \u062E\u0644\u0627\u0644 \u0627\u0644\u0641\u062A\u0631\u0629 \u0627\u0644\u0645\u062D\u062F\u062F\u0629" },
-      h29(
+      h30(
         "div",
         { className: "grid grid-cols-2 lg:grid-cols-4 gap-3" },
-        h29(Metric, { label: "\u0639\u062F\u062F \u0641\u0648\u0627\u062A\u064A\u0631 \u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A", value: String(sales.length), sub: `${paidSales.length} \u0645\u0633\u062F\u062F\u0629 \u2022 ${debtSales.length} \u0622\u062C\u0644\u0629/\u062C\u0632\u0626\u064A\u0629`, tone: "blue" }),
-        h29(Metric, { label: "\u0625\u062C\u0645\u0627\u0644\u064A \u0641\u0648\u0627\u062A\u064A\u0631 \u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A", value: `${money14(salesTotal)} ${currency}`, sub: `\u0645\u062F\u0641\u0648\u0639 ${money14(salesPaid)} \u2022 \u0645\u062A\u0628\u0642\u064A ${money14(salesDebt)}`, tone: "emerald" }),
-        h29(Metric, { label: "\u0639\u062F\u062F \u0627\u0644\u0645\u0631\u062A\u062C\u0639\u0627\u062A", value: String(returns.length), sub: `\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0631\u062A\u062C\u0639 ${money14(returnsTotal)} ${currency}`, tone: "rose" }),
-        h29(Metric, { label: "\u0635\u0627\u0641\u064A \u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A \u0628\u0639\u062F \u0627\u0644\u0645\u0631\u062A\u062C\u0639\u0627\u062A", value: `${money14(salesTotal - returnsTotal)} ${currency}`, sub: "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0628\u064A\u0639 \u0645\u0637\u0631\u0648\u062D\u0627\u064B \u0645\u0646\u0647 \u0627\u0644\u0645\u0631\u062A\u062C\u0639\u0627\u062A", tone: "emerald" })
+        h30(Metric, { label: "\u0639\u062F\u062F \u0641\u0648\u0627\u062A\u064A\u0631 \u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A", value: String(sales.length), sub: `${paidSales.length} \u0645\u0633\u062F\u062F\u0629 \u2022 ${debtSales.length} \u0622\u062C\u0644\u0629/\u062C\u0632\u0626\u064A\u0629`, tone: "blue" }),
+        h30(Metric, { label: "\u0625\u062C\u0645\u0627\u0644\u064A \u0641\u0648\u0627\u062A\u064A\u0631 \u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A", value: `${money14(salesTotal)} ${currency}`, sub: `\u0645\u062F\u0641\u0648\u0639 ${money14(salesPaid)} \u2022 \u0645\u062A\u0628\u0642\u064A ${money14(salesDebt)}`, tone: "emerald" }),
+        h30(Metric, { label: "\u0639\u062F\u062F \u0627\u0644\u0645\u0631\u062A\u062C\u0639\u0627\u062A", value: String(returns.length), sub: `\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0631\u062A\u062C\u0639 ${money14(returnsTotal)} ${currency}`, tone: "rose" }),
+        h30(Metric, { label: "\u0635\u0627\u0641\u064A \u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A \u0628\u0639\u062F \u0627\u0644\u0645\u0631\u062A\u062C\u0639\u0627\u062A", value: `${money14(salesTotal - returnsTotal)} ${currency}`, sub: "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0628\u064A\u0639 \u0645\u0637\u0631\u0648\u062D\u0627\u064B \u0645\u0646\u0647 \u0627\u0644\u0645\u0631\u062A\u062C\u0639\u0627\u062A", tone: "emerald" })
       ),
-      h29(
+      h30(
         "div",
         { className: "grid grid-cols-1 sm:grid-cols-2 gap-3" },
-        h29(Metric, { label: "\u0623\u0631\u0628\u0627\u062D \u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A", value: `${money14(salesProfit)} ${currency}`, sub: `\u0635\u0627\u0641\u064A \u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A ${money14(netSales)} \u2212 \u062A\u0643\u0644\u0641\u0629 \u0627\u0644\u0628\u0636\u0627\u0639\u0629 ${money14(cogs)}`, tone: salesProfit >= 0 ? "emerald" : "rose", icon: TrendingUp2 }),
-        h29(Metric, { label: "\u0635\u0627\u0641\u064A \u0627\u0644\u0623\u0631\u0628\u0627\u062D", value: `${money14(netProfit)} ${currency}`, sub: `\u0628\u0639\u062F \u062E\u0635\u0645 \u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A ${money14(operatingExpenseTotal)} + \u0627\u0644\u0647\u0627\u0644\u0643 ${money14(wasteTotal)}`, tone: netProfit >= 0 ? "emerald" : "rose", icon: CircleDollarSign })
+        h30(Metric, { label: "\u0623\u0631\u0628\u0627\u062D \u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A", value: `${money14(salesProfit)} ${currency}`, sub: `\u0635\u0627\u0641\u064A \u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A ${money14(netSales)} \u2212 \u062A\u0643\u0644\u0641\u0629 \u0627\u0644\u0628\u0636\u0627\u0639\u0629 ${money14(cogs)}`, tone: salesProfit >= 0 ? "emerald" : "rose", icon: TrendingUp2 }),
+        h30(Metric, { label: "\u0635\u0627\u0641\u064A \u0627\u0644\u0623\u0631\u0628\u0627\u062D", value: `${money14(netProfit)} ${currency}`, sub: `\u0628\u0639\u062F \u062E\u0635\u0645 \u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A ${money14(operatingExpenseTotal)} + \u0627\u0644\u0647\u0627\u0644\u0643 ${money14(wasteTotal)}`, tone: netProfit >= 0 ? "emerald" : "rose", icon: CircleDollarSign })
       ),
-      h29(
+      h30(
         "div",
         { className: "grid grid-cols-2 lg:grid-cols-4 gap-3" },
-        h29(Metric, { label: "\u0639\u062F\u062F \u0641\u0648\u0627\u062A\u064A\u0631 \u0627\u0644\u0645\u0634\u062A\u0631\u064A\u0627\u062A", value: String(periodPurchases.length), sub: `${paidPurchases.length} \u0645\u0633\u062F\u062F\u0629 \u2022 ${debtPurchases.length} \u0622\u062C\u0644\u0629/\u062C\u0632\u0626\u064A\u0629` }),
-        h29(Metric, { label: "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0634\u062A\u0631\u064A\u0627\u062A", value: `${money14(purchasesTotal)} ${currency}` }),
-        h29(Metric, { label: "\u0627\u0644\u0645\u062F\u0641\u0648\u0639 \u0644\u0644\u0645\u0634\u062A\u0631\u064A\u0627\u062A", value: `${money14(purchasesPaid)} ${currency}`, tone: "blue" }),
-        h29(Metric, { label: "\u0627\u0644\u0645\u062A\u0628\u0642\u064A \u0644\u0644\u0645\u0648\u0631\u062F\u064A\u0646 \u0645\u0646 \u0627\u0644\u0641\u0648\u0627\u062A\u064A\u0631", value: `${money14(purchasesDebt)} ${currency}`, tone: "rose" })
+        h30(Metric, { label: "\u0639\u062F\u062F \u0641\u0648\u0627\u062A\u064A\u0631 \u0627\u0644\u0645\u0634\u062A\u0631\u064A\u0627\u062A", value: String(periodPurchases.length), sub: `${paidPurchases.length} \u0645\u0633\u062F\u062F\u0629 \u2022 ${debtPurchases.length} \u0622\u062C\u0644\u0629/\u062C\u0632\u0626\u064A\u0629` }),
+        h30(Metric, { label: "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0634\u062A\u0631\u064A\u0627\u062A", value: `${money14(purchasesTotal)} ${currency}` }),
+        h30(Metric, { label: "\u0627\u0644\u0645\u062F\u0641\u0648\u0639 \u0644\u0644\u0645\u0634\u062A\u0631\u064A\u0627\u062A", value: `${money14(purchasesPaid)} ${currency}`, tone: "blue" }),
+        h30(Metric, { label: "\u0627\u0644\u0645\u062A\u0628\u0642\u064A \u0644\u0644\u0645\u0648\u0631\u062F\u064A\u0646 \u0645\u0646 \u0627\u0644\u0641\u0648\u0627\u062A\u064A\u0631", value: `${money14(purchasesDebt)} ${currency}`, tone: "rose" })
       )
     ),
-    h29(
+    h30(
       Section,
       { icon: Package11, title: "\u0642\u0633\u0645 \u062A\u0642\u0627\u0631\u064A\u0631 \u0627\u0644\u0645\u062E\u0627\u0632\u0646", subtitle: "\u062A\u0643\u0644\u0641\u0629 \u0627\u0644\u0645\u062E\u0632\u0646 = \u0643\u0645\u064A\u0629 \u0627\u0644\u0631\u0635\u064A\u062F \u0627\u0644\u062D\u0627\u0644\u064A\u0629 \xD7 \u0633\u0639\u0631 \u0627\u0644\u0634\u0631\u0627\u0621/\u0627\u0644\u062A\u0643\u0644\u0641\u0629 \u0644\u0644\u0635\u0646\u0641" },
-      h29(
+      h30(
         "div",
         { className: "grid grid-cols-2 lg:grid-cols-4 gap-3" },
-        h29(Metric, { label: "\u0639\u062F\u062F \u0627\u0644\u0623\u0635\u0646\u0627\u0641 \u0627\u0644\u0645\u0633\u062C\u0644\u0629", value: String(activeProducts.length), sub: "\u0627\u0644\u0623\u0635\u0646\u0627\u0641 \u0627\u0644\u0646\u0634\u0637\u0629 \u063A\u064A\u0631 \u0627\u0644\u0645\u062D\u0630\u0648\u0641\u0629" }),
-        h29(Metric, { label: `\u0623\u0635\u0646\u0627\u0641 \u0628\u0647\u0627 \u0631\u0635\u064A\u062F \u2014 ${activeWarehouseReport.name}`, value: String(activeWarehouseReport.skuCount), tone: "blue" }),
-        h29(Metric, { label: "\u0625\u062C\u0645\u0627\u0644\u064A \u0639\u062F\u062F \u0627\u0644\u0648\u062D\u062F\u0627\u062A \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629 \u0628\u0627\u0644\u0645\u062E\u0632\u0646", value: money14(activeWarehouseReport.quantity), sub: "\u0645\u062C\u0645\u0648\u0639 \u0623\u0631\u0635\u062F\u0629 \u0627\u0644\u0623\u0635\u0646\u0627\u0641 \u0628\u0648\u062D\u062F\u0627\u062A\u0647\u0627 \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629" }),
-        h29(Metric, { label: "\u062A\u0643\u0644\u0641\u0629 \u0627\u0644\u0645\u062E\u0632\u0646 \u0628\u0633\u0639\u0631 \u0627\u0644\u0634\u0631\u0627\u0621", value: `${money14(activeWarehouseReport.costValue)} ${currency}`, sub: "\u0627\u0644\u0643\u0645\u064A\u0629 \xD7 \u062A\u0643\u0644\u0641\u0629 \u0627\u0644\u0634\u0631\u0627\u0621", tone: "emerald" })
+        h30(Metric, { label: "\u0639\u062F\u062F \u0627\u0644\u0623\u0635\u0646\u0627\u0641 \u0627\u0644\u0645\u0633\u062C\u0644\u0629", value: String(activeProducts.length), sub: "\u0627\u0644\u0623\u0635\u0646\u0627\u0641 \u0627\u0644\u0646\u0634\u0637\u0629 \u063A\u064A\u0631 \u0627\u0644\u0645\u062D\u0630\u0648\u0641\u0629" }),
+        h30(Metric, { label: `\u0623\u0635\u0646\u0627\u0641 \u0628\u0647\u0627 \u0631\u0635\u064A\u062F \u2014 ${activeWarehouseReport.name}`, value: String(activeWarehouseReport.skuCount), tone: "blue" }),
+        h30(Metric, { label: "\u0625\u062C\u0645\u0627\u0644\u064A \u0639\u062F\u062F \u0627\u0644\u0648\u062D\u062F\u0627\u062A \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629 \u0628\u0627\u0644\u0645\u062E\u0632\u0646", value: money14(activeWarehouseReport.quantity), sub: "\u0645\u062C\u0645\u0648\u0639 \u0623\u0631\u0635\u062F\u0629 \u0627\u0644\u0623\u0635\u0646\u0627\u0641 \u0628\u0648\u062D\u062F\u0627\u062A\u0647\u0627 \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629" }),
+        h30(Metric, { label: "\u062A\u0643\u0644\u0641\u0629 \u0627\u0644\u0645\u062E\u0632\u0646 \u0628\u0633\u0639\u0631 \u0627\u0644\u0634\u0631\u0627\u0621", value: `${money14(activeWarehouseReport.costValue)} ${currency}`, sub: "\u0627\u0644\u0643\u0645\u064A\u0629 \xD7 \u062A\u0643\u0644\u0641\u0629 \u0627\u0644\u0634\u0631\u0627\u0621", tone: "emerald" })
       ),
-      h29(
+      h30(
         "div",
         { className: "overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900" },
-        h29(
+        h30(
           "table",
           { className: "w-full text-xs" },
-          h29("thead", { className: "bg-slate-50 dark:bg-slate-800/60 text-slate-500" }, h29("tr", null, h29("th", { className: "p-3 text-right" }, t("\u0627\u0644\u0645\u062E\u0632\u0646")), h29("th", { className: "p-3 text-center" }, "\u0639\u062F\u062F \u0627\u0644\u0623\u0635\u0646\u0627\u0641"), h29("th", { className: "p-3 text-center" }, "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0643\u0645\u064A\u0629"), h29("th", { className: "p-3 text-left" }, "\u062A\u0643\u0644\u0641\u0629 \u0627\u0644\u0645\u062E\u0632\u0648\u0646"))),
-          h29("tbody", null, ...inventoryByWarehouse.map((w) => h29("tr", { key: w.id, className: "border-t border-slate-100 dark:border-slate-800" }, h29("td", { className: "p-3 font-bold" }, w.name), h29("td", { className: "p-3 text-center font-mono" }, w.skuCount), h29("td", { className: "p-3 text-center font-mono" }, money14(w.quantity)), h29("td", { className: "p-3 text-left font-mono font-black text-violet-700" }, `${money14(w.costValue)} ${currency}`))))
+          h30("thead", { className: "bg-slate-50 dark:bg-slate-800/60 text-slate-500" }, h30("tr", null, h30("th", { className: "p-3 text-right" }, t("\u0627\u0644\u0645\u062E\u0632\u0646")), h30("th", { className: "p-3 text-center" }, "\u0639\u062F\u062F \u0627\u0644\u0623\u0635\u0646\u0627\u0641"), h30("th", { className: "p-3 text-center" }, "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0643\u0645\u064A\u0629"), h30("th", { className: "p-3 text-left" }, "\u062A\u0643\u0644\u0641\u0629 \u0627\u0644\u0645\u062E\u0632\u0648\u0646"))),
+          h30("tbody", null, ...inventoryByWarehouse.map((w) => h30("tr", { key: w.id, className: "border-t border-slate-100 dark:border-slate-800" }, h30("td", { className: "p-3 font-bold" }, w.name), h30("td", { className: "p-3 text-center font-mono" }, w.skuCount), h30("td", { className: "p-3 text-center font-mono" }, money14(w.quantity)), h30("td", { className: "p-3 text-left font-mono font-black text-violet-700" }, `${money14(w.costValue)} ${currency}`))))
         )
       )
     ),
-    h29(
+    h30(
       Section,
       { icon: Users10, title: "\u0642\u0633\u0645 \u062A\u0642\u0627\u0631\u064A\u0631 \u0627\u0644\u0639\u0645\u0644\u0627\u0621", subtitle: "\u0644\u0646\u0627 = \u0627\u0644\u0639\u0645\u064A\u0644 \u0645\u062F\u064A\u0646 \u0644\u0646\u0627\u060C \u0639\u0644\u064A\u0646\u0627 = \u0644\u0644\u0639\u0645\u064A\u0644 \u0631\u0635\u064A\u062F \u062F\u0627\u0626\u0646 \u0639\u0646\u062F\u0646\u0627" },
-      h29(
+      h30(
         "div",
         { className: "grid grid-cols-2 lg:grid-cols-5 gap-3" },
-        h29(Metric, { label: "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0639\u0645\u0644\u0627\u0621", value: String(activeCustomers.length) }),
-        h29(Metric, { label: "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u062F\u064A\u0648\u0646 \u0644\u0646\u0627 \u0639\u0644\u0649 \u0627\u0644\u0639\u0645\u0644\u0627\u0621", value: `${money14(customersOnThem)} ${currency}`, tone: "rose" }),
-        h29(Metric, { label: "\u0625\u062C\u0645\u0627\u0644\u064A \u0644\u0647\u0645 \u0639\u0644\u064A\u0646\u0627", value: `${money14(customersForThem)} ${currency}`, tone: "blue" }),
-        h29(Metric, { label: "\u0627\u0644\u0639\u0645\u0644\u0627\u0621 \u0627\u0644\u0645\u062F\u064A\u0648\u0646\u064A\u0629", value: String(indebtedCustomers), sub: `${creditCustomers} \u0644\u062F\u064A\u0647\u0645 \u0631\u0635\u064A\u062F \u062F\u0627\u0626\u0646` }),
-        h29(Metric, { label: "\u0627\u0644\u0639\u0645\u0644\u0627\u0621 \u0627\u0644\u0645\u0633\u062F\u062F\u0648\u0646", value: String(settledCustomers), tone: "emerald" })
+        h30(Metric, { label: "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0639\u0645\u0644\u0627\u0621", value: String(activeCustomers.length) }),
+        h30(Metric, { label: "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u062F\u064A\u0648\u0646 \u0644\u0646\u0627 \u0639\u0644\u0649 \u0627\u0644\u0639\u0645\u0644\u0627\u0621", value: `${money14(customersOnThem)} ${currency}`, tone: "rose" }),
+        h30(Metric, { label: "\u0625\u062C\u0645\u0627\u0644\u064A \u0644\u0647\u0645 \u0639\u0644\u064A\u0646\u0627", value: `${money14(customersForThem)} ${currency}`, tone: "blue" }),
+        h30(Metric, { label: "\u0627\u0644\u0639\u0645\u0644\u0627\u0621 \u0627\u0644\u0645\u062F\u064A\u0648\u0646\u064A\u0629", value: String(indebtedCustomers), sub: `${creditCustomers} \u0644\u062F\u064A\u0647\u0645 \u0631\u0635\u064A\u062F \u062F\u0627\u0626\u0646` }),
+        h30(Metric, { label: "\u0627\u0644\u0639\u0645\u0644\u0627\u0621 \u0627\u0644\u0645\u0633\u062F\u062F\u0648\u0646", value: String(settledCustomers), tone: "emerald" })
       )
     ),
-    h29(
+    h30(
       Section,
       { icon: Truck7, title: "\u0642\u0633\u0645 \u062A\u0642\u0627\u0631\u064A\u0631 \u0627\u0644\u0645\u0648\u0631\u062F\u064A\u0646", subtitle: "\u0644\u0647\u0645 = \u0627\u0644\u0645\u0628\u0644\u063A \u0627\u0644\u0645\u0633\u062A\u062D\u0642 \u0644\u0644\u0645\u0648\u0631\u062F\u060C \u0639\u0644\u064A\u0647\u0645 = \u0631\u0635\u064A\u062F \u0644\u0646\u0627 \u0639\u0646\u062F \u0627\u0644\u0645\u0648\u0631\u062F" },
-      h29(
+      h30(
         "div",
         { className: "grid grid-cols-2 lg:grid-cols-5 gap-3" },
-        h29(Metric, { label: "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0648\u0631\u062F\u064A\u0646", value: String(activeSuppliers.length) }),
-        h29(Metric, { label: "\u0625\u062C\u0645\u0627\u0644\u064A \u0644\u0647\u0645 \u0639\u0644\u064A\u0646\u0627", value: `${money14(suppliersForThem)} ${currency}`, tone: "rose" }),
-        h29(Metric, { label: "\u0625\u062C\u0645\u0627\u0644\u064A \u0639\u0644\u064A\u0647\u0645 \u0644\u0646\u0627", value: `${money14(suppliersOnThem)} ${currency}`, tone: "blue" }),
-        h29(Metric, { label: "\u0645\u0648\u0631\u062F\u0648\u0646 \u0644\u0647\u0645 \u0645\u0633\u062A\u062D\u0642\u0627\u062A", value: String(suppliersWeOwe) }),
-        h29(Metric, { label: "\u0645\u0648\u0631\u062F\u0648\u0646 \u0645\u0633\u062F\u062F\u0648\u0646", value: String(settledSuppliers), sub: `${suppliersOweUs} \u0639\u0644\u064A\u0647\u0645 \u0631\u0635\u064A\u062F \u0644\u0646\u0627`, tone: "emerald" })
+        h30(Metric, { label: "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0648\u0631\u062F\u064A\u0646", value: String(activeSuppliers.length) }),
+        h30(Metric, { label: "\u0625\u062C\u0645\u0627\u0644\u064A \u0644\u0647\u0645 \u0639\u0644\u064A\u0646\u0627", value: `${money14(suppliersForThem)} ${currency}`, tone: "rose" }),
+        h30(Metric, { label: "\u0625\u062C\u0645\u0627\u0644\u064A \u0639\u0644\u064A\u0647\u0645 \u0644\u0646\u0627", value: `${money14(suppliersOnThem)} ${currency}`, tone: "blue" }),
+        h30(Metric, { label: "\u0645\u0648\u0631\u062F\u0648\u0646 \u0644\u0647\u0645 \u0645\u0633\u062A\u062D\u0642\u0627\u062A", value: String(suppliersWeOwe) }),
+        h30(Metric, { label: "\u0645\u0648\u0631\u062F\u0648\u0646 \u0645\u0633\u062F\u062F\u0648\u0646", value: String(settledSuppliers), sub: `${suppliersOweUs} \u0639\u0644\u064A\u0647\u0645 \u0631\u0635\u064A\u062F \u0644\u0646\u0627`, tone: "emerald" })
       )
     ),
-    h29(
+    h30(
       Section,
       { icon: WalletCards3, title: "\u0642\u0633\u0645 \u062A\u0642\u0627\u0631\u064A\u0631 \u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A", subtitle: "\u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A \u062E\u0644\u0627\u0644 \u0627\u0644\u0641\u062A\u0631\u0629 \u0627\u0644\u0645\u062E\u062A\u0627\u0631\u0629" },
-      h29(
+      h30(
         "div",
         { className: "grid grid-cols-2 lg:grid-cols-4 gap-3" },
-        h29(Metric, { label: "\u0639\u062F\u062F \u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A", value: String(periodExpenses.length) }),
-        h29(Metric, { label: "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A", value: `${money14(expenseTotal)} ${currency}`, tone: "rose" }),
-        h29(Metric, { label: "\u0639\u062F\u062F \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0645\u0635\u0631\u0648\u0641", value: String(expenseGroups.length) }),
-        h29(Metric, { label: "\u0645\u062A\u0648\u0633\u0637 \u0627\u0644\u0645\u0635\u0631\u0648\u0641", value: `${money14(periodExpenses.length ? expenseTotal / periodExpenses.length : 0)} ${currency}` })
+        h30(Metric, { label: "\u0639\u062F\u062F \u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A", value: String(periodExpenses.length) }),
+        h30(Metric, { label: "\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A", value: `${money14(expenseTotal)} ${currency}`, tone: "rose" }),
+        h30(Metric, { label: "\u0639\u062F\u062F \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0645\u0635\u0631\u0648\u0641", value: String(expenseGroups.length) }),
+        h30(Metric, { label: "\u0645\u062A\u0648\u0633\u0637 \u0627\u0644\u0645\u0635\u0631\u0648\u0641", value: `${money14(periodExpenses.length ? expenseTotal / periodExpenses.length : 0)} ${currency}` })
       )
     )
   );
@@ -20418,7 +20480,7 @@ var ReportsView = () => {
 // app/components__trash__TrashView.js
 import React50, { useState as useState37 } from "react";
 import { RotateCcw as RotateCcw6, Trash2 as Trash225 } from "lucide-react";
-var h30 = React50.createElement;
+var h31 = React50.createElement;
 var TrashView = () => {
   const {
     products,
@@ -20481,19 +20543,19 @@ var TrashView = () => {
     if (activeTab === "suppliers") return `\u0627\u0644\u0634\u0631\u0643\u0629: ${item.company || "-"}`;
     return item.notes || "-";
   };
-  const tabButton = (id, label, count) => h30("button", {
+  const tabButton = (id, label, count) => h31("button", {
     type: "button",
     onClick: () => setActiveTab(id),
     className: `px-3 py-1.5 rounded-lg transition whitespace-nowrap ${activeTab === id ? "bg-white dark:bg-slate-900 text-violet-600 shadow-xs" : "text-slate-500"}`
   }, `${label} (${count})`);
-  return h30(
+  return h31(
     "div",
     { id: "trash-screen", className: "p-4 sm:p-6 space-y-4 max-w-5xl mx-auto text-right select-none" },
-    h30(
+    h31(
       "div",
       { className: "flex flex-col sm:flex-row sm:items-center justify-between gap-4" },
-      h30("div", null, h30("h2", { className: "text-xl font-black text-slate-900 dark:text-white" }, t("\u0633\u0644\u0629 \u0627\u0644\u0645\u062D\u0630\u0648\u0641\u0627\u062A")), h30("p", { className: "text-xs text-slate-500 mt-0.5" }, "\u0627\u0633\u062A\u0631\u062C\u0639 \u0627\u0644\u0639\u0646\u0635\u0631 \u0623\u0648 \u0627\u062D\u0630\u0641\u0647 \u0646\u0647\u0627\u0626\u064A\u0627\u064B \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A. \u0627\u0644\u062D\u0630\u0641 \u0627\u0644\u0646\u0647\u0627\u0626\u064A \u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0644\u062A\u0631\u0627\u062C\u0639 \u0639\u0646\u0647.")),
-      h30(
+      h31("div", null, h31("h2", { className: "text-xl font-black text-slate-900 dark:text-white" }, t("\u0633\u0644\u0629 \u0627\u0644\u0645\u062D\u0630\u0648\u0641\u0627\u062A")), h31("p", { className: "text-xs text-slate-500 mt-0.5" }, "\u0627\u0633\u062A\u0631\u062C\u0639 \u0627\u0644\u0639\u0646\u0635\u0631 \u0623\u0648 \u0627\u062D\u0630\u0641\u0647 \u0646\u0647\u0627\u0626\u064A\u0627\u064B \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A. \u0627\u0644\u062D\u0630\u0641 \u0627\u0644\u0646\u0647\u0627\u0626\u064A \u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0644\u062A\u0631\u0627\u062C\u0639 \u0639\u0646\u0647.")),
+      h31(
         "div",
         { className: "flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-bold overflow-x-auto" },
         tabButton("products", "\u0627\u0644\u0623\u0635\u0646\u0627\u0641", deletedProducts.length),
@@ -20502,26 +20564,26 @@ var TrashView = () => {
         tabButton("expenses", "\u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A", deletedExpenses.length)
       )
     ),
-    h30(
+    h31(
       "div",
       { className: "rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden" },
-      activeItems.length === 0 ? h30(EmptyState, { message: emptyText }) : h30(
+      activeItems.length === 0 ? h31(EmptyState, { message: emptyText }) : h31(
         "div",
         { className: "divide-y divide-slate-100 dark:divide-slate-800" },
-        ...pager.pageItems.map((item) => h30(
+        ...pager.pageItems.map((item) => h31(
           "div",
           { key: item.id, className: "p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3" },
-          h30("div", { className: "min-w-0" }, h30("h4", { className: "font-bold text-sm text-slate-900 dark:text-white truncate" }, itemTitle(item)), h30("span", { className: "text-xs text-slate-400" }, itemSub(item))),
-          h30(
+          h31("div", { className: "min-w-0" }, h31("h4", { className: "font-bold text-sm text-slate-900 dark:text-white truncate" }, itemTitle(item)), h31("span", { className: "text-xs text-slate-400" }, itemSub(item))),
+          h31(
             "div",
             { className: "shrink-0 flex items-center gap-2" },
-            h30("button", { type: "button", disabled: busyId === item.id, onClick: () => restore(item), className: "flex items-center gap-1.5 px-3 py-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs font-bold rounded-lg transition disabled:opacity-40" }, h30(RotateCcw6, { className: "w-3.5 h-3.5" }), restoreText),
-            h30("button", { type: "button", disabled: busyId === item.id, onClick: () => permanentlyDelete(item), className: "flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-lg transition disabled:opacity-40" }, h30(Trash225, { className: "w-3.5 h-3.5" }), busyId === item.id ? "\u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0630\u0641..." : "\u062D\u0630\u0641 \u0646\u0647\u0627\u0626\u064A")
+            h31("button", { type: "button", disabled: busyId === item.id, onClick: () => restore(item), className: "flex items-center gap-1.5 px-3 py-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs font-bold rounded-lg transition disabled:opacity-40" }, h31(RotateCcw6, { className: "w-3.5 h-3.5" }), restoreText),
+            h31("button", { type: "button", disabled: busyId === item.id, onClick: () => permanentlyDelete(item), className: "flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-lg transition disabled:opacity-40" }, h31(Trash225, { className: "w-3.5 h-3.5" }), busyId === item.id ? "\u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0630\u0641..." : "\u062D\u0630\u0641 \u0646\u0647\u0627\u0626\u064A")
           )
         ))
       )
     ),
-    h30(Pagination, { pager })
+    h31(Pagination, { pager })
   );
 };
 
@@ -21139,7 +21201,7 @@ if (typeof window !== "undefined") window.__OSCAR_ACCOUNTING_PRINTER__ = smartPr
 // app/components__settings__TelegramQuickGuide.js
 import React51, { useEffect as useEffect31, useState as useState39 } from "react";
 import { ExternalLink, Copy as Copy2, RefreshCw as RefreshCw4, Bot as Bot2, CreditCard as CreditCard5, CheckCircle2 as CheckCircle24 } from "lucide-react";
-var h31 = React51.createElement;
+var h32 = React51.createElement;
 var NOTIFY_BOT_USERNAME = "Oskarteaam_bot";
 var NOTIFY_BOT_URL = "https://t.me/Oskarteaam_bot";
 var PAYMENT_BOT_TOKEN = "8901874566:AAG3TAC6xSl-YHmEnQTpvBrxZpoBwyyx6nY";
@@ -21238,47 +21300,47 @@ var TelegramQuickGuide = () => {
   useEffect31(() => {
     loadPaymentBot();
   }, []);
-  const userList = (rows, usePayment = false) => rows.length ? h31("div", { className: "space-y-1.5 mt-2" }, ...rows.map((row2) => h31(
+  const userList = (rows, usePayment = false) => rows.length ? h32("div", { className: "space-y-1.5 mt-2" }, ...rows.map((row2) => h32(
     "div",
     { key: row2.chatId, className: "flex items-center gap-2 p-2 rounded-xl bg-white border" },
-    h31("div", { className: "flex-1 min-w-0" }, h31("div", { className: "text-[11px] font-black truncate" }, row2.username || row2.name || "\u0645\u0633\u062A\u062E\u062F\u0645 Telegram"), h31("div", { dir: "ltr", className: "text-[10px] text-slate-500 font-mono truncate" }, row2.chatId)),
-    h31("button", { type: "button", onClick: () => copy(row2.chatId), className: "inline-flex items-center gap-1 px-2 py-1.5 rounded-lg border text-slate-600 text-[9px] font-black", title: "\u0646\u0633\u062E ID" }, h31(Copy2, { className: "w-3.5 h-3.5" }), "\u0646\u0633\u062E ID")
-  ))) : h31("div", { className: "mt-2 text-[10px] text-slate-400" }, "\u0644\u0627 \u064A\u0648\u062C\u062F \u0645\u0633\u062A\u062E\u062F\u0645 \u0638\u0627\u0647\u0631 \u0628\u0639\u062F. \u0627\u0641\u062A\u062D \u0627\u0644\u0628\u0648\u062A \u0648\u0627\u0636\u063A\u0637 Start \u062B\u0645 \u0627\u0636\u063A\u0637 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646.");
-  const card = (title, username, url, rows, type) => h31(
+    h32("div", { className: "flex-1 min-w-0" }, h32("div", { className: "text-[11px] font-black truncate" }, row2.username || row2.name || "\u0645\u0633\u062A\u062E\u062F\u0645 Telegram"), h32("div", { dir: "ltr", className: "text-[10px] text-slate-500 font-mono truncate" }, row2.chatId)),
+    h32("button", { type: "button", onClick: () => copy(row2.chatId), className: "inline-flex items-center gap-1 px-2 py-1.5 rounded-lg border text-slate-600 text-[9px] font-black", title: "\u0646\u0633\u062E ID" }, h32(Copy2, { className: "w-3.5 h-3.5" }), "\u0646\u0633\u062E ID")
+  ))) : h32("div", { className: "mt-2 text-[10px] text-slate-400" }, "\u0644\u0627 \u064A\u0648\u062C\u062F \u0645\u0633\u062A\u062E\u062F\u0645 \u0638\u0627\u0647\u0631 \u0628\u0639\u062F. \u0627\u0641\u062A\u062D \u0627\u0644\u0628\u0648\u062A \u0648\u0627\u0636\u063A\u0637 Start \u062B\u0645 \u0627\u0636\u063A\u0637 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646.");
+  const card = (title, username, url, rows, type) => h32(
     "div",
     { className: "rounded-2xl border bg-slate-50 p-3 space-y-2" },
-    h31(
+    h32(
       "div",
       { className: "flex items-center justify-between gap-2" },
-      h31("div", { className: "flex items-center gap-2" }, h31("div", { className: `w-9 h-9 rounded-xl grid place-items-center ${type === "payment" ? "bg-violet-100 text-violet-700" : "bg-sky-100 text-sky-700"}` }, type === "payment" ? h31(CreditCard5, { className: "w-4 h-4" }) : h31(Bot2, { className: "w-4 h-4" })), h31("div", null, h31("div", { className: "text-xs font-black" }, title), h31("div", { dir: "ltr", className: "text-[10px] text-slate-500 font-mono" }, username ? `@${String(username).replace(/^@/, "")}` : "\u062C\u0627\u0631\u064A \u0645\u0639\u0631\u0641\u0629 \u064A\u0648\u0632\u0631 \u0627\u0644\u0628\u0648\u062A..."))),
-      h31("button", { type: "button", disabled: !url, onClick: () => url && window.open(url, "_blank", "noopener"), className: "inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-900 text-white text-[10px] font-black disabled:opacity-40" }, h31(ExternalLink, { className: "w-3.5 h-3.5" }), "Open")
+      h32("div", { className: "flex items-center gap-2" }, h32("div", { className: `w-9 h-9 rounded-xl grid place-items-center ${type === "payment" ? "bg-violet-100 text-violet-700" : "bg-sky-100 text-sky-700"}` }, type === "payment" ? h32(CreditCard5, { className: "w-4 h-4" }) : h32(Bot2, { className: "w-4 h-4" })), h32("div", null, h32("div", { className: "text-xs font-black" }, title), h32("div", { dir: "ltr", className: "text-[10px] text-slate-500 font-mono" }, username ? `@${String(username).replace(/^@/, "")}` : "\u062C\u0627\u0631\u064A \u0645\u0639\u0631\u0641\u0629 \u064A\u0648\u0632\u0631 \u0627\u0644\u0628\u0648\u062A..."))),
+      h32("button", { type: "button", disabled: !url, onClick: () => url && window.open(url, "_blank", "noopener"), className: "inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-900 text-white text-[10px] font-black disabled:opacity-40" }, h32(ExternalLink, { className: "w-3.5 h-3.5" }), "Open")
     ),
-    h31(
+    h32(
       "div",
       { className: "grid grid-cols-3 gap-1.5 text-center text-[9px]" },
-      h31("div", { className: "rounded-lg bg-white border p-2" }, h31("b", { className: "block text-violet-700" }, "1"), "Open"),
-      h31("div", { className: "rounded-lg bg-white border p-2" }, h31("b", { className: "block text-violet-700" }, "2"), "\u0627\u0636\u063A\u0637 Start"),
-      h31("div", { className: "rounded-lg bg-white border p-2" }, h31("b", { className: "block text-violet-700" }, "3"), "\u0627\u0646\u0633\u062E ID")
+      h32("div", { className: "rounded-lg bg-white border p-2" }, h32("b", { className: "block text-violet-700" }, "1"), "Open"),
+      h32("div", { className: "rounded-lg bg-white border p-2" }, h32("b", { className: "block text-violet-700" }, "2"), "\u0627\u0636\u063A\u0637 Start"),
+      h32("div", { className: "rounded-lg bg-white border p-2" }, h32("b", { className: "block text-violet-700" }, "3"), "\u0627\u0646\u0633\u062E ID")
     ),
-    h31("button", { type: "button", onClick: type === "payment" ? loadPaymentUsers : loadNotifyUsers, disabled: !!busy, className: "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border text-[10px] font-black text-slate-700 disabled:opacity-50" }, h31(RefreshCw4, { className: `w-3.5 h-3.5 ${busy === type ? "animate-spin" : ""}` }), busy === type ? "\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u062F\u064A\u062B..." : "\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646"),
+    h32("button", { type: "button", onClick: type === "payment" ? loadPaymentUsers : loadNotifyUsers, disabled: !!busy, className: "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border text-[10px] font-black text-slate-700 disabled:opacity-50" }, h32(RefreshCw4, { className: `w-3.5 h-3.5 ${busy === type ? "animate-spin" : ""}` }), busy === type ? "\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u062F\u064A\u062B..." : "\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646"),
     userList(rows, type === "payment")
   );
-  return h31(
+  return h32(
     "div",
     { className: "rounded-2xl border border-sky-100 bg-sky-50/40 p-3 space-y-3" },
-    h31("div", { className: "flex items-start gap-2" }, h31(CheckCircle24, { className: "w-5 h-5 text-sky-600 shrink-0 mt-0.5" }), h31("div", null, h31("div", { className: "text-xs font-black text-sky-900" }, "\u0627\u0644\u0631\u0628\u0637 \u0627\u0644\u0633\u0631\u064A\u0639 \u2014 3 \u062E\u0637\u0648\u0627\u062A \u0641\u0642\u0637"), h31("div", { className: "text-[10px] text-sky-800 mt-0.5" }, "\u0627\u0641\u062A\u062D \u0627\u0644\u0628\u0648\u062A\u060C \u0627\u0636\u063A\u0637 Start\u060C \u062B\u0645 \u062D\u062F\u0651\u062B \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646 \u0648\u0627\u0646\u0633\u062E \u0627\u0644\u0640 Chat ID."))),
-    h31(
+    h32("div", { className: "flex items-start gap-2" }, h32(CheckCircle24, { className: "w-5 h-5 text-sky-600 shrink-0 mt-0.5" }), h32("div", null, h32("div", { className: "text-xs font-black text-sky-900" }, "\u0627\u0644\u0631\u0628\u0637 \u0627\u0644\u0633\u0631\u064A\u0639 \u2014 3 \u062E\u0637\u0648\u0627\u062A \u0641\u0642\u0637"), h32("div", { className: "text-[10px] text-sky-800 mt-0.5" }, "\u0627\u0641\u062A\u062D \u0627\u0644\u0628\u0648\u062A\u060C \u0627\u0636\u063A\u0637 Start\u060C \u062B\u0645 \u062D\u062F\u0651\u062B \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646 \u0648\u0627\u0646\u0633\u062E \u0627\u0644\u0640 Chat ID."))),
+    h32(
       "div",
       { className: "grid grid-cols-1 lg:grid-cols-2 gap-3" },
       card("\u0628\u0648\u062A \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A", NOTIFY_BOT_USERNAME, NOTIFY_BOT_URL, notifyUsers, "notify"),
       card("\u0628\u0648\u062A \u0627\u0644\u062F\u0641\u0639\u0627\u062A", paymentBot.username, paymentBot.url, paymentUsers, "payment")
     ),
-    settings.p2pPaymentChatId ? h31("div", { className: "text-[10px] font-bold text-violet-700" }, `\u0645\u0639\u0631\u0641 \u0627\u0633\u062A\u0642\u0628\u0627\u0644 \u0627\u0644\u062F\u0641\u0639\u0627\u062A \u0627\u0644\u062D\u0627\u0644\u064A: ${settings.p2pPaymentChatId}`) : null
+    settings.p2pPaymentChatId ? h32("div", { className: "text-[10px] font-bold text-violet-700" }, `\u0645\u0639\u0631\u0641 \u0627\u0633\u062A\u0642\u0628\u0627\u0644 \u0627\u0644\u062F\u0641\u0639\u0627\u062A \u0627\u0644\u062D\u0627\u0644\u064A: ${settings.p2pPaymentChatId}`) : null
   );
 };
 
 // app/components__settings__SettingsView.js
-import { Store as Store2, Printer as Printer8, ShieldCheck as ShieldCheck2, Building2 as Building27, Database, Download as Download10, Upload, RefreshCw as RefreshCw5, Trash2 as Trash226, Save as Save3, Edit2 as Edit25, X as X27, Bluetooth, Cable, Bot as Bot3, Send as Send2, ExternalLink as ExternalLink2, UserPlus as UserPlus5, MessageCircle as MessageCircle2, CreditCard as CreditCard6, WalletCards as WalletCards4, Landmark, ArrowLeftRight as ArrowLeftRight4, SlidersHorizontal, Warehouse as Warehouse5, Settings2 as Settings23 } from "lucide-react";
+import { Store as Store2, Printer as Printer8, ShieldCheck as ShieldCheck2, Building2 as Building27, Database, Download as Download10, Upload, RefreshCw as RefreshCw5, Trash2 as Trash226, Save as Save3, Edit2 as Edit25, X as X28, Bluetooth, Cable, Bot as Bot3, Send as Send2, ExternalLink as ExternalLink2, UserPlus as UserPlus5, MessageCircle as MessageCircle2, CreditCard as CreditCard6, WalletCards as WalletCards4, Landmark, ArrowLeftRight as ArrowLeftRight4, SlidersHorizontal, Warehouse as Warehouse5, Settings2 as Settings23 } from "lucide-react";
 var P2P_ICON_OPTIONS = [
   ["palpay", "PalPay"],
   ["jawwal-pay", "Jawwal Pay"],
@@ -21915,7 +21977,7 @@ var SettingsView = () => {
     const file = e.target.files?.[0];
     e.target.value = "";
     handleSettingsLogoUpload(file);
-  } })] })] }), _jsx15("button", { type: "button", onClick: () => setFormSettings({ ...formSettings, logoSourceUrl: "", logoUrl: "", logoTelegramFileId: "", logoTelegramUniqueId: "", logoStorage: "" }), className: "px-3 py-2 text-[11px] font-bold rounded-lg border border-rose-200 text-rose-600 bg-white", children: "\u0645\u0633\u062D" })] })] })] })] }), _jsxs13("div", { className: "p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4", children: [_jsxs13("div", { className: "flex items-center gap-2 border-b pb-3 border-slate-100 dark:border-slate-800", children: [_jsx15(Printer8, { className: "w-5 h-5 text-violet-600" }), _jsx15("h3", { className: "text-sm font-bold text-slate-900 dark:text-white", children: "\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0637\u0627\u0628\u0639\u0629 \u0627\u0644\u062D\u0631\u0627\u0631\u064A\u0629 \u0648\u0627\u0644\u0625\u064A\u0635\u0627\u0644\u0627\u062A" })] }), _jsxs13("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-4", children: [_jsxs13("div", { children: [_jsx15(SearchableDropdown, { label: "\u0645\u0642\u0627\u0633 \u0648\u0631\u0642 \u0627\u0644\u0637\u0627\u0628\u0639\u0629 \u0627\u0644\u062D\u0631\u0627\u0631\u064A\u0629:", id: "settings-printer-width", options: [{ id: "80mm", label: "80 \u0645\u0644\u0645", subLabel: "\u0637\u0627\u0628\u0639\u0629 \u062D\u0631\u0627\u0631\u064A\u0629 \u0642\u064A\u0627\u0633\u064A\u0629 \u0639\u0631\u064A\u0636\u0629" }, { id: "58mm", label: "58 \u0645\u0644\u0645", subLabel: "\u0637\u0627\u0628\u0639\u0629 \u062D\u0631\u0627\u0631\u064A\u0629 \u0635\u063A\u064A\u0631\u0629 \u0648\u0645\u062D\u0645\u0648\u0644\u0629" }, { id: "a4", label: "A4", subLabel: "\u0641\u0627\u062A\u0648\u0631\u0629 \u0643\u0627\u0645\u0644\u0629 \u0639\u0644\u0649 \u0648\u0631\u0642 A4" }], selectedId: formSettings.printerWidth, onSelect: (id) => setFormSettings({ ...formSettings, printerWidth: id }), placeholder: "\u0627\u0628\u062D\u062B \u0639\u0646 \u0627\u0644\u0645\u0642\u0627\u0633..." })] }), _jsxs13("div", { className: "flex items-center justify-between p-3 border rounded-lg bg-slate-50 dark:bg-slate-800", children: [_jsxs13("div", { children: [_jsx15("span", { className: "text-xs font-bold block", children: "\u0627\u0644\u0637\u0628\u0627\u0639\u0629 \u0639\u0646\u062F \u0627\u0644\u062D\u0641\u0638:" }), _jsx15("span", { className: "text-[11px] text-slate-400", children: "\u0641\u062A\u062D \u0641\u0627\u062A\u0648\u0631\u0629 \u0627\u0644\u0637\u0628\u0627\u0639\u0629 \u0645\u0628\u0627\u0634\u0631\u0629 \u0628\u0639\u062F \u062D\u0641\u0638 \u0641\u0627\u062A\u0648\u0631\u0629 \u0627\u0644\u0628\u064A\u0639" })] }), _jsx15("input", { type: "checkbox", checked: formSettings.printOnSave ?? formSettings.autoPrintReceipt, onChange: (e) => setFormSettings({ ...formSettings, printOnSave: e.target.checked, autoPrintReceipt: e.target.checked }), className: "w-5 h-5 accent-violet-600 rounded" })] }), _jsxs13("div", { className: "sm:col-span-2", children: [_jsx15("label", { className: "text-xs font-semibold block mb-1", children: "\u062A\u0630\u064A\u064A\u0644 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629 \u0627\u0644\u0645\u0637\u0628\u0648\u0639 (\u0631\u0633\u0627\u0644\u0629 \u0623\u0633\u0641\u0644 \u0627\u0644\u0625\u064A\u0635\u0627\u0644):" }), _jsx15("input", { type: "text", value: formSettings.receiptFooterMessage, onChange: (e) => setFormSettings({ ...formSettings, receiptFooterMessage: e.target.value }), placeholder: "\u0634\u0643\u0631\u0627\u064B \u0644\u0632\u064A\u0627\u0631\u062A\u0643\u0645! \u0627\u0644\u0628\u0636\u0627\u0639\u0629 \u0627\u0644\u0645\u0628\u0627\u0639\u0629 \u062A\u0631\u062F \u0648\u062A\u0633\u062A\u0628\u062F\u0644 \u062E\u0644\u0627\u0644 3 \u0623\u064A\u0627\u0645", className: "w-full px-3 py-2 text-xs border rounded-lg bg-slate-50 dark:bg-slate-800" })] })] })] }), _jsxs13("div", { className: "p-5 rounded-2xl bg-white dark:bg-slate-900 border border-violet-200 dark:border-violet-900 shadow-xs space-y-4", children: [_jsxs13("div", { className: "flex items-center justify-between gap-3 border-b pb-3 border-slate-100 dark:border-slate-800", children: [_jsxs13("div", { className: "flex items-center gap-2", children: [_jsx15(Bluetooth, { className: "w-5 h-5 text-violet-600" }), _jsxs13("div", { children: [_jsx15("h3", { className: "text-sm font-black text-slate-900 dark:text-white", children: "\u0637\u0627\u0628\u0639\u0629 Bluetooth / Serial" }), _jsx15("p", { className: "text-[11px] text-slate-500", children: "\u0627\u062E\u062A\u0631 \u0627\u0644\u0637\u0627\u0628\u0639\u0629 \u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629 \u0645\u0646 \u062F\u0627\u062E\u0644 \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C. \u064A\u062A\u0645 \u062D\u0641\u0638\u0647\u0627 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062C\u0647\u0627\u0632 \u0648\u064A\u0639\u064A\u062F \u0627\u0644\u0646\u0638\u0627\u0645 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0647\u0627 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0623\u062B\u0646\u0627\u0621 \u0627\u0644\u062A\u0646\u0642\u0644 \u0623\u0648 \u0628\u0639\u062F \u0631\u062C\u0648\u0639 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0645\u0646 \u0627\u0644\u062E\u0644\u0641\u064A\u0629." })] })] }), _jsx15("span", { className: `px-2.5 py-1 rounded-full text-[10px] font-black ${printerState.ready ? "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300" : "bg-slate-100 text-slate-500 dark:bg-slate-800"}`, children: printerState.connected ? `\u0645\u062A\u0635\u0644 \u0645\u0628\u0627\u0634\u0631 \u2022 ${printerState.name || printerState.preferredName || "\u0627\u0644\u0637\u0627\u0628\u0639\u0629"}` : printerState.systemMode ? `\u062C\u0627\u0647\u0632 \u2022 ${printerState.name || "\u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u0646\u0638\u0627\u0645"}` : printerState.hasRememberedPrinter ? `\u0645\u062D\u0641\u0648\u0638\u0629 \u2022 ${printerState.preferredName || "\u0627\u0644\u0637\u0627\u0628\u0639\u0629"}` : "\u0644\u0645 \u064A\u062A\u0645 \u0627\u062E\u062A\u064A\u0627\u0631 \u0637\u0627\u0628\u0639\u0629" })] }), _jsxs13("div", { className: "flex flex-wrap gap-2", children: [_jsxs13("button", { type: "button", onClick: handleConnectBluetoothPrinter, disabled: !!printerState.connecting, className: "flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold disabled:opacity-40", children: [_jsx15(Bluetooth, { className: "w-4 h-4" }), _jsx15("span", { children: printerState.connecting === "bluetooth" ? "\u062C\u0627\u0631\u064A \u0627\u0644\u0627\u062A\u0635\u0627\u0644..." : printerState.bluetoothSupported ? "\u0627\u062E\u062A\u064A\u0627\u0631 / \u062A\u063A\u064A\u064A\u0631 \u0637\u0627\u0628\u0639\u0629 Bluetooth" : printerState.isIOS ? "\u062A\u0641\u0639\u064A\u0644 \u0637\u0628\u0627\u0639\u0629 iPhone / Bluetooth" : "\u062A\u0641\u0639\u064A\u0644 \u0637\u0628\u0627\u0639\u0629 Bluetooth / \u0627\u0644\u0646\u0638\u0627\u0645" })] }), !printerState.ready && printerState.hasRememberedPrinter ? _jsxs13("button", { type: "button", onClick: handleReconnectPrinter, disabled: !!printerState.connecting, className: "flex items-center gap-2 px-4 py-2 rounded-xl border border-blue-200 text-blue-700 bg-blue-50 text-xs font-bold disabled:opacity-40", children: [_jsx15(RefreshCw5, { className: "w-4 h-4" }), _jsx15("span", { children: "\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u0637\u0627\u0628\u0639\u0629 \u0627\u0644\u0645\u062D\u0641\u0648\u0638\u0629" })] }) : null, _jsxs13("button", { type: "button", onClick: handleConnectSerialPrinter, disabled: !!printerState.connecting, className: "flex items-center gap-2 px-4 py-2 rounded-xl border border-violet-200 dark:border-violet-900 text-violet-700 dark:text-violet-300 bg-violet-50/60 dark:bg-violet-950/20 text-xs font-bold disabled:opacity-40", children: [_jsx15(Cable, { className: "w-4 h-4" }), _jsx15("span", { children: "\u0627\u062E\u062A\u064A\u0627\u0631 \u0637\u0627\u0628\u0639\u0629 Serial" })] }), _jsxs13("button", { type: "button", onClick: handleEnableSystemPrinter, disabled: !!printerState.connecting, className: "flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 bg-white text-xs font-bold disabled:opacity-40", children: [_jsx15(Printer8, { className: "w-4 h-4" }), _jsx15("span", { children: printerState.isIOS ? "\u0637\u0628\u0627\u0639\u0629 iPhone / AirPrint" : "\u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u0646\u0638\u0627\u0645" })] }), printerState.ready || printerState.hasRememberedPrinter ? _jsxs13("button", { type: "button", onClick: handleDisconnectPrinter, className: "flex items-center gap-2 px-4 py-2 rounded-xl border border-rose-200 text-rose-600 bg-rose-50 text-xs font-bold", children: [_jsx15(X27, { className: "w-4 h-4" }), _jsx15("span", { children: "\u0641\u0635\u0644 \u0627\u0644\u0637\u0627\u0628\u0639\u0629" })] }) : null] }), _jsx15("p", { className: "text-[10px] leading-relaxed text-slate-400", children: "\u0632\u0631 Bluetooth \u0638\u0627\u0647\u0631 \u062F\u0627\u0626\u0645\u0627\u064B. Chrome/Edge \u064A\u0633\u062A\u062E\u062F\u0645 \u0627\u062A\u0635\u0627\u0644 ESC/POS \u0645\u0628\u0627\u0634\u0631 \u0639\u0646\u062F \u062A\u0648\u0641\u0631 Web Bluetooth. \u0639\u0644\u0649 iPhone/Safari \u0623\u0648 \u0627\u0644\u0637\u0627\u0628\u0639\u0627\u062A Bluetooth Classic \u064A\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u0646\u0638\u0627\u0645 \u0646\u0627\u0641\u0630\u0629 \u0627\u0644\u0637\u0628\u0627\u0639\u0629/AirPrint \u0623\u0648 \u062A\u0639\u0631\u064A\u0641 \u0627\u0644\u0637\u0627\u0628\u0639\u0629 \u0627\u0644\u0645\u062B\u0628\u062A \u0639\u0644\u0649 \u0627\u0644\u062C\u0647\u0627\u0632\u060C \u0648\u0644\u0627 \u064A\u062A\u0645 \u0625\u062E\u0641\u0627\u0621 \u0627\u0644\u0632\u0631." })] }), _jsxs13("div", { className: "p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4", children: [_jsxs13("div", { className: "flex items-center gap-2 border-b pb-3 border-slate-100 dark:border-slate-800", children: [_jsx15(ShieldCheck2, { className: "w-5 h-5 text-violet-600" }), _jsx15("h3", { className: "text-sm font-bold text-slate-900 dark:text-white", children: "\u0633\u064A\u0627\u0633\u0627\u062A \u0627\u0644\u0628\u064A\u0639 \u0648\u0627\u0644\u0645\u062E\u0632\u0648\u0646" })] }), _jsxs13("div", { className: "flex items-center justify-between p-3 border rounded-lg bg-slate-50 dark:bg-slate-800", children: [_jsxs13("div", { children: [_jsx15("span", { className: "text-xs font-bold block", children: "\u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0627\u0644\u0628\u064A\u0639 \u0628\u0627\u0644\u0633\u0627\u0644\u0628 (Negative Stock):" }), _jsx15("span", { className: "text-[11px] text-slate-400", children: "\u0625\u062A\u0645\u0627\u0645 \u0639\u0645\u0644\u064A\u0629 \u0627\u0644\u0628\u064A\u0639 \u0628\u0627\u0644\u0643\u0627\u0634\u064A\u0631 \u062D\u062A\u0649 \u0644\u0648 \u0643\u0627\u0646\u062A \u0627\u0644\u0643\u0645\u064A\u0629 \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0628\u0627\u0644\u0645\u062E\u0632\u0646 0 (\u0645\u0646\u0627\u0633\u0628 \u0644\u0644\u0633\u0648\u0628\u0631\u0645\u0627\u0631\u0643\u062A \u0644\u062A\u062C\u0646\u0628 \u062A\u0639\u0637\u064A\u0644 \u0627\u0644\u0632\u0628\u0627\u0626\u0646)" })] }), _jsx15("input", { type: "checkbox", checked: formSettings.allowNegativeStock, onChange: (e) => setFormSettings({ ...formSettings, allowNegativeStock: e.target.checked }), className: "w-5 h-5 accent-violet-600 rounded" }), _jsxs13("div", { className: "flex items-center justify-between p-3 border rounded-lg bg-slate-50 dark:bg-slate-800", children: [_jsxs13("div", { children: [_jsx15("span", { className: "text-xs font-bold block", children: "\u062A\u0641\u0639\u064A\u0644 \u0628\u064A\u0639 \u0627\u0644\u0645\u064A\u0632\u0627\u0646" }), _jsx15("span", { className: "text-[11px] text-slate-400", children: "\u0639\u0646\u062F \u062A\u0639\u062F\u064A\u0644 \u0645\u0628\u0644\u063A \u0627\u0644\u0635\u0646\u0641 \u0641\u064A \u0627\u0644\u0633\u0644\u0629 \u062A\u064F\u062D\u0633\u0628 \u0627\u0644\u0643\u0645\u064A\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0648\u064A\u064F\u0642\u0631\u0628 \u0635\u0627\u0641\u064A \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629 \u0644\u0623\u0642\u0631\u0628 \u0639\u062F\u062F \u0635\u062D\u064A\u062D." })] }), _jsx15("input", { type: "checkbox", checked: !!formSettings.scaleModeEnabled, onChange: (e) => setFormSettings({ ...formSettings, scaleModeEnabled: e.target.checked }), className: "w-5 h-5 accent-violet-600 rounded" })] })] })] }), _jsx15("div", { className: "flex justify-end", children: _jsxs13("button", { type: "submit", className: "flex items-center gap-2 px-6 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold rounded-xl shadow-md transition", children: [_jsx15(Save3, { className: "w-4 h-4" }), _jsx15("span", { children: "\u062D\u0641\u0638 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0639\u0627\u0645\u0629" })] }) })] }), _jsxs13("div", { className: "p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4", children: [_jsxs13("div", { className: "flex items-center gap-2 border-b pb-3 border-slate-100 dark:border-slate-800", children: [_jsx15(Building27, { className: "w-5 h-5 text-violet-600" }), _jsx15("h3", { className: "text-sm font-bold text-slate-900 dark:text-white", children: "\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0641\u0631\u0648\u0639 \u0648\u0627\u0644\u0645\u062E\u0627\u0632\u0646" })] }), _jsx15("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-3", children: warehouses.map((w) => _jsxs13("div", { className: `p-3 rounded-xl border flex items-center justify-between ${w.id === settings.activeWarehouseId ? "border-violet-500 bg-violet-50/40 dark:bg-violet-950/20" : "bg-slate-50 dark:bg-slate-800/40"}`, children: [_jsxs13("div", { children: [_jsx15("div", { className: "text-xs font-bold text-slate-900 dark:text-white", children: w.name }), _jsxs13("div", { className: "text-[10px] text-slate-400 font-mono", children: ["\u0627\u0644\u0643\u0648\u062F: ", w.code] })] }), _jsxs13("div", { className: "flex items-center gap-1", children: [w.id === settings.activeWarehouseId ? _jsx15("span", { className: "px-2 py-0.5 rounded text-[10px] font-bold bg-violet-600 text-white", children: "\u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A \u0627\u0644\u0646\u0634\u0637" }) : _jsx15("button", { type: "button", onClick: () => updateSettings({ activeWarehouseId: w.id }), className: "px-2 py-1 text-[10px] font-bold text-slate-600 hover:text-violet-600 hover:bg-slate-200 rounded", children: "\u062A\u0641\u0639\u064A\u0644" }), _jsx15("button", { type: "button", onClick: () => {
+  } })] })] }), _jsx15("button", { type: "button", onClick: () => setFormSettings({ ...formSettings, logoSourceUrl: "", logoUrl: "", logoTelegramFileId: "", logoTelegramUniqueId: "", logoStorage: "" }), className: "px-3 py-2 text-[11px] font-bold rounded-lg border border-rose-200 text-rose-600 bg-white", children: "\u0645\u0633\u062D" })] })] })] })] }), _jsxs13("div", { className: "p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4", children: [_jsxs13("div", { className: "flex items-center gap-2 border-b pb-3 border-slate-100 dark:border-slate-800", children: [_jsx15(Printer8, { className: "w-5 h-5 text-violet-600" }), _jsx15("h3", { className: "text-sm font-bold text-slate-900 dark:text-white", children: "\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0637\u0627\u0628\u0639\u0629 \u0627\u0644\u062D\u0631\u0627\u0631\u064A\u0629 \u0648\u0627\u0644\u0625\u064A\u0635\u0627\u0644\u0627\u062A" })] }), _jsxs13("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-4", children: [_jsxs13("div", { children: [_jsx15(SearchableDropdown, { label: "\u0645\u0642\u0627\u0633 \u0648\u0631\u0642 \u0627\u0644\u0637\u0627\u0628\u0639\u0629 \u0627\u0644\u062D\u0631\u0627\u0631\u064A\u0629:", id: "settings-printer-width", options: [{ id: "80mm", label: "80 \u0645\u0644\u0645", subLabel: "\u0637\u0627\u0628\u0639\u0629 \u062D\u0631\u0627\u0631\u064A\u0629 \u0642\u064A\u0627\u0633\u064A\u0629 \u0639\u0631\u064A\u0636\u0629" }, { id: "58mm", label: "58 \u0645\u0644\u0645", subLabel: "\u0637\u0627\u0628\u0639\u0629 \u062D\u0631\u0627\u0631\u064A\u0629 \u0635\u063A\u064A\u0631\u0629 \u0648\u0645\u062D\u0645\u0648\u0644\u0629" }, { id: "a4", label: "A4", subLabel: "\u0641\u0627\u062A\u0648\u0631\u0629 \u0643\u0627\u0645\u0644\u0629 \u0639\u0644\u0649 \u0648\u0631\u0642 A4" }], selectedId: formSettings.printerWidth, onSelect: (id) => setFormSettings({ ...formSettings, printerWidth: id }), placeholder: "\u0627\u0628\u062D\u062B \u0639\u0646 \u0627\u0644\u0645\u0642\u0627\u0633..." })] }), _jsxs13("div", { className: "flex items-center justify-between p-3 border rounded-lg bg-slate-50 dark:bg-slate-800", children: [_jsxs13("div", { children: [_jsx15("span", { className: "text-xs font-bold block", children: "\u0627\u0644\u0637\u0628\u0627\u0639\u0629 \u0639\u0646\u062F \u0627\u0644\u062D\u0641\u0638:" }), _jsx15("span", { className: "text-[11px] text-slate-400", children: "\u0641\u062A\u062D \u0641\u0627\u062A\u0648\u0631\u0629 \u0627\u0644\u0637\u0628\u0627\u0639\u0629 \u0645\u0628\u0627\u0634\u0631\u0629 \u0628\u0639\u062F \u062D\u0641\u0638 \u0641\u0627\u062A\u0648\u0631\u0629 \u0627\u0644\u0628\u064A\u0639" })] }), _jsx15("input", { type: "checkbox", checked: formSettings.printOnSave ?? formSettings.autoPrintReceipt, onChange: (e) => setFormSettings({ ...formSettings, printOnSave: e.target.checked, autoPrintReceipt: e.target.checked }), className: "w-5 h-5 accent-violet-600 rounded" })] }), _jsxs13("div", { className: "sm:col-span-2", children: [_jsx15("label", { className: "text-xs font-semibold block mb-1", children: "\u062A\u0630\u064A\u064A\u0644 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629 \u0627\u0644\u0645\u0637\u0628\u0648\u0639 (\u0631\u0633\u0627\u0644\u0629 \u0623\u0633\u0641\u0644 \u0627\u0644\u0625\u064A\u0635\u0627\u0644):" }), _jsx15("input", { type: "text", value: formSettings.receiptFooterMessage, onChange: (e) => setFormSettings({ ...formSettings, receiptFooterMessage: e.target.value }), placeholder: "\u0634\u0643\u0631\u0627\u064B \u0644\u0632\u064A\u0627\u0631\u062A\u0643\u0645! \u0627\u0644\u0628\u0636\u0627\u0639\u0629 \u0627\u0644\u0645\u0628\u0627\u0639\u0629 \u062A\u0631\u062F \u0648\u062A\u0633\u062A\u0628\u062F\u0644 \u062E\u0644\u0627\u0644 3 \u0623\u064A\u0627\u0645", className: "w-full px-3 py-2 text-xs border rounded-lg bg-slate-50 dark:bg-slate-800" })] })] })] }), _jsxs13("div", { className: "p-5 rounded-2xl bg-white dark:bg-slate-900 border border-violet-200 dark:border-violet-900 shadow-xs space-y-4", children: [_jsxs13("div", { className: "flex items-center justify-between gap-3 border-b pb-3 border-slate-100 dark:border-slate-800", children: [_jsxs13("div", { className: "flex items-center gap-2", children: [_jsx15(Bluetooth, { className: "w-5 h-5 text-violet-600" }), _jsxs13("div", { children: [_jsx15("h3", { className: "text-sm font-black text-slate-900 dark:text-white", children: "\u0637\u0627\u0628\u0639\u0629 Bluetooth / Serial" }), _jsx15("p", { className: "text-[11px] text-slate-500", children: "\u0627\u062E\u062A\u0631 \u0627\u0644\u0637\u0627\u0628\u0639\u0629 \u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629 \u0645\u0646 \u062F\u0627\u062E\u0644 \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C. \u064A\u062A\u0645 \u062D\u0641\u0638\u0647\u0627 \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062C\u0647\u0627\u0632 \u0648\u064A\u0639\u064A\u062F \u0627\u0644\u0646\u0638\u0627\u0645 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0647\u0627 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0623\u062B\u0646\u0627\u0621 \u0627\u0644\u062A\u0646\u0642\u0644 \u0623\u0648 \u0628\u0639\u062F \u0631\u062C\u0648\u0639 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0645\u0646 \u0627\u0644\u062E\u0644\u0641\u064A\u0629." })] })] }), _jsx15("span", { className: `px-2.5 py-1 rounded-full text-[10px] font-black ${printerState.ready ? "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300" : "bg-slate-100 text-slate-500 dark:bg-slate-800"}`, children: printerState.connected ? `\u0645\u062A\u0635\u0644 \u0645\u0628\u0627\u0634\u0631 \u2022 ${printerState.name || printerState.preferredName || "\u0627\u0644\u0637\u0627\u0628\u0639\u0629"}` : printerState.systemMode ? `\u062C\u0627\u0647\u0632 \u2022 ${printerState.name || "\u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u0646\u0638\u0627\u0645"}` : printerState.hasRememberedPrinter ? `\u0645\u062D\u0641\u0648\u0638\u0629 \u2022 ${printerState.preferredName || "\u0627\u0644\u0637\u0627\u0628\u0639\u0629"}` : "\u0644\u0645 \u064A\u062A\u0645 \u0627\u062E\u062A\u064A\u0627\u0631 \u0637\u0627\u0628\u0639\u0629" })] }), _jsxs13("div", { className: "flex flex-wrap gap-2", children: [_jsxs13("button", { type: "button", onClick: handleConnectBluetoothPrinter, disabled: !!printerState.connecting, className: "flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold disabled:opacity-40", children: [_jsx15(Bluetooth, { className: "w-4 h-4" }), _jsx15("span", { children: printerState.connecting === "bluetooth" ? "\u062C\u0627\u0631\u064A \u0627\u0644\u0627\u062A\u0635\u0627\u0644..." : printerState.bluetoothSupported ? "\u0627\u062E\u062A\u064A\u0627\u0631 / \u062A\u063A\u064A\u064A\u0631 \u0637\u0627\u0628\u0639\u0629 Bluetooth" : printerState.isIOS ? "\u062A\u0641\u0639\u064A\u0644 \u0637\u0628\u0627\u0639\u0629 iPhone / Bluetooth" : "\u062A\u0641\u0639\u064A\u0644 \u0637\u0628\u0627\u0639\u0629 Bluetooth / \u0627\u0644\u0646\u0638\u0627\u0645" })] }), !printerState.ready && printerState.hasRememberedPrinter ? _jsxs13("button", { type: "button", onClick: handleReconnectPrinter, disabled: !!printerState.connecting, className: "flex items-center gap-2 px-4 py-2 rounded-xl border border-blue-200 text-blue-700 bg-blue-50 text-xs font-bold disabled:opacity-40", children: [_jsx15(RefreshCw5, { className: "w-4 h-4" }), _jsx15("span", { children: "\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u0637\u0627\u0628\u0639\u0629 \u0627\u0644\u0645\u062D\u0641\u0648\u0638\u0629" })] }) : null, _jsxs13("button", { type: "button", onClick: handleConnectSerialPrinter, disabled: !!printerState.connecting, className: "flex items-center gap-2 px-4 py-2 rounded-xl border border-violet-200 dark:border-violet-900 text-violet-700 dark:text-violet-300 bg-violet-50/60 dark:bg-violet-950/20 text-xs font-bold disabled:opacity-40", children: [_jsx15(Cable, { className: "w-4 h-4" }), _jsx15("span", { children: "\u0627\u062E\u062A\u064A\u0627\u0631 \u0637\u0627\u0628\u0639\u0629 Serial" })] }), _jsxs13("button", { type: "button", onClick: handleEnableSystemPrinter, disabled: !!printerState.connecting, className: "flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 bg-white text-xs font-bold disabled:opacity-40", children: [_jsx15(Printer8, { className: "w-4 h-4" }), _jsx15("span", { children: printerState.isIOS ? "\u0637\u0628\u0627\u0639\u0629 iPhone / AirPrint" : "\u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u0646\u0638\u0627\u0645" })] }), printerState.ready || printerState.hasRememberedPrinter ? _jsxs13("button", { type: "button", onClick: handleDisconnectPrinter, className: "flex items-center gap-2 px-4 py-2 rounded-xl border border-rose-200 text-rose-600 bg-rose-50 text-xs font-bold", children: [_jsx15(X28, { className: "w-4 h-4" }), _jsx15("span", { children: "\u0641\u0635\u0644 \u0627\u0644\u0637\u0627\u0628\u0639\u0629" })] }) : null] }), _jsx15("p", { className: "text-[10px] leading-relaxed text-slate-400", children: "\u0632\u0631 Bluetooth \u0638\u0627\u0647\u0631 \u062F\u0627\u0626\u0645\u0627\u064B. Chrome/Edge \u064A\u0633\u062A\u062E\u062F\u0645 \u0627\u062A\u0635\u0627\u0644 ESC/POS \u0645\u0628\u0627\u0634\u0631 \u0639\u0646\u062F \u062A\u0648\u0641\u0631 Web Bluetooth. \u0639\u0644\u0649 iPhone/Safari \u0623\u0648 \u0627\u0644\u0637\u0627\u0628\u0639\u0627\u062A Bluetooth Classic \u064A\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u0646\u0638\u0627\u0645 \u0646\u0627\u0641\u0630\u0629 \u0627\u0644\u0637\u0628\u0627\u0639\u0629/AirPrint \u0623\u0648 \u062A\u0639\u0631\u064A\u0641 \u0627\u0644\u0637\u0627\u0628\u0639\u0629 \u0627\u0644\u0645\u062B\u0628\u062A \u0639\u0644\u0649 \u0627\u0644\u062C\u0647\u0627\u0632\u060C \u0648\u0644\u0627 \u064A\u062A\u0645 \u0625\u062E\u0641\u0627\u0621 \u0627\u0644\u0632\u0631." })] }), _jsxs13("div", { className: "p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4", children: [_jsxs13("div", { className: "flex items-center gap-2 border-b pb-3 border-slate-100 dark:border-slate-800", children: [_jsx15(ShieldCheck2, { className: "w-5 h-5 text-violet-600" }), _jsx15("h3", { className: "text-sm font-bold text-slate-900 dark:text-white", children: "\u0633\u064A\u0627\u0633\u0627\u062A \u0627\u0644\u0628\u064A\u0639 \u0648\u0627\u0644\u0645\u062E\u0632\u0648\u0646" })] }), _jsxs13("div", { className: "flex items-center justify-between p-3 border rounded-lg bg-slate-50 dark:bg-slate-800", children: [_jsxs13("div", { children: [_jsx15("span", { className: "text-xs font-bold block", children: "\u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0627\u0644\u0628\u064A\u0639 \u0628\u0627\u0644\u0633\u0627\u0644\u0628 (Negative Stock):" }), _jsx15("span", { className: "text-[11px] text-slate-400", children: "\u0625\u062A\u0645\u0627\u0645 \u0639\u0645\u0644\u064A\u0629 \u0627\u0644\u0628\u064A\u0639 \u0628\u0627\u0644\u0643\u0627\u0634\u064A\u0631 \u062D\u062A\u0649 \u0644\u0648 \u0643\u0627\u0646\u062A \u0627\u0644\u0643\u0645\u064A\u0629 \u0627\u0644\u0645\u0633\u062C\u0644\u0629 \u0628\u0627\u0644\u0645\u062E\u0632\u0646 0 (\u0645\u0646\u0627\u0633\u0628 \u0644\u0644\u0633\u0648\u0628\u0631\u0645\u0627\u0631\u0643\u062A \u0644\u062A\u062C\u0646\u0628 \u062A\u0639\u0637\u064A\u0644 \u0627\u0644\u0632\u0628\u0627\u0626\u0646)" })] }), _jsx15("input", { type: "checkbox", checked: formSettings.allowNegativeStock, onChange: (e) => setFormSettings({ ...formSettings, allowNegativeStock: e.target.checked }), className: "w-5 h-5 accent-violet-600 rounded" }), _jsxs13("div", { className: "flex items-center justify-between p-3 border rounded-lg bg-slate-50 dark:bg-slate-800", children: [_jsxs13("div", { children: [_jsx15("span", { className: "text-xs font-bold block", children: "\u062A\u0641\u0639\u064A\u0644 \u0628\u064A\u0639 \u0627\u0644\u0645\u064A\u0632\u0627\u0646" }), _jsx15("span", { className: "text-[11px] text-slate-400", children: "\u0639\u0646\u062F \u062A\u0639\u062F\u064A\u0644 \u0645\u0628\u0644\u063A \u0627\u0644\u0635\u0646\u0641 \u0641\u064A \u0627\u0644\u0633\u0644\u0629 \u062A\u064F\u062D\u0633\u0628 \u0627\u0644\u0643\u0645\u064A\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0648\u064A\u064F\u0642\u0631\u0628 \u0635\u0627\u0641\u064A \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629 \u0644\u0623\u0642\u0631\u0628 \u0639\u062F\u062F \u0635\u062D\u064A\u062D." })] }), _jsx15("input", { type: "checkbox", checked: !!formSettings.scaleModeEnabled, onChange: (e) => setFormSettings({ ...formSettings, scaleModeEnabled: e.target.checked }), className: "w-5 h-5 accent-violet-600 rounded" })] })] })] }), _jsx15("div", { className: "flex justify-end", children: _jsxs13("button", { type: "submit", className: "flex items-center gap-2 px-6 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold rounded-xl shadow-md transition", children: [_jsx15(Save3, { className: "w-4 h-4" }), _jsx15("span", { children: "\u062D\u0641\u0638 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0639\u0627\u0645\u0629" })] }) })] }), _jsxs13("div", { className: "p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4", children: [_jsxs13("div", { className: "flex items-center gap-2 border-b pb-3 border-slate-100 dark:border-slate-800", children: [_jsx15(Building27, { className: "w-5 h-5 text-violet-600" }), _jsx15("h3", { className: "text-sm font-bold text-slate-900 dark:text-white", children: "\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0641\u0631\u0648\u0639 \u0648\u0627\u0644\u0645\u062E\u0627\u0632\u0646" })] }), _jsx15("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-3", children: warehouses.map((w) => _jsxs13("div", { className: `p-3 rounded-xl border flex items-center justify-between ${w.id === settings.activeWarehouseId ? "border-violet-500 bg-violet-50/40 dark:bg-violet-950/20" : "bg-slate-50 dark:bg-slate-800/40"}`, children: [_jsxs13("div", { children: [_jsx15("div", { className: "text-xs font-bold text-slate-900 dark:text-white", children: w.name }), _jsxs13("div", { className: "text-[10px] text-slate-400 font-mono", children: ["\u0627\u0644\u0643\u0648\u062F: ", w.code] })] }), _jsxs13("div", { className: "flex items-center gap-1", children: [w.id === settings.activeWarehouseId ? _jsx15("span", { className: "px-2 py-0.5 rounded text-[10px] font-bold bg-violet-600 text-white", children: "\u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A \u0627\u0644\u0646\u0634\u0637" }) : _jsx15("button", { type: "button", onClick: () => updateSettings({ activeWarehouseId: w.id }), className: "px-2 py-1 text-[10px] font-bold text-slate-600 hover:text-violet-600 hover:bg-slate-200 rounded", children: "\u062A\u0641\u0639\u064A\u0644" }), _jsx15("button", { type: "button", onClick: () => {
     setEditingWarehouse(w);
     setNewWarehouseName(w.name);
     setNewWarehouseCode(w.code);
@@ -21923,7 +21985,7 @@ var SettingsView = () => {
     setEditingWarehouse(null);
     setNewWarehouseName("");
     setNewWarehouseCode("");
-  }, className: "px-3 py-1.5 border border-slate-200 dark:border-slate-700 text-slate-500 text-xs font-bold rounded-lg", title: "\u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u062A\u0639\u062F\u064A\u0644", children: _jsx15(X27, { className: "w-4 h-4" }) })] })] }), financialYearCard, p2pMethodsCard, telegramCard, _jsxs13("div", { id: "settings-install-app", className: "p-5 rounded-2xl bg-white dark:bg-slate-900 border border-violet-200 dark:border-violet-900/70 shadow-xs space-y-4", children: [_jsxs13("div", { className: "flex items-center gap-3 border-b pb-3 border-slate-100 dark:border-slate-800", children: [_jsx15("div", { className: "w-10 h-10 rounded-xl bg-violet-50 dark:bg-violet-950/50 flex items-center justify-center shrink-0", children: _jsx15(Download10, { className: "w-5 h-5 text-violet-600" }) }), _jsxs13("div", { children: [_jsx15("h3", { className: "text-sm font-bold text-slate-900 dark:text-white", children: "\u062A\u062B\u0628\u064A\u062A \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0639\u0644\u0649 \u0627\u0644\u062C\u0647\u0627\u0632" }), _jsx15("p", { className: "text-[11px] text-slate-500 mt-0.5", children: "\u062A\u062B\u0628\u064A\u062A \u0645\u0628\u0627\u0634\u0631 \u0645\u0646 Chrome \u0643\u062A\u0637\u0628\u064A\u0642 \u0645\u0633\u062A\u0642\u0644 \u0628\u0623\u064A\u0642\u0648\u0646\u0629 \u0639\u0644\u0649 \u0627\u0644\u062C\u0647\u0627\u0632 \u0648\u062A\u0634\u063A\u064A\u0644 \u0623\u0633\u0631\u0639 \u0648\u0623\u0641\u0636\u0644 \u0644\u0644\u0623\u0648\u0641\u0644\u0627\u064A\u0646." })] })] }), _jsxs13("div", { className: "flex flex-col sm:flex-row sm:items-center gap-3", children: [_jsxs13("button", { id: "btn-settings-install-pwa", type: "button", onClick: handleInstallApp, disabled: isInstalled, className: `inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black transition shadow-sm ${isInstalled ? "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed" : "bg-violet-600 hover:bg-violet-700 text-white active:scale-[.98]"}`, children: [_jsx15(Download10, { className: "w-4 h-4" }), _jsx15("span", { children: isInstalled ? "\u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0645\u062B\u0628\u062A" : "\u062A\u062B\u0628\u064A\u062A \u0627\u0644\u062A\u0637\u0628\u064A\u0642" })] }), _jsx15("div", { className: `text-[11px] font-semibold ${isInstalled ? "text-violet-600" : isInstallable ? "text-violet-600" : "text-slate-500"}`, children: isInstalled ? "\u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0645\u062B\u0628\u062A \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062C\u0647\u0627\u0632" : isInstallable ? "\u062C\u0627\u0647\u0632 \u0644\u0644\u062A\u062B\u0628\u064A\u062A \u0639\u0628\u0631 Chrome \u2014 \u0627\u0636\u063A\u0637 \u0627\u0644\u0632\u0631 \u0644\u0641\u062A\u062D \u0646\u0627\u0641\u0630\u0629 \u0627\u0644\u062A\u062B\u0628\u064A\u062A" : isIOS ? "\u0639\u0644\u0649 iPhone/iPad: Safari \u2190 \u0645\u0634\u0627\u0631\u0643\u0629 \u2190 \u0625\u0636\u0627\u0641\u0629 \u0625\u0644\u0649 \u0627\u0644\u0634\u0627\u0634\u0629 \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629" : isSecureContext ? "\u0628\u0627\u0646\u062A\u0638\u0627\u0631 \u062A\u0648\u0641\u0631 \u0646\u0627\u0641\u0630\u0629 \u0627\u0644\u062A\u062B\u0628\u064A\u062A \u0645\u0646 Chrome" : "\u0627\u0644\u062A\u062B\u0628\u064A\u062A \u064A\u062D\u062A\u0627\u062C HTTPS \u0623\u0648 localhost" })] })] }), _jsxs13("div", { className: "p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4", children: [_jsxs13("div", { className: "flex items-center gap-2 border-b pb-3 border-slate-100 dark:border-slate-800", children: [_jsx15(Database, { className: "w-5 h-5 text-violet-600" }), _jsx15("h3", { className: "text-sm font-bold text-slate-900 dark:text-white", children: "\u0627\u0644\u0646\u0633\u062E \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A \u0648\u0627\u0633\u062A\u0639\u0627\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A" })] }), _jsx15("p", { className: "text-xs text-slate-500", children: "\u0646\u0638\u0627\u0645 \u0623\u0648\u0633\u0643\u0627\u0631 \u0627\u0644\u0645\u062D\u0627\u0633\u0628\u064A \u064A\u062E\u0632\u0646 \u0643\u0627\u0641\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0645\u062D\u0644\u064A\u0627\u064B \u0648\u0628\u0634\u0643\u0644 \u0622\u0645\u0646 \u0641\u064A \u062C\u0647\u0627\u0632\u0643 \u0639\u0628\u0631 \u0645\u062A\u0635\u0641\u062D \u0627\u0644\u0648\u064A\u0628 \u0628\u062F\u0648\u0646 \u0627\u0644\u062D\u0627\u062C\u0629 \u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u0625\u0646\u062A\u0631\u0646\u062A. \u064A\u0645\u0643\u0646\u0643 \u062D\u0641\u0638 \u0646\u0633\u062E\u0629 \u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629 \u062F\u0648\u0631\u064A\u0629 \u0628\u0645\u0644\u0641 JSON." }), _jsxs13("div", { className: "flex flex-wrap items-center gap-3 pt-2", children: [_jsxs13("button", { onClick: handleExportBackup, className: "flex items-center gap-2 px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold rounded-xl shadow-xs transition", children: [_jsx15(Download10, { className: "w-4 h-4" }), _jsx15("span", { children: "\u062A\u0635\u062F\u064A\u0631 \u0646\u0633\u062E\u0629 \u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629 \u0643\u0627\u0645\u0644\u0629 (JSON)" })] }), _jsxs13("label", { className: "flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer transition", children: [_jsx15(Upload, { className: "w-4 h-4" }), _jsx15("span", { children: "\u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0646\u0633\u062E\u0629 \u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629 \u0645\u0646 \u0645\u0644\u0641" }), _jsx15("input", { type: "file", accept: ".json", onChange: handleImportBackup, className: "hidden" })] }), _jsxs13("button", { onClick: handleResetSeedData, className: "flex items-center gap-1.5 px-3 py-2 text-slate-500 hover:text-rose-600 text-xs font-semibold mr-auto transition", children: [_jsx15(RefreshCw5, { className: "w-3.5 h-3.5" }), _jsx15("span", { children: "\u0625\u0639\u0627\u062F\u0629 \u0636\u0628\u0637 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0644\u0648\u0636\u0639 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A \u0627\u0644\u0623\u0648\u0644\u064A" })] })] })] }), (currentUser.isCompanyManager || currentUser.roleCode === "admin") && _jsx15(NotificationSettings, {})] });
+  }, className: "px-3 py-1.5 border border-slate-200 dark:border-slate-700 text-slate-500 text-xs font-bold rounded-lg", title: "\u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u062A\u0639\u062F\u064A\u0644", children: _jsx15(X28, { className: "w-4 h-4" }) })] })] }), financialYearCard, p2pMethodsCard, telegramCard, _jsxs13("div", { id: "settings-install-app", className: "p-5 rounded-2xl bg-white dark:bg-slate-900 border border-violet-200 dark:border-violet-900/70 shadow-xs space-y-4", children: [_jsxs13("div", { className: "flex items-center gap-3 border-b pb-3 border-slate-100 dark:border-slate-800", children: [_jsx15("div", { className: "w-10 h-10 rounded-xl bg-violet-50 dark:bg-violet-950/50 flex items-center justify-center shrink-0", children: _jsx15(Download10, { className: "w-5 h-5 text-violet-600" }) }), _jsxs13("div", { children: [_jsx15("h3", { className: "text-sm font-bold text-slate-900 dark:text-white", children: "\u062A\u062B\u0628\u064A\u062A \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0639\u0644\u0649 \u0627\u0644\u062C\u0647\u0627\u0632" }), _jsx15("p", { className: "text-[11px] text-slate-500 mt-0.5", children: "\u062A\u062B\u0628\u064A\u062A \u0645\u0628\u0627\u0634\u0631 \u0645\u0646 Chrome \u0643\u062A\u0637\u0628\u064A\u0642 \u0645\u0633\u062A\u0642\u0644 \u0628\u0623\u064A\u0642\u0648\u0646\u0629 \u0639\u0644\u0649 \u0627\u0644\u062C\u0647\u0627\u0632 \u0648\u062A\u0634\u063A\u064A\u0644 \u0623\u0633\u0631\u0639 \u0648\u0623\u0641\u0636\u0644 \u0644\u0644\u0623\u0648\u0641\u0644\u0627\u064A\u0646." })] })] }), _jsxs13("div", { className: "flex flex-col sm:flex-row sm:items-center gap-3", children: [_jsxs13("button", { id: "btn-settings-install-pwa", type: "button", onClick: handleInstallApp, disabled: isInstalled, className: `inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black transition shadow-sm ${isInstalled ? "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed" : "bg-violet-600 hover:bg-violet-700 text-white active:scale-[.98]"}`, children: [_jsx15(Download10, { className: "w-4 h-4" }), _jsx15("span", { children: isInstalled ? "\u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0645\u062B\u0628\u062A" : "\u062A\u062B\u0628\u064A\u062A \u0627\u0644\u062A\u0637\u0628\u064A\u0642" })] }), _jsx15("div", { className: `text-[11px] font-semibold ${isInstalled ? "text-violet-600" : isInstallable ? "text-violet-600" : "text-slate-500"}`, children: isInstalled ? "\u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0645\u062B\u0628\u062A \u0639\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u062C\u0647\u0627\u0632" : isInstallable ? "\u062C\u0627\u0647\u0632 \u0644\u0644\u062A\u062B\u0628\u064A\u062A \u0639\u0628\u0631 Chrome \u2014 \u0627\u0636\u063A\u0637 \u0627\u0644\u0632\u0631 \u0644\u0641\u062A\u062D \u0646\u0627\u0641\u0630\u0629 \u0627\u0644\u062A\u062B\u0628\u064A\u062A" : isIOS ? "\u0639\u0644\u0649 iPhone/iPad: Safari \u2190 \u0645\u0634\u0627\u0631\u0643\u0629 \u2190 \u0625\u0636\u0627\u0641\u0629 \u0625\u0644\u0649 \u0627\u0644\u0634\u0627\u0634\u0629 \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629" : isSecureContext ? "\u0628\u0627\u0646\u062A\u0638\u0627\u0631 \u062A\u0648\u0641\u0631 \u0646\u0627\u0641\u0630\u0629 \u0627\u0644\u062A\u062B\u0628\u064A\u062A \u0645\u0646 Chrome" : "\u0627\u0644\u062A\u062B\u0628\u064A\u062A \u064A\u062D\u062A\u0627\u062C HTTPS \u0623\u0648 localhost" })] })] }), _jsxs13("div", { className: "p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4", children: [_jsxs13("div", { className: "flex items-center gap-2 border-b pb-3 border-slate-100 dark:border-slate-800", children: [_jsx15(Database, { className: "w-5 h-5 text-violet-600" }), _jsx15("h3", { className: "text-sm font-bold text-slate-900 dark:text-white", children: "\u0627\u0644\u0646\u0633\u062E \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A \u0648\u0627\u0633\u062A\u0639\u0627\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A" })] }), _jsx15("p", { className: "text-xs text-slate-500", children: "\u0646\u0638\u0627\u0645 \u0623\u0648\u0633\u0643\u0627\u0631 \u0627\u0644\u0645\u062D\u0627\u0633\u0628\u064A \u064A\u062E\u0632\u0646 \u0643\u0627\u0641\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0645\u062D\u0644\u064A\u0627\u064B \u0648\u0628\u0634\u0643\u0644 \u0622\u0645\u0646 \u0641\u064A \u062C\u0647\u0627\u0632\u0643 \u0639\u0628\u0631 \u0645\u062A\u0635\u0641\u062D \u0627\u0644\u0648\u064A\u0628 \u0628\u062F\u0648\u0646 \u0627\u0644\u062D\u0627\u062C\u0629 \u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u0625\u0646\u062A\u0631\u0646\u062A. \u064A\u0645\u0643\u0646\u0643 \u062D\u0641\u0638 \u0646\u0633\u062E\u0629 \u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629 \u062F\u0648\u0631\u064A\u0629 \u0628\u0645\u0644\u0641 JSON." }), _jsxs13("div", { className: "flex flex-wrap items-center gap-3 pt-2", children: [_jsxs13("button", { onClick: handleExportBackup, className: "flex items-center gap-2 px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold rounded-xl shadow-xs transition", children: [_jsx15(Download10, { className: "w-4 h-4" }), _jsx15("span", { children: "\u062A\u0635\u062F\u064A\u0631 \u0646\u0633\u062E\u0629 \u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629 \u0643\u0627\u0645\u0644\u0629 (JSON)" })] }), _jsxs13("label", { className: "flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer transition", children: [_jsx15(Upload, { className: "w-4 h-4" }), _jsx15("span", { children: "\u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0646\u0633\u062E\u0629 \u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629 \u0645\u0646 \u0645\u0644\u0641" }), _jsx15("input", { type: "file", accept: ".json", onChange: handleImportBackup, className: "hidden" })] }), _jsxs13("button", { onClick: handleResetSeedData, className: "flex items-center gap-1.5 px-3 py-2 text-slate-500 hover:text-rose-600 text-xs font-semibold mr-auto transition", children: [_jsx15(RefreshCw5, { className: "w-3.5 h-3.5" }), _jsx15("span", { children: "\u0625\u0639\u0627\u062F\u0629 \u0636\u0628\u0637 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0644\u0648\u0636\u0639 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A \u0627\u0644\u0623\u0648\u0644\u064A" })] })] })] }), (currentUser.isCompanyManager || currentUser.roleCode === "admin") && _jsx15(NotificationSettings, {})] });
 };
 
 // app/components__financial__FinancialYearsView.js
@@ -21949,10 +22011,10 @@ import {
   ChevronLeft as ChevronLeft3,
   ShieldCheck as ShieldCheck3,
   Clock3 as Clock33,
-  X as X28,
+  X as X29,
   DatabaseBackup as DatabaseBackup2
 } from "lucide-react";
-var h32 = React53.createElement;
+var h33 = React53.createElement;
 var num7 = (v) => {
   const n4 = Number(v);
   return Number.isFinite(n4) ? n4 : 0;
@@ -21968,14 +22030,14 @@ var dateOnly = (v) => {
   const d = new Date(v);
   return Number.isFinite(d.getTime()) ? d.toLocaleDateString("ar-EG") : "-";
 };
-var Metric2 = ({ icon: Icon, label, value, sub, tone = "emerald" }) => h32(
+var Metric2 = ({ icon: Icon, label, value, sub, tone = "emerald" }) => h33(
   "div",
   { className: "rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs" },
-  h32(
+  h33(
     "div",
     { className: "flex items-start justify-between gap-3" },
-    h32("div", { className: "min-w-0" }, h32("div", { className: "text-[10px] font-bold text-slate-500" }, label), h32("div", { className: "mt-1 text-lg font-black text-slate-900 dark:text-white font-mono" }, value), sub ? h32("div", { className: "text-[9px] text-slate-400 mt-1" }, sub) : null),
-    h32("div", { className: `w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${tone === "indigo" ? "bg-indigo-50 text-indigo-600" : tone === "amber" ? "bg-amber-50 text-amber-600" : tone === "blue" ? "bg-blue-50 text-blue-600" : "bg-violet-50 text-violet-600"}` }, h32(Icon, { className: "w-4 h-4" }))
+    h33("div", { className: "min-w-0" }, h33("div", { className: "text-[10px] font-bold text-slate-500" }, label), h33("div", { className: "mt-1 text-lg font-black text-slate-900 dark:text-white font-mono" }, value), sub ? h33("div", { className: "text-[9px] text-slate-400 mt-1" }, sub) : null),
+    h33("div", { className: `w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${tone === "indigo" ? "bg-indigo-50 text-indigo-600" : tone === "amber" ? "bg-amber-50 text-amber-600" : tone === "blue" ? "bg-blue-50 text-blue-600" : "bg-violet-50 text-violet-600"}` }, h33(Icon, { className: "w-4 h-4" }))
   )
 );
 var FinancialYearsView = () => {
@@ -22109,103 +22171,103 @@ var FinancialYearsView = () => {
     ["\u0627\u0644\u0647\u0627\u0644\u0643 \u0648\u0627\u0644\u0627\u0633\u062A\u0647\u0644\u0627\u0643", Receipt8, selectedData.wasteRecords.map((x) => ({ date: x.date || x.createdAt, ref: x.reason || x.type || x.id, name: x.productName || x.itemName || "\u0647\u0627\u0644\u0643", amount: x.cost || x.amount || 0 }))],
     ["\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0645\u0637\u0639\u0645", ReceiptText6, selectedData.restaurantOrders.map((x) => ({ date: x.date || x.createdAt, ref: x.orderNumber || x.id, name: x.tableName || x.customerName || "\u0637\u0644\u0628", amount: x.total || x.grandTotal || 0 }))]
   ];
-  return h32(
+  return h33(
     "div",
     { className: "p-4 sm:p-6 space-y-5 max-w-7xl mx-auto text-right" },
-    h32(
+    h33(
       "div",
       { className: "flex flex-col lg:flex-row lg:items-center justify-between gap-4" },
-      h32("div", { className: "flex items-start gap-3" }, h32("div", { className: "w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center" }, h32(CalendarRange4, { className: "w-6 h-6" })), h32("div", null, h32("h2", { className: "text-xl font-black text-slate-900 dark:text-white" }, t("\u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0627\u062A \u0627\u0644\u0645\u0627\u0644\u064A\u0629 \u0648\u0627\u0644\u0623\u0631\u0634\u064A\u0641")), h32("p", { className: "text-xs text-slate-500 mt-1" }, "\u0643\u0644 \u0633\u0646\u0629 \u0645\u0633\u062A\u0642\u0644\u0629 \u0628\u062D\u0631\u0643\u0627\u062A\u0647\u0627. \u0639\u0646\u062F \u0641\u062A\u062D \u0633\u0646\u0629 \u062C\u062F\u064A\u062F\u0629 \u062A\u064F\u0624\u0631\u0634\u0641 \u0627\u0644\u062D\u0631\u0643\u0627\u062A \u0627\u0644\u0642\u062F\u064A\u0645\u0629 \u0648\u062A\u0633\u062A\u0645\u0631 \u0627\u0644\u062B\u0648\u0627\u0628\u062A \u0648\u0627\u0644\u0623\u0631\u0635\u062F\u0629 \u0648\u0627\u0644\u0645\u062E\u0632\u0648\u0646 \u0643\u0645\u0627 \u0647\u064A."))),
-      h32("div", { className: "px-4 py-2 rounded-xl bg-violet-50 border border-violet-200 text-violet-800 text-xs font-black" }, `\u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629 \u0627\u0644\u0645\u0641\u062A\u0648\u062D\u0629: ${active3?.name || t("\u0627\u0644\u062D\u0627\u0644\u064A\u0629")}`)
+      h33("div", { className: "flex items-start gap-3" }, h33("div", { className: "w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center" }, h33(CalendarRange4, { className: "w-6 h-6" })), h33("div", null, h33("h2", { className: "text-xl font-black text-slate-900 dark:text-white" }, t("\u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0627\u062A \u0627\u0644\u0645\u0627\u0644\u064A\u0629 \u0648\u0627\u0644\u0623\u0631\u0634\u064A\u0641")), h33("p", { className: "text-xs text-slate-500 mt-1" }, "\u0643\u0644 \u0633\u0646\u0629 \u0645\u0633\u062A\u0642\u0644\u0629 \u0628\u062D\u0631\u0643\u0627\u062A\u0647\u0627. \u0639\u0646\u062F \u0641\u062A\u062D \u0633\u0646\u0629 \u062C\u062F\u064A\u062F\u0629 \u062A\u064F\u0624\u0631\u0634\u0641 \u0627\u0644\u062D\u0631\u0643\u0627\u062A \u0627\u0644\u0642\u062F\u064A\u0645\u0629 \u0648\u062A\u0633\u062A\u0645\u0631 \u0627\u0644\u062B\u0648\u0627\u0628\u062A \u0648\u0627\u0644\u0623\u0631\u0635\u062F\u0629 \u0648\u0627\u0644\u0645\u062E\u0632\u0648\u0646 \u0643\u0645\u0627 \u0647\u064A."))),
+      h33("div", { className: "px-4 py-2 rounded-xl bg-violet-50 border border-violet-200 text-violet-800 text-xs font-black" }, `\u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629 \u0627\u0644\u0645\u0641\u062A\u0648\u062D\u0629: ${active3?.name || t("\u0627\u0644\u062D\u0627\u0644\u064A\u0629")}`)
     ),
-    h32(
+    h33(
       "div",
       { className: "grid grid-cols-2 lg:grid-cols-4 gap-3" },
-      h32(Metric2, { icon: WalletCards5, label: "\u0623\u0631\u0635\u062F\u0629 \u0627\u0644\u062D\u0633\u0627\u0628\u0627\u062A \u0627\u0644\u0645\u0631\u062D\u0644\u0629", value: `${money15(staticBalances.accountBalance)} ${settings.currencySymbol || ""}`, sub: "\u062A\u0628\u0642\u0649 \u0645\u0633\u062A\u0645\u0631\u0629 \u0628\u064A\u0646 \u0627\u0644\u0633\u0646\u0648\u0627\u062A", tone: "blue" }),
-      h32(Metric2, { icon: Boxes5, label: "\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u062E\u0632\u0648\u0646 \u0627\u0644\u062D\u0627\u0644\u064A\u0629", value: `${money15(staticBalances.inventoryCost)} ${settings.currencySymbol || ""}`, sub: "\u0627\u0644\u0645\u062E\u0632\u0648\u0646 \u0644\u0627 \u064A\u0628\u062F\u0623 \u0645\u0646 \u0635\u0641\u0631", tone: "emerald" }),
-      h32(Metric2, { icon: Users11, label: "\u062F\u064A\u0648\u0646 \u0627\u0644\u0639\u0645\u0644\u0627\u0621 \u0627\u0644\u0645\u0631\u062D\u0644\u0629", value: `${money15(staticBalances.customerDebt)} ${settings.currencySymbol || ""}`, sub: `${(customers || []).length} \u0639\u0645\u064A\u0644`, tone: "amber" }),
-      h32(Metric2, { icon: Building28, label: "\u0645\u0633\u062A\u062D\u0642 \u0627\u0644\u0645\u0648\u0631\u062F\u064A\u0646 \u0627\u0644\u0645\u0631\u062D\u0644", value: `${money15(staticBalances.supplierDebt)} ${settings.currencySymbol || ""}`, sub: `${(suppliers || []).length} \u0645\u0648\u0631\u062F`, tone: "indigo" })
+      h33(Metric2, { icon: WalletCards5, label: "\u0623\u0631\u0635\u062F\u0629 \u0627\u0644\u062D\u0633\u0627\u0628\u0627\u062A \u0627\u0644\u0645\u0631\u062D\u0644\u0629", value: `${money15(staticBalances.accountBalance)} ${settings.currencySymbol || ""}`, sub: "\u062A\u0628\u0642\u0649 \u0645\u0633\u062A\u0645\u0631\u0629 \u0628\u064A\u0646 \u0627\u0644\u0633\u0646\u0648\u0627\u062A", tone: "blue" }),
+      h33(Metric2, { icon: Boxes5, label: "\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u062E\u0632\u0648\u0646 \u0627\u0644\u062D\u0627\u0644\u064A\u0629", value: `${money15(staticBalances.inventoryCost)} ${settings.currencySymbol || ""}`, sub: "\u0627\u0644\u0645\u062E\u0632\u0648\u0646 \u0644\u0627 \u064A\u0628\u062F\u0623 \u0645\u0646 \u0635\u0641\u0631", tone: "emerald" }),
+      h33(Metric2, { icon: Users11, label: "\u062F\u064A\u0648\u0646 \u0627\u0644\u0639\u0645\u0644\u0627\u0621 \u0627\u0644\u0645\u0631\u062D\u0644\u0629", value: `${money15(staticBalances.customerDebt)} ${settings.currencySymbol || ""}`, sub: `${(customers || []).length} \u0639\u0645\u064A\u0644`, tone: "amber" }),
+      h33(Metric2, { icon: Building28, label: "\u0645\u0633\u062A\u062D\u0642 \u0627\u0644\u0645\u0648\u0631\u062F\u064A\u0646 \u0627\u0644\u0645\u0631\u062D\u0644", value: `${money15(staticBalances.supplierDebt)} ${settings.currencySymbol || ""}`, sub: `${(suppliers || []).length} \u0645\u0648\u0631\u062F`, tone: "indigo" })
     ),
-    h32(
+    h33(
       "section",
       { className: "rounded-3xl border border-indigo-200 dark:border-indigo-900 bg-white dark:bg-slate-900 p-4 sm:p-5 shadow-sm" },
-      h32("div", { className: "flex items-center gap-2 mb-4" }, h32(PlayCircle, { className: "w-5 h-5 text-indigo-600" }), h32("div", null, h32("div", { className: "font-black text-sm" }, "\u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629 \u0627\u0644\u062D\u0627\u0644\u064A\u0629 \u0648\u0641\u062A\u062D \u0645\u062C\u0645\u0648\u0639\u0629 \u062C\u062F\u064A\u062F\u0629"), h32("div", { className: "text-[10px] text-slate-500 mt-0.5" }, "\u0644\u0627 \u064A\u0648\u062C\u062F \u062A\u0627\u0631\u064A\u062E \u0646\u0647\u0627\u064A\u0629 \u0645\u0633\u0628\u0642. \u0627\u0644\u0625\u063A\u0644\u0627\u0642 \u064A\u062D\u062F\u062B \u0641\u0642\u0637 \u0644\u062D\u0638\u0629 \u0641\u062A\u062D \u0627\u0644\u0633\u0646\u0629 \u0627\u0644\u062A\u0627\u0644\u064A\u0629."))),
-      showClose ? h32(ModalLayer, { className: "fixed inset-0 bg-black/50 flex items-center justify-center p-4", onClick: () => !busy && setShowClose(false) }, h32("div", { className: "ct-financial-close-dialog", onClick: (e) => e.stopPropagation() }, h32("h3", null, t("\u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629")), h32("label", null, t("\u0627\u0633\u0645 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629 \u0627\u0644\u0645\u0624\u0631\u0634\u0641\u0629"), h32("input", { value: closedName, onChange: (e) => setClosedName(e.target.value), required: true })), h32(
+      h33("div", { className: "flex items-center gap-2 mb-4" }, h33(PlayCircle, { className: "w-5 h-5 text-indigo-600" }), h33("div", null, h33("div", { className: "font-black text-sm" }, "\u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629 \u0627\u0644\u062D\u0627\u0644\u064A\u0629 \u0648\u0641\u062A\u062D \u0645\u062C\u0645\u0648\u0639\u0629 \u062C\u062F\u064A\u062F\u0629"), h33("div", { className: "text-[10px] text-slate-500 mt-0.5" }, "\u0644\u0627 \u064A\u0648\u062C\u062F \u062A\u0627\u0631\u064A\u062E \u0646\u0647\u0627\u064A\u0629 \u0645\u0633\u0628\u0642. \u0627\u0644\u0625\u063A\u0644\u0627\u0642 \u064A\u062D\u062F\u062B \u0641\u0642\u0637 \u0644\u062D\u0638\u0629 \u0641\u062A\u062D \u0627\u0644\u0633\u0646\u0629 \u0627\u0644\u062A\u0627\u0644\u064A\u0629."))),
+      showClose ? h33(ModalLayer, { className: "fixed inset-0 bg-black/50 flex items-center justify-center p-4", onClick: () => !busy && setShowClose(false) }, h33("div", { className: "ct-financial-close-dialog", onClick: (e) => e.stopPropagation() }, h33("h3", null, t("\u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629")), h33("label", null, t("\u0627\u0633\u0645 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629 \u0627\u0644\u0645\u0624\u0631\u0634\u0641\u0629"), h33("input", { value: closedName, onChange: (e) => setClosedName(e.target.value), required: true })), h33(
         "form",
         { onSubmit: startNew, className: "grid grid-cols-1 sm:grid-cols-[1fr_180px_auto] gap-3 items-end" },
-        h32("label", { className: "text-[11px] font-bold" }, t("\u0627\u0633\u0645 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629 \u0627\u0644\u062C\u062F\u064A\u062F\u0629"), h32("input", { value: name, onChange: (e) => setName(e.target.value), placeholder: "\u0645\u062B\u0627\u0644: \u0627\u0644\u0633\u0646\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629 2027", className: "block w-full mt-1 px-3 py-2.5 rounded-xl border bg-white dark:bg-slate-800 text-xs" })),
-        h32("label", { className: "text-[11px] font-bold" }, t("\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0628\u062F\u0627\u064A\u0629"), h32("input", { type: "date", value: startDate, onChange: (e) => setStartDate(e.target.value), className: "block w-full mt-1 px-3 py-2.5 rounded-xl border bg-white dark:bg-slate-800 text-xs" })),
-        h32("button", { type: "submit", disabled: busy, className: "h-[42px] px-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black disabled:opacity-50" }, busy ? "\u062C\u0627\u0631\u064A \u0627\u0644\u0623\u0631\u0634\u0641\u0629..." : "\u0625\u063A\u0644\u0627\u0642 \u0648\u0641\u062A\u062D \u0627\u0644\u062C\u062F\u064A\u062F\u0629")
-      ), h32("button", { type: "button", disabled: busy, onClick: () => setShowClose(false) }, t("\u0625\u0644\u063A\u0627\u0621")))) : h32("button", { type: "button", className: "ct-financial-close-button", onClick: () => {
+        h33("label", { className: "text-[11px] font-bold" }, t("\u0627\u0633\u0645 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629 \u0627\u0644\u062C\u062F\u064A\u062F\u0629"), h33("input", { value: name, onChange: (e) => setName(e.target.value), placeholder: "\u0645\u062B\u0627\u0644: \u0627\u0644\u0633\u0646\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629 2027", className: "block w-full mt-1 px-3 py-2.5 rounded-xl border bg-white dark:bg-slate-800 text-xs" })),
+        h33("label", { className: "text-[11px] font-bold" }, t("\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0628\u062F\u0627\u064A\u0629"), h33("input", { type: "date", value: startDate, onChange: (e) => setStartDate(e.target.value), className: "block w-full mt-1 px-3 py-2.5 rounded-xl border bg-white dark:bg-slate-800 text-xs" })),
+        h33("button", { type: "submit", disabled: busy, className: "h-[42px] px-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black disabled:opacity-50" }, busy ? "\u062C\u0627\u0631\u064A \u0627\u0644\u0623\u0631\u0634\u0641\u0629..." : "\u0625\u063A\u0644\u0627\u0642 \u0648\u0641\u062A\u062D \u0627\u0644\u062C\u062F\u064A\u062F\u0629")
+      ), h33("button", { type: "button", disabled: busy, onClick: () => setShowClose(false) }, t("\u0625\u0644\u063A\u0627\u0621")))) : h33("button", { type: "button", className: "ct-financial-close-button", onClick: () => {
         setClosedName(active3?.name || "");
         setShowClose(true);
       } }, t("\u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629")),
-      h32("div", { className: "mt-3 flex items-start gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 text-[10px] leading-5 text-slate-600 dark:text-slate-300" }, h32(ShieldCheck3, { className: "w-4 h-4 text-violet-600 shrink-0 mt-0.5" }), h32("span", null, "\u064A\u062A\u0645 \u0623\u0631\u0634\u0641\u0629 \u0641\u0648\u0627\u062A\u064A\u0631 \u0627\u0644\u0628\u064A\u0639 \u0648\u0627\u0644\u0645\u0631\u062A\u062C\u0639\u0627\u062A \u0648\u0627\u0644\u0645\u0634\u062A\u0631\u064A\u0627\u062A \u0648\u0627\u0644\u0633\u0646\u062F\u0627\u062A \u0648\u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A \u0648\u062D\u0631\u0643\u0627\u062A \u0627\u0644\u0645\u062E\u0632\u0648\u0646 \u0648\u0627\u0644\u062A\u062D\u0648\u064A\u0644\u0627\u062A \u0648\u0627\u0644\u0648\u0631\u062F\u064A\u0627\u062A \u0648\u0633\u062C\u0644 \u0627\u0644\u0639\u0645\u0644\u064A\u0627\u062A. \u062A\u0628\u0642\u0649 \u0627\u0644\u0623\u0635\u0646\u0627\u0641 \u0648\u0627\u0644\u0643\u0645\u064A\u0627\u062A \u0648\u0627\u0644\u062D\u0633\u0627\u0628\u0627\u062A \u0648\u0627\u0644\u0639\u0645\u0644\u0627\u0621 \u0648\u0627\u0644\u0645\u0648\u0631\u062F\u0648\u0646 \u0648\u0623\u0631\u0635\u062F\u062A\u0647\u0645 \u0648\u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0648\u0627\u0644\u0645\u062E\u0627\u0632\u0646 \u0645\u0633\u062A\u062E\u062F\u0645\u0629 \u0641\u064A \u0627\u0644\u0633\u0646\u0629 \u0627\u0644\u062C\u062F\u064A\u062F\u0629."))
+      h33("div", { className: "mt-3 flex items-start gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 text-[10px] leading-5 text-slate-600 dark:text-slate-300" }, h33(ShieldCheck3, { className: "w-4 h-4 text-violet-600 shrink-0 mt-0.5" }), h33("span", null, "\u064A\u062A\u0645 \u0623\u0631\u0634\u0641\u0629 \u0641\u0648\u0627\u062A\u064A\u0631 \u0627\u0644\u0628\u064A\u0639 \u0648\u0627\u0644\u0645\u0631\u062A\u062C\u0639\u0627\u062A \u0648\u0627\u0644\u0645\u0634\u062A\u0631\u064A\u0627\u062A \u0648\u0627\u0644\u0633\u0646\u062F\u0627\u062A \u0648\u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A \u0648\u062D\u0631\u0643\u0627\u062A \u0627\u0644\u0645\u062E\u0632\u0648\u0646 \u0648\u0627\u0644\u062A\u062D\u0648\u064A\u0644\u0627\u062A \u0648\u0627\u0644\u0648\u0631\u062F\u064A\u0627\u062A \u0648\u0633\u062C\u0644 \u0627\u0644\u0639\u0645\u0644\u064A\u0627\u062A. \u062A\u0628\u0642\u0649 \u0627\u0644\u0623\u0635\u0646\u0627\u0641 \u0648\u0627\u0644\u0643\u0645\u064A\u0627\u062A \u0648\u0627\u0644\u062D\u0633\u0627\u0628\u0627\u062A \u0648\u0627\u0644\u0639\u0645\u0644\u0627\u0621 \u0648\u0627\u0644\u0645\u0648\u0631\u062F\u0648\u0646 \u0648\u0623\u0631\u0635\u062F\u062A\u0647\u0645 \u0648\u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0648\u0627\u0644\u0645\u062E\u0627\u0632\u0646 \u0645\u0633\u062A\u062E\u062F\u0645\u0629 \u0641\u064A \u0627\u0644\u0633\u0646\u0629 \u0627\u0644\u062C\u062F\u064A\u062F\u0629."))
     ),
-    h32(
+    h33(
       "section",
       { className: "space-y-3" },
-      h32("div", { className: "flex items-center gap-2" }, h32(Archive, { className: "w-5 h-5 text-slate-500" }), h32("h3", { className: "font-black text-sm" }, t("\u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0627\u062A \u0627\u0644\u0645\u0627\u0644\u064A\u0629"))),
-      h32("div", { className: "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3" }, ...years.slice().reverse().map((year) => {
+      h33("div", { className: "flex items-center gap-2" }, h33(Archive, { className: "w-5 h-5 text-slate-500" }), h33("h3", { className: "font-black text-sm" }, t("\u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0627\u062A \u0627\u0644\u0645\u0627\u0644\u064A\u0629"))),
+      h33("div", { className: "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3" }, ...years.slice().reverse().map((year) => {
         const current = year.id === activeId;
         const counts = { sales: (archive.invoices || []).filter((r) => belongs(r, year.id) && r.type === "sale").length, purchases: (archive.purchases || []).filter((r) => belongs(r, year.id)).length, vouchers: (archive.vouchers || []).filter((r) => belongs(r, year.id)).length };
-        return h32(
+        return h33(
           "button",
           { key: year.id, type: "button", onClick: () => setSelectedId(year.id), className: `text-right p-4 rounded-2xl border transition ${selectedId === year.id ? "border-indigo-500 ring-2 ring-indigo-100 bg-indigo-50/40" : "border-slate-200 bg-white hover:border-indigo-300"} dark:bg-slate-900` },
-          h32("div", { className: "flex items-start justify-between gap-2" }, h32("div", null, h32("div", { className: "font-black text-sm flex items-center gap-2" }, h32(FolderArchive, { size: 22 }), year.name || "\u0645\u062C\u0645\u0648\u0639\u0629 \u0645\u0627\u0644\u064A\u0629"), h32("div", { className: "text-[10px] text-slate-500 mt-1" }, `${dateOnly(year.startDate)} \u2190 ${current ? t("\u0645\u0641\u062A\u0648\u062D\u0629") : dateOnly(year.endDate)}`)), h32("span", { className: `px-2 py-1 rounded-full text-[9px] font-black ${current ? "bg-violet-100 text-violet-700" : "bg-slate-100 text-slate-600"}` }, current ? t("\u0645\u0641\u062A\u0648\u062D\u0629") : t("\u0645\u0624\u0631\u0634\u0641\u0629"))),
-          h32("div", { className: "grid grid-cols-3 gap-1 mt-3 text-center" }, h32("div", { className: "rounded-lg bg-slate-50 p-2" }, h32("b", { className: "block text-xs" }, counts.sales), h32("span", { className: "text-[8px] text-slate-500" }, "\u0645\u0628\u064A\u0639\u0627\u062A")), h32("div", { className: "rounded-lg bg-slate-50 p-2" }, h32("b", { className: "block text-xs" }, counts.purchases), h32("span", { className: "text-[8px] text-slate-500" }, "\u0645\u0634\u062A\u0631\u064A\u0627\u062A")), h32("div", { className: "rounded-lg bg-slate-50 p-2" }, h32("b", { className: "block text-xs" }, counts.vouchers), h32("span", { className: "text-[8px] text-slate-500" }, "\u0633\u0646\u062F\u0627\u062A")))
+          h33("div", { className: "flex items-start justify-between gap-2" }, h33("div", null, h33("div", { className: "font-black text-sm flex items-center gap-2" }, h33(FolderArchive, { size: 22 }), year.name || "\u0645\u062C\u0645\u0648\u0639\u0629 \u0645\u0627\u0644\u064A\u0629"), h33("div", { className: "text-[10px] text-slate-500 mt-1" }, `${dateOnly(year.startDate)} \u2190 ${current ? t("\u0645\u0641\u062A\u0648\u062D\u0629") : dateOnly(year.endDate)}`)), h33("span", { className: `px-2 py-1 rounded-full text-[9px] font-black ${current ? "bg-violet-100 text-violet-700" : "bg-slate-100 text-slate-600"}` }, current ? t("\u0645\u0641\u062A\u0648\u062D\u0629") : t("\u0645\u0624\u0631\u0634\u0641\u0629"))),
+          h33("div", { className: "grid grid-cols-3 gap-1 mt-3 text-center" }, h33("div", { className: "rounded-lg bg-slate-50 p-2" }, h33("b", { className: "block text-xs" }, counts.sales), h33("span", { className: "text-[8px] text-slate-500" }, "\u0645\u0628\u064A\u0639\u0627\u062A")), h33("div", { className: "rounded-lg bg-slate-50 p-2" }, h33("b", { className: "block text-xs" }, counts.purchases), h33("span", { className: "text-[8px] text-slate-500" }, "\u0645\u0634\u062A\u0631\u064A\u0627\u062A")), h33("div", { className: "rounded-lg bg-slate-50 p-2" }, h33("b", { className: "block text-xs" }, counts.vouchers), h33("span", { className: "text-[8px] text-slate-500" }, "\u0633\u0646\u062F\u0627\u062A")))
         );
       }))
     ),
-    archiveError ? h32("p", { role: "alert", className: "text-rose-600" }, archiveError) : null,
-    selected ? h32(
+    archiveError ? h33("p", { role: "alert", className: "text-rose-600" }, archiveError) : null,
+    selected ? h33(
       "section",
       { className: "rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5 space-y-4" },
-      h32("div", { className: "flex flex-col sm:flex-row sm:items-center justify-between gap-3" }, h32("div", { className: "flex items-center gap-2" }, selected.id === activeId ? h32(Clock33, { className: "w-5 h-5 text-violet-600" }) : h32(LockKeyhole, { className: "w-5 h-5 text-slate-500" }), h32("div", null, h32("div", { className: "font-black text-base" }, selected.name), h32("button", { type: "button", onClick: downloadGroup, disabled: loading || !!archiveError, className: "ct-archive-download" }, h32(Download11, { size: 16 }), t("\u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629")), h32("div", { className: "text-[10px] text-slate-500" }, selected.id === activeId ? "\u0627\u0644\u0633\u0646\u0629 \u0627\u0644\u062D\u0627\u0644\u064A\u0629 \u2014 \u0642\u0627\u0628\u0644\u0629 \u0644\u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u062D\u0631\u0643\u0627\u062A" : "\u0633\u0646\u0629 \u0645\u0624\u0631\u0634\u0641\u0629 \u2014 \u0639\u0631\u0636 \u0648\u0642\u0631\u0627\u0621\u0629 \u0641\u0642\u0637"))), loading ? h32("span", { className: "text-[10px] text-slate-400" }, "\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0623\u0631\u0634\u064A\u0641...") : null),
-      h32(
+      h33("div", { className: "flex flex-col sm:flex-row sm:items-center justify-between gap-3" }, h33("div", { className: "flex items-center gap-2" }, selected.id === activeId ? h33(Clock33, { className: "w-5 h-5 text-violet-600" }) : h33(LockKeyhole, { className: "w-5 h-5 text-slate-500" }), h33("div", null, h33("div", { className: "font-black text-base" }, selected.name), h33("button", { type: "button", onClick: downloadGroup, disabled: loading || !!archiveError, className: "ct-archive-download" }, h33(Download11, { size: 16 }), t("\u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629")), h33("div", { className: "text-[10px] text-slate-500" }, selected.id === activeId ? "\u0627\u0644\u0633\u0646\u0629 \u0627\u0644\u062D\u0627\u0644\u064A\u0629 \u2014 \u0642\u0627\u0628\u0644\u0629 \u0644\u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u062D\u0631\u0643\u0627\u062A" : "\u0633\u0646\u0629 \u0645\u0624\u0631\u0634\u0641\u0629 \u2014 \u0639\u0631\u0636 \u0648\u0642\u0631\u0627\u0621\u0629 \u0641\u0642\u0637"))), loading ? h33("span", { className: "text-[10px] text-slate-400" }, "\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0623\u0631\u0634\u064A\u0641...") : null),
+      h33(
         "div",
         { className: "grid grid-cols-2 md:grid-cols-4 gap-3" },
-        h32(Metric2, { icon: ReceiptText6, label: t("\u0635\u0627\u0641\u064A \u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A"), value: `${money15(selectedData.salesTotal - selectedData.returnsTotal)} ${settings.currencySymbol || ""}`, sub: `${selectedData.sales.length} \u0628\u064A\u0639 \u2022 ${selectedData.returns.length} \u0645\u0631\u062A\u062C\u0639` }),
-        h32(Metric2, { icon: Truck8, label: t("\u0627\u0644\u0645\u0634\u062A\u0631\u064A\u0627\u062A"), value: `${money15(selectedData.purchaseTotal)} ${settings.currencySymbol || ""}`, sub: `${selectedData.purchases.length} \u0641\u0627\u062A\u0648\u0631\u0629`, tone: "blue" }),
-        h32(Metric2, { icon: Receipt8, label: t("\u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A"), value: `${money15(selectedData.expenseTotal)} ${settings.currencySymbol || ""}`, sub: `${selectedData.expenses.length} \u0639\u0645\u0644\u064A\u0629`, tone: "amber" }),
-        h32(Metric2, { icon: PackageSearch, label: "\u062D\u0631\u0643\u0627\u062A \u0627\u0644\u0645\u062E\u0632\u0648\u0646", value: String(selectedData.stockMovements.length), sub: `${selectedData.transfers.length} \u062A\u062D\u0648\u064A\u0644 \u0645\u0627\u0644\u064A`, tone: "indigo" })
+        h33(Metric2, { icon: ReceiptText6, label: t("\u0635\u0627\u0641\u064A \u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A"), value: `${money15(selectedData.salesTotal - selectedData.returnsTotal)} ${settings.currencySymbol || ""}`, sub: `${selectedData.sales.length} \u0628\u064A\u0639 \u2022 ${selectedData.returns.length} \u0645\u0631\u062A\u062C\u0639` }),
+        h33(Metric2, { icon: Truck8, label: t("\u0627\u0644\u0645\u0634\u062A\u0631\u064A\u0627\u062A"), value: `${money15(selectedData.purchaseTotal)} ${settings.currencySymbol || ""}`, sub: `${selectedData.purchases.length} \u0641\u0627\u062A\u0648\u0631\u0629`, tone: "blue" }),
+        h33(Metric2, { icon: Receipt8, label: t("\u0627\u0644\u0645\u0635\u0631\u0648\u0641\u0627\u062A"), value: `${money15(selectedData.expenseTotal)} ${settings.currencySymbol || ""}`, sub: `${selectedData.expenses.length} \u0639\u0645\u0644\u064A\u0629`, tone: "amber" }),
+        h33(Metric2, { icon: PackageSearch, label: "\u062D\u0631\u0643\u0627\u062A \u0627\u0644\u0645\u062E\u0632\u0648\u0646", value: String(selectedData.stockMovements.length), sub: `${selectedData.transfers.length} \u062A\u062D\u0648\u064A\u0644 \u0645\u0627\u0644\u064A`, tone: "indigo" })
       ),
-      ...previewRows.map(([title, Icon, rows]) => h32(
+      ...previewRows.map(([title, Icon, rows]) => h33(
         "div",
         { key: title, className: "rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden" },
-        h32("div", { className: "flex items-center justify-between gap-2 px-3 py-2.5 bg-slate-50 dark:bg-slate-800/60" }, h32("div", { className: "flex items-center gap-2" }, h32(Icon, { className: "w-4 h-4 text-indigo-600" }), h32("b", { className: "text-xs" }, title)), h32("span", { className: "text-[9px] text-slate-500" }, `${rows.length} \u0633\u062C\u0644`)),
-        rows.length ? h32(
+        h33("div", { className: "flex items-center justify-between gap-2 px-3 py-2.5 bg-slate-50 dark:bg-slate-800/60" }, h33("div", { className: "flex items-center gap-2" }, h33(Icon, { className: "w-4 h-4 text-indigo-600" }), h33("b", { className: "text-xs" }, title)), h33("span", { className: "text-[9px] text-slate-500" }, `${rows.length} \u0633\u062C\u0644`)),
+        rows.length ? h33(
           "div",
           { className: "overflow-x-auto" },
-          h32(
+          h33(
             "table",
             { className: "w-full text-[10px] min-w-[620px]" },
-            h32(
+            h33(
               "thead",
               null,
-              h32(
+              h33(
                 "tr",
                 { className: "text-slate-400 border-b" },
-                h32("th", { className: "p-2 text-right" }, t("\u0627\u0644\u062A\u0627\u0631\u064A\u062E")),
-                h32("th", { className: "p-2 text-right" }, t("\u0627\u0644\u0645\u0631\u062C\u0639")),
-                h32("th", { className: "p-2 text-right" }, "\u0627\u0644\u062C\u0647\u0629 / \u0627\u0644\u0628\u064A\u0627\u0646"),
-                h32("th", { className: "p-2 text-left" }, "\u0627\u0644\u0642\u064A\u0645\u0629")
+                h33("th", { className: "p-2 text-right" }, t("\u0627\u0644\u062A\u0627\u0631\u064A\u062E")),
+                h33("th", { className: "p-2 text-right" }, t("\u0627\u0644\u0645\u0631\u062C\u0639")),
+                h33("th", { className: "p-2 text-right" }, "\u0627\u0644\u062C\u0647\u0629 / \u0627\u0644\u0628\u064A\u0627\u0646"),
+                h33("th", { className: "p-2 text-left" }, "\u0627\u0644\u0642\u064A\u0645\u0629")
               )
             ),
-            h32(
+            h33(
               "tbody",
               null,
-              ...rows.slice(0, 50).map((r, i) => h32(
+              ...rows.slice(0, 50).map((r, i) => h33(
                 "tr",
                 { key: `${title}-${i}`, className: "border-b last:border-0" },
-                h32("td", { className: "p-2 whitespace-nowrap" }, dt(r.date)),
-                h32("td", { className: "p-2 font-bold" }, String(r.ref || "-")),
-                h32("td", { className: "p-2" }, String(r.name || "-")),
-                h32("td", { className: `p-2 text-left font-mono font-bold ${num7(r.amount) < 0 ? "text-rose-600" : "text-slate-800"}` }, `${money15(r.amount)} ${settings.currencySymbol || ""}`)
+                h33("td", { className: "p-2 whitespace-nowrap" }, dt(r.date)),
+                h33("td", { className: "p-2 font-bold" }, String(r.ref || "-")),
+                h33("td", { className: "p-2" }, String(r.name || "-")),
+                h33("td", { className: `p-2 text-left font-mono font-bold ${num7(r.amount) < 0 ? "text-rose-600" : "text-slate-800"}` }, `${money15(r.amount)} ${settings.currencySymbol || ""}`)
               ))
             )
           )
-        ) : h32("div", { className: "p-4 text-center text-[10px] text-slate-400" }, h32(EmptyState, { message: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0633\u062C\u0644\u0627\u062A" }))
+        ) : h33("div", { className: "p-4 text-center text-[10px] text-slate-400" }, h33(EmptyState, { message: "\u0644\u0627 \u064A\u0648\u062C\u062F \u0633\u062C\u0644\u0627\u062A" }))
       ))
     ) : null
   );
@@ -22213,8 +22275,8 @@ var FinancialYearsView = () => {
 
 // app/components__pos__ThermalReceiptModal.js
 import React54, { useEffect as useEffect34, useRef as useRef22, useState as useState42 } from "react";
-import { Printer as Printer9, X as X29, Download as Download12, Image as ImageIcon10, FileSpreadsheet as FileSpreadsheet14, Bluetooth as Bluetooth2 } from "lucide-react";
-var h33 = React54.createElement;
+import { Printer as Printer9, X as X30, Download as Download12, Image as ImageIcon10, FileSpreadsheet as FileSpreadsheet14, Bluetooth as Bluetooth2 } from "lucide-react";
+var h34 = React54.createElement;
 function money16(value) {
   const n4 = Number(value);
   return Number.isFinite(n4) ? n4.toFixed(2) : "0.00";
@@ -22350,82 +22412,82 @@ var ThermalReceiptModal = () => {
     return downloadProfessionalInvoicePDF(invoice, { ...settings, printerWidth: paperWidth, customerPortalUrl: portalUrl }, `\u0641\u0627\u062A\u0648\u0631\u0629-${invoice.invoiceNumber}.pdf`);
   });
   const handleDownloadExcel = () => withExporting(() => downloadProfessionalInvoiceExcel(invoice, settings, `\u0641\u0627\u062A\u0648\u0631\u0629-${invoice.invoiceNumber}.xlsx`));
-  const paperButton = (key3, label) => h33("button", {
+  const paperButton = (key3, label) => h34("button", {
     onClick: () => setPaperWidth(key3),
     className: `px-2.5 py-1 rounded-md text-xs font-bold transition ${paperWidth === key3 ? "bg-violet-600 text-white shadow-xs" : "text-slate-700 dark:text-slate-300 hover:text-slate-900"}`
   }, label);
-  const exportButton = (id, onClick, Icon, text, iconClass, title) => h33("button", {
+  const exportButton = (id, onClick, Icon, text, iconClass, title) => h34("button", {
     id,
     onClick,
     disabled: isExporting,
     className: "flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 text-slate-700 dark:text-slate-200 text-xs font-bold transition disabled:opacity-50",
     title
-  }, h33(Icon, { className: `w-3.5 h-3.5 ${iconClass}` }), h33("span", { className: "inline" }, t(text)));
-  const itemRows = (invoice.items || []).map((item, idx) => h33(
+  }, h34(Icon, { className: `w-3.5 h-3.5 ${iconClass}` }), h34("span", { className: "inline" }, t(text)));
+  const itemRows = (invoice.items || []).map((item, idx) => h34(
     "tr",
     { key: item.id || idx, className: "receipt-item-row" },
-    h33("td", { className: "receipt-cell receipt-index-cell" }, idx + 1),
-    h33("td", { className: "receipt-cell receipt-product-cell" }, item.productName),
-    h33("td", { className: "receipt-cell receipt-unit-cell" }, item.unitName || "-"),
-    h33("td", { className: "receipt-cell receipt-number-cell" }, item.quantity),
-    h33("td", { className: "receipt-cell receipt-number-cell" }, money16(item.unitPrice)),
-    h33("td", { className: "receipt-cell receipt-number-cell receipt-total-cell" }, money16(item.total))
+    h34("td", { className: "receipt-cell receipt-index-cell" }, idx + 1),
+    h34("td", { className: "receipt-cell receipt-product-cell" }, item.productName),
+    h34("td", { className: "receipt-cell receipt-unit-cell" }, item.unitName || "-"),
+    h34("td", { className: "receipt-cell receipt-number-cell" }, item.quantity),
+    h34("td", { className: "receipt-cell receipt-number-cell" }, money16(item.unitPrice)),
+    h34("td", { className: "receipt-cell receipt-number-cell receipt-total-cell" }, money16(item.total))
   ));
-  const totalRow = (label, value, cls = "") => h33(
+  const totalRow = (label, value, cls = "") => h34(
     "div",
     { className: `receipt-total-row ${cls}` },
-    h33("span", { className: "receipt-total-label" }, label),
-    h33("span", { className: "receipt-total-value" }, `${money16(value)} ${settings.currencySymbol}`)
+    h34("span", { className: "receipt-total-label" }, label),
+    h34("span", { className: "receipt-total-value" }, `${money16(value)} ${settings.currencySymbol}`)
   );
-  const paymentCell = (label, value, cls = "") => h33(
+  const paymentCell = (label, value, cls = "") => h34(
     "div",
     { className: `receipt-payment-cell ${cls}` },
-    h33("span", { className: "receipt-payment-label" }, `${label}:`),
-    h33("span", { className: "receipt-payment-value" }, `${money16(value)} ${settings.currencySymbol}`)
+    h34("span", { className: "receipt-payment-label" }, `${label}:`),
+    h34("span", { className: "receipt-payment-value" }, `${money16(value)} ${settings.currencySymbol}`)
   );
-  return h33(ModalLayer, {
+  return h34(ModalLayer, {
     id: "modal-receipt-backdrop",
     className: "fixed inset-x-0 oscar-bounded-modal z-[80] flex items-stretch sm:items-center justify-center bg-black/70 p-1.5 sm:p-3 overflow-hidden animate-in fade-in"
-  }, h33(
+  }, h34(
     "div",
     {
       id: "modal-receipt-box",
       className: "w-full max-w-5xl rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col h-full max-h-full sm:h-auto"
     },
-    h33(
+    h34(
       "div",
       { className: "no-print flex flex-wrap items-center justify-between p-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 gap-2 select-none" },
-      h33(
+      h34(
         "div",
         { className: "flex items-center gap-1.5 bg-slate-200/70 dark:bg-slate-800 p-1 rounded-lg" },
         paperButton("80mm", "80 \u0645\u0644\u0645 \u062D\u0631\u0627\u0631\u064A"),
         paperButton("58mm", "58 \u0645\u0644\u0645"),
         paperButton("a4", "A4")
       ),
-      h33(
+      h34(
         "div",
         { className: "flex items-center gap-1.5 flex-wrap justify-end" },
         exportButton("btn-download-receipt-excel", handleDownloadExcel, FileSpreadsheet14, "Excel", "text-violet-600", "\u062A\u0646\u0632\u064A\u0644 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629 \u0643\u0645\u0644\u0641 Excel \u0627\u062D\u062A\u0631\u0627\u0641\u064A"),
         exportButton("btn-download-receipt-pdf", handleDownloadPDF, Download12, "PDF", "text-rose-600", "\u062A\u0646\u0632\u064A\u0644 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629 \u0643\u0645\u0644\u0641 PDF \u0627\u062D\u062A\u0631\u0627\u0641\u064A"),
         exportButton("btn-download-receipt-image", handleDownloadImage, ImageIcon10, "\u0635\u0648\u0631\u0629", "text-blue-600", "\u062A\u0646\u0632\u064A\u0644 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629 \u0643\u0635\u0648\u0631\u0629"),
-        h33(
+        h34(
           "button",
           { id: "btn-bluetooth-print", onClick: handleBluetoothPrint, disabled: isExporting, className: `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-bold shadow-xs transition disabled:opacity-50 ${printerState.ready ? "bg-violet-600 hover:bg-violet-700" : "bg-blue-600 hover:bg-blue-700"}`, title: printerState.connected ? `\u0645\u062A\u0635\u0644: ${printerState.name || "\u0637\u0627\u0628\u0639\u0629"}` : printerState.systemMode ? "\u0637\u0628\u0627\u0639\u0629 \u0639\u0628\u0631 \u0646\u0638\u0627\u0645 \u0627\u0644\u062C\u0647\u0627\u0632" : "\u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0637\u0627\u0628\u0639\u0629 \u0648\u0627\u0644\u0637\u0628\u0627\u0639\u0629" },
-          h33(Bluetooth2, { className: "w-4 h-4" }),
-          h33("span", null, printerState.connected ? "\u0637\u0628\u0627\u0639\u0629 Bluetooth" : printerState.systemMode ? printerState.isIOS ? "\u0637\u0628\u0627\u0639\u0629 iPhone" : "\u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u0646\u0638\u0627\u0645" : printerState.bluetoothSupported ? "\u0631\u0628\u0637 \u0648\u0637\u0628\u0627\u0639\u0629 Bluetooth" : printerState.isIOS ? "\u0637\u0628\u0627\u0639\u0629 iPhone" : "\u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u0646\u0638\u0627\u0645")
+          h34(Bluetooth2, { className: "w-4 h-4" }),
+          h34("span", null, printerState.connected ? "\u0637\u0628\u0627\u0639\u0629 Bluetooth" : printerState.systemMode ? printerState.isIOS ? "\u0637\u0628\u0627\u0639\u0629 iPhone" : "\u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u0646\u0638\u0627\u0645" : printerState.bluetoothSupported ? "\u0631\u0628\u0637 \u0648\u0637\u0628\u0627\u0639\u0629 Bluetooth" : printerState.isIOS ? "\u0637\u0628\u0627\u0639\u0629 iPhone" : "\u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u0646\u0638\u0627\u0645")
         ),
-        h33(
+        h34(
           "button",
           { id: "btn-trigger-print", onClick: handlePrint, className: "flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold shadow-xs transition" },
-          h33(Printer9, { className: "w-4 h-4" }),
-          h33("span", null, "\u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629 \u0641\u0642\u0637")
+          h34(Printer9, { className: "w-4 h-4" }),
+          h34("span", null, "\u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629 \u0641\u0642\u0637")
         )
       )
     ),
-    h33(
+    h34(
       "div",
       { className: "receipt-preview-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-2 sm:p-4 bg-slate-100 dark:bg-slate-950/80 flex items-start justify-center custom-scrollbar overscroll-contain" },
-      h33(
+      h34(
         "div",
         {
           ref: receiptContainerRef,
@@ -22434,10 +22496,10 @@ var ThermalReceiptModal = () => {
           className: `receipt-paper bg-white text-black shadow-sm border border-slate-200 text-right select-none transition-all mx-auto ${paperWidth === "80mm" ? "receipt-paper-80" : paperWidth === "58mm" ? "receipt-paper-58" : "receipt-paper-a4"}`,
           style: { fontFamily: "system-ui, -apple-system, Arial, Tahoma, sans-serif" }
         },
-        h33(
+        h34(
           "div",
           { className: "receipt-brand-header" },
-          logoSrc ? h33("img", {
+          logoSrc ? h34("img", {
             src: logoSrc,
             alt: settings.storeName,
             className: "receipt-brand-logo",
@@ -22446,95 +22508,95 @@ var ThermalReceiptModal = () => {
               e.currentTarget.src = DEFAULT_LOGO_DATA_URL;
             }
           }) : null,
-          h33("h2", { className: "receipt-store-name" }, settings.storeName),
+          h34("h2", { className: "receipt-store-name" }, settings.storeName),
           null,
-          settings.receiptShowStoreInfo !== false ? h33(
+          settings.receiptShowStoreInfo !== false ? h34(
             "div",
             { className: "receipt-store-info-grid" },
-            settings.address ? h33("span", { className: "receipt-store-info" }, settings.address) : null,
-            settings.phone ? h33("span", { className: "receipt-store-info" }, `\u0647\u0627\u062A\u0641: ${settings.phone}`) : null,
-            settings.taxNumber ? h33("span", { className: "receipt-store-info" }, `\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0636\u0631\u064A\u0628\u064A: ${settings.taxNumber}`) : null
+            settings.address ? h34("span", { className: "receipt-store-info" }, settings.address) : null,
+            settings.phone ? h34("span", { className: "receipt-store-info" }, `\u0647\u0627\u062A\u0641: ${settings.phone}`) : null,
+            settings.taxNumber ? h34("span", { className: "receipt-store-info" }, `\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0636\u0631\u064A\u0628\u064A: ${settings.taxNumber}`) : null
           ) : null
         ),
-        h33(
+        h34(
           "div",
           { className: "receipt-meta" },
-          h33("div", { className: "receipt-meta-row receipt-meta-strong" }, h33("span", null, isReturn ? "\u0641\u0627\u062A\u0648\u0631\u0629 \u0645\u0631\u062A\u062C\u0639 \u0645\u0628\u064A\u0639\u0627\u062A" : "\u0641\u0627\u062A\u0648\u0631\u0629 \u0645\u0628\u064A\u0639\u0627\u062A"), h33("span", { className: "font-mono" }, `#${invoice.invoiceNumber}`)),
-          h33("div", { className: "receipt-meta-row" }, h33("span", null, t("\u0627\u0644\u062A\u0627\u0631\u064A\u062E:")), h33("span", null, `${new Date(invoice.date).toLocaleDateString("ar-EG")} - ${new Date(invoice.date).toLocaleTimeString("ar-EG")}`)),
-          h33("div", { className: "receipt-meta-row" }, h33("span", null, t("\u0627\u0644\u0643\u0627\u0634\u064A\u0631:")), h33("span", null, invoice.cashierName || "-")),
-          invoice.customerName && invoice.customerId !== "cust-walkin" ? h33("div", { className: "receipt-meta-row receipt-meta-strong" }, h33("span", null, t("\u0627\u0644\u0639\u0645\u064A\u0644:")), h33("span", null, invoice.customerName)) : null
+          h34("div", { className: "receipt-meta-row receipt-meta-strong" }, h34("span", null, isReturn ? "\u0641\u0627\u062A\u0648\u0631\u0629 \u0645\u0631\u062A\u062C\u0639 \u0645\u0628\u064A\u0639\u0627\u062A" : "\u0641\u0627\u062A\u0648\u0631\u0629 \u0645\u0628\u064A\u0639\u0627\u062A"), h34("span", { className: "font-mono" }, `#${invoice.invoiceNumber}`)),
+          h34("div", { className: "receipt-meta-row" }, h34("span", null, t("\u0627\u0644\u062A\u0627\u0631\u064A\u062E:")), h34("span", null, `${new Date(invoice.date).toLocaleDateString("ar-EG")} - ${new Date(invoice.date).toLocaleTimeString("ar-EG")}`)),
+          h34("div", { className: "receipt-meta-row" }, h34("span", null, t("\u0627\u0644\u0643\u0627\u0634\u064A\u0631:")), h34("span", null, invoice.cashierName || "-")),
+          invoice.customerName && invoice.customerId !== "cust-walkin" ? h34("div", { className: "receipt-meta-row receipt-meta-strong" }, h34("span", null, t("\u0627\u0644\u0639\u0645\u064A\u0644:")), h34("span", null, invoice.customerName)) : null
         ),
-        h33(
+        h34(
           "div",
           { className: "receipt-items-wrap" },
-          h33(
+          h34(
             "table",
             { className: "receipt-items-table" },
-            h33(
+            h34(
               "colgroup",
               null,
-              h33("col", { className: "receipt-col-index" }),
-              h33("col", { className: "receipt-col-product" }),
-              h33("col", { className: "receipt-col-unit" }),
-              h33("col", { className: "receipt-col-qty" }),
-              h33("col", { className: "receipt-col-price" }),
-              h33("col", { className: "receipt-col-total" })
+              h34("col", { className: "receipt-col-index" }),
+              h34("col", { className: "receipt-col-product" }),
+              h34("col", { className: "receipt-col-unit" }),
+              h34("col", { className: "receipt-col-qty" }),
+              h34("col", { className: "receipt-col-price" }),
+              h34("col", { className: "receipt-col-total" })
             ),
-            h33("thead", null, h33(
+            h34("thead", null, h34(
               "tr",
               null,
-              h33("th", null, "#"),
-              h33("th", null, t("\u0627\u0644\u0635\u0646\u0641")),
-              h33("th", null, t("\u0627\u0644\u0648\u062D\u062F\u0629")),
-              h33("th", { className: "receipt-qty-heading" }, t("\u0627\u0644\u0643\u0645\u064A\u0629")),
-              h33("th", null, t("\u0627\u0644\u0633\u0639\u0631")),
-              h33("th", null, t("\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A"))
+              h34("th", null, "#"),
+              h34("th", null, t("\u0627\u0644\u0635\u0646\u0641")),
+              h34("th", null, t("\u0627\u0644\u0648\u062D\u062F\u0629")),
+              h34("th", { className: "receipt-qty-heading" }, t("\u0627\u0644\u0643\u0645\u064A\u0629")),
+              h34("th", null, t("\u0627\u0644\u0633\u0639\u0631")),
+              h34("th", null, t("\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A"))
             )),
-            h33("tbody", null, itemRows)
+            h34("tbody", null, itemRows)
           )
         ),
-        h33("div", { className: "receipt-summary-divider", "aria-hidden": "true" }),
-        Number(invoice.discountTotal) > 0 || Number(invoice.taxTotal) > 0 || Number(invoice.additionalCharges) > 0 ? h33(
+        h34("div", { className: "receipt-summary-divider", "aria-hidden": "true" }),
+        Number(invoice.discountTotal) > 0 || Number(invoice.taxTotal) > 0 || Number(invoice.additionalCharges) > 0 ? h34(
           "div",
           { className: "receipt-adjustments" },
           Number(invoice.discountTotal) > 0 ? totalRow("\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u062E\u0635\u0645:", -Number(invoice.discountTotal), "receipt-total-discount") : null,
           Number(invoice.taxTotal) > 0 ? totalRow(`\u0636\u0631\u064A\u0628\u0629 \u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0636\u0627\u0641\u0629 (${settings.taxRate}%):`, invoice.taxTotal) : null,
           Number(invoice.additionalCharges) > 0 ? totalRow("\u0643\u0644\u0641\u0629 \u0625\u0636\u0627\u0641\u064A\u0629 / \u0634\u062D\u0646:", invoice.additionalCharges) : null
         ) : null,
-        h33(
+        h34(
           "div",
           { className: "receipt-payment-grid" },
-          h33(
+          h34(
             "div",
             { className: "receipt-payment-column receipt-payment-right" },
             paymentCell("\u0627\u0644\u0645\u062C\u0645\u0648\u0639", invoice.subtotal, "receipt-payment-strong"),
             paymentCell("\u0627\u0644\u0645\u0628\u0644\u063A \u0627\u0644\u0645\u0637\u0644\u0648\u0628", invoice.grandTotal, "receipt-payment-strong")
           ),
-          h33(
+          h34(
             "div",
             { className: "receipt-payment-column receipt-payment-left" },
             paymentCell("\u0627\u0644\u0645\u062F\u0641\u0648\u0639", invoice.paidAmount),
             paymentCell("\u0627\u0644\u0645\u062A\u0628\u0642\u064A", Number(invoice.remainingAmount || 0), "receipt-payment-debt")
           )
         ),
-        Number(invoice.changeAmount) > 0 ? h33("div", { className: "receipt-adjustments" }, totalRow("\u0627\u0644\u0641\u0643\u0629 \u0644\u0644\u0632\u0628\u0648\u0646:", invoice.changeAmount, "receipt-total-change")) : null,
-        h33(
+        Number(invoice.changeAmount) > 0 ? h34("div", { className: "receipt-adjustments" }, totalRow("\u0627\u0644\u0641\u0643\u0629 \u0644\u0644\u0632\u0628\u0648\u0646:", invoice.changeAmount, "receipt-total-change")) : null,
+        h34(
           "div",
           { className: "receipt-footer" },
-          settings.receiptShowBarcode !== false && customerQrDataUrl ? h33("div", { className: "receipt-customer-qr" }, h33("img", { src: customerQrDataUrl, alt: "QR \u0635\u0641\u062D\u0629 \u0627\u0644\u0639\u0645\u064A\u0644 \u0648\u0627\u0644\u0633\u062F\u0627\u062F" }), h33("strong", null, "\u0627\u0645\u0633\u062D \u0644\u0641\u062A\u062D \u0635\u0641\u062D\u0629 \u0627\u0644\u0639\u0645\u064A\u0644 \u0648\u0627\u0644\u0633\u062F\u0627\u062F")) : null,
-          h33("p", null, settings.receiptFooterMessage || ""),
-          h33("div", { className: "receipt-system-mark" }, "\u0628\u0631\u0646\u0627\u0645\u062C \u0643\u0627\u0634 \u062A\u0648\u0628 \u0627\u0644\u0645\u062D\u0627\u0633\u0628\u064A \u062C\u0648\u0627\u0644 0597603119")
+          settings.receiptShowBarcode !== false && customerQrDataUrl ? h34("div", { className: "receipt-customer-qr" }, h34("img", { src: customerQrDataUrl, alt: "QR \u0635\u0641\u062D\u0629 \u0627\u0644\u0639\u0645\u064A\u0644 \u0648\u0627\u0644\u0633\u062F\u0627\u062F" }), h34("strong", null, "\u0627\u0645\u0633\u062D \u0644\u0641\u062A\u062D \u0635\u0641\u062D\u0629 \u0627\u0644\u0639\u0645\u064A\u0644 \u0648\u0627\u0644\u0633\u062F\u0627\u062F")) : null,
+          h34("p", null, settings.receiptFooterMessage || ""),
+          h34("div", { className: "receipt-system-mark" }, "\u0628\u0631\u0646\u0627\u0645\u062C \u0643\u0627\u0634 \u062A\u0648\u0628 \u0627\u0644\u0645\u062D\u0627\u0633\u0628\u064A \u062C\u0648\u0627\u0644 0597603119")
         )
       )
     ),
-    h33("div", { className: "no-print ct-receipt-footer" }, h33("button", { type: "button", onClick: () => setShowThermalModal(null) }, t("\u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u0639\u0631\u0636")))
+    h34("div", { className: "no-print ct-receipt-footer" }, h34("button", { type: "button", onClick: () => setShowThermalModal(null) }, t("\u0625\u063A\u0644\u0627\u0642 \u0627\u0644\u0639\u0631\u0636")))
   ));
 };
 
 // app/components__auth__LoginGate.js
 import React55, { useEffect as useEffect35, useRef as useRef23, useState as useState43 } from "react";
-import { KeyRound, Upload as Upload2, ShieldCheck as ShieldCheck4, Building2 as Building29, FileText as FileText8, X as X30, ChevronDown as ChevronDown6, Search as Search13, Image as ImageIcon11, MapPin as MapPin3, Phone as Phone2, Check as Check5, LogIn, Headphones as Headphones3 } from "lucide-react";
-var h34 = React55.createElement;
+import { KeyRound, Upload as Upload2, ShieldCheck as ShieldCheck4, Building2 as Building29, FileText as FileText8, X as X31, ChevronDown as ChevronDown6, Search as Search13, Image as ImageIcon11, MapPin as MapPin3, Phone as Phone2, Check as Check5, LogIn, Headphones as Headphones3 } from "lucide-react";
+var h35 = React55.createElement;
 var CURRENCY_COUNTRY = { ILS: "PS", USD: "US", JOD: "JO", EGP: "EG", SAR: "SA", AED: "AE", TRY: "TR", EUR: "EU", GBP: "GB", AUD: "AU", CAD: "CA", CHF: "CH", CNY: "CN", JPY: "JP", INR: "IN", KWD: "KW", QAR: "QA", BHD: "BH", OMR: "OM", LBP: "LB", SYP: "SY", IQD: "IQ", YER: "YE", MAD: "MA", TND: "TN", DZD: "DZ", LYD: "LY", SDG: "SD", MRU: "MR", SOS: "SO", DJF: "DJ", KMF: "KM", AFN: "AF", ALL: "AL", AMD: "AM", ANG: "CW", AOA: "AO", ARS: "AR", AWG: "AW", AZN: "AZ", BAM: "BA", BBD: "BB", BDT: "BD", BGN: "BG", BIF: "BI", BMD: "BM", BND: "BN", BOB: "BO", BRL: "BR", BSD: "BS", BTN: "BT", BWP: "BW", BYN: "BY", BZD: "BZ", CDF: "CD", CLP: "CL", COP: "CO", CRC: "CR", CUP: "CU", CVE: "CV", CZK: "CZ", DKK: "DK", DOP: "DO", ERN: "ER", ETB: "ET", FJD: "FJ", FKP: "FK", GEL: "GE", GHS: "GH", GIP: "GI", GMD: "GM", GNF: "GN", GTQ: "GT", GYD: "GY", HKD: "HK", HNL: "HN", HTG: "HT", HUF: "HU", IDR: "ID", IRR: "IR", ISK: "IS", JMD: "JM", KES: "KE", KGS: "KG", KHR: "KH", KPW: "KP", KRW: "KR", KYD: "KY", KZT: "KZ", LAK: "LA", LKR: "LK", LRD: "LR", LSL: "LS", MDL: "MD", MGA: "MG", MKD: "MK", MMK: "MM", MNT: "MN", MOP: "MO", MUR: "MU", MVR: "MV", MWK: "MW", MXN: "MX", MYR: "MY", MZN: "MZ", NAD: "NA", NGN: "NG", NIO: "NI", NOK: "NO", NPR: "NP", NZD: "NZ", PAB: "PA", PEN: "PE", PGK: "PG", PHP: "PH", PKR: "PK", PLN: "PL", PYG: "PY", RON: "RO", RSD: "RS", RUB: "RU", RWF: "RW", SBD: "SB", SCR: "SC", SEK: "SE", SGD: "SG", SHP: "SH", SLE: "SL", SRD: "SR", SSP: "SS", STN: "ST", SZL: "SZ", THB: "TH", TJS: "TJ", TMT: "TM", TOP: "TO", TTD: "TT", TWD: "TW", TZS: "TZ", UAH: "UA", UGX: "UG", UYU: "UY", UZS: "UZ", VES: "VE", VND: "VN", VUV: "VU", WST: "WS", XAF: "CM", XCD: "AG", XOF: "SN", XPF: "PF", ZAR: "ZA", ZMW: "ZM", ZWG: "ZW" };
 var PREFERRED_CURRENCIES = ["ILS", "USD", "JOD", "EGP", "SAR", "AED", "TRY", "EUR", "GBP", "KWD", "QAR", "BHD", "OMR"];
 var CURRENCY_NAMES = { ILS: "\u0634\u064A\u0643\u0644 \u0625\u0633\u0631\u0627\u0626\u064A\u0644\u064A \u062C\u062F\u064A\u062F", USD: "\u062F\u0648\u0644\u0627\u0631 \u0623\u0645\u0631\u064A\u0643\u064A", JOD: "\u062F\u064A\u0646\u0627\u0631 \u0623\u0631\u062F\u0646\u064A", EGP: "\u062C\u0646\u064A\u0647 \u0645\u0635\u0631\u064A", SAR: "\u0631\u064A\u0627\u0644 \u0633\u0639\u0648\u062F\u064A", AED: "\u062F\u0631\u0647\u0645 \u0625\u0645\u0627\u0631\u0627\u062A\u064A", TRY: "\u0644\u064A\u0631\u0629 \u062A\u0631\u0643\u064A\u0629", EUR: "\u064A\u0648\u0631\u0648", GBP: "\u062C\u0646\u064A\u0647 \u0625\u0633\u062A\u0631\u0644\u064A\u0646\u064A" };
@@ -22626,33 +22688,33 @@ var dataUrlFromImage = (file, maxSide = 700, quality = 0.88) => new Promise((res
 var Picker = ({ kind, value, onChange, options, open, setOpen, query, setQuery }) => {
   const selected = options.find((x) => (kind === "country" ? x.dial : x.code) === value) || options[0];
   const filtered = options.filter((x) => normalizeText(`${x.name} ${x.code} ${x.dial || ""}`).includes(normalizeText(query)));
-  return h34(
+  return h35(
     "div",
     { className: `auth2-picker ${kind === "country" ? "auth2-country-picker" : ""}` },
-    h34(
+    h35(
       "button",
       { type: "button", className: "auth2-select-trigger", onClick: () => setOpen(!open), "aria-expanded": open },
-      h34(
+      h35(
         "span",
         { className: "picker-main" },
-        h34("span", { className: "auth2-flag" }, flag(selected.country || selected.code)),
-        h34("span", { className: "picker-copy" }, h34("strong", null, selected.name), h34("small", null, kind === "country" ? selected.dial : `${selected.code} \xB7 ${selected.symbol}`))
+        h35("span", { className: "auth2-flag" }, flag(selected.country || selected.code)),
+        h35("span", { className: "picker-copy" }, h35("strong", null, selected.name), h35("small", null, kind === "country" ? selected.dial : `${selected.code} \xB7 ${selected.symbol}`))
       ),
-      h34(ChevronDown6, { className: "icon" })
+      h35(ChevronDown6, { className: "icon" })
     ),
-    open ? h34(
+    open ? h35(
       "div",
       { className: "auth2-select-menu" },
-      h34("div", { className: "auth2-select-search" }, h34(Search13, { className: "icon" }), h34("input", { autoFocus: true, value: query, onChange: (e) => setQuery(e.target.value), placeholder: kind === "country" ? "\u0627\u0628\u062D\u062B \u0639\u0646 \u0627\u0644\u062F\u0648\u0644\u0629..." : "\u0627\u0628\u062D\u062B \u0639\u0646 \u0627\u0644\u0639\u0645\u0644\u0629..." })),
-      h34("div", { className: "auth2-select-options" }, ...filtered.map((item) => h34(
+      h35("div", { className: "auth2-select-search" }, h35(Search13, { className: "icon" }), h35("input", { autoFocus: true, value: query, onChange: (e) => setQuery(e.target.value), placeholder: kind === "country" ? "\u0627\u0628\u062D\u062B \u0639\u0646 \u0627\u0644\u062F\u0648\u0644\u0629..." : "\u0627\u0628\u062D\u062B \u0639\u0646 \u0627\u0644\u0639\u0645\u0644\u0629..." })),
+      h35("div", { className: "auth2-select-options" }, ...filtered.map((item) => h35(
         "button",
         { key: kind === "country" ? item.dial : item.code, type: "button", className: kind === "country" ? "auth2-country-option" : "currency-option", "aria-selected": (kind === "country" ? item.dial : item.code) === value, onClick: () => {
           onChange(kind === "country" ? item.dial : item.code);
           setOpen(false);
           setQuery("");
         } },
-        h34("span", { className: "auth2-option-main" }, h34("span", { className: "auth2-flag" }, flag(item.country || item.code)), h34("span", { className: "auth2-option-copy" }, h34("strong", null, item.name), h34("small", null, kind === "country" ? item.dial : `${item.code} \xB7 ${item.symbol}`))),
-        (kind === "country" ? item.dial : item.code) === value ? h34(Check5, { className: "icon" }) : null
+        h35("span", { className: "auth2-option-main" }, h35("span", { className: "auth2-flag" }, flag(item.country || item.code)), h35("span", { className: "auth2-option-copy" }, h35("strong", null, item.name), h35("small", null, kind === "country" ? item.dial : `${item.code} \xB7 ${item.symbol}`))),
+        (kind === "country" ? item.dial : item.code) === value ? h35(Check5, { className: "icon" }) : null
       )))
     ) : null
   );
@@ -22799,22 +22861,22 @@ var LoginGate = ({ children }) => {
   };
   if (runtime) return children;
   const curr = CURRENCIES.find((x) => x.code === currency) || CURRENCIES[0];
-  return h34(
+  return h35(
     "main",
     { className: "auth2-view" },
-    codeOpen && h34("div", { className: "ct-login-code", role: "dialog", "aria-modal": true }, h34("section", null, h34("h2", null, "\u0627\u0644\u062F\u062E\u0648\u0644 \u0628\u0648\u0627\u0633\u0637\u0629 \u0627\u0644\u0634\u0641\u0631\u0629"), h34("textarea", { autoFocus: true, value: loginCode, onChange: (e) => setLoginCode(e.target.value), placeholder: "\u0627\u0644\u0635\u0642 \u0634\u0641\u0631\u0629 \u0627\u0644\u062F\u062E\u0648\u0644 \u0647\u0646\u0627", "aria-label": "\u0634\u0641\u0631\u0629 \u0627\u0644\u062F\u062E\u0648\u0644" }), error && h34("p", { role: "alert" }, error), h34("button", { type: "button", disabled: busy || !loginCode.trim(), onClick: () => open(new File([loginCode.trim()], "login.mzauth", { type: "application/octet-stream" })) }, busy ? "\u062C\u0627\u0631\u064D \u0627\u0644\u062A\u062D\u0642\u0642" : "\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644"), h34("button", { type: "button", disabled: busy, onClick: () => {
+    codeOpen && h35("div", { className: "ct-login-code", role: "dialog", "aria-modal": true }, h35("section", null, h35("h2", null, "\u0627\u0644\u062F\u062E\u0648\u0644 \u0628\u0648\u0627\u0633\u0637\u0629 \u0627\u0644\u0634\u0641\u0631\u0629"), h35("textarea", { autoFocus: true, value: loginCode, onChange: (e) => setLoginCode(e.target.value), placeholder: "\u0627\u0644\u0635\u0642 \u0634\u0641\u0631\u0629 \u0627\u0644\u062F\u062E\u0648\u0644 \u0647\u0646\u0627", "aria-label": "\u0634\u0641\u0631\u0629 \u0627\u0644\u062F\u062E\u0648\u0644" }), error && h35("p", { role: "alert" }, error), h35("button", { type: "button", disabled: busy || !loginCode.trim(), onClick: () => open(new File([loginCode.trim()], "login.mzauth", { type: "application/octet-stream" })) }, busy ? "\u062C\u0627\u0631\u064D \u0627\u0644\u062A\u062D\u0642\u0642" : "\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644"), h35("button", { type: "button", disabled: busy, onClick: () => {
       setCodeOpen(false);
       setLoginCode("");
       setError("");
     } }, "\u0625\u0644\u063A\u0627\u0621"))),
-    h34("div", { className: "ct-auth-language" }, h34(LanguagePicker)),
-    h34(
+    h35("div", { className: "ct-auth-language" }, h35(LanguagePicker)),
+    h35(
       "section",
       { className: "auth2-card", "aria-labelledby": "loginTitle" },
-      h34("div", { className: "auth2-brand" }, h34("img", { className: "brand-logo-img", src: DEFAULT_LOGO_DATA_URL, alt: "\u0634\u0639\u0627\u0631 \u0643\u0627\u0634 \u062A\u0648\u0628 3" }), h34("div", null, h34("div", { className: "auth2-brand-name" }, "\u0643\u0627\u0634 \u062A\u0648\u0628 3"), h34("div", { className: "auth2-brand-sub" }, t("\u0646\u0638\u0627\u0645\u0643 \u0627\u0644\u0645\u062D\u0627\u0633\u0628\u064A \u0641\u064A \u0645\u0643\u0627\u0646 \u0648\u0627\u062D\u062F")))),
-      h34("div", { className: "auth2-intro" }, h34("h1", { id: "loginTitle" }, t("\u0645\u0631\u062D\u0628\u0627\u064B \u0628\u0643 \u0641\u064A \u0643\u0627\u0634 \u062A\u0648\u0628 3")), h34("p", null, t("\u0623\u062F\u0631 \u0645\u0628\u064A\u0639\u0627\u062A\u0643 \u0648\u062D\u0633\u0627\u0628\u0627\u062A\u0643 \u0648\u0645\u062E\u0632\u0648\u0646\u0643 \u0628\u0633\u0647\u0648\u0644\u0629 \u0645\u0646 \u0645\u0643\u0627\u0646 \u0648\u0627\u062D\u062F."))),
-      h34("div", { className: "auth2-section-title" }, h34(ShieldCheck4, { className: "icon" }), h34("span", null, t("\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0628\u0648\u0627\u0633\u0637\u0629 \u0645\u0644\u0641 \u0627\u0644\u062A\u0641\u0639\u064A\u0644"))),
-      !file ? h34(
+      h35("div", { className: "auth2-brand" }, h35("img", { className: "brand-logo-img", src: DEFAULT_LOGO_DATA_URL, alt: "\u0634\u0639\u0627\u0631 \u0643\u0627\u0634 \u062A\u0648\u0628 3" }), h35("div", null, h35("div", { className: "auth2-brand-name" }, "\u0643\u0627\u0634 \u062A\u0648\u0628 3"), h35("div", { className: "auth2-brand-sub" }, t("\u0646\u0638\u0627\u0645\u0643 \u0627\u0644\u0645\u062D\u0627\u0633\u0628\u064A \u0641\u064A \u0645\u0643\u0627\u0646 \u0648\u0627\u062D\u062F")))),
+      h35("div", { className: "auth2-intro" }, h35("h1", { id: "loginTitle" }, t("\u0645\u0631\u062D\u0628\u0627\u064B \u0628\u0643 \u0641\u064A \u0643\u0627\u0634 \u062A\u0648\u0628 3")), h35("p", null, t("\u0623\u062F\u0631 \u0645\u0628\u064A\u0639\u0627\u062A\u0643 \u0648\u062D\u0633\u0627\u0628\u0627\u062A\u0643 \u0648\u0645\u062E\u0632\u0648\u0646\u0643 \u0628\u0633\u0647\u0648\u0644\u0629 \u0645\u0646 \u0645\u0643\u0627\u0646 \u0648\u0627\u062D\u062F."))),
+      h35("div", { className: "auth2-section-title" }, h35(ShieldCheck4, { className: "icon" }), h35("span", null, t("\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0628\u0648\u0627\u0633\u0637\u0629 \u0645\u0644\u0641 \u0627\u0644\u062A\u0641\u0639\u064A\u0644"))),
+      !file ? h35(
         "div",
         { className: "auth2-dropzone", role: "button", tabIndex: 0, onClick: () => inputRef.current?.click(), onKeyDown: (e) => {
           if (e.key === "Enter" || e.key === " ") {
@@ -22829,36 +22891,36 @@ var LoginGate = ({ children }) => {
           e.currentTarget.classList.remove("dragging");
           handleActivationFile(e.dataTransfer.files?.[0]);
         } },
-        h34("div", { className: "auth2-drop-icon" }, h34(Upload2, { className: "icon" })),
-        h34("strong", null, t("\u0623\u0631\u0641\u0642 \u0645\u0644\u0641 \u0627\u0644\u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u062E\u0627\u0635 \u0628\u062D\u0633\u0627\u0628\u0643")),
-        h34("p", null, t("\u0627\u062E\u062A\u0631 \u0645\u0644\u0641 \u0627\u0644\u062A\u0641\u0639\u064A\u0644 .mzauth \u0645\u0646 \u062C\u0647\u0627\u0632\u0643 \u0644\u0644\u062F\u062E\u0648\u0644 \u0625\u0644\u0649 \u0627\u0644\u0646\u0638\u0627\u0645.")),
-        h34("div", { className: "ct-login-choices" }, h34("span", { className: "auth2-file-button" }, t("\u0627\u062E\u062A\u064A\u0627\u0631 \u0645\u0644\u0641 \u0627\u0644\u062A\u0641\u0639\u064A\u0644")), h34("button", { type: "button", className: "ct-login-code-icon", title: "\u0627\u0644\u062F\u062E\u0648\u0644 \u0628\u0648\u0627\u0633\u0637\u0629 \u0627\u0644\u0634\u0641\u0631\u0629", "aria-label": "\u0627\u0644\u062F\u062E\u0648\u0644 \u0628\u0648\u0627\u0633\u0637\u0629 \u0627\u0644\u0634\u0641\u0631\u0629", onClick: (e) => {
+        h35("div", { className: "auth2-drop-icon" }, h35(Upload2, { className: "icon" })),
+        h35("strong", null, t("\u0623\u0631\u0641\u0642 \u0645\u0644\u0641 \u0627\u0644\u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u062E\u0627\u0635 \u0628\u062D\u0633\u0627\u0628\u0643")),
+        h35("p", null, t("\u0627\u062E\u062A\u0631 \u0645\u0644\u0641 \u0627\u0644\u062A\u0641\u0639\u064A\u0644 .mzauth \u0645\u0646 \u062C\u0647\u0627\u0632\u0643 \u0644\u0644\u062F\u062E\u0648\u0644 \u0625\u0644\u0649 \u0627\u0644\u0646\u0638\u0627\u0645.")),
+        h35("div", { className: "ct-login-choices" }, h35("span", { className: "auth2-file-button" }, t("\u0627\u062E\u062A\u064A\u0627\u0631 \u0645\u0644\u0641 \u0627\u0644\u062A\u0641\u0639\u064A\u0644")), h35("button", { type: "button", className: "ct-login-code-icon", title: "\u0627\u0644\u062F\u062E\u0648\u0644 \u0628\u0648\u0627\u0633\u0637\u0629 \u0627\u0644\u0634\u0641\u0631\u0629", "aria-label": "\u0627\u0644\u062F\u062E\u0648\u0644 \u0628\u0648\u0627\u0633\u0637\u0629 \u0627\u0644\u0634\u0641\u0631\u0629", onClick: (e) => {
           e.stopPropagation();
           setError("");
           setCodeOpen(true);
-        }, onKeyDown: (e) => e.stopPropagation() }, h34(KeyRound, { className: "icon" })))
+        }, onKeyDown: (e) => e.stopPropagation() }, h35(KeyRound, { className: "icon" })))
       ) : null,
-      h34("input", { ref: inputRef, type: "file", accept: ".mzauth", hidden: true, onChange: (e) => handleActivationFile(e.target.files?.[0]) }),
-      file ? h34("div", { className: "auth2-file-ready" }, h34("div", { className: "auth2-file-main" }, h34("span", { className: "auth2-file-icon" }, h34(FileText8, { className: "icon" })), h34("div", null, h34("strong", null, file.name), h34("small", null, t("\u062C\u0627\u0647\u0632 \u0644\u0644\u062A\u062D\u0642\u0642")))), h34("button", { type: "button", className: "icon-btn", onClick: () => {
+      h35("input", { ref: inputRef, type: "file", accept: ".mzauth", hidden: true, onChange: (e) => handleActivationFile(e.target.files?.[0]) }),
+      file ? h35("div", { className: "auth2-file-ready" }, h35("div", { className: "auth2-file-main" }, h35("span", { className: "auth2-file-icon" }, h35(FileText8, { className: "icon" })), h35("div", null, h35("strong", null, file.name), h35("small", null, t("\u062C\u0627\u0647\u0632 \u0644\u0644\u062A\u062D\u0642\u0642")))), h35("button", { type: "button", className: "icon-btn", onClick: () => {
         setFile(null);
         setError("");
         if (inputRef.current) inputRef.current.value = "";
-      }, "aria-label": t("\u0625\u0632\u0627\u0644\u0629 \u0645\u0644\u0641 \u0627\u0644\u062A\u0641\u0639\u064A\u0644") }, h34(X30, { className: "icon" }))) : null,
-      file ? h34("button", { type: "button", className: "auth2-primary", disabled: busy, onClick: open }, busy ? h34("span", { className: "spinner" }) : h34(LogIn, { className: "icon" }), h34("span", null, busy ? t("\u062C\u0627\u0631\u064D \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644") : t("\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644"))) : null,
-      error ? h34("div", { className: "form-error", role: "alert" }, error) : null,
-      success ? h34("div", { className: "auth2-success" }, success) : null,
-      h34("div", { className: "auth2-divider" }, h34("span", null, t("\u0623\u0648"))),
-      h34("button", { type: "button", className: "auth2-outline", "aria-expanded": trialOpen, onClick: () => {
+      }, "aria-label": t("\u0625\u0632\u0627\u0644\u0629 \u0645\u0644\u0641 \u0627\u0644\u062A\u0641\u0639\u064A\u0644") }, h35(X31, { className: "icon" }))) : null,
+      file ? h35("button", { type: "button", className: "auth2-primary", disabled: busy, onClick: open }, busy ? h35("span", { className: "spinner" }) : h35(LogIn, { className: "icon" }), h35("span", null, busy ? t("\u062C\u0627\u0631\u064D \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644") : t("\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644"))) : null,
+      error ? h35("div", { className: "form-error", role: "alert" }, error) : null,
+      success ? h35("div", { className: "auth2-success" }, success) : null,
+      h35("div", { className: "auth2-divider" }, h35("span", null, t("\u0623\u0648"))),
+      h35("button", { type: "button", className: "auth2-outline", "aria-expanded": trialOpen, onClick: () => {
         setTrialOpen((v) => !v);
         setError("");
         setCountryOpen(false);
         setCurrencyOpen(false);
-      } }, h34(Building29, { className: "icon" }), h34("span", null, trialOpen ? t("\u0625\u063A\u0644\u0627\u0642 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u062D\u0633\u0627\u0628") : t("\u0623\u0646\u0634\u0626 \u062D\u0633\u0627\u0628\u0643 \u0628\u0640 20\u20AA"))),
-      trialOpen ? h34(
+      } }, h35(Building29, { className: "icon" }), h35("span", null, trialOpen ? t("\u0625\u063A\u0644\u0627\u0642 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u062D\u0633\u0627\u0628") : t("\u0623\u0646\u0634\u0626 \u062D\u0633\u0627\u0628\u0643 \u0628\u0640 20\u20AA"))),
+      trialOpen ? h35(
         "form",
         { className: "auth2-trial", onSubmit: createTrial, noValidate: true },
-        h34("div", { className: "auth2-trial-head" }, h34("h2", null, t("\u0623\u0646\u0634\u0626 \u062D\u0633\u0627\u0628 \u0643\u0627\u0634 \u062A\u0648\u0628 3")), h34("p", null, t("\u0623\u062F\u062E\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0634\u0631\u0643\u062A\u0643\u060C \u062B\u0645 \u0623\u0643\u0645\u0644 \u062F\u0641\u0639 20\u20AA \u0644\u0625\u0631\u0633\u0627\u0644 \u0637\u0644\u0628 \u0627\u0644\u062A\u0641\u0639\u064A\u0644."))),
-        h34("div", { className: "auth2-field" }, h34("label", null, t("\u0634\u0639\u0627\u0631 \u0627\u0644\u0634\u0631\u0643\u0629 "), h34("span", null, t("\u0627\u062E\u062A\u064A\u0627\u0631\u064A"))), h34("div", { className: "auth2-logo-upload" }, logo ? h34("img", { src: logo, className: "auth2-logo-preview", alt: t("\u0645\u0639\u0627\u064A\u0646\u0629 \u0634\u0639\u0627\u0631 \u0627\u0644\u0634\u0631\u0643\u0629") }) : h34("div", { className: "auth2-logo-preview placeholder" }, h34(ImageIcon11, { className: "icon" })), h34("div", { className: "auth2-logo-copy" }, h34("strong", null, logo ? t("\u062A\u0645 \u0627\u062E\u062A\u064A\u0627\u0631 \u0634\u0639\u0627\u0631 \u0627\u0644\u0634\u0631\u0643\u0629") : t("\u0623\u0636\u0641 \u0647\u0648\u064A\u0629 \u0634\u0631\u0643\u062A\u0643")), h34("small", null, "PNG\u060C JPG\u060C WEBP"), h34("div", { className: "auth2-logo-actions" }, h34("button", { type: "button", onClick: () => logoRef.current?.click() }, logo ? t("\u062A\u063A\u064A\u064A\u0631 \u0627\u0644\u0634\u0639\u0627\u0631") : t("\u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0634\u0639\u0627\u0631")), logo ? h34("button", { type: "button", onClick: () => setLogo("") }, t("\u0625\u0632\u0627\u0644\u0629")) : null))), h34("input", { ref: logoRef, type: "file", accept: "image/png,image/jpeg,image/webp", hidden: true, onChange: async (e) => {
+        h35("div", { className: "auth2-trial-head" }, h35("h2", null, t("\u0623\u0646\u0634\u0626 \u062D\u0633\u0627\u0628 \u0643\u0627\u0634 \u062A\u0648\u0628 3")), h35("p", null, t("\u0623\u062F\u062E\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0634\u0631\u0643\u062A\u0643\u060C \u062B\u0645 \u0623\u0643\u0645\u0644 \u062F\u0641\u0639 20\u20AA \u0644\u0625\u0631\u0633\u0627\u0644 \u0637\u0644\u0628 \u0627\u0644\u062A\u0641\u0639\u064A\u0644."))),
+        h35("div", { className: "auth2-field" }, h35("label", null, t("\u0634\u0639\u0627\u0631 \u0627\u0644\u0634\u0631\u0643\u0629 "), h35("span", null, t("\u0627\u062E\u062A\u064A\u0627\u0631\u064A"))), h35("div", { className: "auth2-logo-upload" }, logo ? h35("img", { src: logo, className: "auth2-logo-preview", alt: t("\u0645\u0639\u0627\u064A\u0646\u0629 \u0634\u0639\u0627\u0631 \u0627\u0644\u0634\u0631\u0643\u0629") }) : h35("div", { className: "auth2-logo-preview placeholder" }, h35(ImageIcon11, { className: "icon" })), h35("div", { className: "auth2-logo-copy" }, h35("strong", null, logo ? t("\u062A\u0645 \u0627\u062E\u062A\u064A\u0627\u0631 \u0634\u0639\u0627\u0631 \u0627\u0644\u0634\u0631\u0643\u0629") : t("\u0623\u0636\u0641 \u0647\u0648\u064A\u0629 \u0634\u0631\u0643\u062A\u0643")), h35("small", null, "PNG\u060C JPG\u060C WEBP"), h35("div", { className: "auth2-logo-actions" }, h35("button", { type: "button", onClick: () => logoRef.current?.click() }, logo ? t("\u062A\u063A\u064A\u064A\u0631 \u0627\u0644\u0634\u0639\u0627\u0631") : t("\u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0634\u0639\u0627\u0631")), logo ? h35("button", { type: "button", onClick: () => setLogo("") }, t("\u0625\u0632\u0627\u0644\u0629")) : null))), h35("input", { ref: logoRef, type: "file", accept: "image/png,image/jpeg,image/webp", hidden: true, onChange: async (e) => {
           try {
             const v = await dataUrlFromImage(e.target.files?.[0]);
             setLogo(v);
@@ -22867,21 +22929,21 @@ var LoginGate = ({ children }) => {
             setError(String(err?.message || err));
           }
         } })),
-        h34("div", { className: "auth2-field" }, h34("label", null, t("\u0627\u0633\u0645 \u0627\u0644\u0634\u0631\u0643\u0629 "), h34("b", null, "*")), h34("div", { className: "auth2-input-icon" }, h34(Building29, { className: "icon" }), h34("input", { value: companyName, onChange: (e) => setCompanyName(e.target.value), placeholder: t("\u0645\u062B\u0627\u0644: \u0634\u0631\u0643\u0629 \u0643\u0627\u0634 \u062A\u0648\u0628 3 \u0644\u0644\u062A\u062C\u0627\u0631\u0629"), required: true }))),
-        h34("div", { className: "auth2-field" }, h34("label", null, t("\u0627\u0644\u0639\u0646\u0648\u0627\u0646 \u0648\u0627\u0644\u0645\u0648\u0642\u0639 "), h34("b", null, "*")), h34("div", { className: "auth2-input-icon" }, h34(MapPin3, { className: "icon" }), h34("input", { value: address, onChange: (e) => setAddress(e.target.value), placeholder: t("\u0627\u0644\u0645\u062F\u064A\u0646\u0629\u060C \u0627\u0644\u0634\u0627\u0631\u0639 \u0623\u0648 \u0627\u0644\u0645\u0648\u0642\u0639"), required: true }))),
-        h34("div", { className: "auth2-field" }, h34("label", null, t("\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641 "), h34("b", null, "*")), h34("div", { className: "auth2-phone-row" }, h34(Picker, { kind: "country", value: dial, onChange: setDial, options: COUNTRIES, open: countryOpen, setOpen: (v) => {
+        h35("div", { className: "auth2-field" }, h35("label", null, t("\u0627\u0633\u0645 \u0627\u0644\u0634\u0631\u0643\u0629 "), h35("b", null, "*")), h35("div", { className: "auth2-input-icon" }, h35(Building29, { className: "icon" }), h35("input", { value: companyName, onChange: (e) => setCompanyName(e.target.value), placeholder: t("\u0645\u062B\u0627\u0644: \u0634\u0631\u0643\u0629 \u0643\u0627\u0634 \u062A\u0648\u0628 3 \u0644\u0644\u062A\u062C\u0627\u0631\u0629"), required: true }))),
+        h35("div", { className: "auth2-field" }, h35("label", null, t("\u0627\u0644\u0639\u0646\u0648\u0627\u0646 \u0648\u0627\u0644\u0645\u0648\u0642\u0639 "), h35("b", null, "*")), h35("div", { className: "auth2-input-icon" }, h35(MapPin3, { className: "icon" }), h35("input", { value: address, onChange: (e) => setAddress(e.target.value), placeholder: t("\u0627\u0644\u0645\u062F\u064A\u0646\u0629\u060C \u0627\u0644\u0634\u0627\u0631\u0639 \u0623\u0648 \u0627\u0644\u0645\u0648\u0642\u0639"), required: true }))),
+        h35("div", { className: "auth2-field" }, h35("label", null, t("\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641 "), h35("b", null, "*")), h35("div", { className: "auth2-phone-row" }, h35(Picker, { kind: "country", value: dial, onChange: setDial, options: COUNTRIES, open: countryOpen, setOpen: (v) => {
           setCountryOpen(v);
           if (v) setCurrencyOpen(false);
-        }, query: countryQuery, setQuery: setCountryQuery }), h34("div", { className: "auth2-phone-wrap" }, h34(Phone2, { className: "auth2-phone-icon" }), h34("input", { className: "auth2-phone-input", value: phone, onChange: (e) => setPhone(e.target.value.replace(/[^0-9\s-]/g, "")), placeholder: "597603119", inputMode: "tel", required: true })))),
-        h34("div", { className: "auth2-field" }, h34("label", null, t("\u0627\u0644\u0639\u0645\u0644\u0629 "), h34("b", null, "*")), h34(Picker, { kind: "currency", value: currency, onChange: setCurrency, options: CURRENCIES, open: currencyOpen, setOpen: (v) => {
+        }, query: countryQuery, setQuery: setCountryQuery }), h35("div", { className: "auth2-phone-wrap" }, h35(Phone2, { className: "auth2-phone-icon" }), h35("input", { className: "auth2-phone-input", value: phone, onChange: (e) => setPhone(e.target.value.replace(/[^0-9\s-]/g, "")), placeholder: "597603119", inputMode: "tel", required: true })))),
+        h35("div", { className: "auth2-field" }, h35("label", null, t("\u0627\u0644\u0639\u0645\u0644\u0629 "), h35("b", null, "*")), h35(Picker, { kind: "currency", value: currency, onChange: setCurrency, options: CURRENCIES, open: currencyOpen, setOpen: (v) => {
           setCurrencyOpen(v);
           if (v) setCountryOpen(false);
         }, query: currencyQuery, setQuery: setCurrencyQuery })),
-        h34("button", { type: "submit", className: "auth2-primary", disabled: trialBusy }, trialBusy ? h34("span", { className: "spinner" }) : h34(Building29, { className: "icon" }), h34("span", null, trialBusy ? t("\u062C\u0627\u0631\u064D \u062A\u062C\u0647\u064A\u0632 \u0627\u0644\u0637\u0644\u0628...") : t("\u0645\u062A\u0627\u0628\u0639\u0629 \u0644\u0644\u062F\u0641\u0639 \u2014 20\u20AA")))
+        h35("button", { type: "submit", className: "auth2-primary", disabled: trialBusy }, trialBusy ? h35("span", { className: "spinner" }) : h35(Building29, { className: "icon" }), h35("span", null, trialBusy ? t("\u062C\u0627\u0631\u064D \u062A\u062C\u0647\u064A\u0632 \u0627\u0644\u0637\u0644\u0628...") : t("\u0645\u062A\u0627\u0628\u0639\u0629 \u0644\u0644\u062F\u0641\u0639 \u2014 20\u20AA")))
       ) : null,
-      h34("div", { className: "auth2-foot" }, h34(ShieldCheck4, { className: "icon" }), h34("span", null, t("\u0628\u064A\u0627\u0646\u0627\u062A\u0643 \u0645\u062D\u0641\u0648\u0638\u0629 \u062F\u0627\u062E\u0644 \u0645\u0633\u0627\u062D\u0629 \u0634\u0631\u0643\u062A\u0643 \u0627\u0644\u0645\u0633\u062A\u0642\u0644\u0629.")))
+      h35("div", { className: "auth2-foot" }, h35(ShieldCheck4, { className: "icon" }), h35("span", null, t("\u0628\u064A\u0627\u0646\u0627\u062A\u0643 \u0645\u062D\u0641\u0648\u0638\u0629 \u062F\u0627\u062E\u0644 \u0645\u0633\u0627\u062D\u0629 \u0634\u0631\u0643\u062A\u0643 \u0627\u0644\u0645\u0633\u062A\u0642\u0644\u0629.")))
     ),
-    h34("a", { href: "./support.html", title: t("\u0627\u0644\u062F\u0639\u0645 \u0627\u0644\u0641\u0646\u064A"), "aria-label": t("\u0627\u0644\u062F\u0639\u0645 \u0627\u0644\u0641\u0646\u064A"), style: { position: "fixed", left: "18px", bottom: "max(18px, env(safe-area-inset-bottom))", width: "54px", height: "54px", borderRadius: "18px", display: "grid", placeItems: "center", background: "linear-gradient(135deg,#10b981,#6D28D9)", color: "#fff", boxShadow: "0 14px 30px rgba(5,150,105,.30)", border: "1px solid rgba(255,255,255,.35)", zIndex: 80, textDecoration: "none" } }, h34(Headphones3, { style: { width: "25px", height: "25px" } }))
+    h35("a", { href: "./support.html", title: t("\u0627\u0644\u062F\u0639\u0645 \u0627\u0644\u0641\u0646\u064A"), "aria-label": t("\u0627\u0644\u062F\u0639\u0645 \u0627\u0644\u0641\u0646\u064A"), style: { position: "fixed", left: "18px", bottom: "max(18px, env(safe-area-inset-bottom))", width: "54px", height: "54px", borderRadius: "18px", display: "grid", placeItems: "center", background: "linear-gradient(135deg,#10b981,#6D28D9)", color: "#fff", boxShadow: "0 14px 30px rgba(5,150,105,.30)", border: "1px solid rgba(255,255,255,.35)", zIndex: 80, textDecoration: "none" } }, h35(Headphones3, { style: { width: "25px", height: "25px" } }))
   );
 };
 
@@ -23083,13 +23145,13 @@ var RestaurantTablesView = () => {
 // app/restaurant__components__RestaurantWaiterView.js
 import React58, { useMemo as useMemo14, useState as useState45, useEffect as useEffect36 } from "react";
 import { createPortal as createPortal19 } from "react-dom";
-import { Utensils as Utensils2, Search as Search14, Plus as Plus16, Minus as Minus4, Trash2 as Trash228, Send as Send3, Printer as Printer11, Users as Users13, ShoppingBag as ShoppingBag2, ShoppingCart as ShoppingCart8, AlertTriangle as AlertTriangle5, Lock as Lock2, X as X32, StickyNote, ChevronDown as ChevronDown7 } from "lucide-react";
+import { Utensils as Utensils2, Search as Search14, Plus as Plus16, Minus as Minus4, Trash2 as Trash228, Send as Send3, Printer as Printer11, Users as Users13, ShoppingBag as ShoppingBag2, ShoppingCart as ShoppingCart8, AlertTriangle as AlertTriangle5, Lock as Lock2, X as X33, StickyNote, ChevronDown as ChevronDown7 } from "lucide-react";
 
 // app/restaurant__components__KitchenTicketModal.js
 import React57 from "react";
 import { createPortal as createPortal18 } from "react-dom";
-import { Printer as Printer10, X as X31 } from "lucide-react";
-var h35 = React57.createElement;
+import { Printer as Printer10, X as X32 } from "lucide-react";
+var h36 = React57.createElement;
 var money17 = (value) => Number(value || 0).toLocaleString("ar-EG", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 var addonUnitTotal = (item) => (item?.addons || []).reduce((sum, addon) => sum + Number(addon?.price || 0), 0);
 var unitTotal = (item) => Number(item?.unitPrice || 0) + addonUnitTotal(item);
@@ -23110,14 +23172,14 @@ var KitchenTicketModal = ({ order, isAdditionOnly = false, onClose }) => {
     if (!el) return;
     await printElementOnly(el, printerWidth, `${isAdditionOnly ? "\u0625\u0636\u0627\u0641\u0629 \u0644\u0644\u0645\u0637\u0628\u062E" : "\u062A\u0630\u0643\u0631\u0629 \u0627\u0644\u0645\u0637\u0628\u062E"} ${order.orderNumber || ""}`);
   };
-  const infoRow = (label, value) => h35("div", {
+  const infoRow = (label, value) => h36("div", {
     style: { display: "flex", justifyContent: "space-between", gap: "8px", alignItems: "flex-start", marginBottom: "2px" }
-  }, h35("span", null, label), h35("strong", { style: { textAlign: "left" } }, value));
+  }, h36("span", null, label), h36("strong", { style: { textAlign: "left" } }, value));
   const itemRow = (item, idx) => {
     const qty = Number(item.quantity || 0);
     const one = unitTotal(item);
     const total = lineTotal(item);
-    return h35(
+    return h36(
       "div",
       {
         key: item.id || idx,
@@ -23128,7 +23190,7 @@ var KitchenTicketModal = ({ order, isAdditionOnly = false, onClose }) => {
           pageBreakInside: "avoid"
         }
       },
-      h35(
+      h36(
         "div",
         {
           style: {
@@ -23140,18 +23202,18 @@ var KitchenTicketModal = ({ order, isAdditionOnly = false, onClose }) => {
             lineHeight: "1.35"
           }
         },
-        h35("div", { style: { fontWeight: 900, wordBreak: "break-word" } }, item.productName || "\u0635\u0646\u0641"),
-        h35("div", { style: { textAlign: "center", fontWeight: 900, border: "1px solid #111", borderRadius: "4px", padding: "2px 1px" } }, qty),
-        h35("div", { style: { textAlign: "center", fontWeight: 800, whiteSpace: "nowrap" } }, money17(one)),
-        h35("div", { style: { textAlign: "center", fontWeight: 900, whiteSpace: "nowrap" } }, money17(total))
+        h36("div", { style: { fontWeight: 900, wordBreak: "break-word" } }, item.productName || "\u0635\u0646\u0641"),
+        h36("div", { style: { textAlign: "center", fontWeight: 900, border: "1px solid #111", borderRadius: "4px", padding: "2px 1px" } }, qty),
+        h36("div", { style: { textAlign: "center", fontWeight: 800, whiteSpace: "nowrap" } }, money17(one)),
+        h36("div", { style: { textAlign: "center", fontWeight: 900, whiteSpace: "nowrap" } }, money17(total))
       ),
-      item.sizeVariant && h35("div", { style: { marginTop: "3px", fontSize: "9px", fontWeight: 700 } }, `\u0627\u0644\u062D\u062C\u0645: ${item.sizeVariant.name}`),
-      item.addons && item.addons.length > 0 && h35("div", { style: { marginTop: "2px", fontSize: "9px", fontWeight: 700 } }, `\u0625\u0636\u0627\u0641\u0627\u062A: ${item.addons.map((a) => `+ ${a.name}`).join("\u060C ")}`),
-      item.removals && item.removals.length > 0 && h35("div", { style: { marginTop: "2px", fontSize: "9px", fontWeight: 700 } }, `\u0627\u0633\u062A\u0628\u0639\u0627\u062F: ${item.removals.map((r) => `- ${r}`).join("\u060C ")}`),
-      item.notes && h35("div", { style: { marginTop: "3px", padding: "3px 5px", border: "1px solid #d1d5db", borderRadius: "5px", fontSize: "9px", fontWeight: 800 } }, `\u0645\u0644\u0627\u062D\u0638\u0629: ${item.notes}`)
+      item.sizeVariant && h36("div", { style: { marginTop: "3px", fontSize: "9px", fontWeight: 700 } }, `\u0627\u0644\u062D\u062C\u0645: ${item.sizeVariant.name}`),
+      item.addons && item.addons.length > 0 && h36("div", { style: { marginTop: "2px", fontSize: "9px", fontWeight: 700 } }, `\u0625\u0636\u0627\u0641\u0627\u062A: ${item.addons.map((a) => `+ ${a.name}`).join("\u060C ")}`),
+      item.removals && item.removals.length > 0 && h36("div", { style: { marginTop: "2px", fontSize: "9px", fontWeight: 700 } }, `\u0627\u0633\u062A\u0628\u0639\u0627\u062F: ${item.removals.map((r) => `- ${r}`).join("\u060C ")}`),
+      item.notes && h36("div", { style: { marginTop: "3px", padding: "3px 5px", border: "1px solid #d1d5db", borderRadius: "5px", fontSize: "9px", fontWeight: 800 } }, `\u0645\u0644\u0627\u062D\u0638\u0629: ${item.notes}`)
     );
   };
-  return createPortal18(h35(
+  return createPortal18(h36(
     "div",
     {
       className: "waiter-frost-overlay select-none",
@@ -23160,35 +23222,35 @@ var KitchenTicketModal = ({ order, isAdditionOnly = false, onClose }) => {
         if (event.target === event.currentTarget) onClose?.();
       }
     },
-    h35(
+    h36(
       "div",
       {
         className: "bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col",
         style: { width: "min(96vw, 760px)", maxHeight: "94dvh" }
       },
-      h35(
+      h36(
         "div",
         { className: "flex items-center justify-between p-3 border-b bg-slate-50 shrink-0" },
-        h35(
+        h36(
           "div",
           { className: "flex items-center gap-2" },
-          h35(Printer10, { className: "w-5 h-5 text-violet-600" }),
-          h35(
+          h36(Printer10, { className: "w-5 h-5 text-violet-600" }),
+          h36(
             "div",
             null,
-            h35("h3", { className: "text-sm font-black text-slate-900" }, isAdditionOnly ? "\u0641\u0627\u062A\u0648\u0631\u0629 \u0625\u0636\u0627\u0641\u0629 \u0644\u0644\u0645\u0637\u0628\u062E" : "\u0641\u0627\u062A\u0648\u0631\u0629 \u0627\u0644\u0645\u0637\u0628\u062E / \u0627\u0644\u062C\u0631\u0633\u0648\u0646"),
-            h35("div", { className: "text-[10px] text-slate-500" }, `${displayItems.length} \u0623\u0635\u0646\u0627\u0641 \u2022 ${itemCount} \u0643\u0645\u064A\u0629`)
+            h36("h3", { className: "text-sm font-black text-slate-900" }, isAdditionOnly ? "\u0641\u0627\u062A\u0648\u0631\u0629 \u0625\u0636\u0627\u0641\u0629 \u0644\u0644\u0645\u0637\u0628\u062E" : "\u0641\u0627\u062A\u0648\u0631\u0629 \u0627\u0644\u0645\u0637\u0628\u062E / \u0627\u0644\u062C\u0631\u0633\u0648\u0646"),
+            h36("div", { className: "text-[10px] text-slate-500" }, `${displayItems.length} \u0623\u0635\u0646\u0627\u0641 \u2022 ${itemCount} \u0643\u0645\u064A\u0629`)
           )
         ),
-        h35("button", { onClick: onClose, className: "w-9 h-9 rounded-xl border bg-white flex items-center justify-center text-slate-600" }, h35(X31, { className: "w-4 h-4" }))
+        h36("button", { onClick: onClose, className: "w-9 h-9 rounded-xl border bg-white flex items-center justify-center text-slate-600" }, h36(X32, { className: "w-4 h-4" }))
       ),
-      h35(
+      h36(
         "div",
         {
           className: "flex-1 min-h-0 overflow-y-auto overscroll-contain bg-slate-100 p-2 sm:p-4",
           style: { WebkitOverflowScrolling: "touch" }
         },
-        h35(
+        h36(
           "div",
           {
             id: "kitchen-ticket-print-area",
@@ -23206,15 +23268,15 @@ var KitchenTicketModal = ({ order, isAdditionOnly = false, onClose }) => {
               overflow: "visible"
             }
           },
-          h35(
+          h36(
             "div",
             { style: { textAlign: "center", borderBottom: "2px dashed #111", paddingBottom: "7px", marginBottom: "7px" } },
-            h35("div", { style: { fontSize: "15px", fontWeight: 900 } }, settings.storeName || "\u0643\u0627\u0634 \u062A\u0648\u0628 3"),
-            h35("div", { style: { fontSize: "14px", fontWeight: 900, marginTop: "2px" } }, isAdditionOnly ? "\u0625\u0636\u0627\u0641\u0629 \u062C\u062F\u064A\u062F\u0629 \u0644\u0644\u0637\u0644\u0628" : "\u0641\u0627\u062A\u0648\u0631\u0629 \u0637\u0644\u0628 \u0627\u0644\u0645\u0637\u0628\u062E"),
-            h35("div", { style: { fontSize: "12px", fontWeight: 900, marginTop: "3px" } }, order.orderType === "dine_in" ? `\u0637\u0627\u0648\u0644\u0629: ${order.tableNumber || "\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"}${order.sectionName ? ` - ${order.sectionName}` : ""}` : `\u0633\u0641\u0631\u064A / \u062A\u064A\u0643 \u0623\u0648\u0627\u064A: ${order.queueNumber || order.orderNumber || ""}`),
-            h35("div", { style: { fontSize: "9px", marginTop: "2px" } }, `\u0627\u0644\u0637\u0644\u0628: #${order.orderNumber || ""}${order.kitchenTicketId ? ` | \u0627\u0644\u062A\u0630\u0643\u0631\u0629: #${String(order.kitchenTicketId).slice(-8)}` : ""}`)
+            h36("div", { style: { fontSize: "15px", fontWeight: 900 } }, settings.storeName || "\u0643\u0627\u0634 \u062A\u0648\u0628 3"),
+            h36("div", { style: { fontSize: "14px", fontWeight: 900, marginTop: "2px" } }, isAdditionOnly ? "\u0625\u0636\u0627\u0641\u0629 \u062C\u062F\u064A\u062F\u0629 \u0644\u0644\u0637\u0644\u0628" : "\u0641\u0627\u062A\u0648\u0631\u0629 \u0637\u0644\u0628 \u0627\u0644\u0645\u0637\u0628\u062E"),
+            h36("div", { style: { fontSize: "12px", fontWeight: 900, marginTop: "3px" } }, order.orderType === "dine_in" ? `\u0637\u0627\u0648\u0644\u0629: ${order.tableNumber || "\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"}${order.sectionName ? ` - ${order.sectionName}` : ""}` : `\u0633\u0641\u0631\u064A / \u062A\u064A\u0643 \u0623\u0648\u0627\u064A: ${order.queueNumber || order.orderNumber || ""}`),
+            h36("div", { style: { fontSize: "9px", marginTop: "2px" } }, `\u0627\u0644\u0637\u0644\u0628: #${order.orderNumber || ""}${order.kitchenTicketId ? ` | \u0627\u0644\u062A\u0630\u0643\u0631\u0629: #${String(order.kitchenTicketId).slice(-8)}` : ""}`)
           ),
-          h35(
+          h36(
             "div",
             { style: { borderBottom: "1px dashed #111", paddingBottom: "6px", marginBottom: "6px", fontSize: "10px" } },
             infoRow("\u0627\u0644\u062C\u0631\u0633\u0648\u0646:", order.waiterName || "\u0627\u0644\u0643\u0627\u0634\u064A\u0631"),
@@ -23222,7 +23284,7 @@ var KitchenTicketModal = ({ order, isAdditionOnly = false, onClose }) => {
             order.guestCount ? infoRow("\u0639\u062F\u062F \u0627\u0644\u0623\u0641\u0631\u0627\u062F:", order.guestCount) : null,
             infoRow("\u0648\u0642\u062A \u0627\u0644\u0625\u0631\u0633\u0627\u0644:", new Date(order.lastKitchenSendAt || order.sentToKitchenAt || order.createdAt || Date.now()).toLocaleString("ar-EG"))
           ),
-          h35(
+          h36(
             "div",
             {
               style: {
@@ -23237,13 +23299,13 @@ var KitchenTicketModal = ({ order, isAdditionOnly = false, onClose }) => {
                 textAlign: "center"
               }
             },
-            h35("div", { style: { textAlign: "right" } }, t("\u0627\u0644\u0635\u0646\u0641")),
-            h35("div", null, "\u0643\u0645\u064A\u0629"),
-            h35("div", null, `\u0627\u0644\u0633\u0639\u0631 ${currency}`),
-            h35("div", null, `\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A ${currency}`)
+            h36("div", { style: { textAlign: "right" } }, t("\u0627\u0644\u0635\u0646\u0641")),
+            h36("div", null, "\u0643\u0645\u064A\u0629"),
+            h36("div", null, `\u0627\u0644\u0633\u0639\u0631 ${currency}`),
+            h36("div", null, `\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A ${currency}`)
           ),
-          h35("div", { style: { overflow: "visible" } }, displayItems.map(itemRow)),
-          h35(
+          h36("div", { style: { overflow: "visible" } }, displayItems.map(itemRow)),
+          h36(
             "div",
             {
               style: {
@@ -23258,21 +23320,21 @@ var KitchenTicketModal = ({ order, isAdditionOnly = false, onClose }) => {
                 fontWeight: 900
               }
             },
-            h35("span", null, `\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A (${itemCount}):`),
-            h35("span", { style: { fontSize: "14px", whiteSpace: "nowrap" } }, `${money17(grandTotal)} ${currency}`)
+            h36("span", null, `\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A (${itemCount}):`),
+            h36("span", { style: { fontSize: "14px", whiteSpace: "nowrap" } }, `${money17(grandTotal)} ${currency}`)
           ),
-          orderNote ? h35("div", { style: { marginTop: "8px", border: "2px solid #111", padding: "6px", fontWeight: 900, fontSize: "10px", borderRadius: "5px", whiteSpace: "pre-wrap" } }, `\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u0637\u0644\u0628: ${orderNote}`) : null,
-          h35("div", { style: { textAlign: "center", marginTop: "8px", fontSize: "8px" } }, "\u0641\u0627\u062A\u0648\u0631\u0629 \u0645\u0637\u0628\u062E \u062F\u0627\u062E\u0644\u064A\u0629 \u2022 \u062A\u0634\u0645\u0644 \u0627\u0644\u0643\u0645\u064A\u0629 \u0648\u0627\u0644\u0633\u0639\u0631 \u0648\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A")
+          orderNote ? h36("div", { style: { marginTop: "8px", border: "2px solid #111", padding: "6px", fontWeight: 900, fontSize: "10px", borderRadius: "5px", whiteSpace: "pre-wrap" } }, `\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u0637\u0644\u0628: ${orderNote}`) : null,
+          h36("div", { style: { textAlign: "center", marginTop: "8px", fontSize: "8px" } }, "\u0641\u0627\u062A\u0648\u0631\u0629 \u0645\u0637\u0628\u062E \u062F\u0627\u062E\u0644\u064A\u0629 \u2022 \u062A\u0634\u0645\u0644 \u0627\u0644\u0643\u0645\u064A\u0629 \u0648\u0627\u0644\u0633\u0639\u0631 \u0648\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A")
         )
       ),
-      h35(
+      h36(
         "div",
         { className: "p-3 border-t bg-white flex items-center justify-end gap-2 shrink-0" },
-        h35("button", { type: "button", onClick: onClose, className: "h-10 px-4 rounded-xl border bg-white text-xs font-bold text-slate-700" }, t("\u0625\u063A\u0644\u0627\u0642")),
-        h35(
+        h36("button", { type: "button", onClick: onClose, className: "h-10 px-4 rounded-xl border bg-white text-xs font-bold text-slate-700" }, t("\u0625\u063A\u0644\u0627\u0642")),
+        h36(
           "button",
           { type: "button", onClick: handlePrint, className: "h-10 px-5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-black flex items-center gap-2 shadow-sm" },
-          h35(Printer10, { className: "w-4 h-4" }),
+          h36(Printer10, { className: "w-4 h-4" }),
           "\u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u0641\u0627\u062A\u0648\u0631\u0629"
         )
       )
@@ -23281,7 +23343,7 @@ var KitchenTicketModal = ({ order, isAdditionOnly = false, onClose }) => {
 };
 
 // app/restaurant__components__RestaurantWaiterView.js
-var h36 = React58.createElement;
+var h37 = React58.createElement;
 var orderNoteText = (notes) => typeof notes === "string" ? notes : String(notes?.kitchenNotes || notes?.general || "");
 var RestaurantWaiterView = () => {
   const { tables, orders, recipes, createOrder, updateOrder, sendOrderToKitchen, updateOrderItemStatus } = useRestaurant();
@@ -23502,7 +23564,7 @@ var RestaurantWaiterView = () => {
   };
   const money20 = (n4) => Number(n4 || 0).toLocaleString("ar-EG");
   const cartModal = isCartOpen ? createPortal19(
-    h36(
+    h37(
       "div",
       {
         id: "waiter-cart-backdrop",
@@ -23511,91 +23573,91 @@ var RestaurantWaiterView = () => {
           if (e.target === e.currentTarget) setIsCartOpen(false);
         }
       },
-      h36(
+      h37(
         "section",
         { id: "waiter-cart-modal", className: "waiter-order-dialog", role: "dialog", "aria-modal": "true", "aria-label": "\u0633\u0644\u0629 \u0637\u0644\u0628 \u0627\u0644\u062C\u0631\u0633\u0648\u0646" },
-        h36(
+        h37(
           "header",
           { className: "waiter-dialog-header" },
-          h36(
+          h37(
             "div",
             { className: "waiter-dialog-title-wrap" },
-            h36("div", { className: "waiter-dialog-icon" }, h36(ShoppingCart8, { size: 19 })),
-            h36(
+            h37("div", { className: "waiter-dialog-icon" }, h37(ShoppingCart8, { size: 19 })),
+            h37(
               "div",
               null,
-              h36("div", { className: "waiter-dialog-title" }, orderType === "dine_in" ? `\u0637\u0644\u0628 \u0637\u0627\u0648\u0644\u0629 ${selectedTable?.tableNumber || selectedTable?.name || "-"}` : "\u0637\u0644\u0628 \u0633\u0641\u0631\u064A"),
-              h36("div", { className: "waiter-dialog-subtitle" }, `${activeEmployee?.name || t("\u0627\u0644\u062C\u0631\u0633\u0648\u0646")} \u2022 ${cartQty} \u0642\u0637\u0639\u0629${activeExistingOrder ? " \u2022 \u0637\u0644\u0628 \u0645\u0641\u062A\u0648\u062D" : ""}`)
+              h37("div", { className: "waiter-dialog-title" }, orderType === "dine_in" ? `\u0637\u0644\u0628 \u0637\u0627\u0648\u0644\u0629 ${selectedTable?.tableNumber || selectedTable?.name || "-"}` : "\u0637\u0644\u0628 \u0633\u0641\u0631\u064A"),
+              h37("div", { className: "waiter-dialog-subtitle" }, `${activeEmployee?.name || t("\u0627\u0644\u062C\u0631\u0633\u0648\u0646")} \u2022 ${cartQty} \u0642\u0637\u0639\u0629${activeExistingOrder ? " \u2022 \u0637\u0644\u0628 \u0645\u0641\u062A\u0648\u062D" : ""}`)
             )
           ),
-          h36("button", { type: "button", onClick: () => setIsCartOpen(false), className: "waiter-icon-button", "aria-label": t("\u0625\u063A\u0644\u0627\u0642") }, h36(X32, { size: 18 }))
+          h37("button", { type: "button", onClick: () => setIsCartOpen(false), className: "waiter-icon-button", "aria-label": t("\u0625\u063A\u0644\u0627\u0642") }, h37(X33, { size: 18 }))
         ),
-        h36(
+        h37(
           "div",
           { className: "waiter-dialog-body custom-scrollbar" },
-          draftItems.length === 0 ? h36("div", { className: "waiter-cart-empty" }, h36(ShoppingCart8, { size: 34 }), h36("strong", null, "\u0627\u0644\u0633\u0644\u0629 \u0641\u0627\u0631\u063A\u0629"), h36("span", null, "\u0627\u0636\u063A\u0637 \u0639\u0644\u0649 \u0623\u064A \u0635\u0646\u0641 \u0644\u0625\u0636\u0627\u0641\u062A\u0647 \u0644\u0644\u0637\u0644\u0628")) : draftItems.map((item, idx) => {
+          draftItems.length === 0 ? h37("div", { className: "waiter-cart-empty" }, h37(ShoppingCart8, { size: 34 }), h37("strong", null, "\u0627\u0644\u0633\u0644\u0629 \u0641\u0627\u0631\u063A\u0629"), h37("span", null, "\u0627\u0636\u063A\u0637 \u0639\u0644\u0649 \u0623\u064A \u0635\u0646\u0641 \u0644\u0625\u0636\u0627\u0641\u062A\u0647 \u0644\u0644\u0637\u0644\u0628")) : draftItems.map((item, idx) => {
             const sent = item.status !== "new";
             const product = (products || []).find((p) => p.id === item.productId);
             const units = product?.units || [];
             const defaultUnit = units.find((u) => u.isDefaultSale) || units[0];
             const selectedUnitId = item.unitId || defaultUnit?.id || "";
-            return h36(
+            return h37(
               "article",
               { key: item.id || idx, className: `waiter-cart-line ${item.status === "cancelled" ? "is-cancelled" : ""} ${sent ? "is-sent" : ""}` },
-              h36(
+              h37(
                 "div",
                 { className: "waiter-cart-line-top" },
-                h36(
+                h37(
                   "div",
                   { className: "waiter-cart-line-info" },
-                  h36("strong", { className: "waiter-cart-line-name" }, item.productName),
-                  h36(
+                  h37("strong", { className: "waiter-cart-line-name" }, item.productName),
+                  h37(
                     "div",
                     { className: "waiter-cart-line-meta" },
-                    item.status === "new" && units.length > 1 ? h36(
+                    item.status === "new" && units.length > 1 ? h37(
                       "label",
                       { className: "waiter-unit-select-wrap" },
-                      h36("select", { value: selectedUnitId, onChange: (e) => updateItemUnit(idx, e.target.value), className: "waiter-unit-select" }, units.map((u) => h36("option", { key: u.id, value: u.id }, `${u.name} \u2014 ${money20(u.salePrice)} ${settings.currencySymbol || "\u20AA"}`))),
-                      h36(ChevronDown7, { size: 13 })
-                    ) : h36("span", { className: "waiter-meta-pill" }, item.unitName || defaultUnit?.name || "\u062D\u0628\u0629"),
-                    h36("span", { className: `waiter-status-pill ${item.status === "new" ? "new" : item.status === "ready" ? "ready" : "sent"}` }, item.status === "new" ? "\u062C\u062F\u064A\u062F" : item.status === "ready" ? "\u062C\u0627\u0647\u0632" : "\u0645\u0631\u0633\u0644 \u0644\u0644\u0645\u0637\u0628\u062E")
+                      h37("select", { value: selectedUnitId, onChange: (e) => updateItemUnit(idx, e.target.value), className: "waiter-unit-select" }, units.map((u) => h37("option", { key: u.id, value: u.id }, `${u.name} \u2014 ${money20(u.salePrice)} ${settings.currencySymbol || "\u20AA"}`))),
+                      h37(ChevronDown7, { size: 13 })
+                    ) : h37("span", { className: "waiter-meta-pill" }, item.unitName || defaultUnit?.name || "\u062D\u0628\u0629"),
+                    h37("span", { className: `waiter-status-pill ${item.status === "new" ? "new" : item.status === "ready" ? "ready" : "sent"}` }, item.status === "new" ? "\u062C\u062F\u064A\u062F" : item.status === "ready" ? "\u062C\u0627\u0647\u0632" : "\u0645\u0631\u0633\u0644 \u0644\u0644\u0645\u0637\u0628\u062E")
                   )
                 ),
-                h36("div", { className: "waiter-line-total" }, `${money20(Number(item.unitPrice) * Number(item.quantity))} ${settings.currencySymbol || "\u20AA"}`)
+                h37("div", { className: "waiter-line-total" }, `${money20(Number(item.unitPrice) * Number(item.quantity))} ${settings.currencySymbol || "\u20AA"}`)
               ),
-              item.status !== "cancelled" && h36(
+              item.status !== "cancelled" && h37(
                 "div",
                 { className: "waiter-cart-line-actions" },
-                h36(
+                h37(
                   "div",
                   { className: "waiter-qty-control" },
-                  h36("button", { type: "button", onClick: () => updateItemQty(idx, -1), "aria-label": "\u062A\u0642\u0644\u064A\u0644 \u0627\u0644\u0643\u0645\u064A\u0629" }, h36(Minus4, { size: 14 })),
-                  h36("span", null, item.quantity),
-                  h36("button", { type: "button", onClick: () => updateItemQty(idx, 1), "aria-label": "\u0632\u064A\u0627\u062F\u0629 \u0627\u0644\u0643\u0645\u064A\u0629" }, h36(Plus16, { size: 14 }))
+                  h37("button", { type: "button", onClick: () => updateItemQty(idx, -1), "aria-label": "\u062A\u0642\u0644\u064A\u0644 \u0627\u0644\u0643\u0645\u064A\u0629" }, h37(Minus4, { size: 14 })),
+                  h37("span", null, item.quantity),
+                  h37("button", { type: "button", onClick: () => updateItemQty(idx, 1), "aria-label": "\u0632\u064A\u0627\u062F\u0629 \u0627\u0644\u0643\u0645\u064A\u0629" }, h37(Plus16, { size: 14 }))
                 ),
-                h36("div", { className: "waiter-line-unit-price" }, `${money20(item.unitPrice)} ${settings.currencySymbol || "\u20AA"} / ${item.unitName || defaultUnit?.name || "\u062D\u0628\u0629"}`),
-                h36("button", { type: "button", onClick: () => handleRemoveItem(item, idx), className: "waiter-remove-button", "aria-label": "\u062D\u0630\u0641 \u0627\u0644\u0635\u0646\u0641" }, h36(Trash228, { size: 17 }))
+                h37("div", { className: "waiter-line-unit-price" }, `${money20(item.unitPrice)} ${settings.currencySymbol || "\u20AA"} / ${item.unitName || defaultUnit?.name || "\u062D\u0628\u0629"}`),
+                h37("button", { type: "button", onClick: () => handleRemoveItem(item, idx), className: "waiter-remove-button", "aria-label": "\u062D\u0630\u0641 \u0627\u0644\u0635\u0646\u0641" }, h37(Trash228, { size: 17 }))
               )
             );
           })
         ),
-        h36(
+        h37(
           "footer",
           { className: "waiter-dialog-footer" },
-          h36(
+          h37(
             "div",
             { className: "waiter-footer-fields" },
-            h36(
+            h37(
               "label",
               { className: "waiter-field waiter-customer-field" },
-              h36("span", null, t("\u0627\u0633\u0645 \u0627\u0644\u0639\u0645\u064A\u0644")),
-              h36("input", { value: customerName, onChange: (e) => setCustomerName(e.target.value), placeholder: t("\u0627\u062E\u062A\u064A\u0627\u0631\u064A") })
+              h37("span", null, t("\u0627\u0633\u0645 \u0627\u0644\u0639\u0645\u064A\u0644")),
+              h37("input", { value: customerName, onChange: (e) => setCustomerName(e.target.value), placeholder: t("\u0627\u062E\u062A\u064A\u0627\u0631\u064A") })
             ),
-            h36(
+            h37(
               "label",
               { className: "waiter-field waiter-note-field" },
-              h36("span", null, h36(StickyNote, { size: 14 }), "\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0644\u0644\u0645\u0637\u0628\u062E"),
-              h36("textarea", { value: orderNote, onChange: (e) => setOrderNote(e.target.value), onKeyDown: (e) => {
+              h37("span", null, h37(StickyNote, { size: 14 }), "\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0644\u0644\u0645\u0637\u0628\u062E"),
+              h37("textarea", { value: orderNote, onChange: (e) => setOrderNote(e.target.value), onKeyDown: (e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
                   handleSendToKitchen();
@@ -23603,18 +23665,18 @@ var RestaurantWaiterView = () => {
               }, rows: 2, placeholder: "\u0645\u062B\u0627\u0644: \u0628\u062F\u0648\u0646 \u0645\u0644\u062D\u060C \u0645\u0633\u062A\u0639\u062C\u0644..." })
             )
           ),
-          h36(
+          h37(
             "div",
             { className: "waiter-footer-summary" },
-            h36("div", { className: "waiter-total-box" }, h36("span", null, t("\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A")), h36("strong", null, `${money20(subtotal)} ${settings.currencySymbol || "\u20AA"}`)),
-            h36(
+            h37("div", { className: "waiter-total-box" }, h37("span", null, t("\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A")), h37("strong", null, `${money20(subtotal)} ${settings.currencySymbol || "\u20AA"}`)),
+            h37(
               "div",
               { className: "waiter-footer-buttons" },
-              activeExistingOrder && h36("button", { type: "button", onClick: () => {
+              activeExistingOrder && h37("button", { type: "button", onClick: () => {
                 setShowTicketModal(activeExistingOrder);
                 setIsAdditionTicket(false);
-              }, className: "waiter-secondary-action" }, h36(Printer11, { size: 16 }), t("\u0637\u0628\u0627\u0639\u0629")),
-              h36("button", { type: "button", id: "waiter-send-kitchen", "data-enter-primary": "true", onClick: handleSendToKitchen, disabled: !draftItems.length && !orderNote.trim(), className: "waiter-primary-action" }, h36(Send3, { size: 17 }), activeExistingOrder ? "\u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u062A\u062D\u062F\u064A\u062B" : "\u0625\u0631\u0633\u0627\u0644 \u0644\u0644\u0645\u0637\u0628\u062E")
+              }, className: "waiter-secondary-action" }, h37(Printer11, { size: 16 }), t("\u0637\u0628\u0627\u0639\u0629")),
+              h37("button", { type: "button", id: "waiter-send-kitchen", "data-enter-primary": "true", onClick: handleSendToKitchen, disabled: !draftItems.length && !orderNote.trim(), className: "waiter-primary-action" }, h37(Send3, { size: 17 }), activeExistingOrder ? "\u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u062A\u062D\u062F\u064A\u062B" : "\u0625\u0631\u0633\u0627\u0644 \u0644\u0644\u0645\u0637\u0628\u062E")
             )
           )
         )
@@ -23623,92 +23685,92 @@ var RestaurantWaiterView = () => {
     document.body
   ) : null;
   const cancelModal = cancelModalItem ? createPortal19(
-    h36(
+    h37(
       "div",
       { className: "waiter-frost-overlay waiter-confirm-overlay", onMouseDown: (e) => {
         if (e.target === e.currentTarget) setCancelModalItem(null);
       } },
-      h36(
+      h37(
         "section",
         { className: "waiter-confirm-dialog", role: "alertdialog", "aria-modal": "true" },
-        h36("div", { className: "waiter-confirm-heading" }, h36("div", { className: "waiter-confirm-icon" }, h36(AlertTriangle5, { size: 20 })), h36("div", null, h36("strong", null, "\u0625\u0644\u063A\u0627\u0621 \u0635\u0646\u0641 \u0645\u0631\u0633\u0644 \u0644\u0644\u0645\u0637\u0628\u062E"), h36("span", null, cancelModalItem.productName))),
-        h36("label", { className: "waiter-field" }, h36("span", null, "\u0633\u0628\u0628 \u0627\u0644\u0625\u0644\u063A\u0627\u0621"), h36("select", { value: cancelReason, onChange: (e) => setCancelReason(e.target.value) }, ["\u0637\u0644\u0628 \u0627\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u062A\u0631\u0627\u062C\u0639", "\u062E\u0637\u0623 \u0627\u0644\u062C\u0631\u0633\u0648\u0646 \u0641\u064A \u0627\u0644\u0627\u062E\u062A\u064A\u0627\u0631", "\u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 \u0641\u064A \u0627\u0644\u0645\u0637\u0628\u062E", "\u062A\u0623\u062E\u0631 \u0627\u0644\u062A\u062D\u0636\u064A\u0631"].map((x) => h36("option", { key: x, value: x }, x)))),
-        h36("label", { className: "waiter-field waiter-pin-field" }, h36("span", null, "\u0631\u0645\u0632 \u0627\u0644\u0645\u0634\u0631\u0641"), h36("div", { className: "waiter-pin-wrap" }, h36(Lock2, { size: 16 }), h36("input", { type: "password", value: managerPin, onChange: (e) => setManagerPin(e.target.value), placeholder: "PIN" }))),
-        h36("div", { className: "waiter-confirm-actions" }, h36("button", { type: "button", onClick: () => setCancelModalItem(null), className: "waiter-secondary-action" }, "\u062A\u0631\u0627\u062C\u0639"), h36("button", { type: "button", onClick: handleConfirmCancelItem, className: "waiter-danger-action" }, "\u062A\u0623\u0643\u064A\u062F \u0627\u0644\u062D\u0630\u0641"))
+        h37("div", { className: "waiter-confirm-heading" }, h37("div", { className: "waiter-confirm-icon" }, h37(AlertTriangle5, { size: 20 })), h37("div", null, h37("strong", null, "\u0625\u0644\u063A\u0627\u0621 \u0635\u0646\u0641 \u0645\u0631\u0633\u0644 \u0644\u0644\u0645\u0637\u0628\u062E"), h37("span", null, cancelModalItem.productName))),
+        h37("label", { className: "waiter-field" }, h37("span", null, "\u0633\u0628\u0628 \u0627\u0644\u0625\u0644\u063A\u0627\u0621"), h37("select", { value: cancelReason, onChange: (e) => setCancelReason(e.target.value) }, ["\u0637\u0644\u0628 \u0627\u0644\u0639\u0645\u064A\u0644 \u0627\u0644\u062A\u0631\u0627\u062C\u0639", "\u062E\u0637\u0623 \u0627\u0644\u062C\u0631\u0633\u0648\u0646 \u0641\u064A \u0627\u0644\u0627\u062E\u062A\u064A\u0627\u0631", "\u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631 \u0641\u064A \u0627\u0644\u0645\u0637\u0628\u062E", "\u062A\u0623\u062E\u0631 \u0627\u0644\u062A\u062D\u0636\u064A\u0631"].map((x) => h37("option", { key: x, value: x }, x)))),
+        h37("label", { className: "waiter-field waiter-pin-field" }, h37("span", null, "\u0631\u0645\u0632 \u0627\u0644\u0645\u0634\u0631\u0641"), h37("div", { className: "waiter-pin-wrap" }, h37(Lock2, { size: 16 }), h37("input", { type: "password", value: managerPin, onChange: (e) => setManagerPin(e.target.value), placeholder: "PIN" }))),
+        h37("div", { className: "waiter-confirm-actions" }, h37("button", { type: "button", onClick: () => setCancelModalItem(null), className: "waiter-secondary-action" }, "\u062A\u0631\u0627\u062C\u0639"), h37("button", { type: "button", onClick: handleConfirmCancelItem, className: "waiter-danger-action" }, "\u062A\u0623\u0643\u064A\u062F \u0627\u0644\u062D\u0630\u0641"))
       )
     ),
     document.body
   ) : null;
-  return h36(
+  return h37(
     React58.Fragment,
     null,
-    h36(
+    h37(
       "div",
       { dir: "rtl", className: "waiter-v2-root" },
-      h36(
+      h37(
         "div",
         { className: "waiter-v2-topbar" },
-        h36(
+        h37(
           "div",
           { className: "waiter-v2-order-controls" },
-          h36(
+          h37(
             "div",
             { className: "waiter-v2-segment" },
-            h36("button", { type: "button", onClick: () => {
+            h37("button", { type: "button", onClick: () => {
               setIgnoreHydrateTableId("");
               setOrderType("dine_in");
-            }, className: orderType === "dine_in" ? "active" : "" }, h36(Utensils2, { size: 16 }), "\u0637\u0627\u0648\u0644\u0629"),
-            h36("button", { type: "button", onClick: () => {
+            }, className: orderType === "dine_in" ? "active" : "" }, h37(Utensils2, { size: 16 }), "\u0637\u0627\u0648\u0644\u0629"),
+            h37("button", { type: "button", onClick: () => {
               setIgnoreHydrateTableId("");
               setOrderType("takeaway");
-            }, className: orderType === "takeaway" ? "active" : "" }, h36(ShoppingBag2, { size: 16 }), "\u0633\u0641\u0631\u064A")
+            }, className: orderType === "takeaway" ? "active" : "" }, h37(ShoppingBag2, { size: 16 }), "\u0633\u0641\u0631\u064A")
           ),
-          orderType === "dine_in" ? h36("label", { className: "waiter-v2-select" }, h36("select", { value: selectedTableId, onChange: (e) => {
+          orderType === "dine_in" ? h37("label", { className: "waiter-v2-select" }, h37("select", { value: selectedTableId, onChange: (e) => {
             setIgnoreHydrateTableId("");
             setSelectedTableId(e.target.value);
           } }, tables.map((t2, idx) => {
             const label = t2.tableNumber ?? t2.name ?? idx + 1;
             const section = t2.sectionName ? ` \u2022 ${t2.sectionName}` : "";
-            return h36("option", { key: t2.id, value: t2.id }, `\u0637\u0627\u0648\u0644\u0629 ${label}${section} \u2014 ${t2.status === "available" ? "\u0645\u062A\u0627\u062D\u0629" : "\u0645\u0634\u063A\u0648\u0644\u0629"}`);
-          })), h36(ChevronDown7, { size: 15 })) : h36("div", { className: "waiter-v2-takeaway-note" }, h36(ShoppingBag2, { size: 16 }), h36("span", null, "\u0637\u0644\u0628 \u0633\u0641\u0631\u064A \u062C\u062F\u064A\u062F")),
-          orderType === "dine_in" && h36("label", { className: "waiter-v2-guests", title: "\u0639\u062F\u062F \u0627\u0644\u0623\u0641\u0631\u0627\u062F" }, h36(Users13, { size: 16 }), h36("input", { type: "number", min: 1, max: 25, value: guestCount, onChange: (e) => setGuestCount(parseInt(e.target.value) || 1) }), h36("span", null, "\u0623\u0641\u0631\u0627\u062F")),
-          activeExistingOrder && h36("span", { className: "waiter-v2-open-order" }, "\u0637\u0644\u0628 \u0645\u0641\u062A\u0648\u062D")
+            return h37("option", { key: t2.id, value: t2.id }, `\u0637\u0627\u0648\u0644\u0629 ${label}${section} \u2014 ${t2.status === "available" ? "\u0645\u062A\u0627\u062D\u0629" : "\u0645\u0634\u063A\u0648\u0644\u0629"}`);
+          })), h37(ChevronDown7, { size: 15 })) : h37("div", { className: "waiter-v2-takeaway-note" }, h37(ShoppingBag2, { size: 16 }), h37("span", null, "\u0637\u0644\u0628 \u0633\u0641\u0631\u064A \u062C\u062F\u064A\u062F")),
+          orderType === "dine_in" && h37("label", { className: "waiter-v2-guests", title: "\u0639\u062F\u062F \u0627\u0644\u0623\u0641\u0631\u0627\u062F" }, h37(Users13, { size: 16 }), h37("input", { type: "number", min: 1, max: 25, value: guestCount, onChange: (e) => setGuestCount(parseInt(e.target.value) || 1) }), h37("span", null, "\u0623\u0641\u0631\u0627\u062F")),
+          activeExistingOrder && h37("span", { className: "waiter-v2-open-order" }, "\u0637\u0644\u0628 \u0645\u0641\u062A\u0648\u062D")
         ),
-        h36("button", { type: "button", className: "waiter-v2-cart-summary", onClick: () => setIsCartOpen(true) }, h36("span", { className: "waiter-v2-cart-icon" }, h36(ShoppingCart8, { size: 18 }), cartQty > 0 && h36("b", null, cartQty)), h36("span", { className: "waiter-v2-cart-copy" }, h36("small", null, t("\u0627\u0644\u0633\u0644\u0629")), h36("strong", null, `${money20(subtotal)} ${settings.currencySymbol || "\u20AA"}`)))
+        h37("button", { type: "button", className: "waiter-v2-cart-summary", onClick: () => setIsCartOpen(true) }, h37("span", { className: "waiter-v2-cart-icon" }, h37(ShoppingCart8, { size: 18 }), cartQty > 0 && h37("b", null, cartQty)), h37("span", { className: "waiter-v2-cart-copy" }, h37("small", null, t("\u0627\u0644\u0633\u0644\u0629")), h37("strong", null, `${money20(subtotal)} ${settings.currencySymbol || "\u20AA"}`)))
       ),
-      h36(
+      h37(
         "div",
         { className: "waiter-v2-discovery" },
-        h36("div", { className: "waiter-v2-search" }, h36(Search14, { size: 17 }), h36("input", { value: searchTerm, onChange: (e) => setSearchTerm(e.target.value), placeholder: "\u0627\u0628\u062D\u062B \u0628\u0627\u0633\u0645 \u0627\u0644\u0635\u0646\u0641 \u0623\u0648 \u0627\u0644\u0628\u0627\u0631\u0643\u0648\u062F..." })),
-        h36(
+        h37("div", { className: "waiter-v2-search" }, h37(Search14, { size: 17 }), h37("input", { value: searchTerm, onChange: (e) => setSearchTerm(e.target.value), placeholder: "\u0627\u0628\u062D\u062B \u0628\u0627\u0633\u0645 \u0627\u0644\u0635\u0646\u0641 \u0623\u0648 \u0627\u0644\u0628\u0627\u0631\u0643\u0648\u062F..." })),
+        h37(
           "div",
           { className: "waiter-v2-categories custom-scrollbar" },
-          h36("button", { type: "button", onClick: () => setSelectedCategoryId("all"), className: selectedCategoryId === "all" ? "active" : "" }, `\u0627\u0644\u0643\u0644 ${restaurantProducts.length}`),
-          restaurantCategories.map((cat) => h36("button", { type: "button", key: cat.id, onClick: () => setSelectedCategoryId(cat.id), className: selectedCategoryId === cat.id ? "active" : "" }, cat.name))
+          h37("button", { type: "button", onClick: () => setSelectedCategoryId("all"), className: selectedCategoryId === "all" ? "active" : "" }, `\u0627\u0644\u0643\u0644 ${restaurantProducts.length}`),
+          restaurantCategories.map((cat) => h37("button", { type: "button", key: cat.id, onClick: () => setSelectedCategoryId(cat.id), className: selectedCategoryId === cat.id ? "active" : "" }, cat.name))
         )
       ),
-      h36(
+      h37(
         "main",
         { className: "waiter-v2-products custom-scrollbar" },
-        filteredProducts.length === 0 ? h36("div", { className: "waiter-v2-empty" }, h36(Search14, { size: 30 }), h36("strong", null, "\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0635\u0646\u0627\u0641 \u0645\u0637\u0627\u0628\u0642\u0629"), h36("span", null, "\u063A\u064A\u0651\u0631 \u0627\u0644\u0628\u062D\u062B \u0623\u0648 \u0627\u0644\u062A\u0635\u0646\u064A\u0641")) : h36("div", { className: "waiter-v2-grid" }, filteredProducts.map((prod) => {
+        filteredProducts.length === 0 ? h37("div", { className: "waiter-v2-empty" }, h37(Search14, { size: 30 }), h37("strong", null, "\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0635\u0646\u0627\u0641 \u0645\u0637\u0627\u0628\u0642\u0629"), h37("span", null, "\u063A\u064A\u0651\u0631 \u0627\u0644\u0628\u062D\u062B \u0623\u0648 \u0627\u0644\u062A\u0635\u0646\u064A\u0641")) : h37("div", { className: "waiter-v2-grid" }, filteredProducts.map((prod) => {
           const unit = (prod.units || []).find((u) => u.isDefaultSale) || (prod.units || [])[0];
           const price = Number(unit?.salePrice ?? prod.sellingPrice ?? prod.salePrice ?? 0) || 0;
           const qty = productQty(prod.id);
-          return h36(
+          return h37(
             "button",
             { type: "button", key: prod.id, onClick: () => handleQuickAdd(prod), className: `waiter-v2-product ${qty ? "has-qty" : ""}` },
-            qty > 0 && h36("span", { className: "waiter-v2-product-qty" }, qty),
-            h36("div", { className: "waiter-v2-product-head" }, h36("span", { className: "waiter-v2-product-category" }, prod.categoryName || "\u0645\u0637\u0639\u0645"), h36("span", { className: "waiter-v2-product-plus" }, h36(Plus16, { size: 16 }))),
-            h36("strong", { className: "waiter-v2-product-name" }, prod.name),
-            h36("div", { className: "waiter-v2-product-foot" }, h36("span", { className: "waiter-v2-product-unit" }, unit?.name || prod.baseUnitName || "\u062D\u0628\u0629"), h36("b", null, `${money20(price)} ${settings.currencySymbol || "\u20AA"}`))
+            qty > 0 && h37("span", { className: "waiter-v2-product-qty" }, qty),
+            h37("div", { className: "waiter-v2-product-head" }, h37("span", { className: "waiter-v2-product-category" }, prod.categoryName || "\u0645\u0637\u0639\u0645"), h37("span", { className: "waiter-v2-product-plus" }, h37(Plus16, { size: 16 }))),
+            h37("strong", { className: "waiter-v2-product-name" }, prod.name),
+            h37("div", { className: "waiter-v2-product-foot" }, h37("span", { className: "waiter-v2-product-unit" }, unit?.name || prod.baseUnitName || "\u062D\u0628\u0629"), h37("b", null, `${money20(price)} ${settings.currencySymbol || "\u20AA"}`))
           );
         }))
       ),
-      h36("button", { id: "waiter-cart-fab", type: "button", onClick: () => setIsCartOpen(true), className: "waiter-v2-fab" }, h36(ShoppingCart8, { size: 22 }), cartQty > 0 && h36("span", null, cartQty))
+      h37("button", { id: "waiter-cart-fab", type: "button", onClick: () => setIsCartOpen(true), className: "waiter-v2-fab" }, h37(ShoppingCart8, { size: 22 }), cartQty > 0 && h37("span", null, cartQty))
     ),
     cartModal,
     cancelModal,
-    showTicketModal && h36(KitchenTicketModal, { order: showTicketModal, isAdditionOnly: isAdditionTicket, onClose: () => setShowTicketModal(null) })
+    showTicketModal && h37(KitchenTicketModal, { order: showTicketModal, isAdditionOnly: isAdditionTicket, onClose: () => setShowTicketModal(null) })
   );
 };
 
@@ -23728,7 +23790,7 @@ import {
   StickyNote as StickyNote2,
   TimerReset,
   CircleDot as CircleDot2,
-  X as X33
+  X as X34
 } from "lucide-react";
 
 // app/restaurant__services__kitchenPrint.js
@@ -23824,7 +23886,7 @@ async function printKitchenTicketDirect(order, settings = {}, options = {}) {
 }
 
 // app/restaurant__components__RestaurantKDSView.js
-var h37 = React59.createElement;
+var h38 = React59.createElement;
 var noteText2 = (notes) => typeof notes === "string" ? notes : String(notes?.kitchenNotes || notes?.general || "");
 var RestaurantKDSView = () => {
   const { orders, updateOrderStatus, updateOrderItemStatus, cancelRestaurantOrder } = useRestaurant();
@@ -23916,44 +23978,44 @@ var RestaurantKDSView = () => {
     await cancelRestaurantOrder(order.id, "\u062D\u0630\u0641 \u0645\u0646 \u0634\u0627\u0634\u0629 \u0627\u0644\u0645\u0637\u0628\u062E", false);
     showToast("\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0637\u0644\u0628 \u0645\u0646 \u0634\u0627\u0634\u0629 \u0627\u0644\u0645\u0637\u0628\u062E", "info");
   };
-  const tabButton = (id, label, count) => h37("button", {
+  const tabButton = (id, label, count) => h38("button", {
     key: id,
     onClick: () => setFilterTab(id),
     className: `px-3 py-2 rounded-xl text-[11px] sm:text-xs font-black whitespace-nowrap border transition ${filterTab === id ? "bg-amber-500 border-amber-500 text-white shadow-sm" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}`
   }, count === void 0 ? label : `${label} (${count})`);
-  return h37(
+  return h38(
     "div",
     {
       dir: "rtl",
       className: "flex flex-col h-full w-full bg-slate-50 text-slate-900 overflow-hidden select-none text-right"
     },
-    h37(
+    h38(
       "div",
       { className: "bg-white border-b border-slate-200 px-3 sm:px-5 py-3 shadow-sm shrink-0" },
-      h37(
+      h38(
         "div",
         { className: "flex flex-col lg:flex-row lg:items-center justify-between gap-3" },
-        h37(
+        h38(
           "div",
           { className: "flex items-center gap-3 min-w-0" },
-          h37("div", { className: "w-11 h-11 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0" }, h37(ChefHat6, { className: "w-6 h-6" })),
-          h37(
+          h38("div", { className: "w-11 h-11 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0" }, h38(ChefHat6, { className: "w-6 h-6" })),
+          h38(
             "div",
             { className: "min-w-0" },
-            h37("div", { className: "font-black text-base sm:text-lg text-slate-900" }, "\u0634\u0627\u0634\u0629 \u0627\u0644\u0645\u0637\u0628\u062E"),
-            h37("div", { className: "text-[10px] sm:text-[11px] text-slate-500 font-semibold" }, "\u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0648\u0627\u0644\u0623\u0635\u0646\u0627\u0641 \u0648\u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u062A\u0635\u0644 \u0645\u0628\u0627\u0634\u0631\u0629 \u0645\u0646 \u0627\u0644\u062C\u0631\u0633\u0648\u0646")
+            h38("div", { className: "font-black text-base sm:text-lg text-slate-900" }, "\u0634\u0627\u0634\u0629 \u0627\u0644\u0645\u0637\u0628\u062E"),
+            h38("div", { className: "text-[10px] sm:text-[11px] text-slate-500 font-semibold" }, "\u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0648\u0627\u0644\u0623\u0635\u0646\u0627\u0641 \u0648\u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u062A\u0635\u0644 \u0645\u0628\u0627\u0634\u0631\u0629 \u0645\u0646 \u0627\u0644\u062C\u0631\u0633\u0648\u0646")
           )
         ),
-        h37(
+        h38(
           "div",
           { className: "grid grid-cols-4 gap-1.5 sm:gap-2 w-full lg:w-auto" },
-          h37("div", { className: "rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2 text-center min-w-0" }, h37("div", { className: "text-[9px] text-slate-500 font-bold" }, "\u0627\u0644\u0646\u0634\u0637\u0629"), h37("div", { className: "text-sm font-black text-slate-900" }, counts.active)),
-          h37("div", { className: "rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-2 text-center min-w-0" }, h37("div", { className: "text-[9px] text-amber-700 font-bold" }, "\u062C\u062F\u064A\u062F\u0629"), h37("div", { className: "text-sm font-black text-amber-700" }, counts.sent)),
-          h37("div", { className: "rounded-xl border border-blue-200 bg-blue-50 px-2.5 py-2 text-center min-w-0" }, h37("div", { className: "text-[9px] text-blue-700 font-bold" }, "\u062A\u062D\u0636\u064A\u0631"), h37("div", { className: "text-sm font-black text-blue-700" }, counts.preparing)),
-          h37("div", { className: "rounded-xl border border-violet-200 bg-violet-50 px-2.5 py-2 text-center min-w-0" }, h37("div", { className: "text-[9px] text-violet-700 font-bold" }, "\u062C\u0627\u0647\u0632\u0629"), h37("div", { className: "text-sm font-black text-violet-700" }, counts.ready))
+          h38("div", { className: "rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2 text-center min-w-0" }, h38("div", { className: "text-[9px] text-slate-500 font-bold" }, "\u0627\u0644\u0646\u0634\u0637\u0629"), h38("div", { className: "text-sm font-black text-slate-900" }, counts.active)),
+          h38("div", { className: "rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-2 text-center min-w-0" }, h38("div", { className: "text-[9px] text-amber-700 font-bold" }, "\u062C\u062F\u064A\u062F\u0629"), h38("div", { className: "text-sm font-black text-amber-700" }, counts.sent)),
+          h38("div", { className: "rounded-xl border border-blue-200 bg-blue-50 px-2.5 py-2 text-center min-w-0" }, h38("div", { className: "text-[9px] text-blue-700 font-bold" }, "\u062A\u062D\u0636\u064A\u0631"), h38("div", { className: "text-sm font-black text-blue-700" }, counts.preparing)),
+          h38("div", { className: "rounded-xl border border-violet-200 bg-violet-50 px-2.5 py-2 text-center min-w-0" }, h38("div", { className: "text-[9px] text-violet-700 font-bold" }, "\u062C\u0627\u0647\u0632\u0629"), h38("div", { className: "text-sm font-black text-violet-700" }, counts.ready))
         )
       ),
-      h37(
+      h38(
         "div",
         { className: "mt-3 flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar" },
         tabButton("active", "\u0627\u0644\u0646\u0634\u0637\u0629", counts.active),
@@ -23961,23 +24023,23 @@ var RestaurantKDSView = () => {
         tabButton("preparing", "\u0642\u064A\u062F \u0627\u0644\u062A\u062D\u0636\u064A\u0631", counts.preparing),
         tabButton("ready", "\u062C\u0627\u0647\u0632\u0629 \u0628\u0627\u0644\u0643\u0627\u0645\u0644", counts.ready),
         tabButton("completed", "\u0627\u0644\u0645\u0633\u0644\u0651\u0645\u0629"),
-        h37("button", {
+        h38("button", {
           onClick: () => setSoundEnabled((v) => !v),
           className: `mr-auto shrink-0 p-2 rounded-xl border ${soundEnabled ? "bg-violet-50 border-violet-200 text-violet-700" : "bg-white border-slate-200 text-slate-500"}`,
           title: soundEnabled ? "\u0627\u0644\u0635\u0648\u062A \u0645\u0641\u0639\u0644" : "\u0627\u0644\u0635\u0648\u062A \u0645\u062A\u0648\u0642\u0641"
-        }, soundEnabled ? h37(Volume2, { className: "w-4 h-4" }) : h37(VolumeX, { className: "w-4 h-4" }))
+        }, soundEnabled ? h38(Volume2, { className: "w-4 h-4" }) : h38(VolumeX, { className: "w-4 h-4" }))
       )
     ),
-    h37(
+    h38(
       "div",
       { className: "flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 custom-scrollbar" },
-      filteredOrders.length === 0 ? h37(
+      filteredOrders.length === 0 ? h38(
         "div",
         { className: "h-full min-h-64 flex flex-col items-center justify-center text-slate-400" },
-        h37(CheckCircle26, { className: "w-14 h-14 opacity-25" }),
-        h37("div", { className: "mt-2 font-black text-sm text-slate-500" }, "\u0644\u0627 \u062A\u0648\u062C\u062F \u0637\u0644\u0628\u0627\u062A \u0647\u0646\u0627"),
-        h37("div", { className: "mt-1 text-[11px]" }, "\u0623\u064A \u0637\u0644\u0628 \u062C\u062F\u064A\u062F \u0633\u064A\u0638\u0647\u0631 \u0639\u0644\u0649 \u0627\u0644\u0634\u0627\u0634\u0629 \u0641\u0648\u0631 \u0648\u0635\u0648\u0644\u0647 \u0645\u0646 \u0627\u0644\u062C\u0631\u0633\u0648\u0646")
-      ) : h37(
+        h38(CheckCircle26, { className: "w-14 h-14 opacity-25" }),
+        h38("div", { className: "mt-2 font-black text-sm text-slate-500" }, "\u0644\u0627 \u062A\u0648\u062C\u062F \u0637\u0644\u0628\u0627\u062A \u0647\u0646\u0627"),
+        h38("div", { className: "mt-1 text-[11px]" }, "\u0623\u064A \u0637\u0644\u0628 \u062C\u062F\u064A\u062F \u0633\u064A\u0638\u0647\u0631 \u0639\u0644\u0649 \u0627\u0644\u0634\u0627\u0634\u0629 \u0641\u0648\u0631 \u0648\u0635\u0648\u0644\u0647 \u0645\u0646 \u0627\u0644\u062C\u0631\u0633\u0648\u0646")
+      ) : h38(
         "div",
         { className: "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4" },
         filteredOrders.map((order) => {
@@ -23987,52 +24049,52 @@ var RestaurantKDSView = () => {
           const note = noteText2(order.notes);
           const items = (order.items || []).filter((i) => i.status !== "cancelled");
           const readyItems = items.filter((i) => i.status === "ready").length;
-          return h37(
+          return h38(
             "article",
             {
               key: order.id,
               onClick: () => setDetailsModalOrder(order),
               className: `rounded-2xl border bg-white overflow-hidden shadow-sm cursor-pointer transition hover:shadow-md ${isReady ? "border-violet-300" : overdue ? "border-rose-300" : "border-slate-200"}`
             },
-            h37(
+            h38(
               "div",
               { className: `p-3 border-b ${isReady ? "bg-violet-50 border-violet-200" : overdue ? "bg-rose-50 border-rose-200" : "bg-white border-slate-100"} flex items-center justify-between gap-2` },
-              h37(
+              h38(
                 "div",
                 { className: "flex items-center gap-2 min-w-0" },
-                h37(
+                h38(
                   "div",
                   { className: `w-11 h-11 rounded-xl border flex flex-col items-center justify-center shrink-0 ${isReady ? "bg-white border-violet-200 text-violet-700" : "bg-slate-50 border-slate-200 text-slate-700"}` },
-                  order.orderType === "dine_in" ? h37(Utensils3, { className: "w-4 h-4" }) : h37(ShoppingBag3, { className: "w-4 h-4" }),
-                  h37("span", { className: "text-[9px] font-black mt-0.5" }, order.tableNumber || order.queueNumber || "\u0633\u0641\u0631\u064A")
+                  order.orderType === "dine_in" ? h38(Utensils3, { className: "w-4 h-4" }) : h38(ShoppingBag3, { className: "w-4 h-4" }),
+                  h38("span", { className: "text-[9px] font-black mt-0.5" }, order.tableNumber || order.queueNumber || "\u0633\u0641\u0631\u064A")
                 ),
-                h37(
+                h38(
                   "div",
                   { className: "min-w-0 flex-1" },
-                  h37("div", { className: "font-black text-sm text-slate-900 truncate" }, order.orderType === "dine_in" ? `\u0637\u0627\u0648\u0644\u0629 ${order.tableNumber || order.tableName || "-"}` : "\u0637\u0644\u0628 \u0633\u0641\u0631\u064A"),
-                  h37("div", { className: "text-[10px] text-slate-700 font-black truncate" }, `\u0627\u0644\u0639\u0645\u064A\u0644: ${order.customerName || "-"}`),
-                  h37("div", { className: "text-[10px] text-slate-500 font-semibold truncate" }, `\u0627\u0644\u062C\u0631\u0633\u0648\u0646: ${order.waiterName || "-"} \u2022 #${String(order.orderNumber || "").slice(-5)}`)
+                  h38("div", { className: "font-black text-sm text-slate-900 truncate" }, order.orderType === "dine_in" ? `\u0637\u0627\u0648\u0644\u0629 ${order.tableNumber || order.tableName || "-"}` : "\u0637\u0644\u0628 \u0633\u0641\u0631\u064A"),
+                  h38("div", { className: "text-[10px] text-slate-700 font-black truncate" }, `\u0627\u0644\u0639\u0645\u064A\u0644: ${order.customerName || "-"}`),
+                  h38("div", { className: "text-[10px] text-slate-500 font-semibold truncate" }, `\u0627\u0644\u062C\u0631\u0633\u0648\u0646: ${order.waiterName || "-"} \u2022 #${String(order.orderNumber || "").slice(-5)}`)
                 )
               ),
-              h37(
+              h38(
                 "div",
                 { className: `shrink-0 px-2 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 ${overdue && !isReady ? "bg-rose-100 text-rose-700" : "bg-slate-100 text-slate-600"}` },
-                h37(Clock7, { className: "w-3.5 h-3.5" }),
+                h38(Clock7, { className: "w-3.5 h-3.5" }),
                 `${mins} \u062F`
               )
             ),
-            h37(
+            h38(
               "div",
               { className: "px-3 pt-3 flex items-center justify-between text-[10px] font-bold text-slate-500" },
-              h37("span", null, `\u0627\u0644\u0623\u0635\u0646\u0627\u0641 ${items.length}`),
-              h37("span", { className: readyItems === items.length && items.length ? "text-violet-700" : "" }, `${readyItems}/${items.length} \u062C\u0627\u0647\u0632`)
+              h38("span", null, `\u0627\u0644\u0623\u0635\u0646\u0627\u0641 ${items.length}`),
+              h38("span", { className: readyItems === items.length && items.length ? "text-violet-700" : "" }, `${readyItems}/${items.length} \u062C\u0627\u0647\u0632`)
             ),
-            h37(
+            h38(
               "div",
               { className: "p-3 space-y-2 max-h-80 overflow-y-auto custom-scrollbar" },
               items.map((item) => {
                 const ready = item.status === "ready";
-                return h37(
+                return h38(
                   "button",
                   {
                     key: item.id,
@@ -24042,108 +24104,108 @@ var RestaurantKDSView = () => {
                     },
                     className: `w-full p-2.5 rounded-xl border text-right flex items-start justify-between gap-2 transition ${ready ? "bg-violet-50 text-violet-900 border-violet-200" : "bg-slate-50 text-slate-900 border-slate-200 hover:bg-slate-100"}`
                   },
-                  h37(
+                  h38(
                     "div",
                     { className: "min-w-0 flex-1" },
-                    h37("div", { className: "font-black text-base leading-7 tracking-normal" }, `${item.quantity} \xD7 ${item.productName}`),
-                    h37("div", { className: `text-[11px] leading-5 font-bold ${ready ? "text-violet-700" : "text-slate-500"}` }, ready ? "\u062C\u0627\u0647\u0632 \u2014 \u0627\u0636\u063A\u0637 \u0644\u0644\u062A\u0631\u0627\u062C\u0639" : "\u0627\u0636\u063A\u0637 \u0639\u0646\u062F \u0627\u0646\u062A\u0647\u0627\u0621 \u062A\u062D\u0636\u064A\u0631 \u0627\u0644\u0635\u0646\u0641")
+                    h38("div", { className: "font-black text-base leading-7 tracking-normal" }, `${item.quantity} \xD7 ${item.productName}`),
+                    h38("div", { className: `text-[11px] leading-5 font-bold ${ready ? "text-violet-700" : "text-slate-500"}` }, ready ? "\u062C\u0627\u0647\u0632 \u2014 \u0627\u0636\u063A\u0637 \u0644\u0644\u062A\u0631\u0627\u062C\u0639" : "\u0627\u0636\u063A\u0637 \u0639\u0646\u062F \u0627\u0646\u062A\u0647\u0627\u0621 \u062A\u062D\u0636\u064A\u0631 \u0627\u0644\u0635\u0646\u0641")
                   ),
-                  ready ? h37(CheckCircle26, { className: "w-5 h-5 text-violet-600 shrink-0 mt-0.5" }) : h37(CircleDot2, { className: "w-5 h-5 text-slate-300 shrink-0 mt-0.5" })
+                  ready ? h38(CheckCircle26, { className: "w-5 h-5 text-violet-600 shrink-0 mt-0.5" }) : h38(CircleDot2, { className: "w-5 h-5 text-slate-300 shrink-0 mt-0.5" })
                 );
               }),
-              note && h37(
+              note && h38(
                 "div",
                 { className: "p-3 rounded-xl border-2 border-amber-300 bg-amber-50 text-amber-950 text-sm font-black leading-6" },
-                h37(StickyNote2, { className: "inline w-4 h-4 ml-1 text-amber-600" }),
+                h38(StickyNote2, { className: "inline w-4 h-4 ml-1 text-amber-600" }),
                 `\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u0637\u0644\u0628: ${note}`
               )
             ),
-            h37(
+            h38(
               "div",
               { className: "p-3 border-t border-slate-100 bg-slate-50 flex items-center gap-2" },
-              h37(
+              h38(
                 "div",
                 { className: "flex items-center gap-2 shrink-0" },
-                h37("button", { onClick: (e) => {
+                h38("button", { onClick: (e) => {
                   e.stopPropagation();
                   setTicketModalOrder(order);
-                }, className: "w-10 h-10 p-0 rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 flex items-center justify-center shadow-sm", title: "\u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u062A\u0630\u0643\u0631\u0629" }, h37(Printer12, { className: "w-4 h-4" })),
-                h37("button", { onClick: (e) => {
+                }, className: "w-10 h-10 p-0 rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 flex items-center justify-center shadow-sm", title: "\u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u062A\u0630\u0643\u0631\u0629" }, h38(Printer12, { className: "w-4 h-4" })),
+                h38("button", { onClick: (e) => {
                   e.stopPropagation();
                   remove(order);
-                }, className: "w-10 h-10 p-0 rounded-xl border border-rose-300 bg-white text-rose-600 hover:bg-rose-50 flex items-center justify-center shadow-sm", title: "\u062D\u0630\u0641 \u0627\u0644\u0637\u0644\u0628" }, h37(Trash229, { className: "w-4 h-4" }))
+                }, className: "w-10 h-10 p-0 rounded-xl border border-rose-300 bg-white text-rose-600 hover:bg-rose-50 flex items-center justify-center shadow-sm", title: "\u062D\u0630\u0641 \u0627\u0644\u0637\u0644\u0628" }, h38(Trash229, { className: "w-4 h-4" }))
               ),
-              order.status === "sent" && h37("button", { onClick: (e) => {
+              order.status === "sent" && h38("button", { onClick: (e) => {
                 e.stopPropagation();
                 start(order.id);
-              }, className: "flex-1 h-10 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs shadow-sm flex items-center justify-center gap-1.5 active:scale-[.98]" }, h37(Flame, { className: "w-4 h-4" }), "\u0628\u062F\u0621 \u0627\u0644\u062A\u062D\u0636\u064A\u0631"),
-              ["preparing", "partially_ready"].includes(order.status) && h37("button", { onClick: (e) => {
+              }, className: "flex-1 h-10 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs shadow-sm flex items-center justify-center gap-1.5 active:scale-[.98]" }, h38(Flame, { className: "w-4 h-4" }), "\u0628\u062F\u0621 \u0627\u0644\u062A\u062D\u0636\u064A\u0631"),
+              ["preparing", "partially_ready"].includes(order.status) && h38("button", { onClick: (e) => {
                 e.stopPropagation();
                 fullyReady(order.id);
-              }, className: "flex-1 h-10 px-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-black text-xs shadow-sm flex items-center justify-center gap-1.5 active:scale-[.98]" }, h37(CheckCircle26, { className: "w-4 h-4" }), "\u062C\u0627\u0647\u0632 \u0628\u0627\u0644\u0643\u0627\u0645\u0644"),
-              order.status === "ready" && h37("button", { onClick: (e) => {
+              }, className: "flex-1 h-10 px-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-black text-xs shadow-sm flex items-center justify-center gap-1.5 active:scale-[.98]" }, h38(CheckCircle26, { className: "w-4 h-4" }), "\u062C\u0627\u0647\u0632 \u0628\u0627\u0644\u0643\u0627\u0645\u0644"),
+              order.status === "ready" && h38("button", { onClick: (e) => {
                 e.stopPropagation();
                 served(order.id);
-              }, className: "flex-1 h-10 px-3 rounded-xl font-black text-xs shadow-sm flex items-center justify-center gap-1.5 active:scale-[.98]", style: { backgroundColor: "#0f766e", color: "#ffffff", border: "1px solid #0f766e" } }, h37(TimerReset, { className: "w-4 h-4" }), "\u062A\u0645 \u0627\u0644\u062A\u0633\u0644\u064A\u0645")
+              }, className: "flex-1 h-10 px-3 rounded-xl font-black text-xs shadow-sm flex items-center justify-center gap-1.5 active:scale-[.98]", style: { backgroundColor: "#0f766e", color: "#ffffff", border: "1px solid #0f766e" } }, h38(TimerReset, { className: "w-4 h-4" }), "\u062A\u0645 \u0627\u0644\u062A\u0633\u0644\u064A\u0645")
             )
           );
         })
       )
     ),
-    detailsModalOrder && h37(
+    detailsModalOrder && h38(
       ModalLayer,
       {
         className: "fixed inset-0 flex items-center justify-center bg-black/60 p-2 sm:p-4",
         style: { zIndex: 9998 },
         onClick: () => setDetailsModalOrder(null)
       },
-      h37(
+      h38(
         "div",
         {
           className: "bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col w-full max-w-2xl",
           style: { maxHeight: "calc(100dvh - 150px)" },
           onClick: (e) => e.stopPropagation()
         },
-        h37(
+        h38(
           "div",
           { className: "p-3 sm:p-4 border-b bg-white flex items-start justify-between gap-3 shrink-0" },
-          h37(
+          h38(
             "div",
             { className: "min-w-0" },
-            h37("div", { className: "font-black text-lg text-slate-900" }, detailsModalOrder.orderType === "dine_in" ? `\u0637\u0644\u0628 \u0637\u0627\u0648\u0644\u0629 ${detailsModalOrder.tableNumber || detailsModalOrder.tableName || "-"}` : "\u0637\u0644\u0628 \u0633\u0641\u0631\u064A"),
-            h37(
+            h38("div", { className: "font-black text-lg text-slate-900" }, detailsModalOrder.orderType === "dine_in" ? `\u0637\u0644\u0628 \u0637\u0627\u0648\u0644\u0629 ${detailsModalOrder.tableNumber || detailsModalOrder.tableName || "-"}` : "\u0637\u0644\u0628 \u0633\u0641\u0631\u064A"),
+            h38(
               "div",
               { className: "mt-1 text-xs text-slate-600 font-bold flex flex-wrap gap-x-3 gap-y-1" },
-              h37("span", null, `\u0627\u0644\u0639\u0645\u064A\u0644: ${detailsModalOrder.customerName || "-"}`),
-              h37("span", null, `\u0627\u0644\u062C\u0631\u0633\u0648\u0646: ${detailsModalOrder.waiterName || "-"}`),
-              detailsModalOrder.orderType === "dine_in" ? h37("span", null, `\u0631\u0642\u0645 \u0627\u0644\u0637\u0627\u0648\u0644\u0629: ${detailsModalOrder.tableNumber || detailsModalOrder.tableName || "-"}`) : null
+              h38("span", null, `\u0627\u0644\u0639\u0645\u064A\u0644: ${detailsModalOrder.customerName || "-"}`),
+              h38("span", null, `\u0627\u0644\u062C\u0631\u0633\u0648\u0646: ${detailsModalOrder.waiterName || "-"}`),
+              detailsModalOrder.orderType === "dine_in" ? h38("span", null, `\u0631\u0642\u0645 \u0627\u0644\u0637\u0627\u0648\u0644\u0629: ${detailsModalOrder.tableNumber || detailsModalOrder.tableName || "-"}`) : null
             )
           ),
-          h37("button", { onClick: () => setDetailsModalOrder(null), className: "w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-600 flex items-center justify-center shrink-0" }, h37(X33, { className: "w-5 h-5" }))
+          h38("button", { onClick: () => setDetailsModalOrder(null), className: "w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-600 flex items-center justify-center shrink-0" }, h38(X34, { className: "w-5 h-5" }))
         ),
-        h37(
+        h38(
           "div",
           { className: "flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-2 custom-scrollbar", style: { WebkitOverflowScrolling: "touch" } },
-          (detailsModalOrder.items || []).filter((i) => i.status !== "cancelled").map((item, idx) => h37(
+          (detailsModalOrder.items || []).filter((i) => i.status !== "cancelled").map((item, idx) => h38(
             "div",
             {
               key: item.id || idx,
               className: `rounded-xl border p-3 ${item.status === "ready" ? "border-violet-200 bg-violet-50" : "border-slate-200 bg-slate-50"}`
             },
-            h37(
+            h38(
               "div",
               { className: "flex items-center justify-between gap-3" },
-              h37("div", { className: "font-black text-base text-slate-900" }, `${item.quantity} \xD7 ${item.productName}`),
-              h37("div", { className: `text-[10px] font-black px-2 py-1 rounded-lg ${item.status === "ready" ? "bg-violet-100 text-violet-700" : "bg-white text-slate-500 border border-slate-200"}` }, item.status === "ready" ? "\u062C\u0627\u0647\u0632" : "\u0642\u064A\u062F \u0627\u0644\u0639\u0645\u0644")
+              h38("div", { className: "font-black text-base text-slate-900" }, `${item.quantity} \xD7 ${item.productName}`),
+              h38("div", { className: `text-[10px] font-black px-2 py-1 rounded-lg ${item.status === "ready" ? "bg-violet-100 text-violet-700" : "bg-white text-slate-500 border border-slate-200"}` }, item.status === "ready" ? "\u062C\u0627\u0647\u0632" : "\u0642\u064A\u062F \u0627\u0644\u0639\u0645\u0644")
             ),
-            item.unitName ? h37("div", { className: "text-[11px] text-slate-600 font-bold mt-1" }, `\u0627\u0644\u0648\u062D\u062F\u0629: ${item.unitName}`) : null,
-            item.notes ? h37("div", { className: "mt-2 text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2" }, `\u0645\u0644\u0627\u062D\u0638\u0629: ${item.notes}`) : null
+            item.unitName ? h38("div", { className: "text-[11px] text-slate-600 font-bold mt-1" }, `\u0627\u0644\u0648\u062D\u062F\u0629: ${item.unitName}`) : null,
+            item.notes ? h38("div", { className: "mt-2 text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2" }, `\u0645\u0644\u0627\u062D\u0638\u0629: ${item.notes}`) : null
           )),
-          noteText2(detailsModalOrder.notes) ? h37("div", { className: "mt-3 rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-sm font-black text-amber-950" }, `\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u0637\u0644\u0628: ${noteText2(detailsModalOrder.notes)}`) : null
+          noteText2(detailsModalOrder.notes) ? h38("div", { className: "mt-3 rounded-xl border-2 border-amber-300 bg-amber-50 p-3 text-sm font-black text-amber-950" }, `\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u0637\u0644\u0628: ${noteText2(detailsModalOrder.notes)}`) : null
         )
       )
     ),
-    ticketModalOrder && h37(KitchenTicketModal, { order: ticketModalOrder, onClose: () => setTicketModalOrder(null) })
+    ticketModalOrder && h38(KitchenTicketModal, { order: ticketModalOrder, onClose: () => setTicketModalOrder(null) })
   );
 };
 
@@ -24304,8 +24366,8 @@ var RestaurantWasteView = () => {
 // app/restaurant__components__RestaurantSettingsPanel.js
 import React61 from "react";
 import { UtensilsCrossed as UtensilsCrossed8, Volume2 as Volume22, Save as Save4 } from "lucide-react";
-var h38 = React61.createElement;
-var row = (title, desc, control) => h38("div", { className: "flex items-center justify-between gap-3 p-3 border rounded-xl bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700" }, h38("div", { className: "min-w-0" }, h38("span", { className: "text-xs font-bold block" }, title), desc ? h38("span", { className: "text-[10px] text-slate-400 block mt-0.5" }, desc) : null), control);
+var h39 = React61.createElement;
+var row = (title, desc, control) => h39("div", { className: "flex items-center justify-between gap-3 p-3 border rounded-xl bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700" }, h39("div", { className: "min-w-0" }, h39("span", { className: "text-xs font-bold block" }, title), desc ? h39("span", { className: "text-[10px] text-slate-400 block mt-0.5" }, desc) : null), control);
 var RestaurantSettingsPanel = () => {
   const { settings, updateSettings, showToast, currentUser, activeEmployee } = useApp();
   const manager2 = isManagerAccess({ currentUser, activeEmployee });
@@ -24318,32 +24380,32 @@ var RestaurantSettingsPanel = () => {
     }
   };
   const enabled = !!settings.isRestaurantModeEnabled;
-  return h38(
+  return h39(
     "div",
     { id: "restaurant-settings-panel", className: "p-5 rounded-2xl bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/70 shadow-xs space-y-4" },
-    h38(
+    h39(
       "div",
       { className: "flex items-center justify-between gap-3 border-b pb-3 border-slate-100 dark:border-slate-800" },
-      h38("div", { className: "flex items-center gap-2 min-w-0" }, h38("div", { className: "w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center shrink-0" }, h38(UtensilsCrossed8, { className: "w-4 h-4" })), h38("div", { className: "min-w-0" }, h38("h3", { className: "text-sm font-black text-slate-900 dark:text-white" }, "\u0648\u0636\u0639 \u0627\u0644\u0645\u0637\u0639\u0645 \u0648\u0627\u0644\u0643\u0627\u0641\u064A\u0647"), h38("p", { className: "text-[11px] text-slate-400" }, "\u0646\u0641\u0633 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0646\u0638\u0627\u0645 \u0627\u0644\u0645\u0637\u0639\u0645 \u0627\u0644\u0645\u0631\u0641\u0642: \u0627\u0644\u0637\u0627\u0648\u0644\u0627\u062A \u0648\u0627\u0644\u062C\u0631\u0633\u0648\u0646 \u0648\u0627\u0644\u0645\u0637\u0628\u062E KDS \u0648\u062A\u0630\u0627\u0643\u0631 \u0627\u0644\u0645\u0637\u0628\u062E"))),
-      h38("button", { type: "button", role: "switch", "aria-label": t("\u0648\u0636\u0639 \u0627\u0644\u0645\u0637\u0639\u0645"), "aria-checked": enabled, disabled: !manager2, className: "ct-restaurant-switch", onClick: () => patch({ isRestaurantModeEnabled: !enabled, restaurantModeDefaultInitialized: true }) }, h38("span"))
+      h39("div", { className: "flex items-center gap-2 min-w-0" }, h39("div", { className: "w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center shrink-0" }, h39(UtensilsCrossed8, { className: "w-4 h-4" })), h39("div", { className: "min-w-0" }, h39("h3", { className: "text-sm font-black text-slate-900 dark:text-white" }, "\u0648\u0636\u0639 \u0627\u0644\u0645\u0637\u0639\u0645 \u0648\u0627\u0644\u0643\u0627\u0641\u064A\u0647"), h39("p", { className: "text-[11px] text-slate-400" }, "\u0646\u0641\u0633 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0646\u0638\u0627\u0645 \u0627\u0644\u0645\u0637\u0639\u0645 \u0627\u0644\u0645\u0631\u0641\u0642: \u0627\u0644\u0637\u0627\u0648\u0644\u0627\u062A \u0648\u0627\u0644\u062C\u0631\u0633\u0648\u0646 \u0648\u0627\u0644\u0645\u0637\u0628\u062E KDS \u0648\u062A\u0630\u0627\u0643\u0631 \u0627\u0644\u0645\u0637\u0628\u062E"))),
+      h39("button", { type: "button", role: "switch", "aria-label": t("\u0648\u0636\u0639 \u0627\u0644\u0645\u0637\u0639\u0645"), "aria-checked": enabled, disabled: !manager2, className: "ct-restaurant-switch", onClick: () => patch({ isRestaurantModeEnabled: !enabled, restaurantModeDefaultInitialized: true }) }, h39("span"))
     ),
-    enabled ? h38(
+    enabled ? h39(
       "div",
       { className: "grid grid-cols-1 sm:grid-cols-2 gap-3" },
-      row("\u0637\u0628\u0627\u0639\u0629 \u062A\u0630\u0643\u0631\u0629 \u0627\u0644\u0645\u0637\u0628\u062E \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B", "\u064A\u0637\u0628\u0639 \u062A\u0630\u0643\u0631\u0629 \u0627\u0644\u0645\u0637\u0628\u062E \u0641\u0648\u0631 \u0648\u0635\u0648\u0644 \u0627\u0644\u0637\u0644\u0628 \u0625\u0644\u0649 \u0634\u0627\u0634\u0629 \u0627\u0644\u0645\u0637\u0628\u062E", h38("input", { type: "checkbox", checked: !!settings.autoPrintKitchenTicket, onChange: (e) => patch({ autoPrintKitchenTicket: e.target.checked }), className: "w-4 h-4 accent-amber-600" })),
-      h38("div", { className: "p-3 border rounded-xl bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700" }, h38("label", { className: "text-xs font-bold block mb-1" }, "\u0645\u0642\u0627\u0633 \u0637\u0627\u0628\u0639\u0629 \u0627\u0644\u0645\u0637\u0628\u062E"), h38("select", { value: settings.kitchenTicketWidth || "80mm", onChange: (e) => patch({ kitchenTicketWidth: e.target.value }), className: "w-full px-3 py-2 text-xs border rounded-xl bg-white dark:bg-slate-900" }, h38("option", { value: "80mm" }, "80 \u0645\u0644\u0645"), h38("option", { value: "58mm" }, "58 \u0645\u0644\u0645"))),
-      row("\u0625\u0638\u0647\u0627\u0631 \u0627\u0644\u0623\u0633\u0639\u0627\u0631 \u0628\u062A\u0630\u0643\u0631\u0629 \u0627\u0644\u0645\u0637\u0628\u062E", "\u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A \u0628\u062F\u0648\u0646 \u0623\u0633\u0639\u0627\u0631", h38("input", { type: "checkbox", checked: !!settings.kitchenTicketShowPrices, onChange: (e) => patch({ kitchenTicketShowPrices: e.target.checked }), className: "w-4 h-4 accent-amber-600" })),
-      h38("div", { className: "p-3 border rounded-xl bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700" }, h38("label", { className: "text-xs font-bold block mb-1" }, "\u0648\u0642\u062A \u0627\u0644\u062A\u062D\u0636\u064A\u0631 \u0627\u0644\u0645\u0633\u062A\u0647\u062F\u0641 (\u062F\u0642\u064A\u0642\u0629)"), h38("input", { type: "number", min: 3, max: 60, value: settings.targetPrepTimeMinutes || 15, onChange: (e) => patch({ targetPrepTimeMinutes: parseInt(e.target.value) || 15 }), className: "w-full px-3 py-2 text-xs border rounded-xl bg-white dark:bg-slate-900 font-mono" })),
-      h38("div", { className: "p-3 border rounded-xl bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700" }, h38("label", { className: "text-xs font-bold block mb-1" }, "\u062D\u0627\u0644\u0629 \u0627\u0644\u0637\u0627\u0648\u0644\u0629 \u0628\u0639\u062F \u0627\u0644\u062F\u0641\u0639"), h38("select", { value: settings.tableAfterPayment || "available", onChange: (e) => patch({ tableAfterPayment: e.target.value }), className: "w-full px-3 py-2 text-xs border rounded-xl bg-white dark:bg-slate-900" }, h38("option", { value: "available" }, "\u0641\u0627\u0631\u063A\u0629 / \u0645\u062A\u0627\u062D\u0629"), h38("option", { value: "cleaning" }, "\u0628\u062D\u0627\u062C\u0629 \u062A\u0646\u0638\u064A\u0641"))),
-      row("\u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0635\u0648\u062A\u064A\u0629 \u0644\u0644\u0645\u0637\u0628\u062E", "\u0635\u0648\u062A \u0639\u0646\u062F \u0648\u0635\u0648\u0644 \u0627\u0644\u0637\u0644\u0628 \u0623\u0648 \u062C\u0627\u0647\u0632\u064A\u062A\u0647", h38("input", { type: "checkbox", checked: settings.enableKitchenSoundAlerts !== false, onChange: (e) => patch({ enableKitchenSoundAlerts: e.target.checked }), className: "w-4 h-4 accent-amber-600" }))
-    ) : h38("p", { className: "text-xs text-slate-400 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl" }, "\u0639\u0646\u062F \u0625\u064A\u0642\u0627\u0641 \u0627\u0644\u0648\u0636\u0639 \u062A\u062E\u062A\u0641\u064A \u0623\u0642\u0633\u0627\u0645 \u0627\u0644\u0645\u0637\u0639\u0645 \u0645\u0646 \u0627\u0644\u0642\u0648\u0627\u0626\u0645 \u0648\u064A\u0628\u0642\u0649 \u0627\u0644\u0643\u0627\u0634\u064A\u0631 \u0627\u0644\u0639\u0627\u062F\u064A \u0643\u0645\u0627 \u0647\u0648.")
+      row("\u0637\u0628\u0627\u0639\u0629 \u062A\u0630\u0643\u0631\u0629 \u0627\u0644\u0645\u0637\u0628\u062E \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B", "\u064A\u0637\u0628\u0639 \u062A\u0630\u0643\u0631\u0629 \u0627\u0644\u0645\u0637\u0628\u062E \u0641\u0648\u0631 \u0648\u0635\u0648\u0644 \u0627\u0644\u0637\u0644\u0628 \u0625\u0644\u0649 \u0634\u0627\u0634\u0629 \u0627\u0644\u0645\u0637\u0628\u062E", h39("input", { type: "checkbox", checked: !!settings.autoPrintKitchenTicket, onChange: (e) => patch({ autoPrintKitchenTicket: e.target.checked }), className: "w-4 h-4 accent-amber-600" })),
+      h39("div", { className: "p-3 border rounded-xl bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700" }, h39("label", { className: "text-xs font-bold block mb-1" }, "\u0645\u0642\u0627\u0633 \u0637\u0627\u0628\u0639\u0629 \u0627\u0644\u0645\u0637\u0628\u062E"), h39("select", { value: settings.kitchenTicketWidth || "80mm", onChange: (e) => patch({ kitchenTicketWidth: e.target.value }), className: "w-full px-3 py-2 text-xs border rounded-xl bg-white dark:bg-slate-900" }, h39("option", { value: "80mm" }, "80 \u0645\u0644\u0645"), h39("option", { value: "58mm" }, "58 \u0645\u0644\u0645"))),
+      row("\u0625\u0638\u0647\u0627\u0631 \u0627\u0644\u0623\u0633\u0639\u0627\u0631 \u0628\u062A\u0630\u0643\u0631\u0629 \u0627\u0644\u0645\u0637\u0628\u062E", "\u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A \u0628\u062F\u0648\u0646 \u0623\u0633\u0639\u0627\u0631", h39("input", { type: "checkbox", checked: !!settings.kitchenTicketShowPrices, onChange: (e) => patch({ kitchenTicketShowPrices: e.target.checked }), className: "w-4 h-4 accent-amber-600" })),
+      h39("div", { className: "p-3 border rounded-xl bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700" }, h39("label", { className: "text-xs font-bold block mb-1" }, "\u0648\u0642\u062A \u0627\u0644\u062A\u062D\u0636\u064A\u0631 \u0627\u0644\u0645\u0633\u062A\u0647\u062F\u0641 (\u062F\u0642\u064A\u0642\u0629)"), h39("input", { type: "number", min: 3, max: 60, value: settings.targetPrepTimeMinutes || 15, onChange: (e) => patch({ targetPrepTimeMinutes: parseInt(e.target.value) || 15 }), className: "w-full px-3 py-2 text-xs border rounded-xl bg-white dark:bg-slate-900 font-mono" })),
+      h39("div", { className: "p-3 border rounded-xl bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700" }, h39("label", { className: "text-xs font-bold block mb-1" }, "\u062D\u0627\u0644\u0629 \u0627\u0644\u0637\u0627\u0648\u0644\u0629 \u0628\u0639\u062F \u0627\u0644\u062F\u0641\u0639"), h39("select", { value: settings.tableAfterPayment || "available", onChange: (e) => patch({ tableAfterPayment: e.target.value }), className: "w-full px-3 py-2 text-xs border rounded-xl bg-white dark:bg-slate-900" }, h39("option", { value: "available" }, "\u0641\u0627\u0631\u063A\u0629 / \u0645\u062A\u0627\u062D\u0629"), h39("option", { value: "cleaning" }, "\u0628\u062D\u0627\u062C\u0629 \u062A\u0646\u0638\u064A\u0641"))),
+      row("\u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0635\u0648\u062A\u064A\u0629 \u0644\u0644\u0645\u0637\u0628\u062E", "\u0635\u0648\u062A \u0639\u0646\u062F \u0648\u0635\u0648\u0644 \u0627\u0644\u0637\u0644\u0628 \u0623\u0648 \u062C\u0627\u0647\u0632\u064A\u062A\u0647", h39("input", { type: "checkbox", checked: settings.enableKitchenSoundAlerts !== false, onChange: (e) => patch({ enableKitchenSoundAlerts: e.target.checked }), className: "w-4 h-4 accent-amber-600" }))
+    ) : h39("p", { className: "text-xs text-slate-400 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl" }, "\u0639\u0646\u062F \u0625\u064A\u0642\u0627\u0641 \u0627\u0644\u0648\u0636\u0639 \u062A\u062E\u062A\u0641\u064A \u0623\u0642\u0633\u0627\u0645 \u0627\u0644\u0645\u0637\u0639\u0645 \u0645\u0646 \u0627\u0644\u0642\u0648\u0627\u0626\u0645 \u0648\u064A\u0628\u0642\u0649 \u0627\u0644\u0643\u0627\u0634\u064A\u0631 \u0627\u0644\u0639\u0627\u062F\u064A \u0643\u0645\u0627 \u0647\u0648.")
   );
 };
 
 // app/components__messages__MessageTemplatesView.js
 import React62, { useMemo as useMemo16, useState as useState48 } from "react";
 import { Save as Save5, Send as Send4, UserRound as UserRound2, ReceiptText as ReceiptText7, Link2 as Link22, Copy as Copy3, MessageSquareText as MessageSquareText4 } from "lucide-react";
-var h39 = React62.createElement;
+var h40 = React62.createElement;
 var DEFAULTS2 = {
   invoiceWhatsApp: `\u0645\u0631\u062D\u0628\u0627\u064B {customer_name} \u{1F44B}
 \u062A\u0645 \u0625\u0635\u062F\u0627\u0631 \u0641\u0627\u062A\u0648\u0631\u062A\u0643 \u0631\u0642\u0645 {invoice_no} \u0645\u0646 {store_name}.
@@ -24408,17 +24470,17 @@ var dateText5 = (v) => {
     return "";
   }
 };
-var WhatsAppSvg2 = () => h39(
+var WhatsAppSvg2 = () => h40(
   "svg",
   { viewBox: "0 0 24 24", className: "w-5 h-5 block", fill: "none", "aria-hidden": "true", style: { display: "block", margin: "0" } },
-  h39("path", { d: "M20.5 11.7A8.5 8.5 0 0 1 7.9 19.1L3.5 20.5l1.4-4.2A8.5 8.5 0 1 1 20.5 11.7Z", stroke: "currentColor", strokeWidth: "1.8", strokeLinejoin: "round" }),
-  h39("path", { d: "M8.2 7.7c.3-.4.6-.4.9-.2l1.1 1.6c.2.3.1.6-.1.9l-.6.7c.7 1.4 1.9 2.5 3.4 3.1l.7-.8c.2-.3.5-.4.8-.2l1.7.9c.3.2.4.5.3.8-.3 1.1-1.3 1.8-2.5 1.8-3.6-.1-7.3-3.4-7.5-7.1 0-.6.2-1.1.5-1.5Z", fill: "currentColor" })
+  h40("path", { d: "M20.5 11.7A8.5 8.5 0 0 1 7.9 19.1L3.5 20.5l1.4-4.2A8.5 8.5 0 1 1 20.5 11.7Z", stroke: "currentColor", strokeWidth: "1.8", strokeLinejoin: "round" }),
+  h40("path", { d: "M8.2 7.7c.3-.4.6-.4.9-.2l1.1 1.6c.2.3.1.6-.1.9l-.6.7c.7 1.4 1.9 2.5 3.4 3.1l.7-.8c.2-.3.5-.4.8-.2l1.7.9c.3.2.4.5.3.8-.3 1.1-1.3 1.8-2.5 1.8-3.6-.1-7.3-3.4-7.5-7.1 0-.6.2-1.1.5-1.5Z", fill: "currentColor" })
 );
-var SmsSvg2 = () => h39(
+var SmsSvg2 = () => h40(
   "svg",
   { viewBox: "0 0 24 24", className: "w-5 h-5 block", fill: "none", "aria-hidden": "true", style: { display: "block", margin: "0" } },
-  h39("rect", { x: "3", y: "4", width: "18", height: "14", rx: "3", stroke: "currentColor", strokeWidth: "1.8" }),
-  h39("path", { d: "m6 8 6 4 6-4M8 20h8", stroke: "currentColor", strokeWidth: "1.8", strokeLinecap: "round", strokeLinejoin: "round" })
+  h40("rect", { x: "3", y: "4", width: "18", height: "14", rx: "3", stroke: "currentColor", strokeWidth: "1.8" }),
+  h40("path", { d: "m6 8 6 4 6-4M8 20h8", stroke: "currentColor", strokeWidth: "1.8", strokeLinecap: "round", strokeLinejoin: "round" })
 );
 var MessageTemplatesView = () => {
   const { settings, updateSettings, customers, invoices, saveCustomer, showToast } = useApp();
@@ -24506,42 +24568,42 @@ var MessageTemplatesView = () => {
       showToast(error?.message || "\u062A\u0639\u0630\u0631 \u0646\u0633\u062E \u0627\u0644\u0631\u0633\u0627\u0644\u0629", "error");
     }
   };
-  const editor = (kind, title, vars, recordSelect) => h39(
+  const editor = (kind, title, vars, recordSelect) => h40(
     "section",
     { className: "rounded-3xl bg-white border border-slate-200 shadow-sm p-4 sm:p-5 space-y-4" },
-    h39("div", { className: "flex items-center gap-3 border-b pb-3" }, h39("div", { className: "w-10 h-10 rounded-2xl bg-violet-50 text-violet-700 grid place-items-center" }, kind === "invoice" ? h39(ReceiptText7, { className: "w-5 h-5" }) : h39(UserRound2, { className: "w-5 h-5" })), h39("div", null, h39("h3", { className: "font-black text-slate-900" }, title), h39("p", { className: "text-[11px] text-slate-500 mt-0.5" }, "\u063A\u064A\u0651\u0631 \u0627\u0644\u0646\u0635 \u0643\u0645\u0627 \u062A\u0631\u064A\u062F\u060C \u0648\u0627\u0644\u0645\u062A\u063A\u064A\u0631\u0627\u062A \u062A\u064F\u0633\u062A\u0628\u062F\u0644 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0639\u0646\u062F \u0627\u0644\u0625\u0631\u0633\u0627\u0644."))),
+    h40("div", { className: "flex items-center gap-3 border-b pb-3" }, h40("div", { className: "w-10 h-10 rounded-2xl bg-violet-50 text-violet-700 grid place-items-center" }, kind === "invoice" ? h40(ReceiptText7, { className: "w-5 h-5" }) : h40(UserRound2, { className: "w-5 h-5" })), h40("div", null, h40("h3", { className: "font-black text-slate-900" }, title), h40("p", { className: "text-[11px] text-slate-500 mt-0.5" }, "\u063A\u064A\u0651\u0631 \u0627\u0644\u0646\u0635 \u0643\u0645\u0627 \u062A\u0631\u064A\u062F\u060C \u0648\u0627\u0644\u0645\u062A\u063A\u064A\u0631\u0627\u062A \u062A\u064F\u0633\u062A\u0628\u062F\u0644 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0639\u0646\u062F \u0627\u0644\u0625\u0631\u0633\u0627\u0644."))),
     recordSelect,
-    h39("div", { className: "rounded-2xl bg-slate-50 border p-3" }, h39("div", { className: "text-[11px] font-black text-slate-600 mb-2" }, "\u0627\u0644\u0645\u062A\u063A\u064A\u0631\u0627\u062A \u0627\u0644\u0645\u062A\u0627\u062D\u0629"), h39("div", { className: "flex flex-wrap gap-1.5" }, ...vars.map((v) => h39("button", { type: "button", key: v.token, onClick: () => addVar(v.token), title: v.token, className: "px-2.5 py-1.5 rounded-lg bg-white border text-[10px] font-black text-violet-700 hover:bg-violet-50" }, v.label)))),
+    h40("div", { className: "rounded-2xl bg-slate-50 border p-3" }, h40("div", { className: "text-[11px] font-black text-slate-600 mb-2" }, "\u0627\u0644\u0645\u062A\u063A\u064A\u0631\u0627\u062A \u0627\u0644\u0645\u062A\u0627\u062D\u0629"), h40("div", { className: "flex flex-wrap gap-1.5" }, ...vars.map((v) => h40("button", { type: "button", key: v.token, onClick: () => addVar(v.token), title: v.token, className: "px-2.5 py-1.5 rounded-lg bg-white border text-[10px] font-black text-violet-700 hover:bg-violet-50" }, v.label)))),
     ...["WhatsApp", "Sms"].map((channel) => {
       const key3 = `${kind}${channel}`;
       const isWa = channel === "WhatsApp";
-      return h39(
+      return h40(
         "div",
         { key: key3, className: "rounded-2xl border border-slate-200 overflow-hidden" },
-        h39("div", { className: `px-3 py-2 flex items-center justify-between ${isWa ? "bg-violet-50 text-violet-800" : "bg-blue-50 text-blue-800"}` }, h39("div", { className: "flex items-center gap-2 font-black text-xs" }, isWa ? h39(WhatsAppSvg2) : h39(SmsSvg2), isWa ? "\u0642\u0627\u0644\u0628 WhatsApp" : "\u0642\u0627\u0644\u0628 SMS"), h39("span", { className: "text-[9px] font-bold opacity-70" }, "\u0642\u0627\u0628\u0644 \u0644\u0644\u062A\u0639\u062F\u064A\u0644")),
-        h39("textarea", { value: draft[key3] || "", onFocus: () => setActiveField(key3), onChange: (e) => setDraft({ ...draft, [key3]: e.target.value }), rows: isWa ? 7 : 4, className: "w-full p-3 text-xs leading-6 bg-white resize-y outline-none", dir: "rtl" }),
-        h39(
+        h40("div", { className: `px-3 py-2 flex items-center justify-between ${isWa ? "bg-violet-50 text-violet-800" : "bg-blue-50 text-blue-800"}` }, h40("div", { className: "flex items-center gap-2 font-black text-xs" }, isWa ? h40(WhatsAppSvg2) : h40(SmsSvg2), isWa ? "\u0642\u0627\u0644\u0628 WhatsApp" : "\u0642\u0627\u0644\u0628 SMS"), h40("span", { className: "text-[9px] font-bold opacity-70" }, "\u0642\u0627\u0628\u0644 \u0644\u0644\u062A\u0639\u062F\u064A\u0644")),
+        h40("textarea", { value: draft[key3] || "", onFocus: () => setActiveField(key3), onChange: (e) => setDraft({ ...draft, [key3]: e.target.value }), rows: isWa ? 7 : 4, className: "w-full p-3 text-xs leading-6 bg-white resize-y outline-none", dir: "rtl" }),
+        h40(
           "div",
           { className: "p-2.5 border-t flex flex-wrap gap-2 justify-end" },
-          h39("button", { type: "button", onClick: () => copyPreview(kind, isWa ? "whatsapp" : "sms"), className: "inline-flex items-center gap-1 px-3 py-2 rounded-xl border text-[10px] font-black text-slate-600" }, h39(Copy3, { className: "w-3.5 h-3.5" }), "\u0646\u0633\u062E \u0627\u0644\u0645\u0639\u0627\u064A\u0646\u0629"),
-          h39("button", { type: "button", disabled: !!busy, onClick: () => send(kind, isWa ? "whatsapp" : "sms"), className: `inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-white text-[10px] font-black disabled:opacity-50 ${isWa ? "bg-violet-600" : "bg-blue-600"}` }, busy === key3 ? h39("span", { className: "w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" }) : h39(Send4, { className: "w-3.5 h-3.5" }), isWa ? "\u0641\u062A\u062D WhatsApp" : "\u0641\u062A\u062D \u0627\u0644\u0631\u0633\u0627\u0626\u0644")
+          h40("button", { type: "button", onClick: () => copyPreview(kind, isWa ? "whatsapp" : "sms"), className: "inline-flex items-center gap-1 px-3 py-2 rounded-xl border text-[10px] font-black text-slate-600" }, h40(Copy3, { className: "w-3.5 h-3.5" }), "\u0646\u0633\u062E \u0627\u0644\u0645\u0639\u0627\u064A\u0646\u0629"),
+          h40("button", { type: "button", disabled: !!busy, onClick: () => send(kind, isWa ? "whatsapp" : "sms"), className: `inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-white text-[10px] font-black disabled:opacity-50 ${isWa ? "bg-violet-600" : "bg-blue-600"}` }, busy === key3 ? h40("span", { className: "w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" }) : h40(Send4, { className: "w-3.5 h-3.5" }), isWa ? "\u0641\u062A\u062D WhatsApp" : "\u0641\u062A\u062D \u0627\u0644\u0631\u0633\u0627\u0626\u0644")
         )
       );
     })
   );
-  return h39(
+  return h40(
     "div",
     { className: "p-4 sm:p-6 max-w-5xl mx-auto space-y-5 text-right" },
-    h39("div", { className: "flex flex-col sm:flex-row sm:items-center justify-between gap-3" }, h39("div", null, h39("div", { className: "flex items-center gap-2" }, h39(MessageSquareText4, { className: "w-6 h-6 text-violet-600" }), h39("h2", { className: "text-xl font-black" }, t("\u0642\u0648\u0627\u0644\u0628 \u0627\u0644\u0631\u0633\u0627\u0626\u0644"))), h39("p", { className: "text-xs text-slate-500 mt-1" }, "\u0642\u0648\u0627\u0644\u0628 \u062C\u0627\u0647\u0632\u0629 \u0644\u0644\u0641\u0648\u0627\u062A\u064A\u0631 \u0648\u0627\u0644\u0639\u0645\u0644\u0627\u0621 \u0645\u0639 \u0631\u0627\u0628\u0637 \u0633\u062F\u0627\u062F \u0645\u062E\u062A\u0635\u0631 \u0648\u0645\u0628\u0627\u0634\u0631.")), h39("button", { type: "button", onClick: saveTemplates, className: "inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-violet-600 text-white text-xs font-black" }, h39(Save5, { className: "w-4 h-4" }), "\u062D\u0641\u0638 \u0627\u0644\u0642\u0648\u0627\u0644\u0628")),
-    h39("div", { className: "rounded-2xl border border-violet-100 bg-violet-50/50 p-3 text-[11px] text-violet-900 leading-6" }, h39("div", { className: "font-black flex items-center gap-1.5" }, h39(Link22, { className: "w-4 h-4" }), "\u0631\u0627\u0628\u0637 \u0627\u0644\u062F\u0641\u0639 \u0627\u0644\u0645\u062E\u062A\u0635\u0631"), h39("div", null, "\u0639\u0646\u062F \u0627\u0644\u0625\u0631\u0633\u0627\u0644 \u064A\u0646\u0634\u0626 \u0643\u0627\u0634 \u062A\u0648\u0628 3 \u0643\u0648\u062F \u0634\u0631\u0643\u0629 \u0645\u0646 5 \u062E\u0627\u0646\u0627\u062A \u0648\u0643\u0648\u062F \u0639\u0645\u064A\u0644 \u0645\u0646 5 \u062E\u0627\u0646\u0627\u062A\u060C \u0648\u064A\u0636\u0639 \u0631\u0627\u0628\u0637 \u0627\u0644\u0633\u062F\u0627\u062F \u0627\u0644\u0642\u0635\u064A\u0631 \u062F\u0627\u062E\u0644 \u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B.")),
-    editor("invoice", "\u0642\u0648\u0627\u0644\u0628 \u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0641\u0648\u0627\u062A\u064A\u0631", INVOICE_VARS, h39("select", { value: invoiceId, onChange: (e) => setInvoiceId(e.target.value), className: "w-full px-3 py-2.5 rounded-xl border bg-white text-xs" }, h39("option", { value: "" }, "\u0627\u062E\u062A\u0631 \u0641\u0627\u062A\u0648\u0631\u0629 \u0644\u0644\u0625\u0631\u0633\u0627\u0644..."), ...sales.map((inv) => h39("option", { key: inv.id, value: inv.id }, `#${inv.invoiceNumber || inv.id} \u2014 ${inv.customerName || liveCustomers.find((c) => String(c.id) === String(inv.customerId))?.name || "\u0639\u0645\u064A\u0644"} \u2014 ${money19(inv.grandTotal)} ${settings.currencySymbol || "\u20AA"}`)))),
-    editor("customer", "\u0642\u0648\u0627\u0644\u0628 \u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0639\u0645\u0644\u0627\u0621", CUSTOMER_VARS, h39("select", { value: customerId, onChange: (e) => setCustomerId(e.target.value), className: "w-full px-3 py-2.5 rounded-xl border bg-white text-xs" }, h39("option", { value: "" }, "\u0627\u062E\u062A\u0631 \u0639\u0645\u064A\u0644\u0627\u064B \u0644\u0644\u0625\u0631\u0633\u0627\u0644..."), ...liveCustomers.map((c) => h39("option", { key: c.id, value: c.id }, `${c.name} \u2014 ${c.phone || "\u0628\u062F\u0648\u0646 \u0647\u0627\u062A\u0641"} \u2014 ${money19(c.balance)} ${settings.currencySymbol || "\u20AA"}`))))
+    h40("div", { className: "flex flex-col sm:flex-row sm:items-center justify-between gap-3" }, h40("div", null, h40("div", { className: "flex items-center gap-2" }, h40(MessageSquareText4, { className: "w-6 h-6 text-violet-600" }), h40("h2", { className: "text-xl font-black" }, t("\u0642\u0648\u0627\u0644\u0628 \u0627\u0644\u0631\u0633\u0627\u0626\u0644"))), h40("p", { className: "text-xs text-slate-500 mt-1" }, "\u0642\u0648\u0627\u0644\u0628 \u062C\u0627\u0647\u0632\u0629 \u0644\u0644\u0641\u0648\u0627\u062A\u064A\u0631 \u0648\u0627\u0644\u0639\u0645\u0644\u0627\u0621 \u0645\u0639 \u0631\u0627\u0628\u0637 \u0633\u062F\u0627\u062F \u0645\u062E\u062A\u0635\u0631 \u0648\u0645\u0628\u0627\u0634\u0631.")), h40("button", { type: "button", onClick: saveTemplates, className: "inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-violet-600 text-white text-xs font-black" }, h40(Save5, { className: "w-4 h-4" }), "\u062D\u0641\u0638 \u0627\u0644\u0642\u0648\u0627\u0644\u0628")),
+    h40("div", { className: "rounded-2xl border border-violet-100 bg-violet-50/50 p-3 text-[11px] text-violet-900 leading-6" }, h40("div", { className: "font-black flex items-center gap-1.5" }, h40(Link22, { className: "w-4 h-4" }), "\u0631\u0627\u0628\u0637 \u0627\u0644\u062F\u0641\u0639 \u0627\u0644\u0645\u062E\u062A\u0635\u0631"), h40("div", null, "\u0639\u0646\u062F \u0627\u0644\u0625\u0631\u0633\u0627\u0644 \u064A\u0646\u0634\u0626 \u0643\u0627\u0634 \u062A\u0648\u0628 3 \u0643\u0648\u062F \u0634\u0631\u0643\u0629 \u0645\u0646 5 \u062E\u0627\u0646\u0627\u062A \u0648\u0643\u0648\u062F \u0639\u0645\u064A\u0644 \u0645\u0646 5 \u062E\u0627\u0646\u0627\u062A\u060C \u0648\u064A\u0636\u0639 \u0631\u0627\u0628\u0637 \u0627\u0644\u0633\u062F\u0627\u062F \u0627\u0644\u0642\u0635\u064A\u0631 \u062F\u0627\u062E\u0644 \u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B.")),
+    editor("invoice", "\u0642\u0648\u0627\u0644\u0628 \u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0641\u0648\u0627\u062A\u064A\u0631", INVOICE_VARS, h40("select", { value: invoiceId, onChange: (e) => setInvoiceId(e.target.value), className: "w-full px-3 py-2.5 rounded-xl border bg-white text-xs" }, h40("option", { value: "" }, "\u0627\u062E\u062A\u0631 \u0641\u0627\u062A\u0648\u0631\u0629 \u0644\u0644\u0625\u0631\u0633\u0627\u0644..."), ...sales.map((inv) => h40("option", { key: inv.id, value: inv.id }, `#${inv.invoiceNumber || inv.id} \u2014 ${inv.customerName || liveCustomers.find((c) => String(c.id) === String(inv.customerId))?.name || "\u0639\u0645\u064A\u0644"} \u2014 ${money19(inv.grandTotal)} ${settings.currencySymbol || "\u20AA"}`)))),
+    editor("customer", "\u0642\u0648\u0627\u0644\u0628 \u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0639\u0645\u0644\u0627\u0621", CUSTOMER_VARS, h40("select", { value: customerId, onChange: (e) => setCustomerId(e.target.value), className: "w-full px-3 py-2.5 rounded-xl border bg-white text-xs" }, h40("option", { value: "" }, "\u0627\u062E\u062A\u0631 \u0639\u0645\u064A\u0644\u0627\u064B \u0644\u0644\u0625\u0631\u0633\u0627\u0644..."), ...liveCustomers.map((c) => h40("option", { key: c.id, value: c.id }, `${c.name} \u2014 ${c.phone || "\u0628\u062F\u0648\u0646 \u0647\u0627\u062A\u0641"} \u2014 ${money19(c.balance)} ${settings.currencySymbol || "\u20AA"}`))))
   );
 };
 
 // app/App.js
-var h40 = React63.createElement;
-var ScrollScreen = ({ children }) => h40("div", { className: "scroll-chain-page h-full min-h-0 overflow-y-auto custom-scrollbar mobile-safe-bottom lg:pb-0" }, children);
+var h41 = React63.createElement;
+var ScrollScreen = ({ children }) => h41("div", { className: "scroll-chain-page h-full min-h-0 overflow-y-auto custom-scrollbar mobile-safe-bottom lg:pb-0" }, children);
 var MainLayout = () => {
   const app = useApp();
   useAppNavigation(app.activeTab, app.setActiveTab);
@@ -24722,73 +24784,73 @@ var MainLayout = () => {
   }, [activeTab, settings.isRestaurantModeEnabled, currentUser, activeEmployee, isLoaded]);
   const screen = (() => {
     if (activeTab === "no_access" || !canAccessTab(activeTab, accessArgs)) {
-      return h40(
+      return h41(
         "div",
         { className: "h-full flex items-center justify-center p-6 bg-slate-100" },
-        h40(
+        h41(
           "div",
           { className: "max-w-md w-full rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm" },
-          h40("div", { className: "text-lg font-black text-slate-900" }, "\u0644\u0627 \u062A\u0648\u062C\u062F \u0635\u0641\u062D\u0629 \u0645\u0633\u0645\u0648\u062D\u0629 \u0644\u0647\u0630\u0627 \u0627\u0644\u062D\u0633\u0627\u0628"),
-          h40("div", { className: "text-xs text-slate-500 mt-2 leading-6" }, "\u064A\u062C\u0628 \u0639\u0644\u0649 \u0627\u0644\u0645\u062F\u064A\u0631 \u062A\u062D\u062F\u064A\u062F \u0635\u0641\u062D\u0629 \u0648\u0627\u062D\u062F\u0629 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 \u0645\u0646 \u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0627\u0644\u0645\u0648\u0638\u0641 \u062B\u0645 \u062D\u0641\u0638\u0647\u0627. \u0628\u0639\u062F \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0633\u064A\u064F\u0641\u062A\u062D \u0627\u0644\u062D\u0633\u0627\u0628 \u0639\u0644\u0649 \u0623\u0648\u0644 \u0635\u0641\u062D\u0629 \u0645\u0633\u0645\u0648\u062D\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B.")
+          h41("div", { className: "text-lg font-black text-slate-900" }, "\u0644\u0627 \u062A\u0648\u062C\u062F \u0635\u0641\u062D\u0629 \u0645\u0633\u0645\u0648\u062D\u0629 \u0644\u0647\u0630\u0627 \u0627\u0644\u062D\u0633\u0627\u0628"),
+          h41("div", { className: "text-xs text-slate-500 mt-2 leading-6" }, "\u064A\u062C\u0628 \u0639\u0644\u0649 \u0627\u0644\u0645\u062F\u064A\u0631 \u062A\u062D\u062F\u064A\u062F \u0635\u0641\u062D\u0629 \u0648\u0627\u062D\u062F\u0629 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 \u0645\u0646 \u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0627\u0644\u0645\u0648\u0638\u0641 \u062B\u0645 \u062D\u0641\u0638\u0647\u0627. \u0628\u0639\u062F \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0633\u064A\u064F\u0641\u062A\u062D \u0627\u0644\u062D\u0633\u0627\u0628 \u0639\u0644\u0649 \u0623\u0648\u0644 \u0635\u0641\u062D\u0629 \u0645\u0633\u0645\u0648\u062D\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B.")
         )
       );
     }
-    if (activeTab === "pos") return h40(POSView);
-    if (activeTab === "distribution") return h40(ScrollScreen, null, h40(DistributionView));
-    if (activeTab === "dashboard") return h40(ScrollScreen, null, h40(DashboardView));
-    if (activeTab === "sales") return h40(ScrollScreen, null, h40(SalesView));
-    if (activeTab === "purchases") return h40(ScrollScreen, null, h40(PurchasesView));
-    if (activeTab === "products") return h40(ScrollScreen, null, h40(ProductsView));
-    if (activeTab === "categories") return h40(ScrollScreen, null, h40(CategoriesView));
-    if (activeTab === "inventory") return h40(ScrollScreen, null, h40(InventoryView));
-    if (activeTab === "customers") return h40(ScrollScreen, null, h40(CustomersView));
-    if (activeTab === "price_groups") return h40(ScrollScreen, null, h40(PriceGroupsView));
-    if (activeTab === "suppliers") return h40(ScrollScreen, null, h40(SuppliersView));
-    if (activeTab === "accounts") return h40(ScrollScreen, null, h40(AccountsView));
-    if (activeTab === "expenses") return h40(ScrollScreen, null, h40(ExpensesView));
-    if (activeTab === "vouchers") return h40(ScrollScreen, null, h40(VouchersView));
-    if (activeTab === "employees") return h40(ScrollScreen, null, h40(EmployeesView));
-    if (activeTab === "barcodes") return h40(ScrollScreen, null, h40(BarcodesView));
-    if (activeTab === "reports") return h40(ScrollScreen, null, h40(ReportsView));
-    if (activeTab === "trash") return h40(ScrollScreen, null, h40(TrashView));
-    if (activeTab === "financial_years") return h40(ScrollScreen, null, h40(FinancialYearsView));
-    if (activeTab === "message_templates") return h40(ScrollScreen, null, h40(MessageTemplatesView));
-    if (activeTab === "settings") return h40(ScrollScreen, null, h40(React63.Fragment, null, h40(SettingsView), h40("div", { className: "px-4 sm:px-6 pb-6 max-w-4xl mx-auto" }, h40(RestaurantSettingsPanel))));
-    if (activeTab === "restaurant_tables" && canOpenRestaurantTab(activeTab)) return h40(ScrollScreen, null, h40(RestaurantTablesView));
-    if (activeTab === "restaurant_waiter" && canOpenRestaurantTab(activeTab)) return h40(RestaurantWaiterView);
-    if (activeTab === "restaurant_kitchen" && canOpenRestaurantTab(activeTab)) return h40(RestaurantKDSView);
-    if (activeTab === "restaurant_waste" && canOpenRestaurantTab(activeTab)) return h40(ScrollScreen, null, h40(RestaurantWasteView));
-    return h40(POSView);
+    if (activeTab === "pos") return h41(POSView);
+    if (activeTab === "distribution") return h41(ScrollScreen, null, h41(DistributionView));
+    if (activeTab === "dashboard") return h41(ScrollScreen, null, h41(DashboardView));
+    if (activeTab === "sales") return h41(ScrollScreen, null, h41(SalesView));
+    if (activeTab === "purchases") return h41(ScrollScreen, null, h41(PurchasesView));
+    if (activeTab === "products") return h41(ScrollScreen, null, h41(ProductsView));
+    if (activeTab === "categories") return h41(ScrollScreen, null, h41(CategoriesView));
+    if (activeTab === "inventory") return h41(ScrollScreen, null, h41(InventoryView));
+    if (activeTab === "customers") return h41(ScrollScreen, null, h41(CustomersView));
+    if (activeTab === "price_groups") return h41(ScrollScreen, null, h41(PriceGroupsView));
+    if (activeTab === "suppliers") return h41(ScrollScreen, null, h41(SuppliersView));
+    if (activeTab === "accounts") return h41(ScrollScreen, null, h41(AccountsView));
+    if (activeTab === "expenses") return h41(ScrollScreen, null, h41(ExpensesView));
+    if (activeTab === "vouchers") return h41(ScrollScreen, null, h41(VouchersView));
+    if (activeTab === "employees") return h41(ScrollScreen, null, h41(EmployeesView));
+    if (activeTab === "barcodes") return h41(ScrollScreen, null, h41(BarcodesView));
+    if (activeTab === "reports") return h41(ScrollScreen, null, h41(ReportsView));
+    if (activeTab === "trash") return h41(ScrollScreen, null, h41(TrashView));
+    if (activeTab === "financial_years") return h41(ScrollScreen, null, h41(FinancialYearsView));
+    if (activeTab === "message_templates") return h41(ScrollScreen, null, h41(MessageTemplatesView));
+    if (activeTab === "settings") return h41(ScrollScreen, null, h41(React63.Fragment, null, h41(SettingsView), h41("div", { className: "px-4 sm:px-6 pb-6 max-w-4xl mx-auto" }, h41(RestaurantSettingsPanel))));
+    if (activeTab === "restaurant_tables" && canOpenRestaurantTab(activeTab)) return h41(ScrollScreen, null, h41(RestaurantTablesView));
+    if (activeTab === "restaurant_waiter" && canOpenRestaurantTab(activeTab)) return h41(RestaurantWaiterView);
+    if (activeTab === "restaurant_kitchen" && canOpenRestaurantTab(activeTab)) return h41(RestaurantKDSView);
+    if (activeTab === "restaurant_waste" && canOpenRestaurantTab(activeTab)) return h41(ScrollScreen, null, h41(RestaurantWasteView));
+    return h41(POSView);
   })();
-  if (!isLoaded || startupWait && !isCloudReady && navigator.onLine !== false) return h40(StartupScreen, { progress: app.startupProgress, offline: !app.isOnline });
-  return h40(
+  if (!isLoaded || startupWait && !isCloudReady && navigator.onLine !== false) return h41(StartupScreen, { progress: app.startupProgress, offline: !app.isOnline });
+  return h41(
     "div",
     {
       className: "flex w-screen bg-slate-100 text-slate-900 overflow-hidden",
       style: { height: "var(--oscar-app-height, 100dvh)", minHeight: "var(--oscar-app-height, 100dvh)" }
     },
-    h40(Sidebar),
-    h40(
+    h41(Sidebar),
+    h41(
       "div",
       { className: "flex-1 flex flex-col min-w-0 h-full min-h-0 overflow-hidden" },
-      h40(Header),
-      h40(
+      h41(Header),
+      h41(
         "main",
         { ref: refreshRef, className: "flex-1 min-h-0 overflow-hidden relative pb-16 lg:pb-0" },
-        h40("div", { className: "ct-pull-indicator" + (pull.refreshing ? " is-refreshing" : ""), style: { opacity: pull.distance ? 1 : 0, transform: `translate(-50%,${Math.max(0, pull.distance - 45)}px)` }, role: "status", "aria-label": t("\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A") }, h40("svg", { viewBox: "0 0 24 24", width: 22, height: 22, fill: "none", stroke: "currentColor", strokeWidth: 2 }, h40("path", { d: "M20 7v5h-5M4 17v-5h5M5.6 7a7 7 0 0 1 12-2L20 8M4 16l2.4 3a7 7 0 0 0 12-2" }))),
-        h40("div", { key: activeTab, style: { transform: `translateY(${pull.distance}px)`, transition: pull.distance ? "none" : "transform .22s ease" }, className: "oscar-page-stage h-full min-h-0 w-full overflow-hidden" }, screen)
+        h41("div", { className: "ct-pull-indicator" + (pull.refreshing ? " is-refreshing" : ""), style: { opacity: pull.distance ? 1 : 0, transform: `translate(-50%,${Math.max(0, pull.distance - 45)}px)` }, role: "status", "aria-label": t("\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A") }, h41("svg", { viewBox: "0 0 24 24", width: 22, height: 22, fill: "none", stroke: "currentColor", strokeWidth: 2 }, h41("path", { d: "M20 7v5h-5M4 17v-5h5M5.6 7a7 7 0 0 1 12-2L20 8M4 16l2.4 3a7 7 0 0 0 12-2" }))),
+        h41("div", { key: activeTab, style: { transform: `translateY(${pull.distance}px)`, transition: pull.distance ? "none" : "transform .22s ease" }, className: "oscar-page-stage h-full min-h-0 w-full overflow-hidden" }, screen)
       ),
-      h40(BottomNav)
+      h41(BottomNav)
     ),
-    h40(NotificationPermissionPrompt, { allowed: currentUser.isCompanyManager || currentUser.roleCode === "admin" }),
-    h40(ThermalReceiptModal),
-    h40(SyncModal),
-    h40(Toast)
+    h41(NotificationPermissionPrompt, { allowed: currentUser.isCompanyManager || currentUser.roleCode === "admin" }),
+    h41(ThermalReceiptModal),
+    h41(SyncModal),
+    h41(Toast)
   );
 };
 function App() {
   useLanguage();
-  return h40(LoginGate, null, h40(AppProvider, null, h40(RestaurantProvider, null, h40(MainLayout))));
+  return h41(LoginGate, null, h41(AppProvider, null, h41(RestaurantProvider, null, h41(MainLayout))));
 }
 
 // app/main.js
@@ -24806,7 +24868,7 @@ var OscarErrorBoundary = class extends React64.Component {
     } catch (_) {
     }
     try {
-      const build = "7.9.4.161-fresh-notifications";
+      const build = "7.9.4.162-filter-dialogs";
       const key3 = "oscar-render-heal-" + build;
       if (sessionStorage.getItem(key3) !== "1") {
         sessionStorage.setItem(key3, "1");
