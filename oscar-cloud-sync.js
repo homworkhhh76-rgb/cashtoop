@@ -164,6 +164,13 @@ async function prepareRemoteValue(store,key,value,remoteRev,{deleted=false,lates
   }
   return{skip:false,value};
 }
+const NOTIFY_STORES=new Set(['invoices','purchases','customers','suppliers','products','categories','vouchers','expenses','stock_movements','transfers','accounts','warehouses','employees','shifts','held_invoices','restaurant_orders','recipes','waste_records','distribution_docs']);
+async function notificationBefore(parsed){if(!NOTIFY_STORES.has(parsed.store))return null;try{return await bridge.getFromStore?.(parsed.store,actualKey(parsed.store,parsed.key))||null}catch{return null}}
+function remoteNotificationRecord(parsed,env,prepared,before,deleted,remoteRev,enabled){
+ if(!enabled||!NOTIFY_STORES.has(parsed.store)||!env?.deviceId||env.deviceId===deviceId())return null;
+ const value=deleted?before:prepared.value;if(!value?.id||JSON.stringify(before)===JSON.stringify(deleted?null:value))return null;
+ return {storeName:parsed.store,value,before,action:deleted?'delete':before?'update':'add',remoteRev,at:new Date(revToMs(remoteRev)||Date.now()).toISOString()};
+}
 async function pullRealtimeSnapshot({force=false}={}){
   if(realtimePullBusy||!bridge||!tenant()||navigator.onLine===false||document.visibilityState==='hidden')return{applied:0};
   const now=Date.now();if(!force&&now-lastRealtimePull<2200)return{applied:0};lastRealtimePull=now;realtimePullBusy=true;
@@ -173,7 +180,7 @@ async function pullRealtimeSnapshot({force=false}={}){
     for(const [lo,hi] of ranges){parts.push('(path>=? AND path<?)');args.push(lo,hi);}
     const settingsPath=pathFor('settings','store_config');parts.push('path=?');args.push(settingsPath);
     const [r]=await s.d.pipeline(s.c,[{sql:`SELECT path,payload,deleted,updated_at,sync_batch FROM ${s.table} WHERE ${parts.join(' OR ')} ORDER BY path`,args}],45000);
-    const rows=s.d.rows(r),pending=readPending(),seen=readRealtimeSeen();let applied=0;const touched=new Set();
+    const rows=s.d.rows(r),pending=readPending(),seen=readRealtimeSeen(),notificationRecords=[],notifyReady=!!readMeta().batchInitialized;let applied=0;const touched=new Set();
     suppress=true;
     try{
       for(const row of rows){
@@ -188,16 +195,18 @@ async function pullRealtimeSnapshot({force=false}={}){
         const rawValue=env&&Object.prototype.hasOwnProperty.call(env,'v')?env.v:env;
         const prepared=await prepareRemoteValue(parsed.store,parsed.key,rawValue,remoteRev,{deleted});
         if(prepared.skip){seen[row.path]=remoteRev||Date.now();continue;}
+        const notificationPrevious=notifyReady?await notificationBefore(parsed):null;
         if(deleted)await bridge.deleteFromStore(parsed.store,actualKey(parsed.store,parsed.key),false);
         else if(prepared.value!=null)await bridge.putInStore(parsed.store,prepared.value,false);
         else continue;
+        const notice=remoteNotificationRecord(parsed,env,prepared,notificationPrevious,deleted,remoteRev,notifyReady);if(notice)notificationRecords.push(notice);
         seen[row.path]=remoteRev||Date.now();applied++;touched.add(parsed.store);
       }
     }finally{suppress=false}
     writeRealtimeSeen(seen);
     if(applied){
       try{await bridge.onApplied?.([...touched])}catch(_){}
-      try{window.dispatchEvent(new CustomEvent('oscar:sync-applied',{detail:{applied,stores:[...touched],realtime:true}}))}catch(_){}
+      try{window.dispatchEvent(new CustomEvent('oscar:sync-applied',{detail:{applied,stores:[...touched],realtime:true,notificationRecords,tenant:tenant()}}))}catch(_){}
       broadcast('synced');
     }
     return{applied,changedStores:[...touched],remoteRows:rows.length,realtime:true};
@@ -244,7 +253,7 @@ async function pushPending(){
 async function applyRows(rows,batch){
   if(!bridge)return{applied:0};
   await hydratePending();
-  const pending=readPending(),touched=new Set(),repairs=[];let applied=0;
+  const pending=readPending(),touched=new Set(),repairs=[],notificationRecords=[],notifyReady=!!readMeta().batchInitialized;let applied=0;
   // Apply movements before stock balances. This lets us verify whether an incoming legacy zero
   // is backed by an actual inventory movement instead of blindly erasing a valid local balance.
   const ordered=[...(rows||[])].sort((a,b)=>{
@@ -264,9 +273,11 @@ async function applyRows(rows,batch){
       const rawValue=env&&Object.prototype.hasOwnProperty.call(env,'v')?env.v:env;
       const prepared=await prepareRemoteValue(parsed.store,parsed.key,rawValue,remoteRev,{deleted,latestMovementMap,repairs});
       if(prepared.skip)continue;
-      if(deleted)await bridge.deleteFromStore(parsed.store,actualKey(parsed.store,parsed.key),false);
+      const notificationPrevious=notifyReady?await notificationBefore(parsed):null;
+        if(deleted)await bridge.deleteFromStore(parsed.store,actualKey(parsed.store,parsed.key),false);
       else if(prepared.value!=null)await bridge.putInStore(parsed.store,prepared.value,false);
       else continue;
+      const notice=remoteNotificationRecord(parsed,env,prepared,notificationPrevious,deleted,remoteRev,notifyReady);if(notice)notificationRecords.push(notice);
       applied++;touched.add(parsed.store);
     }
   }finally{suppress=false}
@@ -276,7 +287,7 @@ async function applyRows(rows,batch){
     for(const row of unique.values()){try{await captureStoreChange('stock',row)}catch(_){}}
   }
   const m=readMeta();m.remoteBatch=Math.max(Number(m.remoteBatch||0),Number(batch||0));m.batchInitialized=true;m.lastPullAt=Date.now();writeMeta(m);
-  if(applied){try{await bridge.onApplied?.([...touched])}catch(_){}try{window.dispatchEvent(new CustomEvent('oscar:sync-applied',{detail:{applied,stores:[...touched],remoteBatch:batch}}))}catch(_){}broadcast('synced')}
+  if(applied){try{await bridge.onApplied?.([...touched])}catch(_){}try{window.dispatchEvent(new CustomEvent('oscar:sync-applied',{detail:{applied,stores:[...touched],remoteBatch:batch,notificationRecords,tenant:tenant()}}))}catch(_){}broadcast('synced')}
   if(repairs.length)requestSync(40);
   return{applied,changedStores:[...touched]}
 }

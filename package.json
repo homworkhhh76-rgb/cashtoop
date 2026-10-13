@@ -1,1 +1,14 @@
-{"name":"cashtop3-server","private":true,"version":"7.9.4-158","scripts":{"start":"node server.js"},"dependencies":{"web-push":"3.6.7"},"engines":{"node":">=18"}}
+{
+  "name": "cashtop3-server",
+  "private": true,
+  "version": "7.9.4-160",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "web-push": "3.6.7"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
