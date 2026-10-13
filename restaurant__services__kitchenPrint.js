@@ -1,4 +1,4 @@
-import { printElementOnly } from './utils__export.js?v=7.9.4.154-distribution-menu';
+import { printElementOnly } from './utils__export.js?v=7.9.4.158-web-notifications';
 
 const esc = (value) => String(value ?? '')
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -44,7 +44,7 @@ export async function printKitchenTicketDirect(order, settings = {}, options = {
   const root = document.createElement('div');
   root.setAttribute('dir', 'rtl');
   root.dataset.paper = width;
-  root.style.cssText = `width:${small ? '58mm' : '80mm'};max-width:100%;background:#fff;color:#000;padding:${small ? '2.2mm' : '3mm'};font-family:Cairo,Arial,sans-serif;font-size:${small ? '9px' : '10px'};line-height:1.4;direction:rtl;text-align:right;overflow:visible;`;
+  root.style.cssText = `width:${small ? '58mm' : '80mm'};max-width:100%;background:#fff;color:#000;padding:${small ? '2.2mm' : '3mm'};font-family:system-ui,-apple-system,Arial,Tahoma,sans-serif;font-size:${small ? '9px' : '10px'};line-height:1.4;direction:rtl;text-align:right;overflow:visible;`;
 
   const itemRows = items.map(item => {
     const qty = Number(item.quantity || 0);

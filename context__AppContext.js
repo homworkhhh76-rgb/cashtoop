@@ -1,14 +1,15 @@
-import {prepareSale as prepareDistributionSale,postSale as postDistributionSale} from './services__distribution.js?v=7.9.4.154-distribution-menu';
-import {buildFinancialClose,fiscalStores,fiscalMasters} from './services__financialClose.js?v=7.9.4.154-distribution-menu';
-import {buildCartReturn} from './services__cartReturn.js?v=7.9.4.154-distribution-menu';
+import { startNotifications } from './services__notifications.js?v=7.9.4.158-web-notifications';
+import {prepareSale as prepareDistributionSale,postSale as postDistributionSale} from './services__distribution.js?v=7.9.4.158-web-notifications';
+import {buildFinancialClose,fiscalStores,fiscalMasters} from './services__financialClose.js?v=7.9.4.158-web-notifications';
+import {buildCartReturn} from './services__cartReturn.js?v=7.9.4.158-web-notifications';
 import { jsx as _jsx } from "react/jsx-runtime";
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { assertOpenFinancialRecord, getAllFromStore, getFromStore, putInStore, deleteFromStore, clearStore, bulkPut, commitLocalBatch, queryStorePage, queryAllStoreRecords, queryStoreStats, getLatestStockMovementLocal, initializeDatabase, seedDatabaseDefaults, cleanupLegacyDemoSeedIfPristine, ensurePrimaryShowroomWarehouse, resetDatabase, exportDatabaseBackup, importDatabaseBackup, syncChannel, DEFAULT_SETTINGS, CASH_CUSTOMER, DEFAULT_CATEGORIES, DEFAULT_WAREHOUSES, DEFAULT_ACCOUNTS, DEFAULT_SUPPLIERS, getDemoProducts, getDemoStock, DEFAULT_EMPLOYEES, } from './services__db.js?v=7.9.4.154-distribution-menu';
-import { calculateUnitConversions, findUnitByBarcode, toBaseQuantity } from './utils__unitTree.js?v=7.9.4.154-distribution-menu';
-import { playBeepSound, playSuccessSound, playErrorSound } from './services__audio.js?v=7.9.4.154-distribution-menu';
-import { notifyTelegramInvoice } from './services__telegram.js?v=7.9.4.154-distribution-menu';
-import { isManagerAccess, normalizeEmployeePermissions, canAccessTab, firstAllowedTab } from './utils__permissions.js?v=7.9.4.154-distribution-menu';
-import { isTrialAccount, TRIAL_LIMITS } from './trial__config.js?v=7.9.4.154-distribution-menu';
+import { assertOpenFinancialRecord, getAllFromStore, getFromStore, putInStore, deleteFromStore, clearStore, bulkPut, commitLocalBatch, queryStorePage, queryAllStoreRecords, queryStoreStats, getLatestStockMovementLocal, initializeDatabase, seedDatabaseDefaults, cleanupLegacyDemoSeedIfPristine, ensurePrimaryShowroomWarehouse, resetDatabase, exportDatabaseBackup, importDatabaseBackup, syncChannel, DEFAULT_SETTINGS, CASH_CUSTOMER, DEFAULT_CATEGORIES, DEFAULT_WAREHOUSES, DEFAULT_ACCOUNTS, DEFAULT_SUPPLIERS, getDemoProducts, getDemoStock, DEFAULT_EMPLOYEES, } from './services__db.js?v=7.9.4.158-web-notifications';
+import { calculateUnitConversions, findUnitByBarcode, toBaseQuantity } from './utils__unitTree.js?v=7.9.4.158-web-notifications';
+import { playBeepSound, playSuccessSound, playErrorSound } from './services__audio.js?v=7.9.4.158-web-notifications';
+import { notifyTelegramInvoice } from './services__telegram.js?v=7.9.4.158-web-notifications';
+import { isManagerAccess, normalizeEmployeePermissions, canAccessTab, firstAllowedTab } from './utils__permissions.js?v=7.9.4.158-web-notifications';
+import { isTrialAccount, TRIAL_LIMITS } from './trial__config.js?v=7.9.4.158-web-notifications';
 const AppContext = createContext(null);
 const recordTime = (item = {}) => {
     const fields = ['createdAt', 'date', 'timestamp', 'startTime', 'updatedAt'];
@@ -240,6 +241,8 @@ export const AppProvider = ({ children }) => {
         }
     }, [isLoaded, activeTab, accessArgs]);
     // Cart state
+    useEffect(() => { if (!isLoaded) return; return startNotifications(settings,currentUser,setActiveTab); }, [isLoaded,settings,currentUser,setActiveTab]);
+
     const [cart, setCart] = useState([]);
     const [invoiceAdditionalCharges, setInvoiceAdditionalCharges] = useState(0);
     const [invoiceDiscountType, setInvoiceDiscountType] = useState('fixed');

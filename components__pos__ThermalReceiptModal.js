@@ -1,14 +1,14 @@
-import {t} from './services__i18n.js?v=7.9.4.154-distribution-menu';
-import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.154-distribution-menu';
+import {t} from './services__i18n.js?v=7.9.4.158-web-notifications';
+import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.158-web-notifications';
 import React, { useEffect, useRef, useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.154-distribution-menu';
-import { printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.154-distribution-menu';
-import { downloadProfessionalInvoicePDF, downloadProfessionalInvoiceImage, downloadProfessionalInvoiceExcel, warmProfessionalExportLibraries } from './utils__professionalExport.js?v=7.9.4.154-distribution-menu';
-import { renderInvoiceCanvas } from './utils__canvasRenderer.js?v=7.9.4.154-distribution-menu';
-import { smartPrinter } from './services__printer.js?v=7.9.4.154-distribution-menu';
-import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.154-distribution-menu';
-import { createCustomerPortalLinks } from './services__customerPortalLinks.js?v=7.9.4.154-distribution-menu';
-import { createQrSvgDataUrl } from './utils__qrcode.js?v=7.9.4.154-distribution-menu';
+import { useApp } from './context__AppContext.js?v=7.9.4.158-web-notifications';
+import { printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.158-web-notifications';
+import { downloadProfessionalInvoicePDF, downloadProfessionalInvoiceImage, downloadProfessionalInvoiceExcel, warmProfessionalExportLibraries } from './utils__professionalExport.js?v=7.9.4.158-web-notifications';
+import { renderInvoiceCanvas } from './utils__canvasRenderer.js?v=7.9.4.158-web-notifications';
+import { smartPrinter } from './services__printer.js?v=7.9.4.158-web-notifications';
+import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.158-web-notifications';
+import { createCustomerPortalLinks } from './services__customerPortalLinks.js?v=7.9.4.158-web-notifications';
+import { createQrSvgDataUrl } from './utils__qrcode.js?v=7.9.4.158-web-notifications';
 import { Printer, X, Download, Image as ImageIcon, FileSpreadsheet, Bluetooth } from 'lucide-react';
 
 const h = React.createElement;
@@ -219,7 +219,7 @@ export const ThermalReceiptModal = () => {
                 id: 'printable-receipt',
                 'data-paper': paperWidth,
                 className: `receipt-paper bg-white text-black shadow-sm border border-slate-200 text-right select-none transition-all mx-auto ${paperWidth === '80mm' ? 'receipt-paper-80' : paperWidth === '58mm' ? 'receipt-paper-58' : 'receipt-paper-a4'}`,
-                style: { fontFamily: "Tahoma, Arial, system-ui, -apple-system, sans-serif" }
+                style: { fontFamily: "system-ui, -apple-system, Arial, Tahoma, sans-serif" }
             },
                 h('div', { className: 'receipt-brand-header' },
                     logoSrc ? h('img', {

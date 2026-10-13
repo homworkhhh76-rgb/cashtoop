@@ -1,13 +1,14 @@
-import {AuditFilters,auditQuery,auditMatches,actorOf} from './components__common__AuditFilters.js?v=7.9.4.154-distribution-menu';
-import {t} from './services__i18n.js?v=7.9.4.154-distribution-menu';
-import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.154-distribution-menu';
+import { EmptyState } from './components__common__EmptyState.js?v=7.9.4.158-web-notifications';
+import {AuditFilters,auditQuery,auditMatches,actorOf} from './components__common__AuditFilters.js?v=7.9.4.158-web-notifications';
+import {t} from './services__i18n.js?v=7.9.4.158-web-notifications';
+import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.158-web-notifications';
 import React, { useEffect, useRef, useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.154-distribution-menu';
-import { Pagination, useDatabasePagination } from './components__common__Pagination.js?v=7.9.4.154-distribution-menu';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.154-distribution-menu';
-import { getBrandLogoDataUrl, getBrandLogoDisplayUrl } from './brand__logo.js?v=7.9.4.154-distribution-menu';
-import { printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.154-distribution-menu';
-import { downloadProfessionalPurchaseInvoicePDF, downloadProfessionalPurchaseInvoiceImage, downloadProfessionalTableExcel } from './utils__professionalExport.js?v=7.9.4.154-distribution-menu';
+import { useApp } from './context__AppContext.js?v=7.9.4.158-web-notifications';
+import { Pagination, useDatabasePagination } from './components__common__Pagination.js?v=7.9.4.158-web-notifications';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.158-web-notifications';
+import { getBrandLogoDataUrl, getBrandLogoDisplayUrl } from './brand__logo.js?v=7.9.4.158-web-notifications';
+import { printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.158-web-notifications';
+import { downloadProfessionalPurchaseInvoicePDF, downloadProfessionalPurchaseInvoiceImage, downloadProfessionalTableExcel } from './utils__professionalExport.js?v=7.9.4.158-web-notifications';
 import { Plus, Trash2, Building2, Eye, X, Pencil, Image as ImageIcon, FileDown, FileSpreadsheet, Printer, AlertTriangle, ReceiptText } from 'lucide-react';
 
 const h = React.createElement;
@@ -347,7 +348,7 @@ export const PurchasesView = () => {
 
   const list = h('div', { className: 'rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm' },
     (!purchasesPager.loading && purchasesPager.totalItems === 0)
-      ? h('div', { className: 'min-h-64 flex flex-col items-center justify-center p-8 text-center' }, h(ReceiptText, { className: 'w-10 h-10 text-slate-300 mb-3' }), h('div', { className: 'font-black text-slate-700 dark:text-slate-200' }, 'لا توجد فواتير مشتريات بعد'), h('p', { className: 'text-xs text-slate-400 mt-1' }, 'اضغط «فاتورة شراء جديدة» لتسجيل أول عملية توريد.'))
+      ? h(EmptyState,{message:'لا يوجد فواتير مشتريات'})
       : h('div', { className: 'overflow-x-auto slim-scrollbar' }, h('table', { className: 'w-full min-w-[760px] text-xs text-right' },
           h('thead', null, h('tr', { className: 'bg-slate-50 dark:bg-slate-800 border-b text-slate-500 dark:border-slate-700' }, ...['الرقم', 'التاريخ', 'المورد', 'الإجمالي', 'المدفوع', 'الدين', ''].map((x, i) => h('th', { key: i, className: 'p-3' }, x)))),
           h('tbody', null, ...purchasesPager.pageItems.map((p, index) => h('tr', { key: p.id || index, className: 'border-b last:border-0 dark:border-slate-800' },
@@ -394,7 +395,7 @@ export const PurchasesView = () => {
             h('thead',null,h('tr',{className:'bg-violet-600 text-white'},...['#','التاريخ','رقم الفاتورة','المورد','الإجمالي','المدفوع','المتبقي'].map((x,i)=>h('th',{key:i,className:'border border-violet-500 p-2 text-right'},x)))),
             h('tbody',null,...(statementRows.length?statementRows:[null]).map((row,i)=>row?h('tr',{key:row.id||i},
               h('td',{className:'border p-2'},i+1),h('td',{className:'border p-2'},safeDate(row.date).toLocaleDateString('ar-EG')),h('td',{className:'border p-2 font-mono'},row.invoiceNumber||'-'),h('td',{className:'border p-2 font-bold'},row.supplierName||'-'),h('td',{className:'border p-2'},money(row.grandTotal)),h('td',{className:'border p-2'},money(row.paidAmount)),h('td',{className:'border p-2'},money(row.remainingAmount))
-            ):h('tr',{key:'empty'},h('td',{colSpan:7,className:'border p-6 text-center text-slate-400'},'لا توجد مشتريات في الفترة المختارة'))))
+            ):h('tr',{key:'empty'},h('td',{colSpan:7,className:'border p-6 text-center text-slate-400'},h(EmptyState,{message:'لا يوجد مشتريات'})))))
           )
         )
       )

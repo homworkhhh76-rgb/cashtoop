@@ -1,6 +1,7 @@
+import { EmptyState } from './components__common__EmptyState.js?v=7.9.4.158-web-notifications';
 import React, {useEffect,useMemo,useState} from 'react';
 import {createPortal} from 'react-dom';
-import {useApp} from './context__AppContext.js?v=7.9.4.154-distribution-menu';
+import {useApp} from './context__AppContext.js?v=7.9.4.158-web-notifications';
 import {Search,Plus,Percent,Users,Package,Trash2,Save,RotateCcw,Tag,CheckCircle2,X} from 'lucide-react';
 
 const h=React.createElement;
@@ -162,7 +163,7 @@ export function PriceGroupsView(){
     ),
     h('div',{className:'price-group-product-list'},...filteredProducts.slice(0,150).map(p=>h('article',{key:p.id,className:'price-group-product-card'},h('div',{className:'price-group-product-title'},p.name),h('div',{className:'price-group-unit-grid'},...(p.units||[]).map(u=>{const base=n(u.salePrice??p.sellingPrice);const auto=calcPercentPrice(base,editing);const manual=readManual(editing,p.id,u.id);return h('label',{key:u.id,className:'price-group-unit-edit'},h('span',{className:'price-group-unit-name'},u.name),h('small',null,`أساسي ${base} • نسبة ${auto}`),h('input',{type:'number',min:0,step:1,value:manual,placeholder:String(auto),onChange:e=>setUnitPrice(p.id,u.id,e.target.value)}));}))))),
     filteredProducts.length>150?h('div',{className:'price-group-modal-note'},'تم عرض أول 150 صنف. استخدم البحث للوصول لبقية الأصناف.'):null,
-    !filteredProducts.length?h('div',{className:'price-group-modal-empty'},'لا توجد أصناف مطابقة للبحث.'):null
+    !filteredProducts.length?h(EmptyState,{message:'لا يوجد منتجات'}):null
   )):null;
 
   return h(React.Fragment,null,
@@ -183,7 +184,7 @@ export function PriceGroupsView(){
             h('button',{type:'button',onClick:()=>remove(g),'aria-label':'حذف المجموعة'},h(Trash2,{size:16}))
           )
         )),
-        !groups.length?h('div',{className:'sm:col-span-2 lg:col-span-3 rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-400'},'لا توجد مجموعات أسعار بعد. اضغط «مجموعة جديدة».'):null
+        !groups.length?h(EmptyState,{message:'لا يوجد مجموعات أسعار'}):null
       ),
       editing&&!customerModalOpen&&!priceModalOpen?h('form',{onSubmit:saveMain,className:'rounded-2xl border border-violet-200 bg-white shadow-sm overflow-hidden'},
         h('div',{className:'p-4 sm:p-5 border-b border-slate-100 bg-violet-50/40 flex items-center justify-between gap-3'},h('div',null,h('h3',{className:'font-black text-base'},groups.some(g=>g.id===editing.id)?'تعديل مجموعة الأسعار':'إنشاء مجموعة أسعار جديدة'),h('p',{className:'text-[11px] text-slate-500 mt-1'},'احفظ الاسم والنسبة، وافتح العملاء والأسعار كل واحد في نافذة مستقلة.')),h(CheckCircle2,{className:'w-6 h-6 text-violet-600'})),

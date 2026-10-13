@@ -1,9 +1,9 @@
-import {t} from './services__i18n.js?v=7.9.4.154-distribution-menu';
-import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.154-distribution-menu';
+import {t} from './services__i18n.js?v=7.9.4.158-web-notifications';
+import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.158-web-notifications';
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import React, { useState } from 'react';
-import { useRestaurant } from './restaurant__context__RestaurantContext.js?v=7.9.4.154-distribution-menu';
-import { useApp } from './restaurant__context__AppContext.js?v=7.9.4.154-distribution-menu';
+import { useRestaurant } from './restaurant__context__RestaurantContext.js?v=7.9.4.158-web-notifications';
+import { useApp } from './restaurant__context__AppContext.js?v=7.9.4.158-web-notifications';
 import { Pencil, Trash2, Plus, BookOpen, Scale, AlertTriangle, } from 'lucide-react';
 export const RestaurantWasteView = () => {
     const { recipes, wasteLogs, addRecipe, updateRecipe, deleteRecipe, logWaste, deleteWasteRecord, } = useRestaurant();

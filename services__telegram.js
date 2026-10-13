@@ -1,5 +1,5 @@
-import { getAllFromStore, getFromStore, putInStore } from './services__db.js?v=7.9.4.154-distribution-menu';
-import { renderInvoiceCanvas, renderVoucherCanvas, renderTableCanvas } from './utils__canvasRenderer.js?v=7.9.4.154-distribution-menu';
+import { getAllFromStore, getFromStore, putInStore } from './services__db.js?v=7.9.4.158-web-notifications';
+import { renderInvoiceCanvas, renderVoucherCanvas, renderTableCanvas } from './utils__canvasRenderer.js?v=7.9.4.158-web-notifications';
 
 // Telegram integration for Cash Top 3.
 // The owner explicitly requested embedding this token in the app build.

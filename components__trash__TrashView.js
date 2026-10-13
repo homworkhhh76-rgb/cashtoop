@@ -1,7 +1,8 @@
-import {t} from './services__i18n.js?v=7.9.4.154-distribution-menu';
+import { EmptyState } from './components__common__EmptyState.js?v=7.9.4.158-web-notifications';
+import {t} from './services__i18n.js?v=7.9.4.158-web-notifications';
 import React, { useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.154-distribution-menu';
-import { Pagination, usePagination } from './components__common__Pagination.js?v=7.9.4.154-distribution-menu';
+import { useApp } from './context__AppContext.js?v=7.9.4.158-web-notifications';
+import { Pagination, usePagination } from './components__common__Pagination.js?v=7.9.4.158-web-notifications';
 import { RotateCcw, Trash2 } from 'lucide-react';
 
 const h = React.createElement;
@@ -44,8 +45,8 @@ export const TrashView = () => {
     } finally { setBusyId(''); }
   };
   const emptyText = {
-    products: 'لا توجد أصناف في سلة المحذوفات', customers: 'لا يوجد عملاء في سلة المحذوفات',
-    suppliers: 'لا يوجد موردون في سلة المحذوفات', expenses: 'لا توجد مصروفات في سلة المحذوفات'
+    products: 'لا يوجد منتجات', customers: 'لا يوجد عملاء',
+    suppliers: 'لا يوجد موردين', expenses: 'لا يوجد مصروفات'
   }[activeTab];
   const restoreText = { products:'استرجاع الصنف', customers:'استرجاع العميل', suppliers:'استرجاع المورد', expenses:'استرجاع المصروف' }[activeTab];
   const itemTitle = item => activeTab === 'expenses' ? `${item.category || 'مصروف'} - ${Number(item.amount || 0).toFixed(2)}` : item.name;
@@ -70,7 +71,7 @@ export const TrashView = () => {
       )
     ),
     h('div',{className:'rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden'},
-      activeItems.length===0 ? h('div',{className:'p-12 text-center text-xs text-slate-400'},emptyText) :
+      activeItems.length===0 ? h(EmptyState,{message:emptyText}) :
       h('div',{className:'divide-y divide-slate-100 dark:divide-slate-800'},
         ...pager.pageItems.map(item=>h('div',{key:item.id,className:'p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3'},
           h('div',{className:'min-w-0'},h('h4',{className:'font-bold text-sm text-slate-900 dark:text-white truncate'},itemTitle(item)),h('span',{className:'text-xs text-slate-400'},itemSub(item))),

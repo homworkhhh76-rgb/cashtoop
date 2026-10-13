@@ -1,8 +1,9 @@
-import {t} from './services__i18n.js?v=7.9.4.154-distribution-menu';
+import { EmptyState } from './components__common__EmptyState.js?v=7.9.4.158-web-notifications';
+import {t} from './services__i18n.js?v=7.9.4.158-web-notifications';
 import React from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.154-distribution-menu';
+import { useApp } from './context__AppContext.js?v=7.9.4.158-web-notifications';
 import { Layers } from 'lucide-react';
-import { ProductImage } from './components__common__ProductImage.js?v=7.9.4.154-distribution-menu';
+import { ProductImage } from './components__common__ProductImage.js?v=7.9.4.158-web-notifications';
 
 const h = React.createElement;
 
@@ -78,7 +79,7 @@ const ProductGridImpl = () => {
       )
     ),
     h('div', { ref:scrollRef,className:'flex-1 overflow-y-auto p-3 custom-scrollbar' },
-      filteredProducts.length===0 ? null :
+      filteredProducts.length===0 ? h(EmptyState,{message:'لا يوجد منتجات'}) :
       h('div',{className:'oscar-pos-product-grid'}, ...filteredProducts.slice(0,renderLimit).map(product=>{
         const baseStock=getProductStock(product.id,settings.activeWarehouseId);
         const defaultUnit=(product.units||[]).find(u=>u.isDefaultSale)||(product.units||[])[0];

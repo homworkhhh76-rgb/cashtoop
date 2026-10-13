@@ -1,9 +1,9 @@
-import {t} from './services__i18n.js?v=7.9.4.154-distribution-menu';
+import {t} from './services__i18n.js?v=7.9.4.158-web-notifications';
 import {createPortal} from 'react-dom';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.154-distribution-menu';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.158-web-notifications';
 import React,{useState,useEffect,useRef} from 'react';
-import {useApp} from './context__AppContext.js?v=7.9.4.154-distribution-menu';
-import {PaymentModal} from './components__pos__PaymentModal.js?v=7.9.4.154-distribution-menu';
+import {useApp} from './context__AppContext.js?v=7.9.4.158-web-notifications';
+import {PaymentModal} from './components__pos__PaymentModal.js?v=7.9.4.158-web-notifications';
 import {Plus,Minus,Trash2,PauseCircle,Clock,Package,Tag} from 'lucide-react';
 const h=React.createElement;
 export function DesktopCheckout(){

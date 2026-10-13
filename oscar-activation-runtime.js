@@ -150,7 +150,7 @@
     return runtime
   }
   function readRuntime(){try{const raw=localStorage.getItem(RUNTIME_KEY);return raw?JSON.parse(unwrapText(raw)):null}catch(_){return null}}
-  function clearRuntime(){localStorage.removeItem(RUNTIME_KEY)}
+  function clearRuntime(){window.dispatchEvent(new Event('ct:logout'));localStorage.removeItem(RUNTIME_KEY)}
   function saveMasterConfig(cfg){const aiInput=cfg.ai||{},master={database:{databaseURL:safe(cfg.databaseURL),authToken:safe(cfg.authToken),table:safe(cfg.table||'oscar_rtdb')},ai:{provider:safe(cfg.aiProvider||aiInput.provider||'openrouter')||'openrouter',apiKey:safe(cfg.aiApiKey||aiInput.apiKey),model:safe(cfg.aiModel||aiInput.model||'google/gemini-2.5-flash:free')||'google/gemini-2.5-flash:free'},adminRootPath:cfg.adminRootPath||'oscar/admin',rootPath:cfg.rootPath||'oscar/companies',savedAt:Date.now()};if(!master.database.databaseURL||!master.database.authToken)throw new Error('بيانات قاعدة الأم غير مكتملة.');localStorage.setItem(MASTER_KEY,wrapText(JSON.stringify(master)));return master}
   function readMasterConfig(){try{const raw=localStorage.getItem(MASTER_KEY);return raw?JSON.parse(unwrapText(raw)):null}catch(_){return null}}
   function clearMasterConfig(){localStorage.removeItem(MASTER_KEY)}

@@ -1,5 +1,5 @@
-import { encodeCustomerPortalAccess } from './customer-portal-codec.js?v=7.9.4.154-distribution-menu';
-import { TRIAL_DATABASE } from './trial__config.js?v=7.9.4.154-distribution-menu';
+import { encodeCustomerPortalAccess } from './customer-portal-codec.js?v=7.9.4.158-web-notifications';
+import { TRIAL_DATABASE } from './trial__config.js?v=7.9.4.158-web-notifications';
 
 const ALPHABET='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const clean=v=>String(v??'').trim();

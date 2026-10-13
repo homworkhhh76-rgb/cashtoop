@@ -1,13 +1,14 @@
-import {AuditFilters,auditQuery,auditMatches,actorOf} from './components__common__AuditFilters.js?v=7.9.4.154-distribution-menu';
-import {t} from './services__i18n.js?v=7.9.4.154-distribution-menu';
+import { EmptyState } from './components__common__EmptyState.js?v=7.9.4.158-web-notifications';
+import {AuditFilters,auditQuery,auditMatches,actorOf} from './components__common__AuditFilters.js?v=7.9.4.158-web-notifications';
+import {t} from './services__i18n.js?v=7.9.4.158-web-notifications';
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useApp } from './context__AppContext.js?v=7.9.4.154-distribution-menu';
-import { Pagination, useDatabasePagination } from './components__common__Pagination.js?v=7.9.4.154-distribution-menu';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.154-distribution-menu';
-import { exportToCSV, printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.154-distribution-menu';
-import { downloadProfessionalTablePDF, downloadProfessionalTableImage, downloadProfessionalVoucherPDF, downloadProfessionalVoucherImage } from './utils__professionalExport.js?v=7.9.4.154-distribution-menu';
-import { getBrandLogoDataUrl, getBrandLogoDisplayUrl } from './brand__logo.js?v=7.9.4.154-distribution-menu';
+import { useApp } from './context__AppContext.js?v=7.9.4.158-web-notifications';
+import { Pagination, useDatabasePagination } from './components__common__Pagination.js?v=7.9.4.158-web-notifications';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.158-web-notifications';
+import { exportToCSV, printElementOnly, warmExportLibraries } from './utils__export.js?v=7.9.4.158-web-notifications';
+import { downloadProfessionalTablePDF, downloadProfessionalTableImage, downloadProfessionalVoucherPDF, downloadProfessionalVoucherImage } from './utils__professionalExport.js?v=7.9.4.158-web-notifications';
+import { getBrandLogoDataUrl, getBrandLogoDisplayUrl } from './brand__logo.js?v=7.9.4.158-web-notifications';
 import { FileSpreadsheet, ArrowDownLeft, ArrowUpRight, Search, Trash2, Printer, Download, Image as ImageIcon, FileText, CreditCard, User, Building2, AlertCircle, Eye, X } from 'lucide-react';
 
 const h = React.createElement;
@@ -198,7 +199,7 @@ export const VouchersView = () => {
           h('td',{className:'p-3'},v.sourceType==='account'?(v.accountName||'حساب مالي'):'بدون حساب'),
           h('td',{className:'p-3 text-slate-500 max-w-[220px] truncate'},v.notes||'-'),
           h('td',{className:'p-3'},h('div',{className:'flex gap-1'},h('button',{type:'button',onClick:()=>{setViewingVoucher(v);setVoucherPaperSize(settings.printerWidth||'80mm');},className:'p-1.5 rounded-lg hover:bg-violet-50 text-violet-700'},h(Eye,{className:'w-4 h-4'})),h('button',{type:'button',onClick:()=>setDeleteConfirmId(v.id),className:'p-1.5 rounded-lg hover:bg-rose-50 text-rose-600'},h(Trash2,{className:'w-4 h-4'}))))
-        )):[h('tr',{key:'empty'},h('td',{colSpan:8,className:'p-8 text-center text-slate-400'},'لا توجد سندات مطابقة'))]))
+        )):[h('tr',{key:'empty'},h('td',{colSpan:8,className:'p-8 text-center text-slate-400'},h(EmptyState,{message:'لا يوجد سندات'})))]))
       ),
       h(Pagination,{pager:vouchersPager})
     ),

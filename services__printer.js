@@ -3,7 +3,7 @@
   - A printer is selected from inside the app once, then remembered on this device/browser.
   - SPA navigation never tears down the connection.
   - If Android/Chrome suspends Bluetooth while the app is in the background, the manager reconnects silently.
-  - Every print waits for a healthy connection and retries once after a transport failure.
+  - Every print waits for a healthy connection and reports partial transport failures without replaying the receipt.
   - Supports BLE printers with a writable GATT characteristic and Web Serial printers as a fallback.
 */
 const PREF_KEY = 'oscar-accounting-printer-pref-v3';
@@ -379,25 +379,16 @@ class SmartPrinterManager {
   async _writeBluetooth(data) {
     const characteristic = this.characteristic;
     if (!characteristic) throw new Error('قناة الطابعة غير متاحة.');
-    const noResponse = !!characteristic.writeValueWithoutResponse;
-    const fn = noResponse ? 'writeValueWithoutResponse' : 'writeValue';
-    // Fast path for thermal printers: larger packets and only a tiny pacing delay.
-    // If a low-MTU printer rejects the packet, retry that packet safely in 20-byte chunks.
-    let chunkSize = noResponse ? 180 : 96;
-    const pause = noResponse ? 2 : 4;
-    for (let i=0; i<data.length; i+=chunkSize) {
-      const chunk = data.slice(i, i+chunkSize);
-      try {
-        await characteristic[fn](chunk);
-      } catch (err) {
-        if (chunkSize > 20 && this.device?.gatt?.connected) {
-          for (let j=0; j<chunk.length; j+=20) {
-            await characteristic[fn](chunk.slice(j, j+20));
-            await sleep(2);
-          }
-        } else throw err;
-      }
-      if (pause) await sleep(pause);
+    // Respect advertised properties; methods can exist even when unsupported.
+    const acknowledged = !!characteristic.properties?.write;
+    const fn = acknowledged
+      ? (characteristic.writeValueWithResponse ? 'writeValueWithResponse' : 'writeValue')
+      : characteristic.properties?.writeWithoutResponse ? 'writeValueWithoutResponse' : null;
+    if (!fn) throw new Error('قناة الطابعة لا تدعم إرسال البيانات.');
+    // 20 bytes fits the default ATT MTU. Never replay a possibly accepted packet.
+    for (let i = 0; i < data.length; i += 20) {
+      await characteristic[fn](data.slice(i, i + 20));
+      await sleep(acknowledged ? 8 : 20);
     }
   }
 
@@ -424,20 +415,12 @@ class SmartPrinterManager {
       this._emit();
       return true;
     } catch (firstErr) {
-      // Do not make the cashier re-select a printer for a normal Android background disconnect.
-      if (this.mode === 'bluetooth') {
-        this.characteristic = null;
-        this.server = null;
-      }
+      // A partial raster job cannot be replayed safely: bytes may already be on paper.
+      this.lastError = 'توقف إرسال الطباعة. أعد تشغيل الطابعة لإلغاء البيانات المتبقية ثم أعد الطباعة يدوياً.';
       this._emit();
-      await sleep(250);
-      await this.autoReconnect({ retries:3 });
-      if (!this.isConnected()) throw firstErr;
-      if (this.mode === 'bluetooth') await this._writeBluetooth(data);
-      else if (this.mode === 'serial') await this._writeSerial(data);
-      this.lastError = '';
-      this._emit();
-      return true;
+      const error = new Error(this.lastError);
+      error.cause = firstErr;
+      throw error;
     }
   }
 
@@ -471,11 +454,21 @@ class SmartPrinterManager {
         raster[y*bytesPerRow+xb] = b;
       }
     }
-    const xL=bytesPerRow&255, xH=(bytesPerRow>>8)&255, yL=height&255, yH=(height>>8)&255;
-    const header = new Uint8Array([0x1b,0x40,0x1b,0x61,0x01,0x1d,0x76,0x30,0x00,xL,xH,yL,yH]);
+    // Small, complete raster bands avoid overflowing low-memory printers.
+    const bandHeight = 24;
+    const count = Math.ceil(height / bandHeight);
+    const header = new Uint8Array([0x1b,0x40,0x1b,0x61,0x01]);
     const footer = new Uint8Array([0x0a,0x0a,0x0a,0x1d,0x56,0x00]);
-    const out = new Uint8Array(header.length+raster.length+footer.length);
-    out.set(header,0); out.set(raster,header.length); out.set(footer,header.length+raster.length);
+    const out = new Uint8Array(header.length + count * 8 + raster.length + footer.length);
+    out.set(header); let offset = header.length;
+    for (let y=0; y<height; y+=bandHeight) {
+      const rows = Math.min(bandHeight, height-y);
+      out.set([0x1d,0x76,0x30,0,bytesPerRow&255,bytesPerRow>>8,rows&255,rows>>8],offset);
+      offset += 8;
+      const band = raster.subarray(y*bytesPerRow,(y+rows)*bytesPerRow);
+      out.set(band,offset); offset += band.length;
+    }
+    out.set(footer,offset);
     return out;
   }
 

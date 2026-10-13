@@ -421,8 +421,10 @@ async function handleAI(req,res,origin){
   }
 }
 
+const notificationService=require('./server__notifications.cjs')({dataDir:TELEGRAM_DATA_DIR,readBody,sendJson});
 const server=http.createServer(async(req,res)=>{
   const origin=String(req.headers.origin||'');
+  if(req.url.split('?')[0]==='/api/notifications')return notificationService.route(req,res,origin);
   if(req.method==='OPTIONS' && (req.url.startsWith('/api/oscar-ai') || req.url.startsWith('/api/oscar-telegram') || req.url.startsWith('/api/telegram') || req.url.startsWith('/api/oscar-product-image') || req.url.startsWith('/api/customer-short-link'))){
     const headers={'Access-Control-Allow-Methods':'GET, POST, HEAD, OPTIONS','Access-Control-Allow-Headers':'Content-Type','Access-Control-Max-Age':'86400'};
     if(ALLOWED_ORIGIN && origin===ALLOWED_ORIGIN) headers['Access-Control-Allow-Origin']=origin;

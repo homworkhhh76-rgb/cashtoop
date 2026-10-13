@@ -1,7 +1,7 @@
-import {customerStatementModel,statementHeaders} from './utils__customerStatement.js?v=7.9.4.154-distribution-menu';
-import { getBrandLogoDataUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.154-distribution-menu';
-import { code128Geometry } from './utils__code128.js?v=7.9.4.154-distribution-menu';
-import { createQrMatrix } from './utils__qrcode.js?v=7.9.4.154-distribution-menu';
+import {customerStatementModel,statementHeaders} from './utils__customerStatement.js?v=7.9.4.158-web-notifications';
+import { getBrandLogoDataUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.158-web-notifications';
+import { code128Geometry } from './utils__code128.js?v=7.9.4.158-web-notifications';
+import { createQrMatrix } from './utils__qrcode.js?v=7.9.4.158-web-notifications';
 
 const imageCache = new Map();
 const num = v => { const n=Number(v); return Number.isFinite(n)?n:0; };
@@ -30,7 +30,7 @@ async function loadImage(src){
   imageCache.set(src,p); return p;
 }
 
-let activeCanvasFont='Cairo, Arial, Tahoma, sans-serif';
+const activeCanvasFont='system-ui, -apple-system, Arial, Tahoma, sans-serif';
 function setFont(ctx,size=24,weight=600){ctx.font=`${weight} ${size}px ${activeCanvasFont}`;ctx.direction='rtl';ctx.textBaseline='middle';}
 function txt(ctx,value,x,y,size=24,weight=600,align='right',color='#0f172a'){
   setFont(ctx,size,weight);ctx.textAlign=align;ctx.fillStyle=color;ctx.fillText(normalize(value)||'-',x,y);
@@ -81,7 +81,7 @@ function drawTable(ctx,{x,y,w,headers,rows,fontSize=19,headH=60,alternate=true,m
 }
 
 export async function renderTableCanvas({title='تقرير',subtitle='',headers=[],rows=[],settings={},orientation='landscape',pageNote=''}){
-  try{await document.fonts?.ready;}catch(_){}
+  
   settings=documentBrandSettings(settings);
   const w=orientation==='landscape'?1600:1120;const ctxProbe=document.createElement('canvas').getContext('2d');const cols=tableColumnGeometry(headers,48,w-96);const fs=headers.length>9?16:headers.length>7?17:19;let bodyH=0;(rows||[]).forEach(r=>bodyH+=rowHeight(ctxProbe,r,cols,fs,56));const probe=createCanvas(w,800);const brandEnd=await drawBrand(probe.ctx,w,settings,title,subtitle,30);const h=Math.max(900,brandEnd+bodyH+220);const {canvas,ctx}=createCanvas(w,h);let y=await drawBrand(ctx,w,settings,title,subtitle,30);
   roundedRect(ctx,48,y,w-96,52,10,'#f8fafc','#e2e8f0');txt(ctx,`تاريخ التقرير: ${new Date().toLocaleString('ar-EG')}`,w-68,y+26,16,600,'right','#64748b');txt(ctx,pageNote||`عدد السجلات: ${(rows||[]).length}`,68,y+26,16,700,'left','#334155');y+=70;
@@ -109,7 +109,7 @@ function drawMetricGlyph(ctx,type,cx,cy,size=34,color='#7C3AED'){
 }
 
 export async function renderExecutiveReportCanvas({title='التقرير اليومي',subtitle='',metrics=[],headers=[],rows=[],settings={}}){
-  try{await document.fonts?.ready;}catch(_){}
+  
   settings=documentBrandSettings(settings);
   const w=1600, h=Math.max(1280, 760 + Math.ceil((rows||[]).length/1)*64);
   const {canvas,ctx}=createCanvas(w,h); let y=await drawBrand(ctx,w,settings,title,subtitle,30);
@@ -156,9 +156,8 @@ function drawBarcode(ctx,value,x,y,w,h){const g=code128Geometry(String(value||''
 function drawQr(ctx,value,x,y,size){const matrix=createQrMatrix(String(value||''),'L'),n=matrix.length;if(!n)return;ctx.fillStyle='#fff';ctx.fillRect(x,y,size,size);const cell=size/n;ctx.fillStyle='#000';for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(matrix[r][c])ctx.fillRect(x+c*cell,y+r*cell,Math.ceil(cell),Math.ceil(cell));}
 
 export async function renderInvoiceCanvas(invoice,settings={},options={}){
-  const previousFont=activeCanvasFont;activeCanvasFont='Tahoma, Arial, sans-serif';
-  try{
-    try{await document.fonts?.ready;}catch(_){}
+  // All documents use installed device fonts, including offline printing.
+    
     settings={...documentBrandSettings(settings),subtitle:'',invoiceBrand:true};
     const paper=options.paperSize||options.paperWidth||settings.printerWidth||'80mm';
     const w=paper==='58mm'?720:paper==='a4'?1240:940;
@@ -222,11 +221,10 @@ export async function renderInvoiceCanvas(invoice,settings={},options={}){
     const finalH=Math.min(canvas.height,Math.ceil(y+24));
     if(finalH<canvas.height){const out=createCanvas(w,finalH);out.ctx.drawImage(canvas,0,0,w,finalH,0,0,w,finalH);return monochromeCanvas(out.canvas);}
     return monochromeCanvas(canvas);
-  }finally{activeCanvasFont=previousFont;}
 }
 
 export async function renderVoucherCanvas(voucher,settings={},options={}){
-  try{await document.fonts?.ready;}catch(_){}settings=documentBrandSettings(settings);const paper=options.paperSize||settings.printerWidth||'80mm';const w=paper==='58mm'?720:paper==='a4'?1240:940;const margin=paper==='58mm'?34:paper==='a4'?74:46;const {canvas,ctx}=createCanvas(w,paper==='a4'?1380:1050);let y=await drawBrand(ctx,w,settings,voucher?.type==='receipt'?'سند قبض مالي':'سند صرف مالي','',30);
+  settings=documentBrandSettings(settings);const paper=options.paperSize||settings.printerWidth||'80mm';const w=paper==='58mm'?720:paper==='a4'?1240:940;const margin=paper==='58mm'?34:paper==='a4'?74:46;const {canvas,ctx}=createCanvas(w,paper==='a4'?1380:1050);let y=await drawBrand(ctx,w,settings,voucher?.type==='receipt'?'سند قبض مالي':'سند صرف مالي','',30);
   roundedRect(ctx,margin,y,w-margin*2,100,12,voucher?.type==='receipt'?'#ecfdf5':'#fffbeb',voucher?.type==='receipt'?'#a7f3d0':'#fde68a');txt(ctx,`رقم السند: #${voucher?.voucherNumber||'-'}`,w/2,y+32,22,900,'center');txt(ctx,dateText(voucher?.date),w/2,y+70,17,600,'center','#64748b');y+=132;
   y=drawPair(ctx,voucher?.type==='receipt'?'استلمنا من:':'صرفنا إلى:',voucher?.partyName||'-',w,y,margin);y=drawPair(ctx,voucher?.type==='receipt'?'في حساب:':'من حساب:',voucher?.sourceType==='account'?(voucher?.accountName||'حساب مالي'):'بدون حساب',w,y,margin);
   roundedRect(ctx,margin,y,w-margin*2,92,12,'#f8fafc','#cbd5e1');txt(ctx,'المبلغ:',w-margin-18,y+46,22,900,'right','#334155');txt(ctx,`${money(voucher?.amount)} ${settings.currencySymbol||''}`,margin+18,y+46,30,900,'left','#6D28D9');y+=118;
@@ -239,7 +237,7 @@ export function customerMovements(customer,invoices=[],vouchers=[]){const invs=i
 export function customerMovementRows(customer,invoices=[],vouchers=[]){return customerMovements(customer,invoices,vouchers).map((m,i)=>{const x=m.data;if(m.kind==='invoice')return[i+1,dateText(x.date),x.type==='return'?'مرتجع مبيعات':'فاتورة مبيعات',x.invoiceNumber||'',money(x.grandTotal),money(x.paidAmount),money(x.remainingAmount)];return[i+1,dateText(x.date),x.type==='receipt'?'سند قبض':'سند صرف',x.voucherNumber||'',money(x.amount),'',''];});}
 
 export async function renderCustomerStatementPages(customer,invoices=[],vouchers=[],settings={}){
-  await document.fonts?.ready;
+  
   settings=documentBrandSettings(settings);const model=customerStatementModel(customer,invoices,vouchers);
   const pages=[],w=1120,h=1584,x=40,widths=[42,122,132,400,110,110,124],heads=statementHeaders;let canvas,ctx,y,page=0;
   async function newPage(){if(canvas)pages.push(canvas);({canvas,ctx}=createCanvas(w,h));page++;y=await drawBrand(ctx,w,settings,'كشف حساب',`العميل: ${customer.name} • الهاتف: ${customer.phone||'-'}`,24);ctx.fillStyle='#7c3aed';ctx.fillRect(x,y,1040,44);let right=1080;heads.forEach((v,i)=>{txt(ctx,v,right-widths[i]/2,y+22,17,800,'center','#fff');right-=widths[i]});y+=44;txt(ctx,`صفحة ${page}`,w/2,h-28,15,600,'center','#64748b');}

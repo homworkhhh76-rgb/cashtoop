@@ -1,7 +1,8 @@
-import { TELEGRAM_BOT_TOKEN, normalizeTelegramRecipients, sendTelegramTextToRecipients, sendTelegramPhotoBlobToRecipients, sendTelegramDocumentBlobToRecipients, buildFullTelegramReportText } from './services__telegram.js?v=7.9.4.154-distribution-menu';
-import { renderExecutiveReportCanvas, renderTablePages } from './utils__canvasRenderer.js?v=7.9.4.154-distribution-menu';
-import { canvasesToPDFBlob } from './utils__pdfExport.js?v=7.9.4.154-distribution-menu';
-import { canvasToImageBlob } from './utils__imageExport.js?v=7.9.4.154-distribution-menu';
+import { markBackupComplete } from './services__notifications.js?v=7.9.4.158-web-notifications';
+import { TELEGRAM_BOT_TOKEN, normalizeTelegramRecipients, sendTelegramTextToRecipients, sendTelegramPhotoBlobToRecipients, sendTelegramDocumentBlobToRecipients, buildFullTelegramReportText } from './services__telegram.js?v=7.9.4.158-web-notifications';
+import { renderExecutiveReportCanvas, renderTablePages } from './utils__canvasRenderer.js?v=7.9.4.158-web-notifications';
+import { canvasesToPDFBlob } from './utils__pdfExport.js?v=7.9.4.158-web-notifications';
+import { canvasToImageBlob } from './utils__imageExport.js?v=7.9.4.158-web-notifications';
 
 const num=v=>{const n=Number(v);return Number.isFinite(n)?n:0;};
 const money=v=>num(v).toFixed(2);
@@ -341,6 +342,7 @@ export async function sendBackupNow(app){
   await saveTelegramConfig(settings).catch(()=>{});
   const sentAt=Date.now();
   writeLocalBackupStamp(sentAt);
+  markBackupComplete().catch(()=>{});
   await bestEffortServer({action:'upload_backup',backupBase64:await blobToBase64(a.blob),backupName:a.name});
   await bestEffortServer({action:'mark_backup_sent',sentAt});
   return {ok:true,sent:result.sent,mode:'direct',sentAt};
