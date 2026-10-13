@@ -1,11 +1,12 @@
-import {AuditFilters,auditQuery,auditMatches,actorOf} from './components__common__AuditFilters.js?v=7.9.4.154-distribution-menu';
-import {t} from './services__i18n.js?v=7.9.4.154-distribution-menu';
+import { EmptyState } from './components__common__EmptyState.js?v=7.9.4.158-web-notifications';
+import {AuditFilters,auditQuery,auditMatches,actorOf} from './components__common__AuditFilters.js?v=7.9.4.158-web-notifications';
+import {t} from './services__i18n.js?v=7.9.4.158-web-notifications';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.154-distribution-menu';
-import { Pagination, usePagination, useDatabasePagination } from './components__common__Pagination.js?v=7.9.4.154-distribution-menu';
-import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.154-distribution-menu';
-import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.154-distribution-menu';
-import { downloadProfessionalTablePDF, downloadProfessionalTableExcel } from './utils__professionalExport.js?v=7.9.4.154-distribution-menu';
+import { useApp } from './context__AppContext.js?v=7.9.4.158-web-notifications';
+import { Pagination, usePagination, useDatabasePagination } from './components__common__Pagination.js?v=7.9.4.158-web-notifications';
+import { SearchableDropdown } from './components__common__Dropdown.js?v=7.9.4.158-web-notifications';
+import { ModalLayer } from './components__common__ModalLayer.js?v=7.9.4.158-web-notifications';
+import { downloadProfessionalTablePDF, downloadProfessionalTableExcel } from './utils__professionalExport.js?v=7.9.4.158-web-notifications';
 import { Plus, Search, Trash2, Edit2, FileSpreadsheet, FileText, Settings2, UsersRound, Receipt, WalletCards, X } from 'lucide-react';
 
 const h = React.createElement;
@@ -445,7 +446,7 @@ export const ExpensesView = () => {
 
     h('div',{className:'rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden'},
       h('div',{className:'overflow-x-auto slim-scrollbar'},
-        count === 0 ? h('div',{className:'p-12 text-center text-xs text-slate-400'},'لا توجد حركات ضمن الفترة والفلترة المحددة') :
+        count === 0 ? h('div',{className:'p-12 text-center text-xs text-slate-400'},h(EmptyState,{message:'لا يوجد حركات'})) :
         mode === 'receipts'
           ? h('table',{className:'w-full text-xs text-right whitespace-nowrap min-w-[1050px]'},
               h('thead',null,h('tr',{className:'bg-slate-50 text-slate-500 border-b'},['المرجع','التاريخ','التصنيف','الجهة','المبلغ','طريقة الدفع','الحساب المودع فيه','البيان'].map(x=>h('th',{key:x,className:'p-3'},x)))),

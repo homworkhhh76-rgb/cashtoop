@@ -1,9 +1,10 @@
-import {t} from './services__i18n.js?v=7.9.4.154-distribution-menu';
-import {ModalLayer} from './components__common__ModalLayer.js?v=7.9.4.154-distribution-menu';
-import {downloadBlob} from './utils__export.js?v=7.9.4.154-distribution-menu';
+import { EmptyState } from './components__common__EmptyState.js?v=7.9.4.158-web-notifications';
+import {t} from './services__i18n.js?v=7.9.4.158-web-notifications';
+import {ModalLayer} from './components__common__ModalLayer.js?v=7.9.4.158-web-notifications';
+import {downloadBlob} from './utils__export.js?v=7.9.4.158-web-notifications';
 import React, { useEffect, useMemo, useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.154-distribution-menu';
-import { queryAllStoreRecords, getAllFromStore } from './services__db.js?v=7.9.4.154-distribution-menu';
+import { useApp } from './context__AppContext.js?v=7.9.4.158-web-notifications';
+import { queryAllStoreRecords, getAllFromStore } from './services__db.js?v=7.9.4.158-web-notifications';
 import {
   CalendarRange, Archive, LockKeyhole, PlayCircle, ReceiptText, Truck, FileSpreadsheet,
   Receipt, ArrowLeftRight, PackageSearch, WalletCards, Users, Building2, Boxes, Eye,
@@ -168,7 +169,7 @@ export const FinancialYearsView=()=>{
                     h('td',{className:'p-2 font-bold'},String(r.ref||'-')),
                     h('td',{className:'p-2'},String(r.name||'-')),
                     h('td',{className:`p-2 text-left font-mono font-bold ${num(r.amount)<0?'text-rose-600':'text-slate-800'}`},`${money(r.amount)} ${settings.currencySymbol||''}`))))))
-          : h('div',{className:'p-4 text-center text-[10px] text-slate-400'},'لا توجد سجلات في هذا القسم')))
+          : h('div',{className:'p-4 text-center text-[10px] text-slate-400'},h(EmptyState,{message:'لا يوجد سجلات'}))))
     ):null
   );
 };

@@ -1,11 +1,12 @@
-import {ModalLayer} from './components__common__ModalLayer.js?v=7.9.4.154-distribution-menu';
-import * as D from './services__distribution.js?v=7.9.4.154-distribution-menu';
-import {t} from './services__i18n.js?v=7.9.4.154-distribution-menu';
+import { EmptyState } from './components__common__EmptyState.js?v=7.9.4.158-web-notifications';
+import {ModalLayer} from './components__common__ModalLayer.js?v=7.9.4.158-web-notifications';
+import * as D from './services__distribution.js?v=7.9.4.158-web-notifications';
+import {t} from './services__i18n.js?v=7.9.4.158-web-notifications';
 import React, { useState } from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.154-distribution-menu';
-import { Pagination, usePagination } from './components__common__Pagination.js?v=7.9.4.154-distribution-menu';
-import { GENERAL_PAGE_PERMISSIONS, RESTAURANT_PAGE_PERMISSIONS, normalizeEmployeePermissions } from './utils__permissions.js?v=7.9.4.154-distribution-menu';
-import { isTrialAccount } from './trial__config.js?v=7.9.4.154-distribution-menu';
+import { useApp } from './context__AppContext.js?v=7.9.4.158-web-notifications';
+import { Pagination, usePagination } from './components__common__Pagination.js?v=7.9.4.158-web-notifications';
+import { GENERAL_PAGE_PERMISSIONS, RESTAURANT_PAGE_PERMISSIONS, normalizeEmployeePermissions } from './utils__permissions.js?v=7.9.4.158-web-notifications';
+import { isTrialAccount } from './trial__config.js?v=7.9.4.158-web-notifications';
 import {
   Users, UserPlus, ShieldCheck, Trash2, Edit2, UserCheck, Download,
   UtensilsCrossed, ChefHat, LayoutGrid, Scale, X
@@ -198,7 +199,7 @@ export const EmployeesView = () => {
     ),
 
     h('div', { className: 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3' },
-      employeesPager.pageItems.map(emp => {
+      !employeesPager.pageItems.length ? h(EmptyState,{message:'لا يوجد موظفين'}) : employeesPager.pageItems.map(emp => {
         const perms = { ...defaultPermissions, ...(emp.permissions || {}) };
         const allowedPages = [
           ...GENERAL_PAGE_PERMISSIONS.filter(([key]) => perms[key]).map(([, , label]) => label),

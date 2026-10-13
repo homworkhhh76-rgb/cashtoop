@@ -1,11 +1,11 @@
-import {registerLayer} from './hooks__appNavigation.js?v=7.9.4.154-distribution-menu';
-import {t} from './services__i18n.js?v=7.9.4.154-distribution-menu';
+import {registerLayer} from './hooks__appNavigation.js?v=7.9.4.158-web-notifications';
+import {t} from './services__i18n.js?v=7.9.4.158-web-notifications';
 import { createPortal } from 'react-dom';
 import React, {useEffect} from 'react';
-import { useApp } from './context__AppContext.js?v=7.9.4.154-distribution-menu';
-import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.154-distribution-menu';
-import { BrandLogoImage } from './components__common__BrandLogoImage.js?v=7.9.4.154-distribution-menu';
-import { canAccessTab, canAccessPermission, firstAllowedTab } from './utils__permissions.js?v=7.9.4.154-distribution-menu';
+import { useApp } from './context__AppContext.js?v=7.9.4.158-web-notifications';
+import { getBrandLogoDataUrl, getBrandLogoDisplayUrl, DEFAULT_LOGO_DATA_URL } from './brand__logo.js?v=7.9.4.158-web-notifications';
+import { BrandLogoImage } from './components__common__BrandLogoImage.js?v=7.9.4.158-web-notifications';
+import { canAccessTab, canAccessPermission, firstAllowedTab } from './utils__permissions.js?v=7.9.4.158-web-notifications';
 import {
   LayoutDashboard, ShoppingCart, ReceiptText, Truck, Package, Boxes, Warehouse,
   Users, Building2, Wallet, Receipt, FileSpreadsheet, UserCheck, Barcode, BarChart3,
