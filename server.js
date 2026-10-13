@@ -46,7 +46,7 @@ var require_server_notifications = __commonJS({
         }
       };
       const digest = (v) => crypto.createHash("sha256").update(v).digest("hex");
-      const preferences = (p) => ({ enabled: !!p?.enabled, types: Object.fromEntries(Object.entries(p?.types || {}).filter(([k, v]) => /^[a-z_]{1,40}$/.test(k) && typeof v === "boolean")), reminderDays: [1, 3, 7, 30].includes(Number(p?.reminderDays)) ? Number(p.reminderDays) : 1, lastBackup: Math.min(Date.now(), Math.max(0, Number(p?.lastBackup) || Date.now())) });
+      const preferences = (p) => ({ since: Math.min(Date.now(), Math.max(0, Number(p?.since) || Date.now())), enabled: !!p?.enabled, types: Object.fromEntries(Object.entries(p?.types || {}).filter(([k, v]) => /^[a-z_]{1,40}$/.test(k) && typeof v === "boolean")), reminderDays: [1, 3, 7, 30].includes(Number(p?.reminderDays)) ? Number(p.reminderDays) : 1, lastBackup: Math.min(Date.now(), Math.max(0, Number(p?.lastBackup) || Date.now())) });
       const rates = /* @__PURE__ */ new Map();
       function rate(key) {
         const now = Date.now(), r = rates.get(key) || { at: now, n: 0 };
@@ -61,7 +61,7 @@ var require_server_notifications = __commonJS({
       async function deliver(channel, event, exclude) {
         let sent = 0;
         for (const [id, s] of Object.entries(channel.subscriptions)) {
-          if (id === exclude || !s.preferences.enabled || s.preferences.types[event.type] === false) continue;
+          if (event.createdAt < Number(s.preferences.since || 0) || id === exclude || !s.preferences.enabled || s.preferences.types[event.type] === false) continue;
           try {
             await webPush.sendNotification(s.subscription, JSON.stringify({ ...event, tenant: channel.tenant }), { TTL: 86400, urgency: event.type === "backup" ? "normal" : "high", timeout: 1e4 });
             sent++;
@@ -125,7 +125,7 @@ var require_server_notifications = __commonJS({
               if (ch.seen[e.id]) return sendJson2(res, 200, { ok: true, duplicate: true }, origin);
               if (ch.tenant && ch.tenant !== e.tenant) return sendJson2(res, 403, { error: "\u0627\u0644\u0634\u0631\u0643\u0629 \u063A\u064A\u0631 \u0645\u0637\u0627\u0628\u0642\u0629" }, origin);
               ch.tenant = String(e.tenant || "");
-              const event = { id: e.id, type: e.type, recordId: String(e.recordId || "").slice(0, 200), storeName: String(e.storeName || "").replace(/[^a-z_]/g, "").slice(0, 40), title: String(e.title || "\u0643\u0627\u0634 \u062A\u0648\u0628 3").slice(0, 120), body: String(e.body || "").slice(0, 500), tab: String(e.tab || "dashboard").replace(/[^a-z_-]/g, "").slice(0, 40) };
+              const event = { id: e.id, type: e.type, createdAt: e.createdAt, recordId: String(e.recordId || "").slice(0, 200), storeName: String(e.storeName || "").replace(/[^a-z_]/g, "").slice(0, 40), title: String(e.title || "\u0643\u0627\u0634 \u062A\u0648\u0628 3").slice(0, 120), body: String(e.body || "").slice(0, 500), tab: String(e.tab || "dashboard").replace(/[^a-z_-]/g, "").slice(0, 40) };
               ch.seen[e.id] = Date.now();
               for (const [key, at] of Object.entries(ch.seen)) if (Date.now() - at > 1728e5) delete ch.seen[key];
               persist();
@@ -157,7 +157,7 @@ var require_server_notifications = __commonJS({
             for (const ch of Object.values(state.channels)) {
               for (const [key, job] of Object.entries(ch.pending || {})) {
                 const target = ch.subscriptions[job.deviceId];
-                if (!target || !target.preferences.enabled || target.preferences.types[job.event.type] === false || now - job.createdAt > 864e5) {
+                if (!target || job.event.createdAt < Number(target.preferences.since || 0) || !target.preferences.enabled || target.preferences.types[job.event.type] === false || now - job.createdAt > 864e5) {
                   delete ch.pending[key];
                   continue;
                 }
@@ -175,7 +175,7 @@ var require_server_notifications = __commonJS({
                 const p = s.preferences;
                 if (!p.enabled || p.types.backup === false || now - p.lastBackup < p.reminderDays * 864e5 || now - (s.remindedAt || 0) < 864e5) continue;
                 try {
-                  await webPush.sendNotification(s.subscription, JSON.stringify({ id: "backup:" + Math.floor(now / 864e5), type: "backup", tenant: ch.tenant, title: "\u062D\u0627\u0646 \u0648\u0642\u062A \u0627\u0644\u0646\u0633\u062E \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A", body: "\u0644\u0645 \u062A\u0633\u062C\u0644 \u0646\u0633\u062E\u0629 \u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629 \u062E\u0644\u0627\u0644 \u0627\u0644\u0645\u062F\u0629 \u0627\u0644\u0645\u062D\u062F\u062F\u0629. \u0627\u0641\u062A\u062D \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0644\u062D\u0641\u0638 \u0646\u0633\u062E\u0629 \u0645\u0646 \u0628\u064A\u0627\u0646\u0627\u062A\u0643.", tab: "settings" }), { TTL: 86400, timeout: 1e4 });
+                  await webPush.sendNotification(s.subscription, JSON.stringify({ id: "backup:" + Math.floor(now / 864e5), type: "backup", createdAt: now, tenant: ch.tenant, title: "\u062D\u0627\u0646 \u0648\u0642\u062A \u0627\u0644\u0646\u0633\u062E \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A", body: "\u0644\u0645 \u062A\u0633\u062C\u0644 \u0646\u0633\u062E\u0629 \u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629 \u062E\u0644\u0627\u0644 \u0627\u0644\u0645\u062F\u0629 \u0627\u0644\u0645\u062D\u062F\u062F\u0629. \u0627\u0641\u062A\u062D \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0644\u062D\u0641\u0638 \u0646\u0633\u062E\u0629 \u0645\u0646 \u0628\u064A\u0627\u0646\u0627\u062A\u0643.", tab: "settings" }), { TTL: 86400, timeout: 1e4 });
                   s.remindedAt = now;
                 } catch (e) {
                   if (e.statusCode === 410 || e.statusCode === 404) delete ch.subscriptions[id];

@@ -1,7 +1,7 @@
-const BUILD='7.9.4.160-sync-notifications';
+const BUILD='7.9.4.161-fresh-notifications';
 const CACHE=`oscar-accounting-${BUILD}`;
 const RUNTIME_CACHE=`oscar-accounting-runtime-${BUILD}`;
-const LOCAL=["./admin.html", "./app-icon.png", "./app.css", "./brand-logo.png", "./customer-portal.js?v=7.9.4.160-sync-notifications", "./customer.html", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./icon.svg", "./index.html", "./ledger-assets/download-icon.png", "./main.js?v=7.9.4.160-sync-notifications", "./manifest.webmanifest", "./notification-badge.png", "./oscar-activation-runtime.js?v=7.9.4.160-sync-notifications", "./oscar-cloud-sync.js?v=7.9.4.160-sync-notifications", "./oscar-ledger.html", "./p2p-bank-palestine.jpg", "./p2p-jawwal-pay.png", "./p2p-palpay.jpg", "./support.html", "./trial-admin.html", "./trial-payment.html", "./معتمد.html"];
+const LOCAL=["./admin.html", "./app-icon.png", "./app.css", "./brand-logo.png", "./customer-portal.js?v=7.9.4.161-fresh-notifications", "./customer.html", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./icon.svg", "./index.html", "./ledger-assets/download-icon.png", "./main.js?v=7.9.4.161-fresh-notifications", "./manifest.webmanifest", "./notification-badge.png", "./oscar-activation-runtime.js?v=7.9.4.161-fresh-notifications", "./oscar-cloud-sync.js?v=7.9.4.161-fresh-notifications", "./oscar-ledger.html", "./p2p-bank-palestine.jpg", "./p2p-jawwal-pay.png", "./p2p-palpay.jpg", "./support.html", "./trial-admin.html", "./trial-payment.html", "./معتمد.html"];
 const REMOTE=[
   'https://esm.sh/react@19.3.0',
   'https://esm.sh/react-dom@19.3.0?external=react',
@@ -114,12 +114,12 @@ async function ctNotificationConfig(value){const cache=await caches.open(CT_NOTI
 let ctNotificationSerial=Promise.resolve();
 function ctNotifyOrdered(fn){const job=ctNotificationSerial.then(fn);ctNotificationSerial=job.catch(()=>{});return job;}
 async function ctShowNotification(d){
- if(!d)return;const cfg=await ctNotificationConfig();if(!cfg?.enabled||cfg.tenant!==d.tenant||cfg.types[d.type]===false)return;
+ if(!d)return;const cfg=await ctNotificationConfig();if(!cfg?.enabled||cfg.tenant!==d.tenant||cfg.types[d.type]===false||!Number.isFinite(d.createdAt)||d.createdAt<Number(cfg.since||Infinity))return;
  const cache=await caches.open('ct-notifications-seen-v1');const key=new URL('./__notification_seen/'+encodeURIComponent(d.tenant)+':'+encodeURIComponent(d.id),self.registration.scope);
  if(await cache.match(key))return;
  await self.registration.showNotification(String(d.title||'كاش توب 3').slice(0,120),{body:String(d.body||'').slice(0,500),icon:new URL('./icon-192.png',self.registration.scope).href,badge:new URL('./notification-badge.png',self.registration.scope).href,lang:'ar',dir:'rtl',tag:String(d.id||'ct-notification'),data:{tab:d.tab,tenant:d.tenant,recordId:d.recordId,storeName:d.storeName}});
  await cache.put(key,new Response(String(Date.now())));const keys=await cache.keys();for(const old of keys.slice(0,Math.max(0,keys.length-2000)))await cache.delete(old);
 }
-self.addEventListener('message',event=>{if(event.data?.type==='CT_NOTIFICATION_CONFIG')event.waitUntil(ctNotifyOrdered(()=>ctNotificationConfig({tenant:event.data.tenant,enabled:!!event.data.enabled,types:event.data.types||{}})));else if(event.data?.type==='CT_SHOW_NOTIFICATION')event.waitUntil(ctNotifyOrdered(()=>ctShowNotification(event.data.notification)));});
+self.addEventListener('message',event=>{if(event.data?.type==='CT_NOTIFICATION_CONFIG')event.waitUntil(ctNotifyOrdered(()=>ctNotificationConfig({tenant:event.data.tenant,enabled:!!event.data.enabled,types:event.data.types||{},since:Number(event.data.since)||Date.now()})));else if(event.data?.type==='CT_SHOW_NOTIFICATION')event.waitUntil(ctNotifyOrdered(()=>ctShowNotification(event.data.notification)));});
 self.addEventListener('push',event=>{let d;try{d=event.data?.json();}catch{return;}event.waitUntil(ctNotifyOrdered(()=>ctShowNotification(d)));});
 self.addEventListener('notificationclick',event=>{event.notification.close();event.waitUntil((async()=>{const d=event.notification.data||{},list=await clients.matchAll({type:'window',includeUncontrolled:true});const scope=new URL(self.registration.scope);for(const client of list){if(client.url.startsWith(scope.href)){await client.focus();client.postMessage({type:'CT_NOTIFICATION_OPEN',tab:d.tab,tenant:d.tenant,recordId:d.recordId,storeName:d.storeName});return;}}const url=new URL('./index.html',scope);url.searchParams.set('notificationTab',String(d.tab||'settings'));url.searchParams.set('notificationTenant',String(d.tenant||''));if(d.recordId)url.searchParams.set('notificationRecord',String(d.recordId));if(d.storeName)url.searchParams.set('notificationStore',String(d.storeName));await clients.openWindow(url.href);})());});
