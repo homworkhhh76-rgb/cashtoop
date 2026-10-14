@@ -1,7 +1,7 @@
-const BUILD='7.9.4.162-filter-dialogs';
+const BUILD='7.9.4.163-links-payment-preview';
 const CACHE=`oscar-accounting-${BUILD}`;
 const RUNTIME_CACHE=`oscar-accounting-runtime-${BUILD}`;
-const LOCAL=["./admin.html", "./app-icon.png", "./app.css", "./brand-logo.png", "./customer-portal.js?v=7.9.4.162-filter-dialogs", "./customer.html", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./icon.svg", "./index.html", "./ledger-assets/download-icon.png", "./main.js?v=7.9.4.162-filter-dialogs", "./manifest.webmanifest", "./notification-badge.png", "./oscar-activation-runtime.js?v=7.9.4.162-filter-dialogs", "./oscar-cloud-sync.js?v=7.9.4.162-filter-dialogs", "./oscar-ledger.html", "./p2p-bank-palestine.jpg", "./p2p-jawwal-pay.png", "./p2p-palpay.jpg", "./support.html", "./trial-admin.html", "./trial-payment.html", "./معتمد.html"];
+const LOCAL=["./admin.html", "./app-icon.png", "./app.css", "./brand-logo.png", "./customer-portal.js?v=7.9.4.163-links-payment-preview", "./customer.html", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./icon.svg", "./index.html", "./ledger-assets/download-icon.png", "./main.js?v=7.9.4.163-links-payment-preview", "./manifest.webmanifest", "./notification-badge.png", "./oscar-activation-runtime.js?v=7.9.4.163-links-payment-preview", "./oscar-cloud-sync.js?v=7.9.4.163-links-payment-preview", "./oscar-ledger.html", "./p2p-bank-palestine.jpg", "./p2p-jawwal-pay.png", "./p2p-palpay.jpg", "./support.html", "./trial-admin.html", "./trial-payment.html", "./معتمد.html"];
 const REMOTE=[
   'https://esm.sh/react@19.3.0',
   'https://esm.sh/react-dom@19.3.0?external=react',

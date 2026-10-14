@@ -98,11 +98,33 @@ async function captureStoreChange(store,value,{deleted=false,key,localUserWrite=
 async function ensureSchema(){const t=tenant(),d=window.OscarActivation?.tursoDirect,c=cfg();if(!t||!d||!c?.databaseURL||!c?.authToken)throw Error('بيانات مزامنة الشركة غير متاحة.');const table=d.table(c),metaTable=table+'_syncmeta';if(schemaTenant===t)return{d,c,table,metaTable};await d.ensure(c);const[info]=await d.pipeline(c,[{sql:`PRAGMA table_info(${table})`,args:[]}]);const cols=d.rows(info).map(x=>String(x.name));if(!cols.includes('sync_batch')){try{await d.pipeline(c,[{sql:`ALTER TABLE ${table} ADD COLUMN sync_batch INTEGER NOT NULL DEFAULT 0`,args:[]}])}catch(e){if(!/duplicate column|already exists/i.test(String(e?.message||e)))throw e}}await d.pipeline(c,[{sql:`CREATE TABLE IF NOT EXISTS ${metaTable} (id INTEGER PRIMARY KEY CHECK(id=1),batch INTEGER NOT NULL DEFAULT 0)`,args:[]},{sql:`INSERT OR IGNORE INTO ${metaTable}(id,batch) VALUES(1,0)`,args:[]},{sql:`CREATE INDEX IF NOT EXISTS idx_${table}_sync_batch ON ${table}(sync_batch,path)`,args:[]}]);schemaTenant=t;return{d,c,table,metaTable}}
 async function remoteBatch(s){const[r]=await s.d.pipeline(s.c,[{sql:`SELECT batch FROM ${s.metaTable} WHERE id=1`,args:[]}]);return Number(s.d.rows(r)[0]?.batch||0)}
 function buildStatements(s,batch){const st=[{sql:`UPDATE ${s.metaTable} SET batch=batch+1 WHERE id=1`,args:[]}];for(const[id,o]of batch){const env={v:o.deleted?null:o.value,deleted:!!o.deleted,rev:Number(o.rev||nextRev()),deviceId:o.deviceId||deviceId(),tenantId:tenant()};st.push({sql:`INSERT INTO ${s.table}(path,payload,deleted,updated_at,sync_batch) VALUES(?,?,?,?,(SELECT batch FROM ${s.metaTable} WHERE id=1)) ON CONFLICT(path) DO UPDATE SET payload=excluded.payload,deleted=excluded.deleted,updated_at=excluded.updated_at,sync_batch=excluded.sync_batch WHERE excluded.updated_at>=${s.table}.updated_at`,args:[pathFor(o.store,o.key),JSON.stringify(env),o.deleted?1:0,Number(o.rev||nextRev())]})}return st}
+function mergeSettings(local={},incoming={},remoteRev=0){
+ const merged={...local,...incoming},clocks={...(incoming.settingsFieldClocks||{})};
+ const localFallback=isoMs(local.settingsUpdatedAt),remoteFallback=isoMs(incoming.settingsUpdatedAt)||revToMs(remoteRev);
+ for(const key of Object.keys(local)){
+  if(key==='settingsFieldClocks'||key==='settingsUpdatedAt')continue;
+  const a=Number(local.settingsFieldClocks?.[key]??localFallback),b=Number(incoming.settingsFieldClocks?.[key]??remoteFallback);
+  if(!(key in incoming)||a>b){merged[key]=local[key];clocks[key]=a;}
+ }
+ merged.settingsFieldClocks=clocks;merged.settingsUpdatedAt=new Date(Math.max(localFallback,remoteFallback)).toISOString();return merged;
+}
+async function pushSettings(s,op){
+ const path=pathFor(op.store,op.key);
+ for(let attempt=0;attempt<4;attempt++){
+  const row=await s.d.readExactRow(s.c,path),env=row?.payload||{},remote=Object.prototype.hasOwnProperty.call(env,'v')?env.v:env;
+  const value=mergeSettings(remote||{},op.value||{},op.rev),rev=Math.max(nextRev(),Number(row?.updated_at||0)+1);
+  const payload={v:value,deleted:false,rev,deviceId:op.deviceId,tenantId:tenant()};
+  const results=await s.d.pipeline(s.c,[{sql:`UPDATE ${s.metaTable} SET batch=batch+1 WHERE id=1`,args:[]},{sql:`INSERT INTO ${s.table}(path,payload,deleted,updated_at,sync_batch) VALUES(?,?,0,?,(SELECT batch FROM ${s.metaTable} WHERE id=1)) ON CONFLICT(path) DO UPDATE SET payload=excluded.payload,deleted=0,updated_at=excluded.updated_at,sync_batch=excluded.sync_batch WHERE ${s.table}.updated_at=?`,args:[path,JSON.stringify(payload),rev,Number(row?.updated_at||0)]}]);
+  if(Number(results[1]?.affected_row_count)>0)return true;
+ }
+ throw Error('تعديلات إعدادات متزامنة؛ ستعاد المحاولة تلقائياً.');
+}
+
 async function flushRealtimeOp(id,op){
   if(!op||navigator.onLine===false||!tenant())return false;
   const s=await ensureSchema();
   try{
-    await s.d.pipeline(s.c,buildStatements(s,[[id,op]]),30000);
+    if(op.store==='settings'&&op.key==='store_config'&&!op.deleted)await pushSettings(s,op);else await s.d.pipeline(s.c,buildStatements(s,[[id,op]]),30000);
     await removePendingOp(id,op.rev);
     broadcast('synced');
     emitStatus({state:'realtime-pushed',realtimeStore:op.store});
@@ -125,8 +147,10 @@ async function prepareRemoteValue(store,key,value,remoteRev,{deleted=false,lates
   if(store==='settings'&&key==='store_config'&&value&&typeof value==='object'){
     try{
       const local=await bridge.getFromStore?.('settings','store_config');
-      if(local?.activeWarehouseId){
-        return{skip:false,value:{...value,activeWarehouseId:local.activeWarehouseId}};
+      if(local){
+        const merged=mergeSettings(local,value,remoteRev);
+        if(local.activeWarehouseId)merged.activeWarehouseId=local.activeWarehouseId;
+        return{skip:false,value:merged};
       }
     }catch(_){ }
     return{skip:false,value};
@@ -240,7 +264,8 @@ async function pushDistributionBatch(s,op){
 }
 
 async function pushPending(){
-  await hydratePending();const every=Object.entries(readPending());const all=every.filter(([,o])=>o.store!=='distribution_batch');if(!every.length)return{uploaded:0,remaining:0};const s=await ensureSchema();let uploaded=0;
+  await hydratePending();const every=Object.entries(readPending());const settingOps=every.filter(([,o])=>o.store==='settings'&&o.key==='store_config'&&!o.deleted);const all=every.filter(([,o])=>o.store!=='distribution_batch'&&!(o.store==='settings'&&o.key==='store_config'&&!o.deleted));if(!every.length)return{uploaded:0,remaining:0};const s=await ensureSchema();let uploaded=0;
+  for(const [id,op] of settingOps){await pushSettings(s,op);await removePendingOp(id,op.rev);uploaded++;}
   for(let i=0;i<all.length;i+=60){const batch=all.slice(i,i+60);try{
     await s.d.pipeline(s.c,buildStatements(s,batch),Math.max(30000,batch.length*700));
     for(const[id,o]of batch)if(await removePendingOp(id,o.rev))uploaded++;

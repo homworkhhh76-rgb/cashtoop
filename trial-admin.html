@@ -10,14 +10,14 @@
 </head>
 <body>
 <div class="shell"><aside class="side"><div class="brand"><img src="brand-logo.png" alt=""><div><b>إدارة الحسابات التجريبية</b><small>طلبات الدفع والتفعيل</small></div></div><div class="nav"><button id="refreshSide">↻ تحديث الطلبات</button><a href="admin.html">لوحة الإدارة العامة</a><a href="index.html">فتح كاش توب 3</a></div><div class="note">هذه الصفحة مستقلة للحسابات التجريبية المدفوعة. الموافقة تفعّل ملف الدخول نفسه الذي استلمه العميل.</div></aside><main class="main">
-<header class="top"><div><h1>طلبات تفعيل كاش توب 3 — 20₪</h1><p>راجع إثبات الدفع ثم وافق أو ارفض. مدة الحساب تبدأ من لحظة الموافقة.</p></div><button class="btn primary" id="refreshTop">↻ تحديث من السحابة</button></header>
+<header class="top"><div><h1>طلبات تفعيل كاش توب 3 — 299₪</h1><p>راجع إثبات الدفع ثم وافق أو ارفض. مدة الحساب تبدأ من لحظة الموافقة.</p></div><button class="btn primary" id="refreshTop">↻ تحديث من السحابة</button></header>
 <section class="stats"><div class="stat"><small>إجمالي الطلبات</small><b id="sAll">0</b></div><div class="stat"><small>بانتظار المراجعة</small><b id="sPending">0</b></div><div class="stat"><small>مقبولة</small><b id="sApproved">0</b></div><div class="stat"><small>مرفوضة</small><b id="sRejected">0</b></div></section>
 <section class="filters"><input id="search" placeholder="بحث باسم الشركة، الهاتف، رقم الطلب أو اسم المرسل"><select id="filter"><option value="all">كل الحالات</option><option value="pending_payment">قيد المراجعة</option><option value="approved">مقبول</option><option value="rejected">مرفوض</option></select></section>
 <section class="table-wrap"><table><thead><tr><th>الشركة</th><th>رقم الطلب</th><th>طريقة الدفع</th><th>المرسل</th><th>المبلغ</th><th>التاريخ</th><th>الحالة</th><th>الإجراءات</th></tr></thead><tbody id="tbody"><tr><td colspan="8" class="empty">جارٍ تحميل الطلبات...</td></tr></tbody></table></section>
 </main></div>
 <div id="toast" class="toast"></div>
 <div id="modal" class="modal-back"><div class="modal"><div class="modal-head"><h2 id="modalTitle">تفاصيل الطلب</h2><button id="closeModal" class="close">×</button></div><img id="proof" class="proof-img" alt="إثبات الدفع"><div id="modalDetails" class="details"></div><div id="modalActions" class="modal-actions"></div></div></div>
-<script src="./oscar-activation-runtime.js?v=7.9.4.162-filter-dialogs"></script>
+<script src="./oscar-activation-runtime.js?v=7.9.4.163-links-payment-preview"></script>
 <script type="module">// app/trial__config.js
 var TRIAL_DATABASE = Object.freeze({
   databaseURL: "libsql://tgggg-amanwaraa.aws-ap-northeast-1.turso.io",
@@ -35,7 +35,7 @@ var TRIAL_LIMITS = Object.freeze({
   days: 10
 });
 
-// app/trial-admin.html.js
+// app/trial-admin.html.inline.js
 var BOT_TOKEN = "8901874566:AAG3TAC6xSl-YHmEnQTpvBrxZpoBwyyx6nY";
 var FILE_ROOT = `https://api.telegram.org/file/bot${BOT_TOKEN}/`;
 var API = `https://api.telegram.org/bot${BOT_TOKEN}`;
@@ -53,7 +53,7 @@ function unwrap(value) {
   return value && typeof value === "object" && Object.prototype.hasOwnProperty.call(value, "v") ? value.deleted ? null : value.v : value;
 }
 function statusLabel(s) {
-  return s === "approved" ? "\u0645\u0642\u0628\u0648\u0644" : s === "rejected" ? "\u0645\u0631\u0641\u0648\u0636" : s === "setup_error" ? "\u062E\u0637\u0623 \u062A\u062C\u0647\u064A\u0632" : "\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629";
+  return s === "approved" ? "مقبول" : s === "rejected" ? "مرفوض" : s === "setup_error" ? "خطأ تجهيز" : "قيد المراجعة";
 }
 function statusClass(s) {
   return ["approved", "rejected", "setup_error"].includes(s) ? s : "pending";
@@ -65,7 +65,7 @@ function accessPath(companyId) {
   return `oscar/companies/${encodeURIComponent(companyId)}/access/company`;
 }
 async function load() {
-  $("tbody").innerHTML = '<tr><td colspan="8" class="empty">\u062C\u0627\u0631\u064D \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0637\u0644\u0628\u0627\u062A...</td></tr>';
+  $("tbody").innerHTML = '<tr><td colspan="8" class="empty">جارٍ تحميل الطلبات...</td></tr>';
   try {
     const list = await OscarActivation.tursoDirect.listPrefix(TRIAL_DATABASE, "oscar/trial_payments", { ensureSchema: true });
     rows = list.filter((x) => Number(x.deleted) !== 1 && x.payload).map((x) => x.payload).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
@@ -82,10 +82,10 @@ function render() {
   $("sApproved").textContent = rows.filter((r) => r.status === "approved").length;
   $("sRejected").textContent = rows.filter((r) => r.status === "rejected").length;
   if (!data.length) {
-    $("tbody").innerHTML = '<tr><td colspan="8" class="empty">\u0644\u0627 \u062A\u0648\u062C\u062F \u0637\u0644\u0628\u0627\u062A \u0645\u0637\u0627\u0628\u0642\u0629.</td></tr>';
+    $("tbody").innerHTML = '<tr><td colspan="8" class="empty">لا توجد طلبات مطابقة.</td></tr>';
     return;
   }
-  $("tbody").innerHTML = data.map((r) => `<tr><td><div class="company"><img class="logo" src="${esc(r.trialProfile?.logo || "brand-logo.png")}" alt=""><div><b>${esc(r.companyName)}</b><small>${esc(r.companyPhone || "")}</small></div></div></td><td dir="ltr">${esc(r.paymentId)}</td><td>${esc(r.methodName)}</td><td>${esc(r.senderName)}</td><td><b>20 \u20AA</b></td><td>${new Date(r.createdAt).toLocaleString("ar")}</td><td><span class="status ${statusClass(r.status)}">${statusLabel(r.status)}</span></td><td><div class="row-actions"><button class="btn blue" data-view="${esc(r.paymentId)}">\u0639\u0631\u0636</button><button class="btn" data-file="${esc(r.paymentId)}">\u0645\u0644\u0641 \u0627\u0644\u062F\u062E\u0648\u0644</button>${r.status === "pending_payment" ? `<button class="btn green" data-approve="${esc(r.paymentId)}">\u0645\u0648\u0627\u0641\u0642\u0629</button><button class="btn red" data-reject="${esc(r.paymentId)}">\u0631\u0641\u0636</button>` : ""}</div></td></tr>`).join("");
+  $("tbody").innerHTML = data.map((r) => `<tr><td><div class="company"><img class="logo" src="${esc(r.trialProfile?.logo || "brand-logo.png")}" alt=""><div><b>${esc(r.companyName)}</b><small>${esc(r.companyPhone || "")}</small></div></div></td><td dir="ltr">${esc(r.paymentId)}</td><td>${esc(r.methodName)}</td><td>${esc(r.senderName)}</td><td><b>299 ₪</b></td><td>${new Date(r.createdAt).toLocaleString("ar")}</td><td><span class="status ${statusClass(r.status)}">${statusLabel(r.status)}</span></td><td><div class="row-actions"><button class="btn blue" data-view="${esc(r.paymentId)}">عرض</button><button class="btn" data-file="${esc(r.paymentId)}">ملف الدخول</button>${r.status === "pending_payment" ? `<button class="btn green" data-approve="${esc(r.paymentId)}">موافقة</button><button class="btn red" data-reject="${esc(r.paymentId)}">رفض</button>` : ""}</div></td></tr>`).join("");
 }
 $("search").oninput = render;
 $("filter").onchange = render;
@@ -93,7 +93,7 @@ $("refreshTop").onclick = load;
 $("refreshSide").onclick = load;
 function downloadFile(row) {
   if (!row?.activationOpaque) {
-    toast("\u0645\u0644\u0641 \u0627\u0644\u062F\u062E\u0648\u0644 \u063A\u064A\u0631 \u0645\u062D\u0641\u0648\u0638 \u0644\u0647\u0630\u0627 \u0627\u0644\u0637\u0644\u0628", "err");
+    toast("ملف الدخول غير محفوظ لهذا الطلب", "err");
     return;
   }
   const blob = new Blob([row.activationOpaque], { type: "application/octet-stream" }), url = URL.createObjectURL(blob), a = document.createElement("a");
@@ -106,20 +106,20 @@ async function proofUrl(fileId) {
   if (!fileId) return "";
   const p = new URLSearchParams({ file_id: fileId });
   const r = await fetch(`${API}/getFile`, { method: "POST", body: p, cache: "no-store" }), j = await r.json();
-  if (!j.ok || !j.result?.file_path) throw new Error(j.description || "\u062A\u0639\u0630\u0631 \u0641\u062A\u062D \u0627\u0644\u0625\u062B\u0628\u0627\u062A");
+  if (!j.ok || !j.result?.file_path) throw new Error(j.description || "تعذر فتح الإثبات");
   return FILE_ROOT + j.result.file_path;
 }
 async function showDetails(row) {
   selected = row;
-  $("modalTitle").textContent = `${row.companyName} \u2014 ${row.paymentId}`;
+  $("modalTitle").textContent = `${row.companyName} — ${row.paymentId}`;
   $("proof").removeAttribute("src");
   try {
     $("proof").src = await proofUrl(row.proofFileId);
   } catch (_) {
     $("proof").src = "brand-logo.png";
   }
-  $("modalDetails").innerHTML = [["\u0627\u0644\u0634\u0631\u0643\u0629", row.companyName], ["\u0627\u0644\u0647\u0627\u062A\u0641", row.companyPhone], ["\u0627\u0644\u0639\u0646\u0648\u0627\u0646", row.companyAddress], ["\u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u062F\u0641\u0639", row.methodName], ["\u0627\u0633\u0645 \u0627\u0644\u0645\u0631\u0633\u0644", row.senderName], ["\u0627\u0644\u0645\u0628\u0644\u063A", "20 \u20AA"], ["\u0627\u0644\u062D\u0627\u0644\u0629", statusLabel(row.status)], ["\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0637\u0644\u0628", new Date(row.createdAt).toLocaleString("ar")], ["\u0633\u0628\u0628 \u0627\u0644\u0631\u0641\u0636", row.rejectionReason || "\u2014"]].map(([k, v]) => `<div class="detail"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join("");
-  $("modalActions").innerHTML = `<button class="btn" data-modal-file="1">\u062A\u0646\u0632\u064A\u0644 \u0645\u0644\u0641 \u0627\u0644\u062F\u062E\u0648\u0644</button>${row.status === "pending_payment" ? '<button class="btn green" data-modal-approve="1">\u0645\u0648\u0627\u0641\u0642\u0629 \u0648\u062A\u0641\u0639\u064A\u0644</button><button class="btn red" data-modal-reject="1">\u0631\u0641\u0636 \u0627\u0644\u062F\u0641\u0639\u0629</button>' : ""}`;
+  $("modalDetails").innerHTML = [["الشركة", row.companyName], ["الهاتف", row.companyPhone], ["العنوان", row.companyAddress], ["طريقة الدفع", row.methodName], ["اسم المرسل", row.senderName], ["المبلغ", "299 ₪"], ["الحالة", statusLabel(row.status)], ["تاريخ الطلب", new Date(row.createdAt).toLocaleString("ar")], ["سبب الرفض", row.rejectionReason || "—"]].map(([k, v]) => `<div class="detail"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join("");
+  $("modalActions").innerHTML = `<button class="btn" data-modal-file="1">تنزيل ملف الدخول</button>${row.status === "pending_payment" ? '<button class="btn green" data-modal-approve="1">موافقة وتفعيل</button><button class="btn red" data-modal-reject="1">رفض الدفعة</button>' : ""}`;
   $("modal").classList.add("show");
 }
 $("closeModal").onclick = () => $("modal").classList.remove("show");
@@ -127,16 +127,16 @@ $("modal").onclick = (e) => {
   if (e.target === $("modal")) $("modal").classList.remove("show");
 };
 async function approve(row) {
-  if (!confirm(`\u062A\u0641\u0639\u064A\u0644 \u062D\u0633\u0627\u0628 ${row.companyName} \u0644\u0645\u062F\u0629 ${TRIAL_LIMITS.days} \u0623\u064A\u0627\u0645\u061F`)) return;
+  if (!confirm(`تفعيل حساب ${row.companyName} لمدة ${TRIAL_LIMITS.days} أيام؟`)) return;
   try {
     const access = unwrap(await OscarActivation.tursoDirect.readExact(TRIAL_DATABASE, accessPath(row.companyId), { ensureSchema: true }));
-    if (!access) throw new Error("\u0633\u062C\u0644 \u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u0634\u0631\u0643\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F.");
+    if (!access) throw new Error("سجل تفعيل الشركة غير موجود.");
     const now = /* @__PURE__ */ new Date(), end = new Date(now.getTime() + TRIAL_LIMITS.days * 864e5);
     const updatedAccess = { ...access, status: "active", startAt: now.toISOString(), endAt: end.toISOString(), approvedAt: now.toISOString(), paymentId: row.paymentId, updatedAt: Date.now() };
     const updatedPayment = { ...row, status: "approved", approvedAt: now.toISOString(), decisionAt: now.toISOString(), trialStartsAt: now.toISOString(), trialEndsAt: end.toISOString(), updatedAt: Date.now() };
     await OscarActivation.tursoDirect.writeExact(TRIAL_DATABASE, accessPath(row.companyId), updatedAccess, Date.now(), false);
     await OscarActivation.tursoDirect.writeExact(TRIAL_DATABASE, payPath(row.paymentId), updatedPayment, Date.now(), false);
-    toast("\u062A\u0645\u062A \u0627\u0644\u0645\u0648\u0627\u0641\u0642\u0629 \u0648\u062A\u0641\u0639\u064A\u0644 \u0645\u0644\u0641 \u0627\u0644\u062F\u062E\u0648\u0644");
+    toast("تمت الموافقة وتفعيل ملف الدخول");
     $("modal").classList.remove("show");
     await load();
   } catch (e) {
@@ -144,16 +144,16 @@ async function approve(row) {
   }
 }
 async function reject(row) {
-  const reason = prompt("\u0633\u0628\u0628 \u0627\u0644\u0631\u0641\u0636 \u0627\u0644\u0630\u064A \u0633\u064A\u0638\u0647\u0631 \u0641\u064A \u0633\u062C\u0644 \u0627\u0644\u0625\u062F\u0627\u0631\u0629:", "\u062A\u0639\u0630\u0631 \u0645\u0637\u0627\u0628\u0642\u0629 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062A\u062D\u0648\u064A\u0644 \u0645\u0639 \u0625\u062B\u0628\u0627\u062A \u0627\u0644\u062F\u0641\u0639.");
+  const reason = prompt("سبب الرفض الذي سيظهر في سجل الإدارة:", "تعذر مطابقة بيانات التحويل مع إثبات الدفع.");
   if (reason === null) return;
   try {
     const access = unwrap(await OscarActivation.tursoDirect.readExact(TRIAL_DATABASE, accessPath(row.companyId), { ensureSchema: true })) || {};
     const now = (/* @__PURE__ */ new Date()).toISOString();
-    const updatedAccess = { ...access, status: "rejected_payment", rejectedAt: now, rejectionReason: reason || "\u0644\u0645 \u064A\u062A\u0645 \u0627\u0639\u062A\u0645\u0627\u062F \u0627\u0644\u062F\u0641\u0639\u0629.", updatedAt: Date.now() };
-    const updatedPayment = { ...row, status: "rejected", rejectedAt: now, decisionAt: now, rejectionReason: reason || "\u0644\u0645 \u064A\u062A\u0645 \u0627\u0639\u062A\u0645\u0627\u062F \u0627\u0644\u062F\u0641\u0639\u0629.", updatedAt: Date.now() };
+    const updatedAccess = { ...access, status: "rejected_payment", rejectedAt: now, rejectionReason: reason || "لم يتم اعتماد الدفعة.", updatedAt: Date.now() };
+    const updatedPayment = { ...row, status: "rejected", rejectedAt: now, decisionAt: now, rejectionReason: reason || "لم يتم اعتماد الدفعة.", updatedAt: Date.now() };
     await OscarActivation.tursoDirect.writeExact(TRIAL_DATABASE, accessPath(row.companyId), updatedAccess, Date.now(), false);
     await OscarActivation.tursoDirect.writeExact(TRIAL_DATABASE, payPath(row.paymentId), updatedPayment, Date.now(), false);
-    toast("\u062A\u0645 \u0631\u0641\u0636 \u0627\u0644\u062F\u0641\u0639\u0629");
+    toast("تم رفض الدفعة");
     $("modal").classList.remove("show");
     await load();
   } catch (e) {
