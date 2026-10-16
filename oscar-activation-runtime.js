@@ -143,7 +143,7 @@
     if(!payload||payload.app!==APP_TAG)throw new Error('ملف التفعيل غير صالح.');
     const companyId=safe(payload.companyId||payload.tenantId),companyKey=safe(payload.companyKey||payload.activationKey);
     if(!companyId||!companyKey)throw new Error('ملف الشركة غير مكتمل.');
-    const cfg=payload.database||{},customerCfg=payload.customerDatabase||{},aiCfg=payload.ai||{},runtime={activationKey:payload.activationKey,fileId:payload.fileId,type:payload.type,companyId,tenantId:companyId,companyKey,companyName:payload.companyName,account:payload.account||null,permissions:payload.permissions||payload.account?.permissions||[],status:payload.status||'active',plan:payload.plan||'lifetime',expiresAt:payload.expiresAt||'',database:{databaseURL:safe(cfg.databaseURL),authToken:safe(cfg.authToken),table:safe(cfg.table||'oscar_rtdb')},customerDatabase:{databaseURL:safe(customerCfg.databaseURL||cfg.databaseURL),authToken:safe(customerCfg.authToken),table:safe(customerCfg.table||cfg.table||'oscar_rtdb')},trialProfile:clone(payload.trialProfile||{}),trialLimits:clone(payload.trialLimits||{}),ai:{provider:safe(aiCfg.provider||'openrouter')||'openrouter',apiKey:safe(aiCfg.apiKey),model:safe(aiCfg.model||'google/gemini-2.5-flash:free')||'google/gemini-2.5-flash:free'},rootPath:payload.rootPath||'oscar/companies',appBaseUrl:normalizeAppUrl(payload.appBaseUrl),activatedAt:Date.now()};
+    const cfg=payload.database||{},customerCfg=payload.customerDatabase||{},aiCfg=payload.ai||{},runtime={activationKey:payload.activationKey,fileId:payload.fileId,type:payload.type,companyId,tenantId:companyId,companyKey,companyName:payload.companyName,account:payload.account||null,permissions:payload.permissions||payload.account?.permissions||[],status:payload.status||'active',plan:payload.plan||'lifetime',expiresAt:payload.expiresAt||'',database:{databaseURL:safe(cfg.databaseURL),authToken:safe(cfg.authToken),table:safe(cfg.table||'oscar_rtdb')},customerDatabase:{databaseURL:safe(customerCfg.databaseURL||cfg.databaseURL),authToken:safe(customerCfg.authToken),table:safe(customerCfg.table||cfg.table||'oscar_rtdb')},trialProfile:clone(payload.trialProfile||{}),trialLimits:clone(payload.trialLimits||{}),ai:{provider:safe(aiCfg.provider||'openrouter')||'openrouter',apiKey:safe(aiCfg.apiKey),model:safe(aiCfg.model||'google/gemini-2.5-flash:free')||'google/gemini-2.5-flash:free'},rootPath:payload.rootPath||'oscar/companies',isTrialLink:!!payload.isTrialLink,appBaseUrl:normalizeAppUrl(payload.appBaseUrl),activatedAt:Date.now()};
     localStorage.setItem(RUNTIME_KEY,wrapText(JSON.stringify(runtime)));
     if(runtime.database.databaseURL&&runtime.database.authToken)saveDatabaseAccess(runtime.database,{companyId});
     window.dispatchEvent(new CustomEvent('oscar:activation-loaded',{detail:{...runtime,database:{...runtime.database,authToken:''},customerDatabase:{...runtime.customerDatabase,authToken:runtime.customerDatabase?.authToken?'***':''},ai:{...runtime.ai,apiKey:runtime.ai.apiKey?'***':''}}}));
@@ -151,7 +151,7 @@
   }
   function readRuntime(){try{const raw=localStorage.getItem(RUNTIME_KEY);return raw?JSON.parse(unwrapText(raw)):null}catch(_){return null}}
   function clearRuntime(){window.dispatchEvent(new Event('ct:logout'));localStorage.removeItem(RUNTIME_KEY)}
-  function saveMasterConfig(cfg){const aiInput=cfg.ai||{},master={database:{databaseURL:safe(cfg.databaseURL),authToken:safe(cfg.authToken),table:safe(cfg.table||'oscar_rtdb')},ai:{provider:safe(cfg.aiProvider||aiInput.provider||'openrouter')||'openrouter',apiKey:safe(cfg.aiApiKey||aiInput.apiKey),model:safe(cfg.aiModel||aiInput.model||'google/gemini-2.5-flash:free')||'google/gemini-2.5-flash:free'},adminRootPath:cfg.adminRootPath||'oscar/admin',rootPath:cfg.rootPath||'oscar/companies',appBaseUrl:normalizeAppUrl(cfg.appBaseUrl),savedAt:Date.now()};if(!master.database.databaseURL||!master.database.authToken)throw new Error('بيانات قاعدة الأم غير مكتملة.');localStorage.setItem(MASTER_KEY,wrapText(JSON.stringify(master)));return master}
+  function saveMasterConfig(cfg){const aiInput=cfg.ai||{},master={database:{databaseURL:safe(cfg.databaseURL),authToken:safe(cfg.authToken),table:safe(cfg.table||'oscar_rtdb')},ai:{provider:safe(cfg.aiProvider||aiInput.provider||'openrouter')||'openrouter',apiKey:safe(cfg.aiApiKey||aiInput.apiKey),model:safe(cfg.aiModel||aiInput.model||'google/gemini-2.5-flash:free')||'google/gemini-2.5-flash:free'},adminRootPath:cfg.adminRootPath||'oscar/admin',rootPath:cfg.rootPath||'oscar/companies',appBaseUrl:normalizeAppUrl(cfg.appBaseUrl),trialDatabaseId:safe(cfg.trialDatabaseId||readMasterConfig()?.trialDatabaseId),savedAt:Date.now()};if(!master.database.databaseURL||!master.database.authToken)throw new Error('بيانات قاعدة الأم غير مكتملة.');localStorage.setItem(MASTER_KEY,wrapText(JSON.stringify(master)));return master}
   function readMasterConfig(){try{const raw=localStorage.getItem(MASTER_KEY);return raw?JSON.parse(unwrapText(raw)):null}catch(_){return null}}
   function clearMasterConfig(){localStorage.removeItem(MASTER_KEY)}
 
@@ -221,6 +221,7 @@
     return {status:'active',endAt:payload.expiresAt||'',companyId,offlineLocal:true};
   }
   async function verifyPayload(payload,{allowOffline=true}={}){
+    if(payload?.expiresAt&&Date.now()>=Date.parse(payload.expiresAt))throw Error('انتهت مدة تفعيل الشركة.');
     if(navigator.onLine!==false){
       try{return await verifyPayloadRemote(payload)}
       catch(error){
@@ -267,13 +268,10 @@
   function normalizeAppUrl(value){const url=new URL(safe(value)||'https://www.cashtoop.com/');if(url.protocol!=='https:'&&!(url.protocol==='http:'&&['localhost','127.0.0.1'].includes(url.hostname)))throw Error('أدخل رابط HTTPS صالحاً للتطبيق.');url.search='';url.hash='';return url.href;}
   async function copyText(text){try{await navigator.clipboard.writeText(text);}catch{const field=document.createElement('textarea');field.value=text;field.style.cssText='position:fixed;top:0;opacity:0';document.body.appendChild(field);field.select();const ok=document.execCommand('copy');field.remove();if(!ok)throw Error('تعذر نسخ الرابط.');}return text;}
   async function loginLinkId(secret){return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',enc.encode(secret))),n=>n.toString(16).padStart(2,'0')).join('');}
-  async function createActivationLink(payload,baseUrl){
-    if(navigator.onLine===false)throw Error('إنشاء رابط الدخول يحتاج اتصالاً بالإنترنت.');
-    const secret=b64(crypto.getRandomValues(new Uint8Array(16))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''),id=await loginLinkId(secret);
-    const made=await makeFile(payload),sealed=await sealObject({opaque:made.opaque},secret);
-    await writeExact(LINK_DATABASE,'oscar/login_links/'+id,{sealed,createdAt:Date.now()},Date.now(),false);
-    const url=new URL(normalizeAppUrl(baseUrl||payload.appBaseUrl||readRuntime()?.appBaseUrl));url.hash='l='+secret;
-    return copyText(url.href);
+  async function createActivationLink(payload,baseUrl,{copy=true}={}){
+    const made=await makeFile(payload);
+    const url=new URL(normalizeAppUrl(baseUrl||payload.appBaseUrl||readRuntime()?.appBaseUrl));url.hash='code='+encodeURIComponent(made.opaque);
+    if(copy)await copyText(url.href);return url.href;
   }
   async function resolveActivationLink(secret){
     if(!/^[A-Za-z0-9_-]{22}$/.test(secret))throw Error('رابط الدخول غير صالح.');
@@ -292,5 +290,6 @@
     await pipeline(db,[{sql:`INSERT INTO ${tursoTable(db)}(path,payload,deleted,updated_at) VALUES ${values} ON CONFLICT(path) DO NOTHING`,args}]);
   }
 
-  window.OscarActivation={normalizeAppUrl,createActivationLink,resolveActivationLink,writeInitialRecords,version:3,copyActivationFile,makeFile,prepareActivationDownload,triggerPreparedActivationDownload,downloadActivationFile,primeActivationFile,readActivationFileText,parseActivationFile,activatePayload,readRuntime,clearRuntime,saveDatabaseAccess,readDatabaseAccess,saveMasterConfig,readMasterConfig,clearMasterConfig,sealObject,openObject,tursoDirect,verifyPayload,verifyPayloadRemote,verifyCompanyAccessRemote,cachedVerification,markVerified,buildRolePayload,prepareVerifiedRoleFile,prepareCompanyManagerFileRotation,rotateCompanyManagerFile,constants:{APP_TAG,RUNTIME_KEY,MASTER_KEY,LOCAL_DB_ACCESS_KEY,VERIFIED_KEY}};
+  async function copyCurrentLoginLink(){const rt=readRuntime();if(!rt?.account)throw Error('سجّل الدخول أولاً.');const payload=buildRolePayload(rt.type||'employee',rt.account);const checked=await verifyPayloadRemote(payload);payload.account={...payload.account,...checked.account};payload.appBaseUrl=checked.access?.appBaseUrl||rt.appBaseUrl;payload.expiresAt=checked.access?.endAt||rt.expiresAt||'';payload.isTrialLink=!!rt.isTrialLink;return createActivationLink(payload);}
+  window.OscarActivation={copyCurrentLoginLink,normalizeAppUrl,createActivationLink,resolveActivationLink,writeInitialRecords,version:3,copyActivationFile,makeFile,prepareActivationDownload,triggerPreparedActivationDownload,downloadActivationFile,primeActivationFile,readActivationFileText,parseActivationFile,activatePayload,readRuntime,clearRuntime,saveDatabaseAccess,readDatabaseAccess,saveMasterConfig,readMasterConfig,clearMasterConfig,sealObject,openObject,tursoDirect,verifyPayload,verifyPayloadRemote,verifyCompanyAccessRemote,cachedVerification,markVerified,buildRolePayload,prepareVerifiedRoleFile,prepareCompanyManagerFileRotation,rotateCompanyManagerFile,constants:{APP_TAG,RUNTIME_KEY,MASTER_KEY,LOCAL_DB_ACCESS_KEY,VERIFIED_KEY}};
 })();

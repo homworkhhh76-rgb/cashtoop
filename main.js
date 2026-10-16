@@ -168,16 +168,17 @@ function deviceId() {
   }
   return id;
 }
-async function enableNotifications() {
+async function enableNotifications(onGranted) {
   if (!window.isSecureContext) throw Error("الإشعارات تحتاج فتح التطبيق عبر HTTPS");
   if (!("Notification" in window)) throw Error("الإشعارات غير متاحة هنا. على iPhone ثبّت التطبيق على الشاشة الرئيسية وافتحه منها");
   if (!allowedReceiver()) throw Error("إشعارات بيانات الشركة متاحة للمدير فقط");
   const permission = await Notification.requestPermission();
   if (permission !== "granted") throw Error("اسمح بالإشعارات من إعدادات الموقع في كروم ثم جرّب مجدداً");
   const p = saveNotificationPreferences({ ...getNotificationPreferences(), enabled: true });
-  const reg = await registration();
-  await reg.active?.postMessage({ type: "CT_NOTIFICATION_CONFIG", tenant: tenant(), enabled: true, types: p.types, since: p.since });
+  if (typeof onGranted === "function") onGranted();
   try {
+    const reg = await registration();
+    await reg.active?.postMessage({ type: "CT_NOTIFICATION_CONFIG", tenant: tenant(), enabled: true, types: p.types, since: p.since });
     const config = await api("config");
     let sub = await reg.pushManager.getSubscription();
     if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlKey(config.publicKey) });
@@ -436,23 +437,44 @@ function NotificationSettings() {
 }
 function NotificationPermissionPrompt({ allowed }) {
   const company = window.OscarActivation?.readRuntime?.()?.companyId || "";
-  const promptKey = "ct-notification-prompt-161:" + company;
-  const [open, setOpen] = React.useState(() => allowed && (!window.Notification || Notification.permission !== "granted") && sessionStorage.getItem(promptKey) !== "later");
+  const promptKey = "ct-notification-prompt-dismissed";
+  const legacyKey = "ct-notification-prompt-161:" + company;
+  const dismiss = () => {
+    try {
+      localStorage.setItem(promptKey, "later");
+      sessionStorage.setItem(legacyKey, "later");
+    } catch {
+    }
+    setOpen(false);
+  };
+  const [open, setOpen] = React.useState(() => allowed && window.Notification?.permission === "default" && localStorage.getItem(promptKey) !== "later" && sessionStorage.getItem(legacyKey) !== "later");
   const [busy, setBusy] = React.useState(false), [error, setError] = React.useState("");
-  if (!allowed || !open) return null;
+  React.useEffect(() => {
+    const check = () => {
+      if (window.Notification?.permission === "granted") setOpen(false);
+    };
+    window.addEventListener("focus", check);
+    window.addEventListener("ct:notification-preferences", check);
+    return () => {
+      window.removeEventListener("focus", check);
+      window.removeEventListener("ct:notification-preferences", check);
+    };
+  }, []);
   async function allow() {
     setBusy(true);
+    setError("");
     try {
-      const result = await enableNotifications();
-      if (window.Notification?.permission === "granted") {
-        setOpen(false);
-      } else setError(result);
+      const result = await enableNotifications(() => setOpen(false));
+      if (window.Notification?.permission === "granted") setOpen(false);
+      else setError(result);
     } catch (e2) {
-      setError(e2.message);
+      if (window.Notification?.permission === "granted") setOpen(false);
+      else setError(e2.message);
     } finally {
       setBusy(false);
     }
   }
+  if (!allowed || !open || window.Notification?.permission !== "default") return null;
   return h(
     "div",
     { className: "fixed inset-0 z-[9999] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4", role: "dialog", "aria-modal": true, "aria-labelledby": "ct-notify-title" },
@@ -464,10 +486,7 @@ function NotificationPermissionPrompt({ allowed }) {
       h("p", { className: "text-sm text-slate-500 leading-7" }, "اسمح بإشعارات كاش توب لتصلك العمليات الجديدة بعد المزامنة. يمكنك اختيار أنواعها من الإعدادات."),
       h("button", { type: "button", disabled: busy, onClick: allow, className: "w-full rounded-xl bg-violet-600 py-3 text-white font-bold disabled:opacity-50" }, busy ? "جارٍ التفعيل…" : "السماح بالإشعارات"),
       error && h("p", { className: "text-xs text-rose-600", role: "status" }, error),
-      h("button", { type: "button", disabled: busy, onClick: () => {
-        sessionStorage.setItem(promptKey, "later");
-        setOpen(false);
-      }, className: "text-sm text-slate-500" }, "لاحقاً")
+      h("button", { type: "button", disabled: busy, onClick: dismiss, className: "text-sm text-slate-500" }, "لاحقاً")
     )
   );
 }
@@ -9994,7 +10013,7 @@ async function printElementOnly(target, paperSize = "80mm", title = "طباعة"
     const clone = await cloneForPrint(element);
     clone.style.cssText += `;width:${cfg.width}!important;max-width:${cfg.width}!important;min-width:0!important;margin:0 auto!important;border:0!important;box-shadow:none!important`;
     iframe = document.createElement("iframe");
-    iframe.style.cssText = "position:fixed;left:-10000px;top:0;width:1px;height:1px;opacity:0;border:0;pointer-events:none";
+    iframe.style.cssText = `position:fixed;left:-10000px;top:0;width:${cfg.width};height:1000px;opacity:0;border:0;pointer-events:none`;
     document.body.appendChild(iframe);
     const doc = iframe.contentDocument || iframe.contentWindow?.document;
     if (!doc) throw new Error("print iframe");
@@ -10009,6 +10028,13 @@ async function printElementOnly(target, paperSize = "80mm", title = "طباعة"
     } catch (_) {
     }
     await new Promise((r) => setTimeout(r, 40));
+    if (!String(paperSize).toLowerCase().includes("a4")) {
+      const printed = doc.getElementById("root");
+      const heightMm = Math.ceil(Math.max(printed.scrollHeight, printed.getBoundingClientRect().height) * 25.4 / 96) + 2;
+      const pageStyle = doc.createElement("style");
+      pageStyle.textContent = `@page{size:${cfg.width} ${heightMm}mm;margin:0}`;
+      doc.head.appendChild(pageStyle);
+    }
     iframe.contentWindow?.focus();
     iframe.contentWindow?.print();
     setTimeout(() => {
@@ -15285,7 +15311,7 @@ var DashboardView = () => {
   );
 };
 
-// ../../../tmp/ct-tools/node_modules/html2canvas/dist/html2canvas.esm.js
+// ../../../tmp/ct164/node_modules/html2canvas/dist/html2canvas.esm.js
 var extendStatics = function(d, b2) {
   extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b3) {
     d2.__proto__ = b3;
@@ -23067,51 +23093,63 @@ var parseBackgroundColor = function(context, element, backgroundColorOverride) {
 var html2canvas_esm_default = html2canvas;
 
 // app/utils__previewExport.js
-async function downloadPreview(target, filename, kind = "image", paperSize = "a4") {
+async function capturePreview(target) {
   const el = typeof target === "string" ? document.querySelector(target) : target;
-  if (!el) return false;
+  if (!el) throw new Error("تعذر العثور على معاينة الفاتورة");
+  await document.fonts?.ready;
+  await Promise.all([...el.querySelectorAll("img")].map((img) => img.decode?.().catch(() => {
+  })));
+  const marker = "preview-" + Date.now();
+  el.setAttribute("data-export-preview", marker);
+  let canvas;
+  const metricsStyle = document.createElement("style");
+  metricsStyle.textContent = 'body > div[style*="visibility: hidden"] > img { display:inline-block!important; }';
+  document.head.appendChild(metricsStyle);
   try {
-    await document.fonts?.ready;
-    await Promise.all([...el.querySelectorAll("img")].map((img) => img.decode?.().catch(() => {
-    })));
-    const marker = "preview-" + Date.now();
-    el.setAttribute("data-export-preview", marker);
-    let canvas;
-    const metricsStyle = document.createElement("style");
-    metricsStyle.textContent = 'body > div[style*="visibility: hidden"] > img { display:inline-block!important; }';
-    document.head.appendChild(metricsStyle);
-    try {
-      canvas = await html2canvas_esm_default(el, {
-        scale: 2,
-        backgroundColor: "#ffffff",
-        useCORS: true,
-        logging: false,
-        imageTimeout: 5e3,
-        ignoreElements: (n4) => n4.matches?.('button,.no-print,.invoice-detail-actions,[data-export-hide="true"]'),
-        onclone: (doc) => {
-          const root = doc.querySelector(`[data-export-preview="${marker}"]`);
-          if (!root) return;
-          root.style.width = el.getBoundingClientRect().width + "px";
-          root.style.maxHeight = "none";
-          root.style.height = "auto";
-          root.style.overflow = "visible";
-          root.style.animation = "none";
-          root.style.transform = "none";
-          for (const node of root.querySelectorAll("*")) {
-            node.style.animation = "none";
-            node.style.transition = "none";
-            if (/auto|scroll/.test(getComputedStyle(node).overflowY)) {
-              node.style.maxHeight = "none";
-              node.style.height = "auto";
-              node.style.overflow = "visible";
-            }
+    canvas = await html2canvas_esm_default(el, {
+      scale: 3,
+      backgroundColor: "#ffffff",
+      useCORS: true,
+      logging: false,
+      imageTimeout: 5e3,
+      ignoreElements: (n4) => n4.matches?.('button,.no-print,.invoice-detail-actions,[data-export-hide="true"]'),
+      onclone: (doc) => {
+        const root = doc.querySelector(`[data-export-preview="${marker}"]`);
+        if (!root) return;
+        root.style.width = el.getBoundingClientRect().width + "px";
+        let parent = root.parentElement;
+        while (parent && parent !== doc.body) {
+          parent.style.overflow = "visible";
+          parent.style.maxHeight = "none";
+          parent.style.height = "auto";
+          parent.style.transform = "none";
+          parent = parent.parentElement;
+        }
+        root.style.maxHeight = "none";
+        root.style.height = "auto";
+        root.style.overflow = "visible";
+        root.style.animation = "none";
+        root.style.transform = "none";
+        for (const node of root.querySelectorAll("*")) {
+          node.style.animation = "none";
+          node.style.transition = "none";
+          if (/auto|scroll/.test(getComputedStyle(node).overflowY)) {
+            node.style.maxHeight = "none";
+            node.style.height = "auto";
+            node.style.overflow = "visible";
           }
         }
-      });
-    } finally {
-      el.removeAttribute("data-export-preview");
-      metricsStyle.remove();
-    }
+      }
+    });
+  } finally {
+    el.removeAttribute("data-export-preview");
+    metricsStyle.remove();
+  }
+  return canvas;
+}
+async function downloadPreview(target, filename, kind = "image", paperSize = "a4") {
+  try {
+    const canvas = await capturePreview(target);
     if (kind === "image") return downloadCanvasAsImage(canvas, filename);
     const pages = [];
     if (paperSize === "a4") {
@@ -29279,6 +29317,7 @@ var SettingsView = () => {
   const [newWarehouseName, setNewWarehouseName] = useState40("");
   const [newWarehouseCode, setNewWarehouseCode] = useState40("");
   const [editingWarehouse, setEditingWarehouse] = useState40(null);
+  const [copyingLoginLink, setCopyingLoginLink] = useState40(false);
   const [telegramChatIdInput, setTelegramChatIdInput] = useState40("");
   const [telegramBusy, setTelegramBusy] = useState40("");
   const [logoUploadBusy, setLogoUploadBusy] = useState40(false);
@@ -29866,7 +29905,17 @@ var SettingsView = () => {
     ["system", Database, "التطبيق والنسخ"]
   ];
   const settingsSectionNav = _jsx15("div", { id: "settings-section-nav", className: "grid grid-cols-2 sm:grid-cols-4 gap-2 p-2 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur border border-slate-200 dark:border-slate-800 shadow-sm", children: settingsSectionItems.map(([id, Icon, label]) => _jsxs13("button", { type: "button", onClick: () => setSettingsSection(id), className: `flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-[11px] sm:text-xs font-black transition ${settingsSection === id ? "bg-violet-600 text-white shadow-sm" : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-200 hover:bg-violet-50"}`, children: [_jsx15(Icon, { className: "w-4 h-4" }), _jsx15("span", { children: label })] }, id)) });
-  return _jsxs13("div", { id: "settings-screen", onInputCapture: markSettingsDraft, onChangeCapture: markSettingsDraft, onClickCapture: markSettingsDraft, "data-oscar-draft-lock": "true", className: "p-4 sm:p-6 space-y-6 max-w-4xl mx-auto text-right select-none", children: [_jsxs13("div", { "data-settings-header": "1", children: [_jsx15("h2", { className: "text-xl font-black text-slate-900 dark:text-white", children: "إعدادات النظام والنسخ الاحتياطي" }), _jsx15("p", { className: "text-xs text-slate-500 mt-0.5", children: "تخصيص بيانات المحل، الطابعة الحرارية، سياسة البيع بالسالب، الفروع، والنسخ الاحتياطي الكامل" })] }), settingsSectionNav, _jsxs13("form", { onSubmit: handleSaveGeneral, onInputCapture: markSettingsDraft, onChangeCapture: markSettingsDraft, "data-oscar-draft-lock": "true", className: "space-y-6", children: [_jsxs13("div", { className: "p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4", children: [_jsxs13("div", { className: "flex items-center gap-2 border-b pb-3 border-slate-100 dark:border-slate-800", children: [_jsx15(Store2, { className: "w-5 h-5 text-violet-600" }), _jsx15("h3", { className: "text-sm font-bold text-slate-900 dark:text-white", children: "معلومات المنشأة والمتجر" })] }), _jsxs13("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-4", children: [_jsxs13("div", { children: [_jsx15("label", { className: "text-xs font-semibold block mb-1", children: "اسم المحل أو السوبرماركت:" }), _jsx15("input", { type: "text", value: formSettings.storeName, onChange: (e2) => setFormSettings({ ...formSettings, storeName: e2.target.value }), className: "w-full px-3 py-2 text-xs border rounded-lg bg-slate-50 dark:bg-slate-800" })] }), _jsxs13("div", { children: [_jsx15("label", { className: "text-xs font-semibold block mb-1", children: "رمز العملة الافتراضي:" }), _jsx15("input", { type: "text", value: formSettings.currencySymbol, onChange: (e2) => setFormSettings({ ...formSettings, currencySymbol: e2.target.value }), className: "w-full px-3 py-2 text-xs border rounded-lg bg-slate-50 dark:bg-slate-800 font-mono font-bold" })] }), _jsxs13("div", { children: [_jsx15("label", { className: "text-xs font-semibold block mb-1", children: "رقم الهاتف والتواصل:" }), _jsx15("input", { type: "text", value: formSettings.phone, onChange: (e2) => setFormSettings({ ...formSettings, phone: e2.target.value }), className: "w-full px-3 py-2 text-xs border rounded-lg bg-slate-50 dark:bg-slate-800 font-mono" })] }), _jsxs13("div", { children: [_jsx15("label", { className: "text-xs font-semibold block mb-1", children: t("العنوان والموقع:") }), _jsx15("input", { type: "text", value: formSettings.address, onChange: (e2) => setFormSettings({ ...formSettings, address: e2.target.value }), className: "w-full px-3 py-2 text-xs border rounded-lg bg-slate-50 dark:bg-slate-800" })] }), _jsxs13("div", { className: "sm:col-span-2", children: [_jsx15("label", { className: "text-xs font-semibold block mb-1", children: "الرقم الضريبي (إن وجد):" }), _jsx15("input", { type: "text", value: formSettings.taxNumber || "", onChange: (e2) => setFormSettings({ ...formSettings, taxNumber: e2.target.value }), className: "w-full px-3 py-2 text-xs border rounded-lg bg-slate-50 dark:bg-slate-800 font-mono" })] }), _jsxs13("div", { className: "sm:col-span-2 space-y-3", children: [_jsx15("label", { className: "text-xs font-semibold block mb-1", children: "شعار المحل / الشركة:" }), _jsxs13("div", { className: "flex items-center gap-3 p-3 rounded-xl border bg-slate-50 dark:bg-slate-800/50", children: [_jsx15(BrandLogoImage, { settings: formSettings, alt: "معاينة الشعار", className: "w-16 h-16 object-cover rounded-lg bg-white border" }), _jsxs13("div", { className: "flex-1 min-w-0", children: [_jsx15("div", { className: "text-xs font-bold text-slate-800 dark:text-slate-100", children: "اختر صورة من جهازك" }), _jsx15("div", { className: "text-[10px] text-slate-500 mt-1 leading-5", children: "اختر شعار الشركة من جهازك، وسيتم حفظه تلقائياً ليظهر في الواجهة والفواتير." }), _jsxs13("label", { className: "mt-2 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-violet-600 text-white text-[10px] font-black cursor-pointer", children: [logoUploadBusy ? _jsx15("span", { className: "w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" }) : _jsx15(Upload, { className: "w-3.5 h-3.5" }), _jsx15("span", { children: logoUploadBusy ? "جاري حفظ الشعار..." : "اختيار صورة من الجهاز" }), _jsx15("input", { type: "file", accept: "image/png,image/jpeg,image/webp", className: "hidden", disabled: logoUploadBusy, onChange: (e2) => {
+  return _jsxs13("div", { id: "settings-screen", onInputCapture: markSettingsDraft, onChangeCapture: markSettingsDraft, onClickCapture: markSettingsDraft, "data-oscar-draft-lock": "true", className: "p-4 sm:p-6 space-y-6 max-w-4xl mx-auto text-right select-none", children: [React52.createElement("button", { type: "button", disabled: copyingLoginLink, onClick: async () => {
+    setCopyingLoginLink(true);
+    try {
+      await window.OscarActivation.copyCurrentLoginLink();
+      showToast("تم نسخ رابط الدخول إلى حسابك", "success");
+    } catch (e2) {
+      showToast(e2.message, "error");
+    } finally {
+      setCopyingLoginLink(false);
+    }
+  }, className: "px-4 py-2 rounded-xl border border-violet-200 text-violet-700 bg-violet-50 text-xs font-bold" }, copyingLoginLink ? "جاري تجهيز الرابط…" : "نسخ رابط دخولي"), _jsxs13("div", { "data-settings-header": "1", children: [_jsx15("h2", { className: "text-xl font-black text-slate-900 dark:text-white", children: "إعدادات النظام والنسخ الاحتياطي" }), _jsx15("p", { className: "text-xs text-slate-500 mt-0.5", children: "تخصيص بيانات المحل، الطابعة الحرارية، سياسة البيع بالسالب، الفروع، والنسخ الاحتياطي الكامل" })] }), settingsSectionNav, _jsxs13("form", { onSubmit: handleSaveGeneral, onInputCapture: markSettingsDraft, onChangeCapture: markSettingsDraft, "data-oscar-draft-lock": "true", className: "space-y-6", children: [_jsxs13("div", { className: "p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4", children: [_jsxs13("div", { className: "flex items-center gap-2 border-b pb-3 border-slate-100 dark:border-slate-800", children: [_jsx15(Store2, { className: "w-5 h-5 text-violet-600" }), _jsx15("h3", { className: "text-sm font-bold text-slate-900 dark:text-white", children: "معلومات المنشأة والمتجر" })] }), _jsxs13("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-4", children: [_jsxs13("div", { children: [_jsx15("label", { className: "text-xs font-semibold block mb-1", children: "اسم المحل أو السوبرماركت:" }), _jsx15("input", { type: "text", value: formSettings.storeName, onChange: (e2) => setFormSettings({ ...formSettings, storeName: e2.target.value }), className: "w-full px-3 py-2 text-xs border rounded-lg bg-slate-50 dark:bg-slate-800" })] }), _jsxs13("div", { children: [_jsx15("label", { className: "text-xs font-semibold block mb-1", children: "رمز العملة الافتراضي:" }), _jsx15("input", { type: "text", value: formSettings.currencySymbol, onChange: (e2) => setFormSettings({ ...formSettings, currencySymbol: e2.target.value }), className: "w-full px-3 py-2 text-xs border rounded-lg bg-slate-50 dark:bg-slate-800 font-mono font-bold" })] }), _jsxs13("div", { children: [_jsx15("label", { className: "text-xs font-semibold block mb-1", children: "رقم الهاتف والتواصل:" }), _jsx15("input", { type: "text", value: formSettings.phone, onChange: (e2) => setFormSettings({ ...formSettings, phone: e2.target.value }), className: "w-full px-3 py-2 text-xs border rounded-lg bg-slate-50 dark:bg-slate-800 font-mono" })] }), _jsxs13("div", { children: [_jsx15("label", { className: "text-xs font-semibold block mb-1", children: t("العنوان والموقع:") }), _jsx15("input", { type: "text", value: formSettings.address, onChange: (e2) => setFormSettings({ ...formSettings, address: e2.target.value }), className: "w-full px-3 py-2 text-xs border rounded-lg bg-slate-50 dark:bg-slate-800" })] }), _jsxs13("div", { className: "sm:col-span-2", children: [_jsx15("label", { className: "text-xs font-semibold block mb-1", children: "الرقم الضريبي (إن وجد):" }), _jsx15("input", { type: "text", value: formSettings.taxNumber || "", onChange: (e2) => setFormSettings({ ...formSettings, taxNumber: e2.target.value }), className: "w-full px-3 py-2 text-xs border rounded-lg bg-slate-50 dark:bg-slate-800 font-mono" })] }), _jsxs13("div", { className: "sm:col-span-2 space-y-3", children: [_jsx15("label", { className: "text-xs font-semibold block mb-1", children: "شعار المحل / الشركة:" }), _jsxs13("div", { className: "flex items-center gap-3 p-3 rounded-xl border bg-slate-50 dark:bg-slate-800/50", children: [_jsx15(BrandLogoImage, { settings: formSettings, alt: "معاينة الشعار", className: "w-16 h-16 object-cover rounded-lg bg-white border" }), _jsxs13("div", { className: "flex-1 min-w-0", children: [_jsx15("div", { className: "text-xs font-bold text-slate-800 dark:text-slate-100", children: "اختر صورة من جهازك" }), _jsx15("div", { className: "text-[10px] text-slate-500 mt-1 leading-5", children: "اختر شعار الشركة من جهازك، وسيتم حفظه تلقائياً ليظهر في الواجهة والفواتير." }), _jsxs13("label", { className: "mt-2 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-violet-600 text-white text-[10px] font-black cursor-pointer", children: [logoUploadBusy ? _jsx15("span", { className: "w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" }) : _jsx15(Upload, { className: "w-3.5 h-3.5" }), _jsx15("span", { children: logoUploadBusy ? "جاري حفظ الشعار..." : "اختيار صورة من الجهاز" }), _jsx15("input", { type: "file", accept: "image/png,image/jpeg,image/webp", className: "hidden", disabled: logoUploadBusy, onChange: (e2) => {
     const file = e2.target.files?.[0];
     e2.target.value = "";
     handleSettingsLogoUpload(file);
@@ -30272,7 +30321,7 @@ var ThermalReceiptModal = () => {
         }
       }
       const portalUrl = await ensureCustomerPortalLink();
-      const canvas = await renderInvoiceCanvas(invoice, { ...settings, printerWidth: paperWidth, customerPortalUrl: portalUrl }, { paperWidth });
+      const canvas = await capturePreview(receiptContainerRef.current);
       await smartPrinter.printCanvas(canvas, { paperWidth: paperWidth === "58mm" ? "58mm" : "80mm" });
       state = smartPrinter.getState();
       showToast(`تم إرسال الفاتورة إلى ${state.name || state.preferredName || "الطابعة"}`, "success");
@@ -30614,8 +30663,8 @@ var Picker = ({ kind, value, onChange, options, open, setOpen, query, setQuery }
 var LoginGate = ({ children }) => {
   const A2 = () => window.OscarActivation;
   const [runtime, setRuntime] = useState43(() => A2()?.readRuntime?.() || null);
-  const [linkPending, setLinkPending] = useState43(() => /^#l=/.test(location.hash));
-  const linkStarted = useRef23(false);
+  const [linkPending, setLinkPending] = useState43(() => /^#(?:l|code)=/.test(location.hash));
+  const linkStarted = useRef23(false), activationAttempt = useRef23(0);
   const [codeOpen, setCodeOpen] = useState43(false), [loginCode, setLoginCode] = useState43("");
   const [file, setFile] = useState43(null), [busy, setBusy] = useState43(false), [error, setError] = useState43(""), [success, setSuccess] = useState43("");
   const [trialOpen, setTrialOpen] = useState43(false), [trialBusy, setTrialBusy] = useState43(false);
@@ -30674,6 +30723,7 @@ var LoginGate = ({ children }) => {
     }
   };
   const open = async (candidate) => {
+    const attempt = ++activationAttempt.current;
     const selected = candidate instanceof Blob ? candidate : file;
     if (!selected) {
       setError("أرفق ملف التفعيل أولاً لتسجيل الدخول.");
@@ -30696,29 +30746,72 @@ var LoginGate = ({ children }) => {
         permissions: verified?.account?.permissions ?? payload.permissions,
         trialProfile: verified?.access?.trialProfile ? { ...payload.trialProfile || {}, ...verified.access.trialProfile } : payload.trialProfile
       } : payload;
+      if (attempt !== activationAttempt.current) return;
       const rt = A2().activatePayload(effective);
       window.OscarCloudSync?.resetForTenant?.();
       setLoginCode("");
       setCodeOpen(false);
       setRuntime(rt);
       setLinkPending(false);
-      if (/^#l=/.test(location.hash)) history.replaceState(null, "", location.pathname + location.search);
+      if (/^#(?:l|code)=/.test(location.hash)) history.replaceState(null, "", location.pathname + location.search);
     } catch (e2) {
-      setError(String(e2?.message || e2 || "تعذر فتح ملف الدخول."));
+      if (attempt === activationAttempt.current) setError(String(e2?.message || e2 || "تعذر فتح ملف الدخول."));
     } finally {
-      setBusy(false);
+      if (attempt === activationAttempt.current) setBusy(false);
     }
   };
   useEffect35(() => {
-    if (!linkPending || linkStarted.current) return;
-    linkStarted.current = true;
-    setBusy(true);
-    const secret = location.hash.slice(3);
-    A2().resolveActivationLink(secret).then((opaque) => open(new File([opaque], "رابط-دخول.mzauth", { type: "application/octet-stream" }))).catch((e2) => {
-      setError(e2?.message || "تعذر فتح رابط الدخول");
-      setBusy(false);
-    });
+    let generation = 0;
+    const enter = async () => {
+      if (!/^#(?:l|code)=/.test(location.hash)) return;
+      const direct = location.hash.startsWith("#code=");
+      const secret = location.hash.slice(direct ? 6 : 3);
+      if (linkStarted.current === secret) return;
+      linkStarted.current = secret;
+      const current = ++generation;
+      activationAttempt.current++;
+      setLinkPending(true);
+      setBusy(true);
+      setError("");
+      try {
+        const opaque = direct ? decodeURIComponent(secret) : await A2().resolveActivationLink(secret);
+        if (current !== generation) return;
+        await open(new File([opaque], "رابط-دخول.mzauth", { type: "application/octet-stream" }));
+      } catch (e2) {
+        if (current === generation) {
+          setError(e2?.message || "تعذر فتح رابط الدخول");
+          setBusy(false);
+          linkStarted.current = false;
+        }
+      }
+    };
+    enter();
+    window.addEventListener("hashchange", enter);
+    return () => {
+      generation++;
+      window.removeEventListener("hashchange", enter);
+    };
   }, []);
+  useEffect35(() => {
+    if (!runtime?.expiresAt) return;
+    const expires = Date.parse(runtime.expiresAt);
+    if (!Number.isFinite(expires)) return;
+    const check = () => {
+      if (Date.now() < expires) return;
+      A2()?.clearRuntime?.();
+      setRuntime(null);
+      setError(runtime.isTrialLink ? "انتهت مدة الدخول التجريبي. اطلب رابطاً جديداً من الإدارة." : "انتهت مدة تفعيل الشركة.");
+    };
+    check();
+    const timer2 = setInterval(check, 1e3);
+    window.addEventListener("focus", check);
+    document.addEventListener("visibilitychange", check);
+    return () => {
+      clearInterval(timer2);
+      window.removeEventListener("focus", check);
+      document.removeEventListener("visibilitychange", check);
+    };
+  }, [runtime?.fileId, runtime?.expiresAt]);
   const createTrial = async (e2) => {
     e2?.preventDefault?.();
     if (!companyName.trim()) {
@@ -30766,7 +30859,7 @@ var LoginGate = ({ children }) => {
       setTrialBusy(false);
     }
   };
-  if (runtime && !linkPending) return children;
+  if (runtime && !linkPending) return h35(React55.Fragment, { key: runtime.companyId + ":" + runtime.fileId }, children);
   const curr = CURRENCIES.find((x) => x.code === currency) || CURRENCIES[0];
   return h35(
     "main",
@@ -32685,8 +32778,9 @@ var MainLayout = () => {
   const canOpenRestaurantTab = (tab) => canAccessTab(tab, accessArgs);
   useEffect38(() => {
     if (!isLoaded) return;
-    if (activeTab !== "no_access" && !canAccessTab(activeTab, accessArgs)) {
-      setActiveTab(firstAllowedTab(accessArgs) || "no_access");
+    if (!canAccessTab(activeTab, accessArgs)) {
+      const nextTab = firstAllowedTab(accessArgs) || "no_access";
+      if (nextTab !== activeTab) setActiveTab(nextTab);
     }
   }, [activeTab, settings.isRestaurantModeEnabled, currentUser, activeEmployee, isLoaded]);
   const screen = (() => {
@@ -32775,7 +32869,7 @@ var OscarErrorBoundary = class extends React64.Component {
     } catch (_) {
     }
     try {
-      const build = "7.9.4.163-links-payment-preview";
+      const build = "7.9.4.167-receipt-print";
       const key3 = "oscar-render-heal-" + build;
       if (sessionStorage.getItem(key3) !== "1") {
         sessionStorage.setItem(key3, "1");
