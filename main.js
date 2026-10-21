@@ -3589,7 +3589,7 @@ function customerStatementModel(customer, invoices = [], vouchers = []) {
     const returned = invoice && x.type === "return";
     const debit = invoice ? returned ? n2(x.paidAmount) : n2(x.grandTotal) : x.type === "payment" ? n2(x.amount) : 0;
     const credit = invoice ? returned ? n2(x.grandTotal) : n2(x.paidAmount) : x.type === "receipt" ? n2(x.amount) : 0;
-    const lines = invoice ? [`فاتورة ${x.invoiceNumber || ""}`, ...(x.items || []).map((it) => `${it.productName || ""} | ${it.unitName || "-"} | ${n2(it.quantity)} × ${money2(it.unitPrice)} = ${money2(it.total ?? n2(it.quantity) * n2(it.unitPrice))}`), ...n2(x.discountTotal) ? [`خصم الفاتورة: ${money2(x.discountTotal)}`] : [], ...n2(x.taxTotal) ? [`الضريبة: ${money2(x.taxTotal)}`] : [], ...n2(x.additionalCharges) ? [`تكلفة إضافية: ${money2(x.additionalCharges)}`] : [], ...x.notes ? [x.notes] : []] : [`سند ${x.voucherNumber || ""}`, x.notes || ""].filter(Boolean);
+    const lines = invoice ? [`فاتورة ${x.invoiceNumber || ""}`, ...(x.items || []).map((it) => `${it.productName || ""} | ${it.unitName || "-"} | ${n2(it.quantity)} × ${money2(it.unitPrice)} = ${money2(it.total ?? n2(it.quantity) * n2(it.unitPrice))}`), ...n2(x.discountTotal) ? [`خصم الفاتورة: ${money2(x.discountTotal)}`] : [], ...n2(x.taxTotal) ? [`الضريبة: ${money2(x.taxTotal)}`] : [], ...n2(x.additionalCharges) ? [`تكلفة إضافية: ${money2(x.additionalCharges)}`] : [], ...n2(x.shippingCost) ? [`تكلفة الشحن: ${money2(x.shippingCost)}`] : [], ...x.notes ? [x.notes] : []] : [`سند ${x.voucherNumber || ""}`, x.notes || ""].filter(Boolean);
     return { id: (invoice ? "invoice:" : "voucher:") + x.id, index: i2 + 1, date: x.date, type: invoice ? returned ? "مرتجع مبيعات" : "فاتورة مبيعات" : x.type === "receipt" ? "سند قبض" : "سند صرف", description: lines.join("\n"), debit, credit };
   });
   const totalDebit = entries.reduce((s, e2) => s + e2.debit, 0), totalCredit = entries.reduce((s, e2) => s + e2.credit, 0);
@@ -5135,7 +5135,8 @@ async function renderInvoiceCanvas(invoice, settings = {}, options = {}) {
   const adjustments = [];
   if (num(invoice?.discountTotal) > 0) adjustments.push(["إجمالي الخصم", -num(invoice.discountTotal)]);
   if (num(invoice?.taxTotal) > 0) adjustments.push(["الضريبة", invoice.taxTotal]);
-  if (num(invoice?.additionalCharges) > 0) adjustments.push(["كلفة إضافية / شحن", invoice.additionalCharges]);
+  if (num(invoice?.additionalCharges) > 0) adjustments.push(["تكاليف إضافية", invoice.additionalCharges]);
+  if (num(invoice?.shippingCost) > 0) adjustments.push(["تكلفة الشحن", invoice.shippingCost]);
   for (const [label, val] of adjustments) {
     txt(ctx, `${label}:`, w - margin, y + 12, 16, 800, "right", "#000");
     txt(ctx, `${money3(val)} ${settings.currencySymbol || ""}`, margin, y + 12, 17, 900, "left", "#000");
@@ -6627,6 +6628,8 @@ var AppProvider = ({ children }) => {
   const [invoiceDiscountValue, setInvoiceDiscountValue] = useState(0);
   const [selectedCustomer, setSelectedCustomer] = useState(CASH_CUSTOMER);
   const [editingSaleInvoiceId, setEditingSaleInvoiceId] = useState(null);
+  const saleEditBusyRef = useRef(false);
+  const purchaseEditBusyRef = useRef(false);
   const priceGroups = useMemo(() => normalizePriceGroups(settings), [settings.priceGroups]);
   const [activePriceGroupIdState, setActivePriceGroupIdState] = useState(() => {
     try {
@@ -7343,8 +7346,8 @@ var AppProvider = ({ children }) => {
       showToast("السلة فارغة!", "error");
       return null;
     }
-    const [sourceProducts, sourceStock, sourceAccounts, sourceCustomers] = distributionContext ? await Promise.all(["products", "stock", "accounts", "customers"].map(getAllFromStore)) : [products, stock, accounts, customers];
-    const liveActiveShift = activeShift || null;
+    const [sourceProducts, sourceStock, sourceAccounts, sourceCustomers] = await Promise.all(["products", "stock", "accounts", "customers"].map(getAllFromStore));
+    const liveActiveShift = activeShift ? await getFromStore("shifts", activeShift.id) || activeShift : null;
     const warehouseId = payload.warehouseIdOverride || settings.activeWarehouseId;
     const warehouse = warehouses.find((w) => w.id === warehouseId) || warehouses[0];
     const now = (/* @__PURE__ */ new Date()).toISOString();
@@ -7434,7 +7437,8 @@ var AppProvider = ({ children }) => {
     const invoiceDiscountAmount = effectiveDiscountType === "percent" ? Math.min(beforeInvoiceDiscount, beforeInvoiceDiscount * Math.max(0, Math.min(100, rawDiscount)) / 100) : Math.min(beforeInvoiceDiscount, Math.max(0, rawDiscount));
     const discountTotal = lineDiscountTotal + invoiceDiscountAmount;
     const additionalCharges = Math.max(0, Number(payload.additionalCharges ?? (isDirectSale ? 0 : invoiceAdditionalCharges)) || 0);
-    const rawGrandTotal = Math.max(0, beforeInvoiceDiscount - invoiceDiscountAmount) + additionalCharges;
+    const shippingCost = payload.restoreOriginalShippingCost === true ? Math.max(0, Number(payload.shippingCost) || 0) : 0;
+    const rawGrandTotal = Math.max(0, beforeInvoiceDiscount - invoiceDiscountAmount) + additionalCharges + shippingCost;
     const grandTotal = settings.scaleModeEnabled ? Math.round(rawGrandTotal) : rawGrandTotal;
     const roundingAdjustment = grandTotal - rawGrandTotal;
     const payments = Array.isArray(payload.payments) ? payload.payments.filter((p) => p && Number(p.amount) > 0 && p.accountId) : [];
@@ -7442,14 +7446,15 @@ var AppProvider = ({ children }) => {
     const remaining = Math.max(0, grandTotal - paid);
     const change = Math.max(0, paid - grandTotal);
     const selectedLiveCustomer = selectedCustomer?.id ? sourceCustomers.find((c) => c.id === selectedCustomer.id) || selectedCustomer : CASH_CUSTOMER;
-    const saleCustomer = payload.forceCashCustomer ? CASH_CUSTOMER : payload.customerObject || (payload.customerId ? sourceCustomers.find((c) => c.id === payload.customerId) || selectedLiveCustomer || CASH_CUSTOMER : selectedLiveCustomer || CASH_CUSTOMER);
+    const requestedCustomerId = payload.customerId || payload.customerObject?.id || selectedLiveCustomer.id;
+    const saleCustomer = payload.forceCashCustomer ? CASH_CUSTOMER : sourceCustomers.find((c) => c.id === requestedCustomerId) || (requestedCustomerId === CASH_CUSTOMER.id ? CASH_CUSTOMER : payload.customerObject?.id === requestedCustomerId ? payload.customerObject : selectedLiveCustomer) || CASH_CUSTOMER;
     const salePriceGroup = priceGroups.find((group) => String(group.id) === String(distributionContext?.rep?.distribution?.priceGroupId || activePriceGroupIdState || "")) || null;
     const salePriceGroupMode = salePriceGroup ? priceGroupHasCustomer(salePriceGroup, saleCustomer) ? "custom" : "percentage" : "";
     if ((payload.paymentType === "debt" || payload.paymentType === "partial") && saleCustomer.id === CASH_CUSTOMER.id) {
       showToast("يجب اختيار عميل مسجل للبيع الآجل أو الدفع الجزئي!", "error");
       return null;
     }
-    const invoice = { id: invoiceId, invoiceNumber, type: "sale", date: invoiceDate, financialYearId: payload.financialYearIdOverride || settings.activeFinancialYearId || "fy-initial", customerId: saleCustomer.id, customerName: saleCustomer.name, priceGroupId: salePriceGroup?.id || "", priceGroupName: salePriceGroup?.name || "", priceGroupMode: salePriceGroupMode, cashierId: currentUser.id, cashierName: currentUser.name, shiftId: liveActiveShift?.id, branchId: settings.activeBranchName, warehouseId, items: invoiceItems, subtotal, lineDiscountTotal, invoiceDiscountType: effectiveDiscountType, invoiceDiscountValue: rawDiscount, invoiceDiscountAmount, discountTotal, taxTotal, additionalCharges, roundingAdjustment, grandTotal, paidAmount: Math.min(paid, grandTotal), remainingAmount: remaining, changeAmount: change, paymentType: payload.paymentType, payments, status: "completed", notes: payload.notes, syncId, isSynced: false, createdAt: payload.createdAtOverride || now, updatedAt: now, editedAt: payload.isEdit ? now : void 0 };
+    const invoice = { id: invoiceId, invoiceNumber, type: "sale", date: invoiceDate, financialYearId: payload.financialYearIdOverride || settings.activeFinancialYearId || "fy-initial", customerId: saleCustomer.id, customerName: saleCustomer.name, priceGroupId: salePriceGroup?.id || "", priceGroupName: salePriceGroup?.name || "", priceGroupMode: salePriceGroupMode, cashierId: currentUser.id, cashierName: currentUser.name, shiftId: liveActiveShift?.id, branchId: settings.activeBranchName, warehouseId, items: invoiceItems, subtotal, lineDiscountTotal, invoiceDiscountType: effectiveDiscountType, invoiceDiscountValue: rawDiscount, invoiceDiscountAmount, discountTotal, taxTotal, additionalCharges, shippingCost, roundingAdjustment, grandTotal, paidAmount: Math.min(paid, grandTotal), remainingAmount: remaining, changeAmount: change, paymentType: payload.paymentType, payments, status: "completed", notes: payload.notes, syncId, isSynced: false, createdAt: payload.createdAtOverride || now, updatedAt: now, editedAt: payload.isEdit ? now : void 0 };
     const updatedStockList = [...sourceStock], newMovements = [], changedStockKeys = /* @__PURE__ */ new Set();
     const deductStock = (productId, productName, baseQty, movementMeta = {}) => {
       const stockIndex = updatedStockList.findIndex((s) => s.productId === productId && s.warehouseId === warehouseId);
@@ -7821,10 +7826,7 @@ var AppProvider = ({ children }) => {
       showToast(`وصلت إلى الحد المتاح لفواتير المشتريات (${TRIAL_LIMITS.purchaseInvoices}).`, "warning");
       return null;
     }
-    const sourceProducts = products;
-    const sourceStock = stock;
-    const sourceAccounts = accounts;
-    const sourceSuppliers = suppliers;
+    const [sourceProducts, sourceStock, sourceAccounts, sourceSuppliers] = await Promise.all(["products", "stock", "accounts", "suppliers"].map(getAllFromStore));
     const now = (/* @__PURE__ */ new Date()).toISOString();
     const purchaseDate = payload?.date ? (/* @__PURE__ */ new Date(`${String(payload.date).slice(0, 10)}T12:00:00`)).toISOString() : payload?.dateOverride || now;
     const invoiceNumber = payload?.invoiceNumberOverride || `PUR-${Date.now().toString().slice(-6)}`;
@@ -7833,7 +7835,13 @@ var AppProvider = ({ children }) => {
     const targetWarehouse = warehouses.find((w) => w.id === payload?.warehouseId) || warehouses.find((w) => w.id === settings.activeWarehouseId) || warehouses.find((w) => w.isDefault) || warehouses.find((w) => /صالة\s*العرض/.test(String(w.name || ""))) || warehouses[0];
     if (!targetWarehouse) throw new Error("لا يوجد مخزن رئيسي. أضف صالة العرض من المخازن أولاً.");
     const warehouseId = targetWarehouse.id;
-    const items = Array.isArray(payload?.items) ? payload.items.filter((i2) => i2?.productId && Number(i2.quantity) > 0) : [];
+    const items = Array.isArray(payload?.items) ? payload.items.filter((i2) => i2?.productId && Number(i2.quantity) > 0).map((item) => {
+      const product = sourceProducts.find((p) => p.id === item.productId);
+      const unit = product?.units?.find((u2) => u2.id === item.unitId);
+      const conversionFactor = Math.max(1e-8, Number(item.conversionFactor || unit?.conversionToBase || 1));
+      const quantity = Number(item.quantity);
+      return { ...item, quantity, conversionFactor, baseQuantity: quantity * conversionFactor };
+    }) : [];
     if (!items.length) throw new Error("أضف صنفاً واحداً على الأقل إلى فاتورة المشتريات.");
     const payments = Array.isArray(payload?.payments) ? payload.payments.filter((p) => p && p.accountId && Number(p.amount) > 0) : [];
     const subtotal = items.reduce((x, i2) => x + (Number(i2.total) || 0), 0);
@@ -7850,7 +7858,7 @@ var AppProvider = ({ children }) => {
       const si = updatedStockList.findIndex((x) => x.productId === item.productId && x.warehouseId === warehouseId);
       const currentBaseStock = si >= 0 ? Number(updatedStockList[si].baseQuantity) || 0 : 0;
       const currentTotalBaseStock = updatedStockList.filter((x) => x.productId === item.productId).reduce((sum, row2) => sum + Math.max(0, Number(row2.baseQuantity) || 0), 0);
-      const baseQty = Math.max(0, Number(item.baseQuantity) || 0);
+      const baseQty = Math.max(0, Number(item.quantity) * Number(item.conversionFactor));
       const newBaseStock = currentBaseStock + baseQty;
       if (pi >= 0) {
         if (!changedProductIds.has(item.productId)) {
@@ -9093,6 +9101,9 @@ var AppProvider = ({ children }) => {
     return true;
   }, [invoices, products, customers, getProductStock, setActiveTab, setActivePriceGroupId, showToast]);
   const updateSaleInvoice = useCallback(async (id, payload = {}) => {
+    if (saleEditBusyRef.current) throw new Error("يجري تعديل فاتورة بالفعل، تجنب الحفظ المكرر");
+    saleEditBusyRef.current = true;
+    try {
     const old = await getFromStore("invoices", id);
     await assertOpenFinancialRecord(old);
     if (!old || old.type !== "sale") throw new Error("فاتورة المبيعات غير موجودة");
@@ -9115,6 +9126,7 @@ var AppProvider = ({ children }) => {
         warehouseIdOverride: old.warehouseId,
         isEdit: true
       });
+      if (!replacement) throw new Error("تعذر إنشاء الفاتورة المعدلة، سيتم استعادة الأصلية");
       await putInStore("audit_logs", { id: `audit-edit-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, date: (/* @__PURE__ */ new Date()).toISOString(), financialYearId: settings.activeFinancialYearId || "fy-initial", type: "sale_edited_reversal_repost", referenceId: old.id, referenceNumber: old.invoiceNumber, userId: currentUser.id, userName: currentUser.name });
       setEditingSaleInvoiceId(null);
       return replacement;
@@ -9131,6 +9143,8 @@ var AppProvider = ({ children }) => {
           invoiceDiscountType: old.invoiceDiscountType || "fixed",
           invoiceDiscountValue: old.invoiceDiscountValue || 0,
           additionalCharges: Number(old.additionalCharges) || 0,
+          restoreOriginalShippingCost: true,
+          shippingCost: Number(old.shippingCost) || 0,
           invoiceIdOverride: old.id,
           invoiceNumberOverride: old.invoiceNumber,
           dateOverride: old.date,
@@ -9144,8 +9158,12 @@ var AppProvider = ({ children }) => {
       await reloadData();
       throw new Error(restored ? `تعذر حفظ التعديل وتمت إعادة الفاتورة القديمة كما كانت: ${String(error?.message || error)}` : `تم عكس الفاتورة القديمة لكن تعذر حفظ التعديل أو استعادتها: ${String(error?.message || error)}`);
     }
+    } finally { saleEditBusyRef.current = false; }
   }, [deleteInvoice, createSaleInvoice, currentUser, reloadData]);
   const updatePurchaseInvoice = useCallback(async (id, payload = {}) => {
+    if (purchaseEditBusyRef.current) throw new Error("يجري تعديل فاتورة مشتريات بالفعل، تجنب الحفظ المكرر");
+    purchaseEditBusyRef.current = true;
+    try {
     const old = await getFromStore("purchases", id);
     await assertOpenFinancialRecord(old);
     if (!old) throw new Error("فاتورة المشتريات غير موجودة");
@@ -9159,6 +9177,7 @@ var AppProvider = ({ children }) => {
         createdAtOverride: old.createdAt || old.date,
         isEdit: true
       });
+      if (!replacement) throw new Error("تعذر إنشاء فاتورة المشتريات المعدلة، سيتم استعادة الأصلية");
       await putInStore("audit_logs", { id: `audit-edit-pur-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, date: (/* @__PURE__ */ new Date()).toISOString(), financialYearId: settings.activeFinancialYearId || "fy-initial", type: "purchase_edited_reversal_repost", referenceId: old.id, referenceNumber: old.invoiceNumber, userId: currentUser.id, userName: currentUser.name });
       return replacement;
     } catch (error) {
@@ -9187,6 +9206,7 @@ var AppProvider = ({ children }) => {
       await reloadData();
       throw new Error(restored ? `تعذر حفظ التعديل وتمت إعادة فاتورة المشتريات القديمة كما كانت: ${String(error?.message || error)}` : `تم عكس فاتورة المشتريات القديمة لكن تعذر حفظ التعديل أو استعادتها: ${String(error?.message || error)}`);
     }
+    } finally { purchaseEditBusyRef.current = false; }
   }, [deletePurchase, createPurchaseInvoice, currentUser, reloadData]);
   const openShift2 = useCallback(async (openingCash) => {
     const normalizedOpeningCash = Math.max(0, finiteNumber(openingCash, 0));
@@ -13367,6 +13387,7 @@ var PaymentModal = ({ isOpen, onClose, onSuccess, embedded = false, controls = n
   const [selectedAccountId, setSelectedAccountId] = useState11(defaultAccountId);
   const [notes, setNotes] = useState11("");
   const [isSubmitting, setIsSubmitting] = useState11(false);
+  const invoiceSubmissionBusyRef = React17.useRef(false);
   const [multiRows, setMultiRows] = useState11([
     { accountId: defaultAccountId, method: "cash", amount: grandTotal }
   ]);
@@ -13506,7 +13527,7 @@ var PaymentModal = ({ isOpen, onClose, onSuccess, embedded = false, controls = n
     setCashGiven((cur + step).toString());
   };
   const handleSubmit = async () => {
-    if (isSubmitting || !cart.length)
+    if (invoiceSubmissionBusyRef.current || isSubmitting || !cart.length)
       return;
     if ((paymentType === "debt" || paymentType === "partial") && (!selectedCustomer || selectedCustomer.id === "cust-walkin")) {
       showToast("يجب اختيار عميل مسجل لإجراء البيع الآجل أو الجزئي", "error");
@@ -13537,6 +13558,7 @@ var PaymentModal = ({ isOpen, onClose, onSuccess, embedded = false, controls = n
       showToast("اختر عميلاً مسجلاً لحفظ المبلغ المتبقي كدين", "warning");
       return;
     }
+    invoiceSubmissionBusyRef.current = true;
     setIsSubmitting(true);
     try {
       let paidAmount = 0;
@@ -13595,6 +13617,7 @@ var PaymentModal = ({ isOpen, onClose, onSuccess, embedded = false, controls = n
       console.error("Payment save failed:", err);
       showToast(`تعذر إتمام الفاتورة: ${String(err?.message || err || "خطأ غير معروف")}`, "error");
     } finally {
+      invoiceSubmissionBusyRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -14071,7 +14094,7 @@ var CartPanelImpl = ({ onOpenPayment }) => {
     setInvoiceDiscountType,
     invoiceDiscountValue,
     setInvoiceDiscountValue,
-    invoiceAdditionalCharges
+    invoiceAdditionalCharges,
   } = useApp();
   const [activeUnitDropdown, setActiveUnitDropdown] = useState13(null);
   const [unitMenuPos, setUnitMenuPos] = useState13(null);
@@ -14356,7 +14379,7 @@ var FullCartView = ({ onOpenPayment, onToggleLayout }) => {
     setInvoiceDiscountType,
     invoiceDiscountValue,
     setInvoiceDiscountValue,
-    invoiceAdditionalCharges
+    invoiceAdditionalCharges,
   } = useApp();
   const [activeUnitDropdown, setActiveUnitDropdown] = useState14(null);
   const [unitMenuPos, setUnitMenuPos] = useState14(null);
@@ -24841,7 +24864,7 @@ var PurchasesView = () => {
   const accounts = Array.isArray(app.accounts) ? app.accounts.filter(Boolean) : [];
   const settings = app.settings || {};
   const { createPurchaseInvoice, updatePurchaseInvoice, deletePurchase, saveSupplier, saveWarehouse, currentUser, showToast, queryAllStoreRecords: queryAllStoreRecords2 } = app;
-  const primaryWarehouse = warehouses[0] || warehouses.find((w) => w?.id === settings.activeWarehouseId) || warehouses.find((w) => w?.isDefault);
+  const primaryWarehouse = warehouses.find((w) => w?.id === settings.activeWarehouseId) || warehouses.find((w) => w?.isDefault) || warehouses[0];
   const activeProducts = products.filter((p) => !p.deletedAt && p.status !== "archived" && Array.isArray(p.units) && p.units.length > 0);
   const [mode, setMode] = useState24("list");
   const [editingId, setEditingId] = useState24(null);
@@ -24863,6 +24886,7 @@ var PurchasesView = () => {
   const [quickPhone, setQuickPhone] = useState24("");
   const [exporting, setExporting] = useState24("");
   const [isSaving, setIsSaving] = useState24(false);
+  const purchaseSubmissionBusyRef = useRef15(false);
   const [purchaseDate, setPurchaseDate] = useState24((/* @__PURE__ */ new Date()).toISOString().slice(0, 10));
   const [supplierInvoiceNumber, setSupplierInvoiceNumber] = useState24("");
   const singleRef = useRef15(null);
@@ -24880,7 +24904,7 @@ var PurchasesView = () => {
   const [financialYearFilter, setFinancialYearFilter] = useState24(activeFinancialYearId);
   useEffect22(() => {
     if (warehouses.length) {
-      const preferred = warehouses[0];
+      const preferred = warehouses.find((w) => w.id === settings.activeWarehouseId) || warehouses.find((w) => w.isDefault) || warehouses[0];
       if (!warehouseId || !warehouses.some((w) => w.id === warehouseId)) setWarehouseId(preferred?.id || "");
     }
     if (suppliers.length && (!supplierId || !suppliers.some((x) => x.id === supplierId))) setSupplierId(suppliers[0].id);
@@ -24922,7 +24946,8 @@ var PurchasesView = () => {
     return next;
   }));
   const submit = async () => {
-    if (isSaving) return;
+    if (purchaseSubmissionBusyRef.current || isSaving) return;
+    purchaseSubmissionBusyRef.current = true;
     setIsSaving(true);
     try {
       const supplier = suppliers.find((s) => s.id === supplierId);
@@ -24986,13 +25011,14 @@ var PurchasesView = () => {
         setNotes("");
         setSupplierInvoiceNumber("");
         setPurchaseDate((/* @__PURE__ */ new Date()).toISOString().slice(0, 10));
-        const preferred = warehouses[0];
+        const preferred = warehouses.find((w) => w.id === settings.activeWarehouseId) || warehouses.find((w) => w.isDefault) || warehouses[0];
         if (preferred) setWarehouseId(preferred.id);
       }
     } catch (err) {
       console.error("Purchase save failed:", err);
       showToast?.(`تعذر حفظ فاتورة المشتريات: ${String(err?.message || err || "خطأ غير معروف")}`, "error");
     } finally {
+      purchaseSubmissionBusyRef.current = false;
       setIsSaving(false);
     }
   };
@@ -25091,7 +25117,7 @@ var PurchasesView = () => {
       "div",
       { className: "grid grid-cols-1 sm:grid-cols-3 gap-3" },
       h23(SearchableDropdown, { id: "purchase-supplier", label: t("المورد:"), options: supplierOpts, selectedId: supplierId, onSelect: setSupplierId, onQuickAdd: () => setShowQuickSupp(true), quickAddLabel: "+ مورد جديد", icon: h23(Building24, { className: "w-4 h-4" }) }),
-      h23(SearchableDropdown, { id: "purchase-warehouse", label: "المخزن المستلم:", options: whOpts, selectedId: warehouseId, onSelect: setWarehouseId, onQuickAdd: () => setShowQuickWarehouse(true), quickAddLabel: "+ إضافة مخزن", placeholder: "ابحث عن مخزن..." }),
+      h23(SearchableDropdown, { id: "purchase-warehouse", label: "المخزن المستلم (تُضاف الكمية هنا):", options: whOpts, selectedId: warehouseId, onSelect: setWarehouseId, onQuickAdd: () => setShowQuickWarehouse(true), quickAddLabel: "+ إضافة مخزن", placeholder: "ابحث عن مخزن..." }),
       h23(SearchableDropdown, { id: "purchase-account", label: paidSafe > 0 ? "حساب دفع المبلغ المدفوع:" : "الحساب (يستخدم عند الدفع):", options: accountOpts, selectedId: accountId, onSelect: setAccountId, placeholder: "ابحث عن حساب..." })
     ),
     h23(
@@ -30497,12 +30523,13 @@ var ThermalReceiptModal = () => {
           )
         ),
         h34("div", { className: "receipt-summary-divider", "aria-hidden": "true" }),
-        Number(invoice.discountTotal) > 0 || Number(invoice.taxTotal) > 0 || Number(invoice.additionalCharges) > 0 ? h34(
+        Number(invoice.discountTotal) > 0 || Number(invoice.taxTotal) > 0 || Number(invoice.additionalCharges) > 0 || Number(invoice.shippingCost) > 0 ? h34(
           "div",
           { className: "receipt-adjustments" },
           Number(invoice.discountTotal) > 0 ? totalRow("إجمالي الخصم:", -Number(invoice.discountTotal), "receipt-total-discount") : null,
           Number(invoice.taxTotal) > 0 ? totalRow(`ضريبة القيمة المضافة (${settings.taxRate}%):`, invoice.taxTotal) : null,
-          Number(invoice.additionalCharges) > 0 ? totalRow("كلفة إضافية / شحن:", invoice.additionalCharges) : null
+          Number(invoice.additionalCharges) > 0 ? totalRow("تكاليف إضافية:", invoice.additionalCharges) : null,
+          Number(invoice.shippingCost) > 0 ? totalRow("تكلفة الشحن:", invoice.shippingCost) : null
         ) : null,
         h34(
           "div",
@@ -32869,7 +32896,7 @@ var OscarErrorBoundary = class extends React64.Component {
     } catch (_) {
     }
     try {
-      const build = "7.9.4.167-receipt-print";
+      const build = "7.9.4.171-no-shipping";
       const key3 = "oscar-render-heal-" + build;
       if (sessionStorage.getItem(key3) !== "1") {
         sessionStorage.setItem(key3, "1");
