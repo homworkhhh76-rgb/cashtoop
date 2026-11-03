@@ -1,112 +1,55 @@
-const BUILD='7.9.4.171-no-shipping';
-const CACHE=`oscar-accounting-${BUILD}`;
-const RUNTIME_CACHE=`oscar-accounting-runtime-${BUILD}`;
-const LOCAL=["./admin.html", "./app-icon.png", "./app.css", "./brand-logo.png", "./customer-portal.js?v=7.9.4.171-no-shipping", "./customer.html", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./icon.svg", "./index.html", "./ledger-assets/download-icon.png", "./main.js?v=7.9.4.171-no-shipping", "./manifest.webmanifest", "./notification-badge.png", "./oscar-activation-runtime.js?v=7.9.4.171-no-shipping", "./oscar-cloud-sync.js?v=7.9.4.171-no-shipping", "./oscar-ledger.html", "./p2p-bank-palestine.jpg", "./p2p-jawwal-pay.png", "./p2p-palpay.jpg", "./support.html", "./trial-admin.html", "./trial-payment.html", "./معتمد.html"];
-const REMOTE=[
-  'https://esm.sh/react@19.3.0',
-  'https://esm.sh/react-dom@19.3.0?external=react',
-  'https://esm.sh/react-dom@19.3.0/client?external=react',
-  'https://esm.sh/react@19.3.0/jsx-runtime',
-  'https://esm.sh/lucide-react@0.546.0?external=react',
-  'https://esm.sh/jsbarcode@3.12.3',
-  'https://esm.sh/xlsx@0.18.5',
-  'https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;500;600;700;800;900&display=swap',
-  // دفتر كاش توب يعتمد على هذه الملفات؛ تخزينها بعد أول فتح يمنع شاشة فارغة عند انقطاع الإنترنت.
-  'https://cdn.tailwindcss.com',
-  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
-  'https://cdn.jsdelivr.net/npm/sweetalert2@11',
-  'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-];
-const cacheable=r=>!!r&&(r.ok||r.type==='opaque');
-async function putFresh(cache,url){try{const req=new Request(url,{cache:'no-cache',mode:url.startsWith('http')?'cors':'same-origin'});const r=await fetch(req);if(cacheable(r))await cache.put(url,r.clone())}catch(_){} }
-
-async function cacheRemoteTree(cache,url,seen=new Set(),depth=0){
-  if(depth>5||seen.has(url))return;seen.add(url);
-  try{
-    const r=await fetch(new Request(url,{cache:'no-cache',mode:'cors'}));
-    if(!cacheable(r))return;
-    await cache.put(url,r.clone());
-    const type=(r.headers.get('content-type')||'').toLowerCase();
-    if(!(type.includes('javascript')||type.includes('ecmascript')||type.includes('css')))return;
-    const text=await r.clone().text();
-    const deps=new Set();
-    if(type.includes('css')){
-      for(const m of text.matchAll(/url\(\s*['"]?([^'")]+)['"]?\s*\)/g)){const spec=m[1];if(spec&& !spec.startsWith('data:'))deps.add(new URL(spec,url).href)}
-    }else{
-      for(const m of text.matchAll(/(?:from\s*|import\s*\(?)['"]([^'"]+)['"]/g)){const spec=m[1];if(spec&&(spec.startsWith('/')||spec.startsWith('./')||spec.startsWith('../')||/^https?:/.test(spec)))deps.add(new URL(spec,url).href)}
+const BUILD = '7.9.4.176-silent30';
+const CACHE = 'oscar-accounting-' + BUILD;
+const BASE = new URL('./', self.location.href);
+const LOCAL = ["./admin.html", "./app-icon.png", "./app.css", "./brand-logo.webp", "./customer-portal.js", "./customer.html", "./icon-192.png", "./icon-maskable-512.png", "./index.html", "./main.js", "./manifest.webmanifest", "./notification-badge.png", "./offline-fonts.css", "./oscar-activation-runtime.js", "./oscar-cloud-sync.js", "./oscar-ledger.html", "./p2p-bank-palestine.jpg", "./p2p-jawwal-pay.png", "./p2p-palpay.jpg", "./shared-17a3c04d5aba.jpg", "./shared-c50d51a1a3c0.jpg", "./support.html", "./trial-admin.html", "./trial-payment.html", "./معتمد.html"];
+const allowed = new Set(LOCAL.map(path => new URL(path, BASE).href));
+const indexURL = new URL('./index.html', BASE).href;
+const readyURL = new URL('./__offline_ready', BASE).href;
+self.addEventListener('install', event => event.waitUntil((async () => {
+  const cache = await caches.open(CACHE);
+  // Installation succeeds only after the entire local shell is stored.
+  // Keep the previous active worker/cache when any download fails.
+  await cache.delete(readyURL);
+  let next = 0;
+  async function download() {
+    while (next < LOCAL.length) {
+      const url = new URL(LOCAL[next++], BASE).href;
+      const response = await fetch(new Request(url, {cache:'reload'}));
+      if (!response.ok || new URL(response.url).origin !== BASE.origin) throw new Error('Incomplete offline shell: ' + url);
+      await cache.put(url, response);
     }
-    await Promise.allSettled([...deps].map(dep=>cacheRemoteTree(cache,dep,seen,depth+1)));
-  }catch(_){}
-}
-self.addEventListener('install',event=>event.waitUntil((async()=>{
-  const cache=await caches.open(CACHE);
-  await Promise.allSettled(LOCAL.map(u=>putFresh(cache,u)));
-  const runtime=await caches.open(RUNTIME_CACHE);
-  await Promise.allSettled(REMOTE.map(u=>cacheRemoteTree(runtime,u)));
+  }
+  await Promise.all(Array.from({length:6}, download));
+  await cache.put(readyURL, new Response(BUILD));
   await self.skipWaiting();
 })()));
-self.addEventListener('activate',event=>event.waitUntil((async()=>{
-  // Keep the previous Oscar caches as an offline safety net. Old builds used to
-  // delete them during every update, which could leave the app unable to open
-  // when the network disappeared before the new dependency tree finished caching.
-  await self.clients.claim();
-})()));
-async function update(cache,request){try{const fresh=await fetch(new Request(request,{cache:'no-cache'}));if(cacheable(fresh))await cache.put(request,fresh.clone());return fresh}catch(_){return null}}
-async function matchPreviousOscarCache(request,{runtime=false,ignoreSearch=false}={}){
-  try{
-    const keys=(await caches.keys()).filter((key)=>runtime
-      ? key.startsWith('oscar-accounting-runtime-')
-      : key.startsWith('oscar-accounting-')&&!key.startsWith('oscar-accounting-runtime-'));
-    for(let i=keys.length-1;i>=0;i--){
-      const key=keys[i];
-      if(key===(runtime?RUNTIME_CACHE:CACHE))continue;
-      const oldCache=await caches.open(key);
-      const hit=await oldCache.match(request,{ignoreSearch});
-      if(hit)return hit;
-    }
-  }catch(_){}
-  return null;
-}
-async function sameOriginResponse(request,event){
-  const cache=await caches.open(CACHE);
-  // Prefer an exact versioned hit. If this build has not been cached yet, try the
-  // network once so an old ignoreSearch entry cannot pin the app to stale code.
-  const exact=await cache.match(request);
-  if(exact)return exact;
-  const fallback=await cache.match(request,{ignoreSearch:true});
-  const fresh=await update(cache,request);if(fresh)return fresh;
-  // Offline safety: when the new build has never been fetched, an older local
-  // copy is still better than a blank screen. The next online launch refreshes it.
-  if(fallback)return fallback;
-  const previous=await matchPreviousOscarCache(request,{ignoreSearch:true});
-  if(previous)return previous;
-  if(request.mode==='navigate'){
-    const localIndex=await cache.match('./index.html',{ignoreSearch:true});
-    if(localIndex)return localIndex;
-    const oldIndex=await matchPreviousOscarCache(new Request(new URL('./index.html',self.location.href)),{ignoreSearch:true});
-    if(oldIndex)return oldIndex;
-    return Response.error();
-  }
-  return new Response('',{status:503,statusText:'Offline'});
-}
-async function externalResponse(request,event){
-  const cache=await caches.open(RUNTIME_CACHE);
-  const cached=await cache.match(request);
-  if(cached)return cached;
-  const fresh=await update(cache,request);if(fresh)return fresh;
-  const previous=await matchPreviousOscarCache(request,{runtime:true,ignoreSearch:false});
-  if(previous)return previous;
-  return new Response('',{status:503,statusText:'Offline'});
-}
-self.addEventListener('fetch',event=>{
-  const request=event.request;if(request.method!=='GET')return;
-  const url=new URL(request.url);
-  if(url.origin===self.location.origin&&url.pathname.startsWith('/api/'))return;
-  event.respondWith(url.origin===self.location.origin?sameOriginResponse(request,event):externalResponse(request,event));
+self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
+self.addEventListener('fetch', event => {
+  const req = event.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  if (url.origin !== BASE.origin || !url.pathname.startsWith(BASE.pathname)) return;
+  // Only bundled static files enter Cache Storage; API/auth/financial requests don't.
+  url.search = ''; url.hash = '';
+  if (url.href === BASE.href) url.href = indexURL;
+  if (!allowed.has(url.href)) return;
+  event.respondWith((async () => {
+    const cache = await caches.open(CACHE);
+    const hit = await cache.match(url.href);
+    if (hit) return hit;
+    const response = await fetch(req);
+    if (response.ok && !response.redirected) await cache.put(url.href, response.clone());
+    return response;
+  })());
 });
-self.addEventListener('message',event=>{if(event.data==='SKIP_WAITING')self.skipWaiting()});
+self.addEventListener('message', event => {
+  if (event.data === 'SKIP_WAITING') event.waitUntil(self.skipWaiting());
+  if (event.data?.type === 'CT_OFFLINE_STATUS') event.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+    const complete = !!(await cache.match(readyURL));
+    event.ports[0]?.postMessage({ready:complete, build:BUILD});
+  })());
+});
 
 // Persistent Web Push settings survive service worker upgrades.
 const CT_NOTIFY_CACHE='ct-notifications-config-v1';
