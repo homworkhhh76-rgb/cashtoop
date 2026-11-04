@@ -1,4 +1,4 @@
-const BUILD = '7.9.4.176-silent30';
+const BUILD = '7.9.4.177-scanner30';
 const CACHE = 'oscar-accounting-' + BUILD;
 const BASE = new URL('./', self.location.href);
 const LOCAL = ["./admin.html", "./app-icon.png", "./app.css", "./brand-logo.webp", "./customer-portal.js", "./customer.html", "./icon-192.png", "./icon-maskable-512.png", "./index.html", "./main.js", "./manifest.webmanifest", "./notification-badge.png", "./offline-fonts.css", "./oscar-activation-runtime.js", "./oscar-cloud-sync.js", "./oscar-ledger.html", "./p2p-bank-palestine.jpg", "./p2p-jawwal-pay.png", "./p2p-palpay.jpg", "./shared-17a3c04d5aba.jpg", "./shared-c50d51a1a3c0.jpg", "./support.html", "./trial-admin.html", "./trial-payment.html", "./معتمد.html"];

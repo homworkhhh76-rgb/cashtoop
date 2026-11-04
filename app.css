@@ -6372,3 +6372,8 @@ body>.oscar-employee-modal-overlay{position:fixed!important;inset:0!important;z-
 @media(max-width:440px){.ct-record-date-grid{grid-template-columns:1fr}.ct-record-filter-content{padding:16px}.ct-record-filter-dialog>footer{padding:12px 16px}.ct-record-filter-dialog>footer button{padding:10px 14px}}
 
 .ct-loading-ring{width:66px!important;height:66px!important;border-width:6px!important}.ct-progress-person{width:155px;height:155px}.ct-progress-person>b{bottom:23px;font-size:16px}
+
+/* Scan confirmation: non-interactive so it cannot steal scanner focus. */
+.ct-scan-preview{position:fixed;z-index:2147483000;top:18px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;width:min(440px,calc(100vw - 24px));padding:12px 16px;border-radius:18px;background:#fff;border:2px solid #7c3aed;box-shadow:0 12px 35px #0f172a33;color:#0f172a;pointer-events:none;font-family:Cairo,Tahoma,sans-serif}
+.ct-scan-preview>div{flex:1;min-width:0}.ct-scan-preview strong{display:block;font-size:15px}.ct-scan-preview small{display:block;color:#64748b}.ct-scan-preview b{color:#6d28d9;white-space:nowrap;font-size:16px}.ct-scan-preview-image{width:56px!important;height:56px!important;object-fit:contain;border-radius:10px;flex:none}
+.ct-profit-summary{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:7px 10px;margin-top:5px;border-radius:9px;background:#ecfdf5;color:#065f46;font-size:12px;font-weight:700;box-sizing:border-box}.ct-profit-summary strong{direction:ltr;font-variant-numeric:tabular-nums}
