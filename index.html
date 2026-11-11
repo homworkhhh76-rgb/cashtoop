@@ -9,12 +9,12 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="كاش توب 3" />
   <title>كاش توب 3</title>
-  <link rel="icon" type="image/png" href="./app-icon.png?v=7.9.4.178-auto-barcode" />
-  <link rel="apple-touch-icon" href="./icon-192.png?v=7.9.4.178-auto-barcode" />
+  <link rel="icon" type="image/png" href="./app-icon.png?v=7.9.4.179-half-shekel" />
+  <link rel="apple-touch-icon" href="./icon-192.png?v=7.9.4.179-half-shekel" />
   <link rel="manifest" href="./manifest.webmanifest" />
   <link href="./offline-fonts.css" rel="stylesheet" />
-  <link rel="stylesheet" href="./app.css?v=7.9.4.178-auto-barcode" />
-<script src="./oscar-activation-runtime.js?v=7.9.4.178-auto-barcode"></script>
+  <link rel="stylesheet" href="./app.css?v=7.9.4.179-half-shekel" />
+<script src="./oscar-activation-runtime.js?v=7.9.4.179-half-shekel"></script>
   <script>
     try {
       const rt = window.OscarActivation?.readRuntime?.();
@@ -22,7 +22,7 @@
       if (companyTitle) document.title = companyTitle;
     } catch (_) {}
   </script>
-  <script src="./oscar-cloud-sync.js?v=7.9.4.178-auto-barcode"></script>
+  <script src="./oscar-cloud-sync.js?v=7.9.4.179-half-shekel"></script>
 </head>
 <body>
   <script>document.documentElement.classList.remove('dark');</script>
@@ -43,7 +43,7 @@
   });
   async function setup() {
     try {
-      const reg = await navigator.serviceWorker.register('./sw.js?v=7.9.4.178-auto-barcode', {updateViaCache:'none'});
+      const reg = await navigator.serviceWorker.register('./sw.js?v=7.9.4.179-half-shekel', {updateViaCache:'none'});
       reg.update().catch(() => {});
     } catch (error) { console.warn('OFFLINE_SETUP', error); }
   }
@@ -54,7 +54,7 @@
 </script>
   <script type="module">
     try {
-      await import('./main.js?v=7.9.4.178-auto-barcode');
+      await import('./main.js?v=7.9.4.179-half-shekel');
     } catch (error) {
       console.error('OSCAR_BOOT_ERROR', error);
       const root = document.getElementById('root');
