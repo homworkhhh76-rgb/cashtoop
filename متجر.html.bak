@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CASH TOP - نظام المطاعم</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- QR Code Generator -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- SweetAlert2 for modern alerts instead of native alert() -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            light: '#4fd1c5',
+                            DEFAULT: '#0d9488',
+                            dark: '#0f766e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Fonts & Scrollbar */
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap');
+        body { font-family: 'Cairo', sans-serif; background-color: #f3f4f6; overflow-x: hidden; }
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* App Layout */
+        .app-view { display: none; min-height: 100vh; padding-bottom: 80px;}
+        .app-view.active { display: block; }
+        
+        /* Modifiers Modal */
+        .modal-overlay { background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
+
+        /* KDS Grid */
+        .kds-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+        
+        /* Thermal Receipt Print Styles */
+        @media print {
+            body * { visibility: hidden; }
+            #print-section, #print-section * { visibility: visible; }
+            #print-section {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 80mm; /* Max width for 80mm thermal */
+                margin: 0;
+                padding: 0;
+                font-family: 'Courier New', Courier, monospace; /* Best for thermal */
+                color: #000;
+                background: #fff;
+            }
+            .print-hidden { display: none !important; }
+            /* Compact styling */
+            #print-section p, #print-section h1, #print-section h2, #print-section h3 { margin: 2px 0; }
+            #print-section table { width: 100%; border-collapse: collapse; font-size: 12px; }
+            #print-section th, #print-section td { padding: 2px 0; text-align: right; border-bottom: 1px dashed #000; }
+            #print-section th.center, #print-section td.center { text-align: center; }
+            #print-section th.left, #print-section td.left { text-align: left; }
+        }
+
+        /* Prevent zooming on inputs in iOS */
+        input, select, textarea { font-size: 16px !important; }
+    </style>
+</head>
+<body class="text-gray-800 antialiased selection:bg-brand selection:text-white">
+
+    <!-- Mobile Admin Header -->
+    <div id="mobile-admin-header" class="lg:hidden hidden print-hidden sticky top-0 z-30 shadow-md bg-[#111827] text-white">
+        <div class="p-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-brand flex items-center justify-center shadow-lg">
+                    <i class="fas fa-cash-register text-sm text-white"></i>
+                </div>
+                <div class="font-black text-lg tracking-wider">CASH TOP</div>
+            </div>
+            <button onclick="toggleSidebar()" class="text-white text-2xl p-2 focus:outline-none hover:text-brand transition-colors">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Sidebar Backdrop for Mobile -->
+    <div id="sidebar-backdrop" class="fixed inset-0 bg-black/60 z-40 hidden backdrop-blur-sm transition-opacity lg:hidden" onclick="toggleSidebar()"></div>
+
+    <!-- Admin Sidebar (Replaces Top Nav) -->
+    <aside id="admin-sidebar" class="fixed right-0 top-0 bottom-0 w-64 bg-[#111827] text-white z-50 hidden flex-col print-hidden shadow-2xl transition-transform duration-300 transform translate-x-full lg:translate-x-0">
+        <div class="p-6 border-b border-gray-800 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-brand flex items-center justify-center shadow-lg shadow-brand/30">
+                <i class="fas fa-cash-register text-xl text-white"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-black tracking-wider text-white leading-tight">CASH TOP</h1>
+                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Restaurant System</p>
+            </div>
+        </div>
+        
+        <div class="p-4 flex-1 overflow-y-auto space-y-2 mt-4">
+            <div class="text-xs text-gray-500 uppercase tracking-wider mb-4 font-bold px-2">لوحة الإدارة</div>
+            
+            <button onclick="navigate('reception')" class="sidebar-btn w-full flex items-center gap-4 px-4 py-3.5 text-gray-300 hover:text-white hover:bg-gray-800 rounded-xl transition-all text-right group">
+                <div class="w-8 h-8 rounded-lg bg-gray-800 group-hover:bg-brand flex items-center justify-center transition-colors"><i class="fas fa-bell"></i></div>
+                <span class="font-bold">استقبال الطلبات</span>
+            </button>
+            
+            <button onclick="navigate('kds')" class="sidebar-btn w-full flex items-center gap-4 px-4 py-3.5 text-gray-300 hover:text-white hover:bg-gray-800 rounded-xl transition-all text-right group">
+                <div class="w-8 h-8 rounded-lg bg-gray-800 group-hover:bg-brand flex items-center justify-center transition-colors"><i class="fas fa-fire-burner"></i></div>
+                <span class="font-bold">المطبخ KDS</span>
+            </button>
+            
+            <button onclick="navigate('pos')" class="sidebar-btn w-full flex items-center gap-4 px-4 py-3.5 text-gray-300 hover:text-white hover:bg-gray-800 rounded-xl transition-all text-right group">
+                <div class="w-8 h-8 rounded-lg bg-gray-800 group-hover:bg-brand flex items-center justify-center transition-colors"><i class="fas fa-file-invoice-dollar"></i></div>
+                <span class="font-bold">الكاشير والفواتير</span>
+            </button>
+            
+            <button onclick="navigate('tables')" class="sidebar-btn w-full flex items-center gap-4 px-4 py-3.5 text-gray-300 hover:text-white hover:bg-gray-800 rounded-xl transition-all text-right group">
+                <div class="w-8 h-8 rounded-lg bg-gray-800 group-hover:bg-brand flex items-center justify-center transition-colors"><i class="fas fa-link"></i></div>
+                <span class="font-bold">الروابط والطاولات</span>
+            </button>
+        </div>
+        
+        <div class="p-4 border-t border-gray-800 bg-gray-900/50">
+            <button onclick="window.open(window.location.origin + window.location.pathname + '?view=menu', '_blank')" class="w-full bg-gradient-to-r from-brand to-brand-dark text-white px-4 py-3 rounded-xl font-bold transition-transform hover:scale-105 active:scale-95 flex justify-center items-center gap-2 shadow-lg shadow-brand/20">
+                <i class="fas fa-external-link-alt"></i> فتح المنيو كزبون
+            </button>
+        </div>
+    </aside>
+
+    <!-- App Views Container (Added transition and margin for sidebar) -->
+    <main id="app-container" class="transition-all duration-300 min-h-screen">
+
+        <!-- ==========================================
+             1. CUSTOMER MENU VIEW 
+             ========================================== -->
+        <section id="view-menu" class="app-view bg-gray-50">
+            <!-- Customer Header -->
+            <header class="bg-white shadow-sm sticky top-0 z-30">
+                <div class="relative h-40 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1514933651103-005eec06c04b?ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80');">
+                    <div class="absolute inset-0 bg-black bg-opacity-40"></div>
+                    <div class="absolute bottom-[-30px] right-4 flex items-end">
+                        <img src="https://ui-avatars.com/api/?name=C+T&background=0d9488&color=fff&size=80" class="rounded-full border-4 border-white shadow-lg w-20 h-20" alt="Logo">
+                        <div class="mr-3 mb-8 text-white">
+                            <h1 class="font-bold text-2xl drop-shadow-md">مطعم CASH TOP</h1>
+                            <p class="text-sm text-green-300 font-medium"><i class="fas fa-door-open"></i> مفتوح الآن</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Categories Bar -->
+                <div class="mt-8 px-4 py-3 flex gap-3 overflow-x-auto hide-scrollbar" id="menu-categories">
+                    <!-- Injected via JS -->
+                </div>
+            </header>
+
+            <!-- Table Info Banner (If scanned from QR) -->
+            <div id="table-info-banner" class="hidden bg-brand text-white text-center py-2 text-sm font-medium">
+                أنت تطلب من طاولة رقم: <span id="current-table-display"></span>
+            </div>
+
+            <!-- Menu Items Grid -->
+            <div class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" id="menu-items">
+                <!-- Injected via JS -->
+            </div>
+
+            <!-- Floating Cart Button (Customer) - PROFESSIONAL REDESIGN -->
+            <div class="fixed bottom-6 left-1/2 transform -translate-x-1/2 w-[90%] max-w-sm z-40 print-hidden">
+                <button onclick="toggleCartModal()" class="w-full bg-gradient-to-r from-gray-900 to-gray-800 text-white font-bold py-3.5 px-6 rounded-2xl shadow-[0_10px_25px_-5px_rgba(0,0,0,0.5)] flex justify-between items-center hover:scale-[1.02] active:scale-95 transition-all border border-gray-700">
+                    <div class="flex items-center gap-4">
+                        <div class="relative">
+                            <i class="fa-solid fa-cart-shopping text-2xl text-brand-light"></i>
+                            <span id="cart-count" class="absolute -top-2 -right-3 bg-red-500 text-white text-[11px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-gray-900 shadow-sm">0</span>
+                        </div>
+                        <span class="text-lg font-bold tracking-wide">عـرض السـلة</span>
+                    </div>
+                    <div class="bg-gray-800/80 border border-gray-600 px-3 py-1.5 rounded-xl flex items-center gap-1">
+                        <span id="cart-total-btn" class="text-lg font-black text-brand-light">0.00</span>
+                        <span class="text-xs text-gray-300">ر.س</span>
+                    </div>
+                </button>
+            </div>
+            
+            <!-- Hidden staff login (removed icon, hidden transparent area for testing only) -->
+             <button onclick="navigate('reception')" class="fixed bottom-0 right-0 w-16 h-16 opacity-0 z-50 print-hidden"></button>
+        </section>
+
+
+        <!-- ==========================================
+             2. RECEPTION / ORDERS VIEW
+             ========================================== -->
+        <section id="view-reception" class="app-view max-w-7xl mx-auto p-4">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800 border-r-4 border-brand pr-2">طلبات المنيو المباشرة (الاستقبال)</h2>
+            <div class="mb-4 bg-blue-50 text-blue-800 p-3 rounded border border-blue-200 text-sm">
+                <i class="fas fa-info-circle"></i> الطلبات هنا <b>لا تؤثر مالياً ولا على المخزون</b> حتى يتم الضغط على "قبول الطلب" لتحويله إلى فاتورة في CASH TOP.
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="reception-orders-list">
+                <!-- Injected via JS -->
+            </div>
+        </section>
+
+
+        <!-- ==========================================
+             3. KITCHEN DISPLAY SYSTEM (KDS)
+             ========================================== -->
+        <section id="view-kds" class="app-view bg-gray-900 text-white p-4 min-h-screen pb-10">
+            <header class="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
+                <h2 class="text-2xl font-bold text-gray-100"><i class="fas fa-fire-burner text-orange-500"></i> شاشة المطبخ (KDS)</h2>
+                <div class="text-sm bg-gray-800 px-3 py-1 rounded">قسم التحضير العام</div>
+            </header>
+            <div class="kds-grid" id="kds-tickets">
+                <!-- Injected via JS -->
+            </div>
+        </section>
+
+
+        <!-- ==========================================
+             4. POS / CASHIER VIEW
+             ========================================== -->
+        <section id="view-pos" class="app-view max-w-[1600px] mx-auto p-2 h-screen flex flex-col md:flex-row gap-4">
+            <!-- Left: Products / Menu -->
+            <div class="flex-1 bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col h-full overflow-hidden">
+                <div class="p-3 border-b bg-gray-50 flex gap-2 overflow-x-auto hide-scrollbar" id="pos-categories">
+                    <!-- JS -->
+                </div>
+                <div class="p-3 grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 overflow-y-auto flex-1 content-start" id="pos-items">
+                    <!-- JS -->
+                </div>
+            </div>
+
+            <!-- Right: POS Cart & Actions -->
+            <div class="w-full md:w-96 bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col h-full">
+                <!-- Top Tabs (New Order / Fetch Table) -->
+                <div class="flex border-b text-sm font-bold">
+                    <button class="flex-1 py-3 bg-brand text-white">طلب مباشر</button>
+                    <button class="flex-1 py-3 bg-gray-100 text-gray-600 hover:bg-gray-200" onclick="posShowActiveOrders()">استدعاء طلب / طاولة</button>
+                </div>
+                
+                <!-- Order Info -->
+                <div class="p-3 border-b text-sm grid grid-cols-2 gap-2 bg-gray-50">
+                    <div>
+                        <label class="block text-xs text-gray-500">نوع الطلب</label>
+                        <select id="pos-order-type" class="w-full border rounded p-1">
+                            <option value="takeaway">سفري</option>
+                            <option value="dine_in">محلي</option>
+                            <option value="delivery">توصيل</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500">العميل</label>
+                        <input type="text" placeholder="عميل نقدي" class="w-full border rounded p-1">
+                    </div>
+                </div>
+
+                <!-- POS Cart Items -->
+                <div class="flex-1 overflow-y-auto p-2 bg-gray-50/50" id="pos-cart-list">
+                    <!-- JS -->
+                </div>
+
+                <!-- POS Totals & Pay -->
+                <div class="p-4 bg-white border-t">
+                    <div class="flex justify-between mb-1 text-gray-600"><span>المجموع:</span> <span id="pos-subtotal">0.00</span></div>
+                    <div class="flex justify-between mb-1 text-gray-600"><span>الضريبة (15%):</span> <span id="pos-tax">0.00</span></div>
+                    <div class="flex justify-between mb-3 text-xl font-bold text-brand"><span>الإجمالي:</span> <span id="pos-total">0.00</span></div>
+                    
+                    <div class="grid grid-cols-2 gap-2 mb-2 text-sm">
+                        <button onclick="posOpenPayment('cash')" class="bg-green-600 text-white p-2 rounded hover:bg-green-700"><i class="fas fa-money-bill"></i> نقدي (الصندوق)</button>
+                        <button onclick="posOpenPayment('bank')" class="bg-blue-600 text-white p-2 rounded hover:bg-blue-700"><i class="fas fa-credit-card"></i> شبكة (البنك)</button>
+                    </div>
+                    <button onclick="posOpenPayment('split')" class="w-full bg-gray-800 text-white p-2 rounded hover:bg-gray-900 mb-2 text-sm">دفع مقسم / متعدد</button>
+                    
+                    <div class="flex gap-2">
+                        <button class="flex-1 border border-red-500 text-red-500 p-2 rounded hover:bg-red-50 text-sm" onclick="clearPOSCart()">إلغاء</button>
+                        <button class="flex-1 border border-orange-500 text-orange-500 p-2 rounded hover:bg-orange-50 text-sm" onclick="alert('واجهة المرتجعات تفتح هنا بناءً على cashtop_sales_returns')"><i class="fas fa-undo"></i> مرتجع</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ==========================================
+             5. TABLE MANAGEMENT & QR CODES
+             ========================================== -->
+        <section id="view-tables" class="app-view max-w-7xl mx-auto p-4 md:p-8">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                <h2 class="text-3xl font-black text-gray-800 flex items-center gap-3">
+                    <div class="w-2 h-8 bg-brand rounded-full"></div>
+                    إدارة الطاولات والروابط
+                </h2>
+                <button onclick="generateAllQRs()" class="bg-gray-900 text-white px-5 py-2.5 rounded-xl shadow-lg hover:bg-black font-bold flex items-center gap-2 transition-all">
+                    <i class="fas fa-print"></i> طباعة جميع الرموز
+                </button>
+            </div>
+            
+            <!-- Copy General Link Section -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8 flex flex-col md:flex-row justify-between items-center gap-4 bg-gradient-to-r from-gray-50 to-white">
+                <div>
+                    <h3 class="font-bold text-gray-900 text-lg mb-1"><i class="fas fa-link text-brand ml-2"></i> رابط المنيو العام (للزبائن)</h3>
+                    <p class="text-sm text-gray-500">انسخ هذا الرابط لمشاركته في انستجرام أو واتساب لاستقبال طلبات التوصيل والاستلام الخارجي.</p>
+                </div>
+                <div class="flex gap-2 w-full md:w-auto relative">
+                    <input type="text" id="general-menu-link" readonly class="border-2 border-gray-200 rounded-xl px-4 py-3 bg-white text-left text-sm w-full md:w-80 font-mono text-gray-600 focus:outline-none" dir="ltr">
+                    <button onclick="copyGeneralLink()" class="bg-brand text-white px-5 py-3 rounded-xl shadow-lg shadow-brand/30 hover:bg-brand-dark flex items-center gap-2 whitespace-nowrap font-bold transition-all">
+                        <i class="fas fa-copy"></i> نسخ
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <table class="min-w-full divide-y divide-gray-100 text-sm text-right">
+                    <thead class="bg-gray-50/50">
+    <!-- ==========================================
+         MODALS & OVERLAYS
+         ========================================== -->
+
+    <!-- Item Modifiers Modal (Customer Menu) -->
+    <div id="modifier-modal" class="fixed inset-0 z-50 hidden flex justify-center items-end sm:items-center modal-overlay">
+        <div class="bg-white w-full sm:w-[500px] rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="relative">
+                <img id="mod-img" src="" class="w-full h-48 object-cover" alt="Product">
+                <button onclick="closeModifierModal()" class="absolute top-4 right-4 bg-white/80 text-gray-800 w-8 h-8 rounded-full flex items-center justify-center hover:bg-white"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-4 flex-1 overflow-y-auto">
+                <h3 id="mod-title" class="text-xl font-bold text-gray-800"></h3>
+                <p id="mod-desc" class="text-gray-500 text-sm mb-4"></p>
+                
+                <div id="modifiers-container" class="space-y-4">
+                    <!-- JS -->
+                </div>
+
+                <div class="mt-4 border-t pt-4">
+    <!-- Customer Cart Modal - PROFESSIONAL REDESIGN -->
+    <div id="cart-modal" class="fixed inset-0 z-50 hidden modal-overlay">
+        <div class="absolute right-0 sm:right-auto sm:left-0 top-0 bottom-0 w-full md:w-[420px] bg-gray-50 shadow-2xl flex flex-col transform transition-transform translate-x-0">
+            
+            <!-- Header -->
+            <div class="p-5 bg-white border-b border-gray-100 flex justify-between items-center shadow-sm z-10 relative">
+                <h2 class="font-black text-xl text-gray-900 flex items-center gap-3">
+                    <div class="w-10 h-10 bg-brand/10 rounded-full flex items-center justify-center text-brand">
+                        <i class="fa-solid fa-cart-shopping"></i>
+                    </div>
+                    سلة الطلبات
+                </h2>
+                <button onclick="toggleCartModal()" class="text-gray-400 hover:text-red-500 bg-gray-100 hover:bg-red-50 w-8 h-8 rounded-full flex items-center justify-center transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- Items Area -->
+            <div class="flex-1 overflow-y-auto p-4 space-y-3" id="cart-items-container">
+                <!-- JS -->
+            </div>
+
+            <!-- Checkout Area -->
+            <div class="p-5 bg-white border-t border-gray-100 shadow-[0_-10px_30px_rgba(0,0,0,0.03)] z-10">
+                <div class="mb-4">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">حدد طريقة الاستلام <span class="text-red-500">*</span></label>
+                    <div class="relative">
+                        <select id="cart-order-type" class="w-full border-2 border-gray-200 rounded-xl p-3 text-sm font-bold text-gray-700 appearance-none focus:border-brand focus:ring-0 outline-none transition-colors" onchange="updateCartUI()">
+                            <option value="dine_in">🍽️ داخل المطعم / طاولة</option>
+                            <option value="takeaway">🛍️ استلام من الفرع</option>
+                            <option value="delivery">🛵 توصيل للمنزل</option>
+                        </select>
+                        <i class="fas fa-chevron-down absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                    </div>
+                </div>
+                
+                <div class="flex justify-between text-gray-500 mb-2 text-sm font-medium"><span>المجموع الفرعي:</span> <span id="cart-sub">0.00</span></div>
+                <div class="flex justify-between font-black text-2xl mb-5 text-gray-900 border-t border-dashed pt-3 mt-3">
+                    <span>الإجمالي:</span> 
+                    <span id="cart-total" class="text-brand">0.00</span>
+                </div>
+                
+                <div class="flex flex-col gap-3">
+                    <button onclick="submitOrder('system')" class="w-full bg-gray-900 text-white font-bold py-3.5 rounded-xl shadow-lg hover:bg-black transition-all text-lg flex justify-center items-center gap-2">
+                        <i class="fas fa-check-circle"></i> تأكيد وإرسال الطلب
+                    </button>
+                    <button onclick="submitOrder('whatsapp')" class="w-full bg-[#25D366]/10 text-[#25D366] font-bold py-3.5 rounded-xl hover:bg-[#25D366]/20 flex justify-center items-center gap-2 transition-all border border-[#25D366]/30">
+                        <i class="fab fa-whatsapp text-xl"></i> إرسال عبر واتساب
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Thermal Print Section (Hidden on screen, visible on print) -->
+    <div id="print-section" class="print-hidden">
+        <!-- Content injected via JS before calling window.print() -->
+    </div>
+
+
+    <!-- ==========================================
+         JAVASCRIPT LOGIC
+         ========================================== -->
+    <script>
+        /**
+         * ------------------------------------------------------------------------
+         * ARCHITECTURE & SECURITY WARNING (As requested in point 19)
+         * ------------------------------------------------------------------------
+         * In a production environment for CASH TOP, the Turso RW Token MUST NOT be
+         * exposed in this frontend file if it's served to customers as a public menu.
+         * * The correct architecture is:
+         * [This HTML Client] <---> [Backend API / Cloudflare Worker] <---> [Turso DB]
+         * * For the purpose of this single-file deliverable, I am implementing an 
+         * IN-MEMORY state manager combined with IndexedDB (for offline sync) that 
+         * SIMULATES the Turso database interactions.
+         * ------------------------------------------------------------------------
+         */
+
+        // --- 1. MOCK DATA & STATE MANAGEMENT (Simulating Turso datasets) ---
+        const MOCK_DATA = {
+            categories: [
+                { id: 'c1', name: 'وجبات رئيسية', icon: 'fa-burger' },
+                { id: 'c2', name: 'بيتزا', icon: 'fa-pizza-slice' },
+                { id: 'c3', name: 'مشروبات', icon: 'fa-glass-water' },
+            ],
+            // Linked to cashtop_products behind the scenes
+            menuItems: [
+                { id: 'm1', prod_id: 'p101', cat_id: 'c1', name: 'برجر لحم كلاسيك', desc: 'شريحة لحم بلدي 150 جرام مع الجبن والخس', price: 25, img: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&q=80', available: true, 
+                  modifiers: [
+                      { type: 'single', name: 'الحجم', required: true, options: [{name: 'عادي', price: 0}, {name: 'دبل', price: 10}] },
+                      { type: 'multiple', name: 'إضافات', options: [{name: 'زيادة جبنة', price: 3}, {name: 'بيكون', price: 5}] },
+                      { type: 'multiple', name: 'إزالة', options: [{name: 'بدون بصل', price: 0}, {name: 'بدون طماطم', price: 0}] }
+                  ]
+                },
+                { id: 'm2', prod_id: 'p102', cat_id: 'c2', name: 'بيتزا بيبروني', desc: 'عجينة رقيقة، صوص طماطم طازج، جبن موزاريلا وبيبروني بقر', price: 35, img: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?w=500&q=80', available: true,
+                  modifiers: [
+                      { type: 'single', name: 'الحجم', required: true, options: [{name: 'صغير', price: 0}, {name: 'وسط', price: 10}, {name: 'كبير', price: 20}] }
+                  ]
+                },
+                { id: 'm3', prod_id: 'p103', cat_id: 'c3', name: 'كولا كلاسيك', desc: 'مشروب غازي بارد', price: 5, img: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=500&q=80', available: true, modifiers: [] }
+            ],
+            tables: [
+                { id: 'T1', branch: 'BR01', name: 'طاولة 1 (داخلية)', status: 'active' },
+                { id: 'T2', branch: 'BR01', name: 'طاولة 2 (نافذة)', status: 'active' },
+                { id: 'T3', branch: 'BR01', name: 'طاولة 3 (خارجية)', status: 'active' }
+            ],
+            // Simulated Chart of Accounts integration
+            paymentMethods: [
+                { id: 'pm_cash', name: 'نقدي (الصندوق الرئيس)', acc_id: '1101' },
+                { id: 'pm_bank', name: 'تحويل بنكي / شبكة', acc_id: '1102' }
+            ]
+        };
+
+        const AppState = {
+            cart: [],
+            orders: [], // Array of received orders (simulating cashtop_restaurant_orders)
+            currentTableInfo: null, // If scanned via QR
+            offlineQueue: [],
+            currency: 'ر.س',
+            posCart: []
+        };
+
+        // --- 2. INITIALIZATION & ROUTING ---
+        document.addEventListener('DOMContentLoaded', () => {
+            checkUrlParameters();
+            initOfflineSupport();
+            
+            // Set General Link in Admin View
+            const generalLinkInput = document.getElementById('general-menu-link');
+            if(generalLinkInput) {
+                generalLinkInput.value = window.location.origin + window.location.pathname + '?view=menu';
+            }
+            
+            // Default view logic
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewParam = urlParams.get('view');
+
+            if (AppState.currentTableInfo || viewParam === 'menu') {
+                navigate('menu'); // Force menu for QR scans or customer link
+            } else {
+                navigate('reception'); // Default for admin
+            }
+            
+            renderCustomerMenu();
+            renderTablesAdmin();
+            
+            // Simulate receiving a test order after 10 seconds for demo purposes
+            setTimeout(() => {
+                receiveIncomingOrder({
+                    id: 'ORD-' + Math.floor(Math.random()*10000),
+                    type: 'delivery',
+                    table: null,
+                    time: new Date(),
+                    status: 'new',
+                    customerInfo: 'أحمد - 0501234567',
+                    items: [
+                        { name: 'بيتزا بيبروني', qty: 2, price: 45, modifiersText: 'الحجم: وسط', notes: '' }
+                    ],
+                    total: 90
+                });
+            }, 10000);
+        });
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('admin-sidebar');
+            const backdrop = document.getElementById('sidebar-backdrop');
+            
+            if (sidebar.classList.contains('translate-x-full')) {
+                // فتح القائمة الجانبية
+                sidebar.classList.remove('translate-x-full');
+                backdrop.classList.remove('hidden');
+            } else {
+                // إغلاق القائمة الجانبية
+                sidebar.classList.add('translate-x-full');
+                backdrop.classList.add('hidden');
+            }
+        }
+
+        function closeSidebarMobile() {
+            if (window.innerWidth < 1024) { // إذا كانت الشاشة جوال أو تابلت
+                const sidebar = document.getElementById('admin-sidebar');
+                const backdrop = document.getElementById('sidebar-backdrop');
+                if(sidebar) sidebar.classList.add('translate-x-full');
+                if(backdrop) backdrop.classList.add('hidden');
+            }
+        }
+
+        function navigate(viewId) {
+            document.querySelectorAll('.app-view').forEach(el => el.classList.remove('active'));
+            document.getElementById(`view-${viewId}`).classList.add('active');
+            
+            const sidebar = document.getElementById('admin-sidebar');
+            const mainContainer = document.getElementById('app-container');
+            const mobileHeader = document.getElementById('mobile-admin-header');
+
+            if(viewId === 'menu') {
+                // Customer Mode - Hide Admin Controls
+                if(sidebar) {
+                    sidebar.classList.add('hidden');
+                    sidebar.classList.remove('flex');
+                }
+                if(mobileHeader) mobileHeader.classList.add('hidden');
+                mainContainer.classList.remove('lg:pr-64'); 
+            } else {
+                // Admin Mode - Show Sidebar
+                if(sidebar) {
+                    sidebar.classList.remove('hidden');
+                    sidebar.classList.add('flex');
+                }
+                if(mobileHeader) mobileHeader.classList.remove('hidden');
+                mainContainer.classList.add('lg:pr-64');
+                
+                // إغلاق القائمة تلقائياً في الجوال بعد اختيار صفحة
+                closeSidebarMobile();
+            }
+
+            // Update active state in sidebar
+            document.querySelectorAll('.sidebar-btn').forEach(btn => {
+                btn.classList.remove('bg-gray-800', 'text-white', 'border-r-4', 'border-brand');
+                btn.classList.add('text-gray-300');
+            });
+            
+            const activeBtn = Array.from(document.querySelectorAll('.sidebar-btn')).find(b => b.getAttribute('onclick').includes(viewId));
+            if(activeBtn) {
+                activeBtn.classList.remove('text-gray-300');
+                activeBtn.classList.add('bg-gray-800', 'text-white', 'border-r-4', 'border-brand');
+            }
+
+            // View specific init
+            if(viewId === 'pos') renderPOSMenu();
+            if(viewId === 'reception') renderReception();
+            if(viewId === 'kds') renderKDS();
+        }
+
+        function copyGeneralLink() {
+            const linkInput = document.getElementById('general-menu-link');
+            linkInput.select();
+            linkInput.setSelectionRange(0, 99999); // For mobile devices
+            document.execCommand("copy");
+            
+            Swal.fire({
+                toast: true, position: 'top-end', showConfirmButton: false, timer: 2000,
+                icon: 'success', title: 'تم نسخ الرابط بنجاح'
+            });
+        }
+
+        function checkUrlParameters() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const tableId = urlParams.get('table');
+            const branchId = urlParams.get('branch');
+            
+            if (tableId) {
+                const table = MOCK_DATA.tables.find(t => t.id === tableId);
+                if (table) {
+                    AppState.currentTableInfo = table;
+                    const banner = document.getElementById('table-info-banner');
+                    banner.classList.remove('hidden');
+                    document.getElementById('current-table-display').innerText = table.name;
+                    
+                    // Set cart default to dine-in
+                    const select = document.getElementById('cart-order-type');
+                    if(select) select.value = 'dine_in';
+                }
+            }
+        }
+
+        // --- 3. CUSTOMER MENU LOGIC ---
+        function renderCustomerMenu() {
+            // Categories
+            const catContainer = document.getElementById('menu-categories');
+            catContainer.innerHTML = `<button onclick="filterMenu('all')" class="whitespace-nowrap px-4 py-2 rounded-full bg-brand text-white text-sm font-bold shadow">الكل</button>`;
+            MOCK_DATA.categories.forEach(cat => {
+                catContainer.innerHTML += `<button onclick="filterMenu('${cat.id}')" class="whitespace-nowrap px-4 py-2 rounded-full bg-white text-gray-700 border text-sm font-bold shadow-sm hover:bg-gray-50"><i class="fas ${cat.icon} ml-1"></i> ${cat.name}</button>`;
+            });
+
+            filterMenu('all');
+        }
+
+        function filterMenu(catId) {
+            const container = document.getElementById('menu-items');
+            container.innerHTML = '';
+            
+            const items = catId === 'all' ? MOCK_DATA.menuItems : MOCK_DATA.menuItems.filter(i => i.cat_id === catId);
+            
+            items.forEach(item => {
+                if(!item.available) return;
+                container.innerHTML += `
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col cursor-pointer hover:shadow-md transition-shadow" onclick="openModifierModal('${item.id}')">
+                        <div class="h-40 overflow-hidden relative">
+                            <img src="${item.img}" class="w-full h-full object-cover" loading="lazy" alt="${item.name}">
+                            <div class="absolute bottom-2 right-2 bg-white px-2 py-1 rounded text-sm font-bold text-gray-800 shadow">${item.price} ${AppState.currency}</div>
+                        </div>
+                        <div class="p-3 flex-1 flex flex-col">
+                            <h3 class="font-bold text-gray-800">${item.name}</h3>
+                            <p class="text-xs text-gray-500 line-clamp-2 mt-1 flex-1">${item.desc}</p>
+                            <button class="mt-3 w-full border border-brand text-brand hover:bg-brand hover:text-white rounded py-1.5 text-sm font-bold transition-colors">
+                                <i class="fas fa-plus"></i> إضافة
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // --- 4. MODIFIERS & CART LOGIC ---
+        let currentEditingItem = null;
+        let modalQty = 1;
+
+        function openModifierModal(itemId) {
+            const item = MOCK_DATA.menuItems.find(i => i.id === itemId);
+            currentEditingItem = JSON.parse(JSON.stringify(item)); // deep copy
+            modalQty = 1;
+            
+            document.getElementById('mod-img').src = item.img;
+            document.getElementById('mod-title').innerText = item.name;
+            document.getElementById('mod-desc').innerText = item.desc;
+            document.getElementById('mod-qty').innerText = modalQty;
+            document.getElementById('mod-notes').value = '';
+            
+            const modsContainer = document.getElementById('modifiers-container');
+            modsContainer.innerHTML = '';
+            
+            if (item.modifiers && item.modifiers.length > 0) {
+                item.modifiers.forEach((mod, modIndex) => {
+                    let html = `<div class="bg-gray-50 p-3 rounded border"><h4 class="font-bold text-sm mb-2">${mod.name} ${mod.required ? '<span class="text-red-500 text-xs">(إجباري)</span>' : ''}</h4>`;
+                    
+                    mod.options.forEach((opt, optIndex) => {
+                        const inputType = mod.type === 'single' ? 'radio' : 'checkbox';
+                        const inputName = `mod_${modIndex}`;
+                        const priceDisplay = opt.price > 0 ? `+${opt.price}` : '';
+                        
+                        html += `
+                            <label class="flex items-center justify-between p-2 border-b last:border-0 cursor-pointer hover:bg-gray-100">
+                                <div class="flex items-center gap-2">
+                                    <input type="${inputType}" name="${inputName}" class="mod-input w-4 h-4 text-brand focus:ring-brand accent-brand" 
+                                           data-mod-name="${mod.name}" data-opt-name="${opt.name}" data-price="${opt.price}" onchange="calcModalPrice()">
+                                    <span class="text-sm">${opt.name}</span>
+                                </div>
+                                <span class="text-xs text-gray-500 font-bold">${priceDisplay}</span>
+                            </label>
+                        `;
+                    });
+                    html += `</div>`;
+                    modsContainer.innerHTML += html;
+                });
+            } else {
+                modsContainer.innerHTML = '<p class="text-xs text-gray-400">لا توجد خيارات إضافية لهذا الصنف.</p>';
+            }
+            
+            calcModalPrice();
+            document.getElementById('modifier-modal').classList.remove('hidden');
+        }
+
+        function closeModifierModal() { document.getElementById('modifier-modal').classList.add('hidden'); }
+        
+        function changeModQty(delta) {
+            if (modalQty + delta > 0) {
+                modalQty += delta;
+                document.getElementById('mod-qty').innerText = modalQty;
+                calcModalPrice();
+            }
+        }
+
+        function calcModalPrice() {
+            let basePrice = currentEditingItem.price;
+            let extras = 0;
+            
+            document.querySelectorAll('.mod-input:checked').forEach(input => {
+                extras += parseFloat(input.dataset.price);
+            });
+            
+            const total = (basePrice + extras) * modalQty;
+            document.getElementById('mod-total-price').innerText = `${total.toFixed(2)} ${AppState.currency}`;
+            return total;
+        }
+
+        function addToCartFromModal() {
+            // Validation for required single selects
+            let valid = true;
+            currentEditingItem.modifiers?.forEach((mod, idx) => {
+                if(mod.required) {
+                    const checked = document.querySelector(`input[name="mod_${idx}"]:checked`);
+                    if(!checked) valid = false;
+                }
+            });
+            
+            if(!valid) {
+                Swal.fire({icon:'warning', title:'تنبيه', text:'الرجاء اختيار الخيارات الإجبارية.', confirmButtonText:'حسناً', confirmButtonColor: '#0d9488'});
+                return;
+            }
+
+            // Gather selected mods
+            let selectedModsText = [];
+            let extraPrice = 0;
+            document.querySelectorAll('.mod-input:checked').forEach(input => {
+                selectedModsText.push(`${input.dataset.modName}: ${input.dataset.optName}`);
+                extraPrice += parseFloat(input.dataset.price);
+            });
+
+            const cartItem = {
+                id: Date.now().toString(),
+                productId: currentEditingItem.prod_id,
+                name: currentEditingItem.name,
+                qty: modalQty,
+                basePrice: currentEditingItem.price,
+                unitPrice: currentEditingItem.price + extraPrice,
+                totalPrice: (currentEditingItem.price + extraPrice) * modalQty,
+                modifiersText: selectedModsText.join(' | '),
+                notes: document.getElementById('mod-notes').value
+            };
+
+            AppState.cart.push(cartItem);
+            closeModifierModal();
+            updateCartUI();
+            
+            // Toast notification
+            Swal.fire({
+                toast: true, position: 'top-end', showConfirmButton: false, timer: 1500,
+                icon: 'success', title: 'تمت الإضافة للسلة'
+            });
+        }
+
+        function toggleCartModal() { document.getElementById('cart-modal').classList.toggle('hidden'); }
+
+        function updateCartUI() {
+            const container = document.getElementById('cart-items-container');
+            const countEl = document.getElementById('cart-count');
+            const totalBtnEl = document.getElementById('cart-total-btn');
+            
+            container.innerHTML = '';
+            let total = 0;
+            let qty = 0;
+
+            AppState.cart.forEach((item, index) => {
+                total += item.totalPrice;
+                qty += item.qty;
+                
+                container.innerHTML += `
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 relative group transition-all hover:shadow-md">
+                        <button onclick="removeFromCart(${index})" class="absolute top-3 left-3 text-gray-300 hover:text-red-500 bg-gray-50 hover:bg-red-50 w-8 h-8 rounded-lg flex items-center justify-center transition-colors"><i class="fas fa-trash-alt"></i></button>
+                        <div class="flex justify-between items-start">
+                            <div class="pr-8">
+                                <h4 class="font-bold text-gray-900 text-sm">${item.name}</h4>
+                                ${item.modifiersText ? `<p class="text-xs text-gray-500 mt-1.5 leading-relaxed">${item.modifiersText}</p>` : ''}
+                                ${item.notes ? `<p class="text-xs text-orange-600 mt-1.5 bg-orange-50 inline-block px-2 py-1 rounded-md font-medium"><i class="fas fa-note-sticky mr-1"></i> ${item.notes}</p>` : ''}
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center mt-4 pt-3 border-t border-gray-50">
+                            <div class="font-black text-lg text-brand">${item.totalPrice.toFixed(2)} <span class="text-xs text-gray-400 font-normal">ر.س</span></div>
+                            <div class="flex items-center gap-1 bg-gray-100 rounded-lg p-1 border border-gray-200">
+                                <button onclick="updateCartQty(${index}, -1)" class="text-gray-600 hover:text-black hover:bg-white w-7 h-7 rounded flex items-center justify-center font-bold shadow-sm transition-colors">-</button>
+                                <span class="text-sm font-bold w-6 text-center">${item.qty}</span>
+                                <button onclick="updateCartQty(${index}, 1)" class="text-gray-600 hover:text-black hover:bg-white w-7 h-7 rounded flex items-center justify-center font-bold shadow-sm transition-colors">+</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            if(AppState.cart.length === 0) {
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-48 text-gray-400 opacity-60">
+                        <i class="fa-solid fa-cart-arrow-down text-5xl mb-4"></i>
+                        <p class="font-bold text-lg">السلة فارغة حالياً</p>
+                    </div>`;
+            }
+
+            countEl.innerText = qty;
+            totalBtnEl.innerText = `${total.toFixed(2)}`;
+            document.getElementById('cart-sub').innerText = `${total.toFixed(2)} ${AppState.currency}`;
+            document.getElementById('cart-total').innerText = `${total.toFixed(2)} ${AppState.currency}`;
+        }
+
+        function updateCartQty(index, delta) {
+            const item = AppState.cart[index];
+            if (item.qty + delta > 0) {
+                item.qty += delta;
+                item.totalPrice = item.unitPrice * item.qty;
+                updateCartUI();
+            } else if (item.qty + delta === 0) {
+                removeFromCart(index);
+            }
+        }
+        function removeFromCart(index) { AppState.cart.splice(index, 1); updateCartUI(); }
+
+
+        // --- 5. ORDER SUBMISSION (Turso simulation & WhatsApp) ---
+        function submitOrder(method) {
+            if (AppState.cart.length === 0) {
+                Swal.fire('تنبيه', 'السلة فارغة!', 'warning');
+                return;
+            }
+
+            const orderType = document.getElementById('cart-order-type').value;
+            let tableId = null;
+            let customerInfo = '';
+
+            if (orderType === 'dine_in') {
+                if (AppState.currentTableInfo) {
+                    tableId = AppState.currentTableInfo.id;
+                } else {
+                    tableId = prompt("أدخل رقم الطاولة:");
+                    if(!tableId) return;
+                }
+            } else if (orderType === 'delivery') {
+                customerInfo = prompt("الرجاء إدخال الاسم ورقم الجوال:");
+                if(!customerInfo) return;
+            }
+
+            const total = AppState.cart.reduce((sum, i) => sum + i.totalPrice, 0);
+            const orderId = 'ORD-' + Math.floor(Math.random() * 100000);
+
+            const orderPayload = {
+                id: orderId,
+                type: orderType,
+                table: tableId,
+                customerInfo: customerInfo,
+                items: JSON.parse(JSON.stringify(AppState.cart)),
+                total: total,
+                status: 'new', // new -> accepted -> prep -> ready -> done
+                time: new Date()
+            };
+
+            if (method === 'whatsapp') {
+                let msg = `*طلب جديد #${orderId}*\n`;
+                if(orderType === 'dine_in') msg += `النوع: محلي - طاولة ${tableId}\n`;
+                if(orderType === 'delivery') msg += `النوع: توصيل\nالعميل: ${customerInfo}\n`;
+                msg += `\n*الأصناف:*\n`;
+                orderPayload.items.forEach(i => {
+                    msg += `- ${i.qty}x ${i.name} (${i.totalPrice}${AppState.currency})\n`;
+                    if(i.modifiersText) msg += `  ${i.modifiersText}\n`;
+                    if(i.notes) msg += `  ملاحظة: ${i.notes}\n`;
+                });
+                msg += `\n*الإجمالي: ${total} ${AppState.currency}*`;
+                
+                window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+                // Don't clear cart immediately on WA to allow retry, just close modal
+                toggleCartModal();
+            } else {
+                // System Order (Simulating Turso API push)
+                processSystemOrder(orderPayload);
+            }
+        }
+
+        function processSystemOrder(orderData) {
+            // Check online status
+            if (navigator.onLine) {
+                // SIMULATE API CALL TO TURSO BACKEND
+                console.log("Sending to Turso Pipeline: cashtop_restaurant_orders", orderData);
+                
+                Swal.fire({
+                    title: 'جاري الإرسال...',
+                    allowOutsideClick: false,
+                    didOpen: () => { Swal.showLoading() }
+                });
+
+                setTimeout(() => {
+                    Swal.fire('تم!', 'تم إرسال الطلب للمطعم بنجاح.', 'success');
+                    AppState.cart = [];
+                    updateCartUI();
+                    toggleCartModal();
+                    
+                    // Simulate Reception receiving it
+                    receiveIncomingOrder(orderData);
+                }, 1000);
+
+            } else {
+                // OFFLINE MODE: Save to Queue via IndexedDB
+                console.warn("Offline! Saving to local queue.");
+                saveToOfflineQueue(orderData);
+                Swal.fire('تم الحفظ (Offline)', 'لا يوجد اتصال. تم حفظ الطلب وسيتم إرساله تلقائياً عند عودة الإنترنت.', 'info');
+                AppState.cart = [];
+                updateCartUI();
+                toggleCartModal();
+            }
+        }
+
+        // --- 6. RECEPTION / ADMIN VIEW (Accepting Orders) ---
+        function receiveIncomingOrder(order) {
+            AppState.orders.unshift(order);
+            // Play notification sound
+            // new Audio('notification.mp3').play();
+            renderReception();
+            if(document.getElementById('view-kds').classList.contains('active')) renderKDS();
+        }
+
+        function renderReception() {
+            const container = document.getElementById('reception-orders-list');
+            container.innerHTML = '';
+            
+            const displayOrders = AppState.orders.filter(o => o.status === 'new' || o.status === 'accepted' || o.status === 'ready');
+            
+            if(displayOrders.length === 0) {
+                container.innerHTML = '<div class="col-span-full text-center text-gray-400 py-10">لا توجد طلبات نشطة حالياً</div>';
+                return;
+            }
+
+            displayOrders.forEach(o => {
+                let statusBadge = '';
+                if(o.status === 'new') statusBadge = '<span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded font-bold animate-pulse">جديد (بحاجة لقبول)</span>';
+                else if(o.status === 'accepted') statusBadge = '<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded font-bold">مقبول / قيد التحضير</span>';
+                else if(o.status === 'ready') statusBadge = '<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded font-bold">جاهز للتسليم</span>';
+
+                let html = `
+                    <div class="bg-white border rounded shadow-sm p-4 relative">
+                        <div class="flex justify-between items-start mb-3 border-b pb-2">
+                            <div>
+                                <h4 class="font-bold text-lg">${o.id}</h4>
+                                <div class="text-xs text-gray-500 mt-1"><i class="far fa-clock"></i> ${new Date(o.time).toLocaleTimeString('ar-SA')}</div>
+                            </div>
+                            ${statusBadge}
+                        </div>
+                        <div class="mb-3 text-sm">
+                            <p><span class="font-bold">النوع:</span> ${o.type === 'dine_in' ? `محلي (طاولة ${o.table})` : o.type === 'delivery' ? 'توصيل' : 'سفري'}</p>
+                            ${o.customerInfo ? `<p><span class="font-bold">العميل:</span> ${o.customerInfo}</p>` : ''}
+                        </div>
+                        <div class="bg-gray-50 p-2 rounded mb-4 max-h-32 overflow-y-auto text-sm border">
+                `;
+                o.items.forEach(i => {
+                    html += `<div class="mb-1 border-b last:border-0 pb-1"><span class="font-bold">${i.qty}x</span> ${i.name}</div>`;
+                });
+                html += `</div>
+                         <div class="flex justify-between items-center font-bold text-lg mb-4">
+                            <span>الإجمالي:</span>
+                            <span class="text-brand">${o.total} ${AppState.currency}</span>
+                         </div>
+                         <div class="flex gap-2">
+                `;
+
+                if (o.status === 'new') {
+                    html += `
+                        <button onclick="changeOrderStatus('${o.id}', 'accepted')" class="flex-1 bg-brand text-white py-2 rounded text-sm font-bold shadow hover:bg-brand-dark">قبول وتوجيه</button>
+                        <button onclick="changeOrderStatus('${o.id}', 'rejected')" class="bg-red-100 text-red-600 px-3 py-2 rounded text-sm font-bold hover:bg-red-200">رفض</button>
+                    `;
+                } else if (o.status === 'accepted') {
+                    html += `<button disabled class="w-full bg-gray-200 text-gray-500 py-2 rounded text-sm font-bold cursor-not-allowed">في المطبخ...</button>`;
+                } else if (o.status === 'ready') {
+                    html += `<button onclick="changeOrderStatus('${o.id}', 'done')" class="w-full bg-green-600 text-white py-2 rounded text-sm font-bold shadow hover:bg-green-700">تسليم وإكمال</button>`;
+                }
+                
+                html += `</div></div>`;
+                container.innerHTML += html;
+            });
+        }
+
+        function changeOrderStatus(orderId, newStatus) {
+            const order = AppState.orders.find(o => o.id === orderId);
+            if(order) {
+                order.status = newStatus;
+                
+                if(newStatus === 'accepted') {
+                    // ** CRITICAL LOGIC POINT **
+                    // Here is where the Order transforms into a CASH TOP financial entity.
+                    console.log(`Creating cashtop_invoices record for source: restaurant_menu, ID: ${orderId}`);
+                    Swal.fire({ toast:true, position:'top-end', icon:'success', title:'تم قبول الطلب وتسجيله مالياً وإرساله للمطبخ', showConfirmButton:false, timer:2000 });
+                }
+
+                renderReception();
+                renderKDS();
+                if(document.getElementById('view-pos').classList.contains('active')) renderPOSCart();
+            }
+        }
+
+
+        // --- 7. KITCHEN DISPLAY SYSTEM (KDS) ---
+        function renderKDS() {
+            const container = document.getElementById('kds-tickets');
+            container.innerHTML = '';
+            
+            // Show only accepted or prep orders
+            const kdsOrders = AppState.orders.filter(o => o.status === 'accepted' || o.status === 'prep');
+            
+            kdsOrders.sort((a, b) => new Date(a.time) - new Date(b.time)); // Oldest first
+
+            kdsOrders.forEach(o => {
+                // Calculate waiting time
+                const waitMins = Math.floor((new Date() - new Date(o.time)) / 60000);
+                let headerColor = waitMins > 15 ? 'bg-red-600' : (waitMins > 10 ? 'bg-orange-500' : 'bg-gray-700');
+
+                let html = `
+                    <div class="bg-gray-800 rounded shadow-lg overflow-hidden border border-gray-700 flex flex-col h-[400px]">
+                        <div class="${headerColor} p-3 flex justify-between items-center">
+                            <div>
+                                <h3 class="font-bold text-xl">#${o.id.split('-')[1]}</h3>
+                                <div class="text-xs opacity-80">${o.type === 'dine_in' ? `طاولة ${o.table}` : (o.type === 'delivery' ? 'توصيل' : 'سفري')}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-2xl font-bold">${waitMins}m</div>
+                                <div class="text-xs opacity-80">انتظار</div>
+                            </div>
+                        </div>
+                        <div class="p-3 flex-1 overflow-y-auto text-lg space-y-3">
+                `;
+
+                o.items.forEach(i => {
+                    html += `
+                        <div class="border-b border-gray-700 pb-2">
+                            <div class="flex items-start gap-2">
+                                <span class="bg-gray-700 px-2 py-1 rounded font-bold text-brand-light">${i.qty}</span>
+                                <div>
+                                    <div class="font-bold text-white">${i.name}</div>
+                                    ${i.modifiersText ? `<div class="text-sm text-gray-400 mt-1">${i.modifiersText}</div>` : ''}
+                                    ${i.notes ? `<div class="text-sm text-orange-400 mt-1"><i class="fas fa-exclamation-triangle text-xs"></i> ${i.notes}</div>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `</div>
+                        <div class="p-3 bg-gray-900 border-t border-gray-700 flex gap-2">
+                `;
+                
+                if (o.status === 'accepted') {
+                    html += `<button onclick="changeOrderStatus('${o.id}', 'prep')" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded text-lg">بدء التحضير</button>`;
+                } else if (o.status === 'prep') {
+                    html += `<button onclick="changeOrderStatus('${o.id}', 'ready')" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded text-lg">جاهز (Ready)</button>`;
+                }
+
+                html += `</div></div>`;
+                container.innerHTML += html;
+            });
+            
+            if(kdsOrders.length === 0) {
+                container.innerHTML = '<div class="col-span-full flex flex-col items-center justify-center h-64 text-gray-500"><i class="fas fa-check-circle text-6xl mb-4"></i><p class="text-xl">لا توجد طلبات قيد التحضير</p></div>';
+            }
+        }
+        
+        // Auto-refresh KDS timers every minute
+        setInterval(() => {
+            if(document.getElementById('view-kds').classList.contains('active')) renderKDS();
+        }, 60000);
+
+
+        // --- 8. POS / CASHIER LOGIC ---
+        function renderPOSMenu() {
+            // Categories
+            const catContainer = document.getElementById('pos-categories');
+            catContainer.innerHTML = `<button onclick="filterPOS('all')" class="px-4 py-2 bg-brand text-white rounded text-sm font-bold shadow-sm whitespace-nowrap">الكل</button>`;
+            MOCK_DATA.categories.forEach(cat => {
+                catContainer.innerHTML += `<button onclick="filterPOS('${cat.id}')" class="px-4 py-2 bg-white border rounded text-gray-700 text-sm font-bold shadow-sm hover:bg-gray-50 whitespace-nowrap">${cat.name}</button>`;
+            });
+            filterPOS('all');
+            renderPOSCart();
+        }
+
+        function filterPOS(catId) {
+            const container = document.getElementById('pos-items');
+            container.innerHTML = '';
+            const items = catId === 'all' ? MOCK_DATA.menuItems : MOCK_DATA.menuItems.filter(i => i.cat_id === catId);
+            
+            items.forEach(item => {
+                container.innerHTML += `
+                    <div class="bg-white border rounded shadow-sm p-2 cursor-pointer hover:border-brand flex flex-col h-32" onclick="addToPOS('${item.id}')">
+                        <div class="font-bold text-gray-800 text-sm leading-tight flex-1">${item.name}</div>
+                        <div class="text-brand font-bold mt-2 text-left text-sm">${item.price} ${AppState.currency}</div>
+                    </div>
+                `;
+            });
+        }
+
+        function addToPOS(itemId) {
+            const item = MOCK_DATA.menuItems.find(i => i.id === itemId);
+            // Simplified for POS (skipping modifier modal for direct POS flow to save time, assuming default options. Real implementation would show modal).
+            const existing = AppState.posCart.find(i => i.id === itemId);
+            if(existing) {
+                existing.qty++;
+                existing.total = existing.qty * existing.price;
+            } else {
+                AppState.posCart.push({
+                    id: item.id, name: item.name, price: item.price, qty: 1, total: item.price
+                });
+            }
+            renderPOSCart();
+        }
+
+        function renderPOSCart() {
+            const list = document.getElementById('pos-cart-list');
+            list.innerHTML = '';
+            let subtotal = 0;
+
+            AppState.posCart.forEach((item, index) => {
+                subtotal += item.total;
+                list.innerHTML += `
+                    <div class="bg-white border p-2 rounded mb-2 text-sm flex justify-between items-center shadow-sm">
+                        <div class="flex-1">
+                            <div class="font-bold">${item.name}</div>
+                            <div class="text-brand">${item.total.toFixed(2)}</div>
+                        </div>
+                        <div class="flex items-center gap-2 bg-gray-100 rounded px-1">
+                            <button onclick="updatePOSQty(${index}, -1)" class="w-6 h-6 hover:bg-gray-200 rounded">-</button>
+                            <span class="w-4 text-center font-bold">${item.qty}</span>
+                            <button onclick="updatePOSQty(${index}, 1)" class="w-6 h-6 hover:bg-gray-200 rounded">+</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            const tax = subtotal * 0.15; // 15% VAT assumption
+            const total = subtotal + tax;
+
+            document.getElementById('pos-subtotal').innerText = subtotal.toFixed(2);
+            document.getElementById('pos-tax').innerText = tax.toFixed(2);
+            document.getElementById('pos-total').innerText = total.toFixed(2);
+        }
+
+        function updatePOSQty(index, delta) {
+            const item = AppState.posCart[index];
+            if(item.qty + delta > 0) {
+                item.qty += delta;
+                item.total = item.qty * item.price;
+            } else {
+                AppState.posCart.splice(index, 1);
+            }
+            renderPOSCart();
+        }
+
+        function clearPOSCart() {
+            AppState.posCart = [];
+            renderPOSCart();
+        }
+
+        function posOpenPayment(method) {
+            if(AppState.posCart.length === 0) return Swal.fire('خطأ', 'الفاتورة فارغة', 'error');
+            
+            const total = document.getElementById('pos-total').innerText;
+            Swal.fire({
+                title: 'تأكيد الدفع',
+                text: `المبلغ المطلوب: ${total} ${AppState.currency} (${method})`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'إصدار الفاتورة',
+                cancelButtonText: 'إلغاء'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    generateThermalReceipt(total, method);
+                    clearPOSCart();
+                    Swal.fire({toast:true, position:'top-end', icon:'success', title:'تم البيع بنجاح', showConfirmButton:false, timer:1500});
+                }
+            });
+        }
+
+        function posShowActiveOrders() {
+            // Function to pull an accepted order into POS to pay for it
+            const acceptedOrders = AppState.orders.filter(o => o.status === 'accepted' || o.status === 'ready' || o.status === 'done');
+            if(acceptedOrders.length === 0) return Swal.fire('معلومة', 'لا توجد طلبات منيو لفتحها', 'info');
+            
+            let options = {};
+            acceptedOrders.forEach(o => {
+                options[o.id] = `${o.id} - ${o.type === 'dine_in' ? 'طاولة '+o.table : 'سفري'} (${o.total} ${AppState.currency})`;
+            });
+
+            Swal.fire({
+                title: 'اختر الطلب',
+                input: 'select',
+                inputOptions: options,
+                showCancelButton: true,
+            }).then((result) => {
+                if (result.isConfirmed && result.value) {
+                    const order = AppState.orders.find(o => o.id === result.value);
+                    // Map order to POS cart
+                    AppState.posCart = order.items.map(i => ({
+                        id: i.productId, name: i.name, price: i.unitPrice, qty: i.qty, total: i.totalPrice
+                    }));
+                    renderPOSCart();
+                }
+            });
+        }
+
+        // --- 9. THERMAL RECEIPT GENERATOR ---
+        function generateThermalReceipt(totalStr, payMethod) {
+            const printSec = document.getElementById('print-section');
+            const d = new Date();
+            const dateStr = d.toLocaleDateString('en-GB');
+            const timeStr = d.toLocaleTimeString('en-US');
+            const invNo = 'INV-' + Math.floor(Math.random() * 999999);
+
+            let itemsHtml = '';
+            AppState.posCart.forEach(i => {
+                itemsHtml += `
+                    <tr>
+                        <td class="left">${i.name}</td>
+                        <td class="center">${i.qty}</td>
+                        <td>${i.total.toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+
+            const methodText = payMethod === 'cash' ? 'نقدي' : payMethod === 'bank' ? 'شبكة / بنك' : 'متعدد';
+
+            printSec.innerHTML = `
+                <div style="text-align: center; margin-bottom: 10px;">
+                    <h2 style="font-weight: bold; font-size: 18px;">مطعم CASH TOP</h2>
+                    <p style="font-size: 12px;">الرقم الضريبي: 300123456700003</p>
+                    <p style="font-size: 12px;">فاتورة ضريبية مبسطة</p>
+                </div>
+                <div style="font-size: 12px; margin-bottom: 10px;">
+                    <div>رقم الفاتورة: ${invNo}</div>
+                    <div>التاريخ: ${dateStr} ${timeStr}</div>
+                    <div>طريقة الدفع: ${methodText}</div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="left">الصنف</th>
+                            <th class="center">الكمية</th>
+                            <th>المجموع</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${itemsHtml}
+                    </tbody>
+                </table>
+                <div style="margin-top: 10px; font-size: 12px;">
+                    <div style="display:flex; justify-content: space-between;"><span>المجموع (شامل الضريبة):</span> <span>${totalStr}</span></div>
+                </div>
+                <div style="text-align: center; margin-top: 15px; font-size: 12px;">
+                    <p>*** شكراً لزيارتكم ***</p>
+                    <p>Powered by CASH TOP</p>
+                </div>
+            `;
+
+            window.print();
+        }
+
+        // --- 10. TABLE MANAGEMENT & QR ---
+        function renderTablesAdmin() {
+            const tbody = document.getElementById('tables-list');
+            tbody.innerHTML = '';
+            MOCK_DATA.tables.forEach(t => {
+                const url = `${window.location.origin}${window.location.pathname}?branch=${t.branch}&table=${t.id}`;
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="font-bold text-gray-900">${t.name}</div>
+                            <div class="text-xs text-gray-500">${t.id}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${t.branch}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">مفعل</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button onclick="printSingleQR('${t.id}', '${t.name}', '${url}')" class="text-brand hover:text-brand-dark flex items-center gap-1"><i class="fas fa-qrcode"></i> طباعة QR</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function generateAllQRs() {
+            const container = document.getElementById('print-section');
+            container.innerHTML = '<div style="text-align:center; padding: 20px;"><h2>رموز الطاولات</h2></div>';
+            
+            // For a real implementation, we render QR code canvases into the print section
+            // Due to qrcode.js rendering asynchronously to DOM, we simulate the output layout for print
+            container.innerHTML += `<p style="text-align:center; font-size: 12px;">(يتم توليد رموز QR هنا باستخدام مكتبة QRCode.js وإدراجها كصور للطباعة دفعة واحدة)</p>`;
+            window.print();
+        }
+
+        function printSingleQR(id, name, url) {
+            const container = document.getElementById('print-section');
+            container.innerHTML = `
+                <div style="text-align: center; padding: 20px; border: 2px solid #000; margin: 10px; border-radius: 10px;">
+                    <h2 style="margin-bottom: 5px;">مطعم CASH TOP</h2>
+                    <h3 style="margin-bottom: 15px;">${name}</h3>
+                    <div id="qr-temp-${id}" style="display: flex; justify-content: center; margin-bottom: 15px;"></div>
+                    <p style="font-size: 12px;">قم بمسح الرمز لعرض المنيو والطلب</p>
+                </div>
+            `;
+            
+            // Generate real QR inside the print section
+            new QRCode(document.getElementById(`qr-temp-${id}`), {
+                text: url, width: 200, height: 200, colorDark : "#000000", colorLight : "#ffffff"
+            });
+
+            setTimeout(() => { window.print(); }, 500); // Wait for canvas render
+        }
+
+
+        // --- 11. OFFLINE & PWA UTILITIES (IndexedDB) ---
+        let db;
+        function initOfflineSupport() {
+            const request = indexedDB.open("CashTopRestaurantDB", 1);
+            request.onupgradeneeded = (event) => {
+                db = event.target.result;
+                if (!db.objectStoreNames.contains("pending_orders")) {
+                    db.createObjectStore("pending_orders", { keyPath: "id" });
+                }
+            };
+            request.onsuccess = (event) => { db = event.target.result; syncOfflineOrders(); };
+            
+            window.addEventListener('online', () => {
+                document.getElementById('connection-status').innerHTML = '<i class="fas fa-circle text-[8px] ml-1"></i> متصل';
+                document.getElementById('connection-status').className = 'flex items-center text-xs font-bold text-green-500';
+                syncOfflineOrders();
+            });
+            window.addEventListener('offline', () => {
+                document.getElementById('connection-status').innerHTML = '<i class="fas fa-circle text-[8px] ml-1"></i> غير متصل';
+                document.getElementById('connection-status').className = 'flex items-center text-xs font-bold text-red-500';
+            });
+        }
+
+        function saveToOfflineQueue(order) {
+            if(!db) return;
+            const tx = db.transaction("pending_orders", "readwrite");
+            const store = tx.objectStore("pending_orders");
+            store.add(order);
+        }
+
+        function syncOfflineOrders() {
+            if(!db || !navigator.onLine) return;
+            const tx = db.transaction("pending_orders", "readwrite");
+            const store = tx.objectStore("pending_orders");
+            const request = store.getAll();
+            
+            request.onsuccess = () => {
+                if(request.result.length > 0) {
+                    console.log(`Syncing ${request.result.length} offline orders...`);
+                    request.result.forEach(order => {
+                        // Push to system
+                        receiveIncomingOrder(order);
+                        // Remove from queue
+                        store.delete(order.id);
+                    });
+                    Swal.fire({toast:true, position:'top-end', icon:'success', title:'تمت مزامنة الطلبات المعلقة بنجاح', showConfirmButton:false, timer:3000});
+                }
+            };
+        }
+
+    </script>
+</body>
+</html>

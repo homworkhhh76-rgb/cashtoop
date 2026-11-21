@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>تسجيل الدخول بحساب Google والنسخ الاحتياطي</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f3f4f6;
+      margin: 0;
+      padding: 24px;
+      color: #111827;
+    }
+    .box {
+      max-width: 650px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    }
+    h1 {
+      margin-top: 0;
+      font-size: 1.3rem;
+    }
+    .user-bar {
+      margin-top: 12px;
+      padding: 12px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 0.95rem;
+    }
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+      min-height: 140px;
+      margin-top: 14px;
+      padding: 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-family: monospace;
+    }
+    .btns {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+    button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.92rem;
+    }
+    .btn-login { background: #1d4ed8; color: #fff; }
+    .btn-save { background: #059669; color: #fff; }
+    .btn-load { background: #d97706; color: #fff; }
+    .btn-file { background: #4b5563; color: #fff; }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    .msg {
+      margin-top: 14px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      display: none;
+      font-size: 0.9rem;
+    }
+    .ok { display: block; background: #dcfce7; color: #166534; }
+    .err { display: block; background: #fee2e2; color: #991b1b; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>النسخ الاحتياطي بحساب Gmail</h1>
+
+    <button class="btn-login" id="loginBtn">تسجيل الدخول بحساب Google</button>
+
+    <div class="user-bar" id="userBar">
+      المستخدم: غير مسجل دخول
+    </div>
+
+    <label for="dataInput" style="display:block; margin-top:14px; font-weight:600;">
+      بيانات النسخة الاحتياطية:
+    </label>
+    <textarea id="dataInput" placeholder='{"notes": "بياناتي المهمة"}'></textarea>
+
+    <div class="btns">
+      <button class="btn-save" id="saveBtn" disabled>حفظ نسخة في حسابي</button>
+      <button class="btn-load" id="loadBtn" disabled>استعادة النسخة الاحتياطية</button>
+      <button class="btn-file" id="importFileBtn">استعادة من ملف JSON</button>
+      <input type="file" id="jsonFileInput" accept="application/json,.json" style="display:none;" />
+    </div>
+
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script>
+    const CLIENT_ID = "825468166501-hnk6ho6rjb7f3j0dfju09fffqul8uded.apps.googleusercontent.com";
+    const SCOPE = "https://www.googleapis.com/auth/drive.file openid email profile";
+    const FILE_NAME = "user_backup_data.json";
+
+    let accessToken = null;
+    let tokenClient = null;
+
+    const loginBtn = document.getElementById("loginBtn");
+    const saveBtn = document.getElementById("saveBtn");
+    const loadBtn = document.getElementById("loadBtn");
+    const importFileBtn = document.getElementById("importFileBtn");
+    const jsonFileInput = document.getElementById("jsonFileInput");
+    const userBar = document.getElementById("userBar");
+    const dataInput = document.getElementById("dataInput");
+    const msgEl = document.getElementById("msg");
+
+    function showMsg(text, isError = false) {
+      msgEl.textContent = text;
+      msgEl.className = "msg " + (isError ? "err" : "ok");
+    }
+
+    async function fetchUserProfile(token) {
+      const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) return null;
+      return res.json();
+    }
+
+    loginBtn.addEventListener("click", () => {
+      if (!window.google?.accounts?.oauth2) {
+        showMsg("مكتبة Google لم تُحمَّل بعد، تأكد من الاتصال بالإنترنت وأعد المحاولة.", true);
+        return;
+      }
+
+      if (!tokenClient) {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: CLIENT_ID,
+          scope: SCOPE,
+          callback: async (resp) => {
+            if (resp.error) {
+              showMsg("فشل تسجيل الدخول: " + resp.error, true);
+              return;
+            }
+            accessToken = resp.access_token;
+            saveBtn.disabled = false;
+            loadBtn.disabled = false;
+
+            const user = await fetchUserProfile(accessToken);
+            userBar.textContent = user?.email
+              ? `المستخدم المسجل: ${user.name || ""} (${user.email})`
+              : "المستخدم المسجل: تم تسجيل الدخول";
+
+            showMsg("تم تسجيل الدخول بنجاح.");
+          }
+        });
+      }
+
+      tokenClient.requestAccessToken({ prompt: "select_account" });
+    });
+
+    async function findBackupFile() {
+      const q = encodeURIComponent(`name='${FILE_NAME}' and trashed=false`);
+      const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      if (!res.ok) throw new Error("تعذر الوصول إلى Google Drive.");
+      const data = await res.json();
+      return data.files?.[0] || null;
+    }
+
+    saveBtn.addEventListener("click", async () => {
+      try {
+        const content = dataInput.value.trim();
+        if (!content) {
+          showMsg("اكتب أو ضع بيانات أولًا قبل الحفظ.", true);
+          return;
+        }
+
+        saveBtn.disabled = true;
+        showMsg("جاري حفظ النسخة الاحتياطية...");
+
+        const existing = await findBackupFile();
+        const form = new FormData();
+        form.append(
+          "metadata",
+          new Blob([JSON.stringify({ name: FILE_NAME, mimeType: "application/json" })], { type: "application/json" })
+        );
+        form.append(
+          "file",
+          new Blob([JSON.stringify({ savedAt: new Date().toISOString(), content }, null, 2)], { type: "application/json" })
+        );
+
+        const url = existing
+          ? `https://www.googleapis.com/upload/drive/v3/files/${existing.id}?uploadType=multipart`
+          : "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart";
+
+        const res = await fetch(url, {
+          method: existing ? "PATCH" : "POST",
+          headers: { Authorization: `Bearer ${accessToken}` },
+          body: form
+        });
+
+        if (!res.ok) throw new Error("فشل حفظ النسخة الاحتياطية.");
+        showMsg("تم حفظ النسخة الاحتياطية في حساب المستخدم بنجاح.");
+      } catch (err) {
+        showMsg(err.message, true);
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
+
+    // زر استعادة النسخة الاحتياطية من Google Drive
+    loadBtn.addEventListener("click", async () => {
+      try {
+        loadBtn.disabled = true;
+        showMsg("جاري استعادة النسخة الاحتياطية...");
+
+        const file = await findBackupFile();
+        if (!file) throw new Error("لا توجد نسخة محفوظة لهذا المستخدم.");
+
+        const res = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        if (!res.ok) throw new Error("تعذر قراءة النسخة من Google Drive.");
+
+        const json = await res.json();
+        dataInput.value = typeof json.content === "string"
+          ? json.content
+          : JSON.stringify(json, null, 2);
+
+        showMsg("تمت استعادة النسخة الاحتياطية بنجاح.");
+      } catch (err) {
+        showMsg(err.message, true);
+      } finally {
+        loadBtn.disabled = false;
+      }
+    });
+
+    // استعادة من ملف JSON محلي عند الحاجة
+    importFileBtn.addEventListener("click", () => jsonFileInput.click());
+    jsonFileInput.addEventListener("change", (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(String(reader.result));
+          dataInput.value = typeof parsed.content === "string"
+            ? parsed.content
+            : JSON.stringify(parsed, null, 2);
+          showMsg("تم تحميل محتوى الملف بنجاح.");
+        } catch {
+          dataInput.value = String(reader.result);
+          showMsg("تم تحميل النص من الملف.");
+        }
+      };
+      reader.readAsText(file);
+      jsonFileInput.value = "";
+    });
+  </script>
+</body>
+</html>
