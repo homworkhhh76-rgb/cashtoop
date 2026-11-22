@@ -1,7 +1,7 @@
 {
   "name": "cashtop3-server",
   "private": true,
-  "version": "7.9.4-167",
+  "version": "7.9.4-187-win10-stock-free",
   "scripts": {
     "start": "node server.js"
   },

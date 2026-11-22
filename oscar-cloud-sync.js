@@ -1,9 +1,9 @@
 /* Cash Top 3 Cloud Sync v2 - IndexedDB durable queue, tenant isolated, local-first delta sync */
 (()=>{'use strict';
 const VERSION='OscarSyncV3-RestaurantRealtime';
-const STORES=new Set(['products','categories','warehouses','stock','stock_movements','invoices','purchases','customers','suppliers','partner_statements','accounts','transfers','expenses','shifts','audit_logs','held_invoices','settings','vouchers','employees','restaurant_tables','restaurant_sections','restaurant_orders','kitchen_sections','table_reservations','recipes','waste_records','distribution_sessions','distribution_docs','distribution_routes','distribution_commissions','distribution_journal','distribution_shifts']);
-const REALTIME_STORES=new Set(['restaurant_tables','restaurant_sections','restaurant_orders','kitchen_sections','table_reservations','recipes','waste_records']);
-const PAGED_HISTORY_STORES=new Set(['distribution_docs','distribution_routes','distribution_commissions','distribution_journal','distribution_shifts','invoices','purchases','stock_movements','expenses','vouchers','transfers','audit_logs','partner_statements','held_invoices']);
+const STORES=new Set(['products','categories','warehouses','stock','stock_movements','invoices','purchases','customers','suppliers','partner_statements','accounts','transfers','expenses','shifts','audit_logs','held_invoices','settings','vouchers','employees','restaurant_tables','restaurant_sections','restaurant_orders','kitchen_sections','table_reservations','recipes','waste_records','distribution_sessions','distribution_docs','distribution_routes','distribution_commissions','distribution_journal','distribution_shifts','accounting_coa','accounting_journal']);
+const REALTIME_STORES=new Set(['restaurant_tables','restaurant_sections','restaurant_orders','kitchen_sections','table_reservations','recipes','waste_records','accounting_coa','accounting_journal']);
+const PAGED_HISTORY_STORES=new Set(['distribution_docs','distribution_routes','distribution_commissions','distribution_journal','distribution_shifts','invoices','purchases','stock_movements','expenses','vouchers','transfers','audit_logs','partner_statements','held_invoices','accounting_journal']);
 const META_PREFIX='oscar_sync_meta_v2::', LEGACY_PENDING_PREFIX='oscar_sync_pending_v1::', DEVICE_KEY='oscar_sync_device_v1', RT_SEEN_PREFIX='oscar_rt_seen_v3::';
 let bridge=null, initialized=false, busy=false, suppress=false, syncTimer=null, probeTimer=null, bc=null, schemaTenant='', seq=0, lastProbe=0, lastRealtimePull=0, realtimePullBusy=false, rerunRequested=false;
 let pendingCache=null, pendingHydrated=false, hydratePromise=null;
@@ -323,7 +323,13 @@ const SAFE_FIELD=/^[A-Za-z_][A-Za-z0-9_]*$/;
 function jsonValueExpr(field){if(field==='actorId')return `COALESCE(NULLIF(${jsonValueExpr('cashierId')},''),NULLIF(${jsonValueExpr('userId')},''),NULLIF(${jsonValueExpr('employeeId')},''),NULLIF(${jsonValueExpr('createdBy')},''),'')`;if(!SAFE_FIELD.test(String(field||'')))throw Error('حقل فلترة غير صالح');return `COALESCE(json_extract(payload,'$.v.${field}'),json_extract(payload,'$.${field}'))`}
 function normalizeInvoiceSearch(value){return String(value??'').toLowerCase().replace(/[٠-٩]/g,c=>String(c.charCodeAt(0)-1632)).replace(/[۰-۹]/g,c=>String(c.charCodeAt(0)-1776)).replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/[\u064B-\u065F\u0670ـ]/g,'').trim();}
 function pendingValueMatches(value,opts={}){
-  if(!value||typeof value!=='object')return false;const filters=opts.filters&&typeof opts.filters==='object'?opts.filters:{};
+  if(!value||typeof value!=='object')return false;
+  const scopedStores=new Set(['invoices','purchases','expenses','vouchers','customers','suppliers','accounts','products','categories','shifts','partner_statements','held_invoices']);
+  if(scopedStores.has(opts.storeName)){
+    const scope=String(window.__CT_ACTIVE_BRANCH__||'main'),actual=String(value.branchId||'main');
+    if(scope==='main'?!['main','الرئيسي','الفرع الرئيسي'].includes(actual):actual!==scope)return false;
+  }
+  const filters=opts.filters&&typeof opts.filters==='object'?opts.filters:{};
   for(const [field,wanted] of Object.entries(filters)){if(wanted===undefined||wanted===''||wanted==='all')continue;let actual=field==='actorId'?(value.cashierId||value.userId||value.employeeId||value.createdBy||''):value?.[field];if(field==='financialYearId'&&(actual===undefined||actual===null||actual===''))actual=opts.legacyFinancialYearId||'';if(Array.isArray(wanted)){if(!wanted.map(String).includes(String(actual??'')))return false}else if(wanted===null){if(!(actual===undefined||actual===null||actual===''))return false}else if(String(actual??'')!==String(wanted))return false}
   const deletedMode=opts.deletedMode||'exclude';if(deletedMode==='exclude'&&value.deletedAt)return false;if(deletedMode==='only'&&!value.deletedAt)return false;
   const dateField=opts.dateField||PAGE_SORT_FIELD[opts.storeName]||'date',raw=value?.[dateField]||value?.date||value?.createdAt||value?.timestamp||'',t=raw?new Date(raw).getTime():0;
@@ -333,6 +339,14 @@ function pendingValueMatches(value,opts={}){
 }
 function buildPagedWhere(store,opts={},s){
   if(!STORES.has(store))throw Error('جدول غير صالح');const p=prefix()+encodeURIComponent(store)+'/',hi=p+'\uffff',where=['path>=?','path<?','deleted=0'],args=[p,hi];
+  // Branch selector filters query/count/aggregates together; historic untagged rows are MAIN.
+  const scope=String(window.__CT_ACTIVE_BRANCH__||'main');
+  const scopedStores=new Set(['invoices','purchases','expenses','vouchers','customers','suppliers','accounts','products','categories','shifts','partner_statements','held_invoices']);
+  if(scopedStores.has(store)){
+    const expr=jsonValueExpr('branchId');
+    if(scope==='main')where.push(`COALESCE(NULLIF(${expr},''),'main') IN ('main','الرئيسي','الفرع الرئيسي')`);
+    else{where.push(`${expr}=?`);args.push(scope)}
+  }
   const filters=opts.filters&&typeof opts.filters==='object'?opts.filters:{};
   for(const [field,wanted] of Object.entries(filters)){if(wanted===undefined||wanted===''||wanted==='all')continue;const expr=jsonValueExpr(field);if(field==='financialYearId'&&opts.legacyFinancialYearId){if(Array.isArray(wanted)){const qs=wanted.map(()=>'?').join(',');where.push(`COALESCE(${expr},?) IN (${qs})`);args.push(opts.legacyFinancialYearId,...wanted)}else{where.push(`COALESCE(${expr},?)=?`);args.push(opts.legacyFinancialYearId,wanted)}continue}if(Array.isArray(wanted)){if(!wanted.length){where.push('0=1');continue}where.push(`${expr} IN (${wanted.map(()=>'?').join(',')})`);args.push(...wanted)}else if(wanted===null){where.push(`(${expr} IS NULL OR ${expr}='')`)}else{where.push(`${expr}=?`);args.push(wanted)}}
   const deletedMode=opts.deletedMode||'exclude',delExpr=jsonValueExpr('deletedAt');if(deletedMode==='exclude')where.push(`(${delExpr} IS NULL OR ${delExpr}='')`);else if(deletedMode==='only')where.push(`(${delExpr} IS NOT NULL AND ${delExpr}<>'')`);

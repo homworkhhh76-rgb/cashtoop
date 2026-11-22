@@ -1,0 +1,39 @@
+/* Cash Top 3 R15 — direction adaptation, no rebrand or redesign */
+html[data-ct-direction="ltr"],html[data-ct-direction="ltr"] body,
+html[data-ct-direction="ltr"] #root { direction:ltr !important; }
+html[data-ct-direction="ltr"] #root :is(main,aside,header,nav,section,article,.ct-language-panel,.ct-win-modeless),
+html[data-ct-direction="ltr"] .win10-accounting-body main { direction:ltr; }
+html[data-ct-direction="ltr"] #root :is(.text-right,[dir="rtl"]):not(.voucher-paper):not([data-paper]) { text-align:left !important; }
+html[data-ct-direction="ltr"] #root [dir="rtl"]:not(.voucher-paper):not([data-paper]),
+html[data-ct-direction="ltr"] .win10-accounting-body [dir="rtl"]:not(.voucher-paper) { direction:ltr !important; }
+html[data-ct-direction="ltr"] :is(input,textarea,select) { text-align:start; }
+html[data-ct-direction="ltr"] .ct-language-panel [lang] { direction:inherit; }
+html[data-ct-direction="rtl"] #root {direction:rtl}
+@media print { html[data-ct-direction="ltr"] [data-paper], html[data-ct-direction="ltr"] .voucher-paper { direction:rtl !important; } }
+/* Apply the same direction to standalone login, accounting and manager pages. */
+html[data-ct-direction="ltr"] body [dir="rtl"]:not(.voucher-paper):not([data-paper]):not([data-ct-no-translate]) { direction:ltr !important; }
+html[data-ct-direction="ltr"] body .text-right:not([data-paper] *) { text-align:left !important; }
+
+/* R16 — first paint locale gate. CSS is present before the UI is rendered.
+   The JS releases the gate as soon as cached translations are ready. */
+html[data-ct-i18n-preparing="1"] body { visibility:hidden !important; }
+
+/* Language selection: fixed contained panel + independently scrollable options */
+.ct-language-backdrop{position:fixed!important;inset:0!important;z-index:110000!important}
+.ct-language-panel.ct-language-panel-v17{display:flex!important;flex-direction:column!important;box-sizing:border-box!important;overflow:hidden!important;max-width:calc(100vw - 16px)!important;min-height:0!important;padding:8px!important;border-radius:17px!important;box-shadow:0 16px 48px #26124430!important}
+.ct-language-panel-v17 .ct-language-heading{flex:0 0 auto;padding:8px 10px!important}
+.ct-language-panel-v17 .ct-language-search-wrap{flex:0 0 auto;padding:5px 6px 9px;border-bottom:1px solid #e2e8f0}
+.ct-language-panel-v17 .ct-language-search{display:block;width:100%;height:40px;min-height:40px;box-sizing:border-box;padding:7px 12px;border:1px solid #cbd5e1;border-radius:5px;color:#111;background:white;font-size:13px;outline:none;direction:auto;text-align:start}
+.ct-language-panel-v17 .ct-language-search:focus{border-color:#0078d7;box-shadow:0 0 0 2px #0078d722}
+.ct-language-panel-v17 .ct-language-options{flex:1 1 auto;min-height:0;overflow-y:auto!important;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin;max-height:calc(78dvh - 120px);padding:3px 0;touch-action:pan-y}
+.ct-language-panel-v17 .ct-language-options>button{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:10px 12px;border-radius:10px;text-align:start;min-height:39px;font-size:13px;cursor:pointer}
+.ct-language-panel-v17 .ct-language-options>button[aria-selected=true]{background:#e8f3ff;color:#005da6;font-weight:800}
+.ct-language-panel-v17 .ct-language-options>button:hover{background:#eef6ff}
+.ct-language-panel-v17 .ct-language-empty{padding:14px 8px;text-align:center;font-size:12px;color:#64748b}
+@media(max-width:640px){.ct-language-panel-v17 .ct-language-options{max-height:calc(80dvh - 130px)}}
+/* Keep the branch shortcut exclusive to the desktop header (override older branch CSS). */
+@media (max-width:1023px){
+  .theme-win10 button.ct-header-branch-link.ct-header-branch-label,
+  .theme-win10 .ct-header-branch-link,
+  .theme-win10 .ct-header-branch-label{display:none!important;visibility:hidden!important}
+}

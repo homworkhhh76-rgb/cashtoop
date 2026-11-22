@@ -1,0 +1,110 @@
+/* Cash Top 3 / Windows 10 accounting screen. Visual-only bridge.
+   Keep the original accounting template, data selectors and business logic intact. */
+@media screen {
+  html.theme-win10.ct-win-accounting { background:#f0f0f0 !important; color-scheme:light; }
+  .theme-win10 .win10-accounting-body {
+    background:#f0f0f0 !important;
+    color:#1a1a1a !important;
+    font-family:"Segoe UI","Cairo","Tajawal",Tahoma,sans-serif !important;
+  }
+  .theme-win10 .win10-accounting-body :is(button,input,textarea,select,table) {
+    font-family:inherit !important;
+  }
+  /* Flat native windows with quiet borders, consistent across desktop and mobile. */
+  .theme-win10 .win10-accounting-body :is(.rounded-2xl,.rounded-xl,.rounded-lg,.rounded-md) { border-radius:0 !important; }
+  .theme-win10 .win10-accounting-body :is(.shadow-sm,.shadow-lg,.shadow-xl,.shadow-2xl) { box-shadow:none !important; }
+  .theme-win10 .win10-accounting-body :is(.border-slate-200,.border-slate-200\/80,.border-slate-100) { border-color:#d9d9d9 !important; }
+  .theme-win10 .win10-accounting-body :is(.bg-slate-50,.bg-slate-100) { background-color:#f4f4f4 !important; }
+  .theme-win10 .win10-accounting-body .bg-white { background-color:#fff !important; }
+  .theme-win10 .win10-accounting-body :is(.bg-indigo-600,.bg-indigo-700) { background:#0078d7 !important; color:#fff !important; }
+  .theme-win10 .win10-accounting-body :is(.hover\:bg-indigo-700:hover,.hover\:bg-indigo-600:hover) { background:#106ebe !important; color:#fff !important; }
+  .theme-win10 .win10-accounting-body :is(.bg-indigo-50,.bg-indigo-50\/80,.bg-blue-50) { background:#e5f1fb !important; }
+  .theme-win10 .win10-accounting-body :is(.bg-indigo-200,.bg-indigo-100) { background:#cce4f7 !important; }
+  .theme-win10 .win10-accounting-body :is(.text-indigo-600,.text-indigo-700,.text-indigo-800) { color:#005a9e !important; }
+  .theme-win10 .win10-accounting-body .text-indigo-300 { color:#cce4f7 !important; }
+  .theme-win10 .win10-accounting-body :is(.border-indigo-200,.border-indigo-500) { border-color:#99c9ef !important; }
+  /* Ensure white writing on blue action buttons (the source code uses nested spans/icons). */
+  .theme-win10 .win10-accounting-body :is(button.bg-indigo-600,button.bg-indigo-700):not(:disabled),
+  .theme-win10 .win10-accounting-body :is(button.bg-indigo-600,button.bg-indigo-700):not(:disabled) :is(span,i,svg) {
+    color:#fff !important;
+  }
+  .theme-win10 .win10-accounting-body button.bg-slate-800:not(:disabled),
+  .theme-win10 .win10-accounting-body button.bg-slate-900:not(:disabled) { background:#383838 !important; color:#fff !important; }
+  .theme-win10 .win10-accounting-body button.bg-slate-800:not(:disabled) :is(span,i),
+  .theme-win10 .win10-accounting-body button.bg-slate-900:not(:disabled) :is(span,i) { color:#fff !important; }
+  .theme-win10 .win10-accounting-body :is(button,input,select,textarea) { border-radius:0 !important; }
+  .theme-win10 .win10-accounting-body :is(input,select,textarea):not([type=hidden]) { min-height:32px; }
+  .theme-win10 .win10-accounting-body :is(input,select,textarea):focus-visible {
+    border-color:#0078d7 !important;
+    outline:1px solid #0078d7 !important;
+    outline-offset:0;
+  }
+  .theme-win10 .win10-accounting-body .tab-btn.bg-white { border:1px solid #0078d7 !important; color:#005a9e !important; }
+  .theme-win10 .win10-accounting-body thead { background:#f3f3f3 !important; }
+  .theme-win10 .win10-accounting-body tr:hover { background:#edf5fb; }
+  .theme-win10 .win10-accounting-body #data-menu-dropdown { box-shadow:0 4px 14px #0002 !important; border:1px solid #adadad !important; }
+  /* The separate screen uses the same Windows 10 drag/min/max/close integration. */
+  .theme-win10 .win10-accounting-body .ct-win-window { background:#fff !important; }
+  .theme-win10 .win10-accounting-body .ct-win-window > div:first-child { background:#f5f5f5 !important; }
+  .theme-win10 .win10-accounting-body :is(.ct-win-modeless,.ct-modal-layer) { z-index:50; }
+  .theme-win10 .win10-accounting-body .ct-win-modeless .ct-win-caption-controls { z-index:5; }
+  /* Reliable whites for e.g. equity heading on blue and pills. */
+  .theme-win10 .win10-accounting-body :is(.bg-indigo-600,.bg-emerald-600,.bg-rose-600) :is(span,i) { color:#fff !important; }
+}
+
+
+/* Native accounting modals for this screen only */
+.theme-win10 .win10-accounting-body.ct-modal-open{overflow:hidden !important}
+.theme-win10 .win10-accounting-body .ct-modal-layer[hidden]{display:none !important}
+.theme-win10 .win10-accounting-body .ct-modal-layer:not([hidden]){
+  display:flex !important;
+  position:fixed !important;
+  inset:0 !important;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+  z-index:9999 !important;
+}
+.theme-win10 .win10-accounting-body :is(.ct-account-modal-panel,.ct-journal-modal-panel,.ct-confirm-modal-panel){
+  border:1px solid #cfcfcf !important;
+  box-shadow:0 10px 30px rgba(0,0,0,.18) !important;
+  border-radius:0 !important;
+  background:#fff !important;
+}
+.theme-win10 .win10-accounting-body #account-modal > .ct-account-modal-panel{max-height:min(92dvh,760px);display:flex;flex-direction:column}
+.theme-win10 .win10-accounting-body #account-form{overflow:auto;max-height:calc(92dvh - 58px);padding-bottom:12px}
+.theme-win10 .win10-accounting-body #journal-modal > .ct-journal-modal-panel{max-height:min(94dvh,860px)}
+.theme-win10 .win10-accounting-body #confirm-modal > .ct-confirm-modal-panel{max-height:min(90dvh,420px);overflow:auto}
+.theme-win10 .win10-accounting-body #account-modal > .ct-account-modal-panel > div:first-child,
+.theme-win10 .win10-accounting-body #journal-modal > .ct-journal-modal-panel > div:first-child{
+  background:#f3f3f3 !important;
+  border-bottom:1px solid #d9d9d9 !important;
+  min-height:42px;
+}
+.theme-win10 .win10-accounting-body #account-modal > .ct-account-modal-panel > div:first-child button,
+.theme-win10 .win10-accounting-body #journal-modal > .ct-journal-modal-panel > div:first-child button{
+  min-width:32px; min-height:32px; border-radius:0 !important; padding:0 8px !important;
+}
+.theme-win10 .win10-accounting-body select{
+  appearance:none; -webkit-appearance:none; background-image:linear-gradient(45deg, transparent 50%, #666 50%), linear-gradient(135deg, #666 50%, transparent 50%);
+  background-position:calc(16px) calc(50% - 3px), calc(10px) calc(50% - 3px);
+  background-size:6px 6px,6px 6px; background-repeat:no-repeat; padding-left:28px !important;
+}
+.theme-win10 .win10-accounting-body :is(input,select,textarea){
+  border:1px solid #c8c8c8 !important; background:#fff !important; color:#1a1a1a !important;
+  box-shadow:none !important;
+}
+.theme-win10 .win10-accounting-body :is(input[readonly], select:disabled, textarea:disabled){background:#f3f3f3 !important;color:#444 !important}
+.theme-win10 .win10-accounting-body #coverage-notice:empty{display:none !important}
+@media (max-width: 768px){
+  .theme-win10 .win10-accounting-body main{padding-top:10px !important;padding-bottom:10px !important}
+  .theme-win10 .win10-accounting-body .ct-modal-layer:not([hidden]){
+    align-items:flex-start !important; justify-content:center !important; padding-top:max(14px, env(safe-area-inset-top) + 8px) !important; padding-bottom:max(74px, env(safe-area-inset-bottom) + 56px) !important;
+  }
+  .theme-win10 .win10-accounting-body #account-modal > .ct-account-modal-panel,
+  .theme-win10 .win10-accounting-body #journal-modal > .ct-journal-modal-panel,
+  .theme-win10 .win10-accounting-body #confirm-modal > .ct-confirm-modal-panel{
+    width:min(100%, 100%) !important; margin:0 auto !important; max-height:100% !important;
+  }
+  .theme-win10 .win10-accounting-body #account-form{max-height:calc(100dvh - 150px)}
+}

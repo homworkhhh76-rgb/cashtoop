@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="theme-win10 ct-win-accounting">
+<head>
+<script id="ct-locale-boot">(function(){
+ try{
+   var l=localStorage.getItem('ct-language')||'ar';
+   var rtl=/^(ar|ur|fa|ku|ps|he|yi)$/.test(l);
+   document.documentElement.lang=l;
+   document.documentElement.dir=rtl?'rtl':'ltr';
+   document.documentElement.dataset.ctDirection=rtl?'rtl':'ltr';
+   if(l!=='ar')document.documentElement.setAttribute('data-ct-i18n-preparing','1');
+ }catch(e){}
+})();</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0078d7">
+<title>النظام المحاسبي المتكامل — كاش توب</title>
+<link rel="stylesheet" href="./offline-fonts.css">
+<link rel="stylesheet" href="./accounting-theme.css?v=7.9.4.182">
+<link rel="stylesheet" href="./windows10.css?v=7">
+<link rel="stylesheet" href="./accounting-windows10.css?v=7.9.4.182">
+<script src="./accounting-icons.js?v=7.9.4.182" defer></script>
+<style>
+.fa-icon-inline{display:inline-block;width:1em;height:1em;fill:currentColor;vertical-align:-.125em;flex-shrink:0} .fa-rotate-270{transform:rotate(270deg)}
+body {font-family:'Cairo','Tajawal',sans-serif;background-color:#f8fafc;color:#0f172a}
+.tabular-nums{font-variant-numeric:tabular-nums}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:#f1f5f9}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:9999px}::-webkit-scrollbar-thumb:hover{background:#94a3b8}
+[hidden]{display:none!important}
+@media print{body{background-color:#fff!important}.no-print{display:none!important}.print-only{display:block!important}.print-shadow-none{box-shadow:none!important;border:1px solid #e2e8f0!important}}
+</style>
+<script src="./accounting.js?v=7.9.4.182" defer></script>
+<link rel="stylesheet" href="./ct-google-translate.css?v=17">
+<script src="./ct-google-translate.js?v=17" defer></script>
+</head>
+<body class="min-h-screen antialiased selection:bg-indigo-100 selection:text-indigo-900 win10-accounting-body">
+<main class="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
+  <!-- شريط التحكم: نفس كود المستخدم -->
+  <div class="no-print bg-white rounded-2xl shadow-sm border border-slate-200/80 p-2.5 sm:p-3 mb-5 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+    <div class="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
+      <button type="button" data-tab="coa" id="tab-btn-coa" class="tab-btn flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all bg-white text-indigo-700 shadow-sm"><i class="fa-solid fa-sitemap"></i><span>شجرة الحسابات</span></button>
+      <button type="button" data-tab="journal" id="tab-btn-journal" class="tab-btn flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 transition-all"><i class="fa-solid fa-file-invoice-dollar"></i><span>القيود المحاسبية</span><span id="entry-count" class="bg-slate-200 text-slate-700 text-xs px-2 py-0.5 rounded-full tabular-nums">0</span></button>
+      <button type="button" data-tab="balance" id="tab-btn-balance" class="tab-btn flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 transition-all"><i class="fa-solid fa-scale-balanced"></i><span>الميزانية العمومية</span></button>
+      <button type="button" data-tab="trial" id="tab-btn-trial" class="tab-btn flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:text-slate-900 transition-all"><i class="fa-solid fa-table-list"></i><span>ميزان المراجعة</span></button>
+    </div>
+    <div class="flex flex-wrap items-center justify-between sm:justify-end gap-2">
+      <button type="button" id="new-account" class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-3.5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-xs sm:text-sm font-bold rounded-xl transition shadow-sm"><i class="fa-solid fa-folder-plus text-indigo-300"></i><span>حساب فرعي جديد</span></button>
+      <button type="button" id="new-journal" class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-bold rounded-xl transition shadow-sm shadow-indigo-200"><i class="fa-solid fa-plus"></i><span>إضافة قيد محاسبي</span></button>
+      <div class="relative" id="data-menu-wrap">
+        <button type="button" id="data-menu-btn" title="خيارات البيانات" class="p-2.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl border border-slate-200 transition"><i class="fa-solid fa-ellipsis-vertical px-1"></i></button>
+        <div id="data-menu-dropdown" hidden class="absolute left-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-40">
+          <button type="button" id="reload-data" class="w-full text-right px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5"><i class="fa-solid fa-rotate-left text-indigo-500"></i><span>تحديث البيانات الفعلية</span></button>
+          <div class="px-3 py-2 border-t border-slate-100">
+            <label for="as-of" class="block text-xs font-bold text-slate-600 mb-1">حتى تاريخ</label><input type="date" id="as-of" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500">
+          </div>
+          <div class="px-3 py-2">
+            <label for="fiscal-filter" class="block text-xs font-bold text-slate-600 mb-1">السنة المالية</label><select id="fiscal-filter" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500"><option value="all">جميع الفترات</option></select>
+          </div>
+          <div class="px-3 py-2">
+            <label for="origin-filter" class="block text-xs font-bold text-slate-600 mb-1">مصدر القيود</label><select id="origin-filter" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500"><option value="all">كل المصادر</option><option value="auto">حركات البرنامج التلقائية</option><option value="manual">القيود اليدوية</option></select>
+          </div>
+          <p id="live-status" class="px-3 pt-2 text-xs text-slate-500 border-t border-slate-100 leading-relaxed">تُحتسب الأرصدة من بيانات الشركة</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- بطاقات مؤشرات مالية؛ نسخ نفس بناء المستخدم -->
+  <div class="no-print grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+    <div class="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-sm flex items-center justify-between"><div><p class="text-xs font-semibold text-slate-500">إجمالي الأصول</p><p id="kpi-assets" class="text-lg sm:text-xl font-extrabold text-slate-900 tabular-nums mt-0.5">0.00</p></div><div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg"><i class="fa-solid fa-building-columns"></i></div></div>
+    <div class="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-sm flex items-center justify-between"><div><p class="text-xs font-semibold text-slate-500">الخصوم وحقوق الملكية</p><p id="kpi-right" class="text-lg sm:text-xl font-extrabold text-slate-900 tabular-nums mt-0.5">0.00</p></div><div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-lg"><i class="fa-solid fa-landmark"></i></div></div>
+    <div class="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-sm flex items-center justify-between"><div><p class="text-xs font-semibold text-slate-500">صافي الربح / الخسارة</p><p id="kpi-profit" class="text-lg sm:text-xl font-extrabold text-emerald-600 tabular-nums mt-0.5">0.00</p></div><div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg"><i class="fa-solid fa-chart-line"></i></div></div>
+    <div class="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-sm flex items-center justify-between"><div><p class="text-xs font-semibold text-slate-500">حالة التوازن المحاسبي</p><p id="kpi-balanced" class="text-sm sm:text-base font-extrabold text-emerald-600 mt-1 flex items-center gap-1.5"><i class="fa-solid fa-circle-check"></i> متوازنة 100%</p><span id="balance-diff-label" hidden></span></div><div id="kpi-balance-icon-box" class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg"><i class="fa-solid fa-check-double"></i></div></div>
+  </div>
+  <div id="coverage-notice" class="no-print bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-xl mb-4 text-xs font-semibold leading-6" hidden></div>
+
+  <!-- شجرة الحسابات -->
+  <section id="panel-coa" class="tab-view space-y-4">
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+      <div class="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50/50">
+        <div class="relative flex-1 max-w-md"><i class="fa-solid fa-magnifying-glass absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i><input type="text" id="coa-search" placeholder="ابحث برقم الحساب أو اسم الحساب (مثال: 1101 أو الصندوق)..." class="w-full pr-10 pl-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"></div>
+        <div class="flex items-center gap-2 self-end sm:self-auto"><button type="button" id="expand-all" class="px-3 py-2 text-xs font-bold text-slate-600 hover:text-indigo-700 bg-white hover:bg-indigo-50 border border-slate-200 rounded-xl transition flex items-center gap-1.5"><i class="fa-solid fa-angles-down"></i> توسيع الكل</button><button type="button" id="collapse-all" class="px-3 py-2 text-xs font-bold text-slate-600 hover:text-indigo-700 bg-white hover:bg-indigo-50 border border-slate-200 rounded-xl transition flex items-center gap-1.5"><i class="fa-solid fa-angles-up"></i> طي الكل</button></div>
+      </div>
+      <div class="overflow-x-auto"><table class="w-full text-right border-collapse"><thead><tr class="bg-slate-50 border-b border-slate-200 text-slate-500 text-xs font-bold uppercase"><th class="py-3.5 px-4 w-36">رمز الحساب</th><th class="py-3.5 px-4">اسم الحساب والتصنيف</th><th class="py-3.5 px-4 w-28 text-center">الطبيعة</th><th class="py-3.5 px-4 w-32 text-center hidden md:table-cell">النوع</th><th class="py-3.5 px-4 w-40 text-left">الرصيد الحالي</th><th class="py-3.5 px-4 w-36 text-center no-print">إجراءات</th></tr></thead><tbody id="coa-body" class="divide-y divide-slate-100 text-sm"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- القيود -->
+  <section id="panel-journal" class="tab-view space-y-4" hidden>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+      <div class="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50/50">
+        <div><h2 class="text-base font-extrabold text-slate-800">سجل القيود اليومية المرحلة</h2><p class="text-xs text-slate-500 mt-0.5">جميع القيود متوازنة وتؤثر مباشرة على أرصدة شجرة الحسابات والميزانية</p></div>
+        <div class="flex items-center gap-2"><div class="relative flex-1 sm:w-64"><i class="fa-solid fa-magnifying-glass absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i><input type="text" id="journal-search" placeholder="بحث في البيان أو رقم القيد..." class="w-full pr-9 pl-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"></div><button type="button" id="journal-add-inside" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shrink-0"><i class="fa-solid fa-plus"></i> قيد جديد</button></div>
+      </div>
+      <div id="journal-body" class="p-4 space-y-3"></div>
+    </div>
+  </section>
+
+  <!-- الميزانية العمومية -->
+  <section id="panel-balance" class="tab-view space-y-4" hidden>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-4 sm:p-6 print-shadow-none">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-200">
+        <div><div class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full bg-indigo-600"></span><h2 class="text-xl font-extrabold text-slate-900">قائمة المركز المالي (الميزانية العمومية)</h2></div><p class="text-xs text-slate-500 mt-1" id="balance-date">كما في تاريخ: <span class="font-bold text-slate-700" id="bs-report-date"></span> — الأرقام محسوبة آلياً من أرصدة شجرة الحسابات</p></div>
+        <div class="no-print flex items-center gap-2"><span id="balance-status" class="px-3.5 py-2 rounded-xl text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5"><i class="fa-solid fa-check-circle"></i> الميزانية متوازنة</span><button type="button" data-print class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition flex items-center gap-2"><i class="fa-solid fa-print"></i> طباعة / تصدير PDF</button></div>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <div class="border border-slate-200 rounded-2xl overflow-hidden flex flex-col justify-between"><div><div class="bg-emerald-600 text-white px-4 py-3 flex items-center justify-between"><span class="font-extrabold text-sm flex items-center gap-2"><i class="fa-solid fa-coins"></i> أولاً: الأصول (Assets)</span><span class="text-xs bg-emerald-700/70 px-2.5 py-0.5 rounded-lg">جانب الموجودات</span></div><div id="balance-assets" class="p-4 space-y-3 text-sm"></div></div><div class="bg-emerald-50 border-t-2 border-emerald-200 px-4 py-3.5 flex items-center justify-between"><span class="font-extrabold text-emerald-950 text-sm">إجمالي الأصول</span><span id="balance-total-assets" class="font-extrabold text-lg text-emerald-700 tabular-nums">0.00</span></div></div>
+        <div class="border border-slate-200 rounded-2xl overflow-hidden flex flex-col justify-between"><div><div class="bg-indigo-600 text-white px-4 py-3 flex items-center justify-between"><span class="font-extrabold text-sm flex items-center gap-2"><i class="fa-solid fa-scale-balanced"></i> ثانياً: الخصوم وحقوق الملكية</span><span class="text-xs bg-indigo-700/70 px-2.5 py-0.5 rounded-lg">جانب المطلوبات</span></div><div id="balance-right" class="p-4 space-y-4 text-sm"></div></div><div class="bg-indigo-50 border-t-2 border-indigo-200 px-4 py-3.5 flex items-center justify-between"><span class="font-extrabold text-indigo-950 text-sm">إجمالي الخصوم وحقوق الملكية</span><span id="balance-total-right" class="font-extrabold text-lg text-indigo-700 tabular-nums">0.00</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ميزان المراجعة -->
+  <section id="panel-trial" class="tab-view space-y-4" hidden>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+      <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50"><div><h2 class="text-base font-extrabold text-slate-800">ميزان المراجعة بالأرصدة (للحسابات الفرعية)</h2><p class="text-xs text-slate-500">التحقق من تساوي إجمالي الأرصدة المدينة مع إجمالي الأرصدة الدائنة</p></div><button type="button" data-print class="no-print px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5"><i class="fa-solid fa-print"></i> طباعة</button></div>
+      <div class="overflow-x-auto"><table class="w-full text-right border-collapse"><thead><tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs font-bold"><th class="py-3 px-4 w-32">رمز الحساب</th><th class="py-3 px-4">اسم الحساب</th><th class="py-3 px-4 w-32">التصنيف</th><th class="py-3 px-4 w-40 text-left text-emerald-700">رصيد مدين</th><th class="py-3 px-4 w-40 text-left text-indigo-700">رصيد دائن</th></tr></thead><tbody id="trial-body" class="divide-y divide-slate-100 text-sm"></tbody><tfoot class="bg-slate-100 border-t-2 border-slate-300 font-extrabold text-sm"><tr><td colspan="3" class="py-3.5 px-4 text-slate-800">الإجمالي العام لميزان المراجعة</td><td id="trial-debit" class="py-3.5 px-4 text-left text-emerald-700 tabular-nums text-base">0.00</td><td id="trial-credit" class="py-3.5 px-4 text-left text-indigo-700 tabular-nums text-base">0.00</td></tr></tfoot></table></div>
+    </div>
+  </section>
+</main>
+
+<!-- نافذة الحساب بنفس تنسيق المستخدم -->
+<div id="account-modal" class="ct-modal-layer fixed inset-0 bg-slate-900/50 z-[9999] items-center justify-center p-3 sm:p-4" hidden>
+  <div class="ct-account-modal-panel bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-fade-in">
+    <div class="px-5 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between"><h3 id="account-modal-title" class="text-base font-extrabold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-folder-plus text-indigo-600"></i><span>إضافة حساب فرعي جديد</span></h3><button type="button" data-close="account-modal" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg transition"><i class="fa-solid fa-xmark text-lg"></i></button></div>
+    <form id="account-form" class="p-5 space-y-4"><input type="hidden" id="account-edit-id">
+      <div><label class="block text-xs font-bold text-slate-700 mb-1.5">الحساب الأب (الرئيسي)</label><select id="account-parent" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"></select></div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5"><div><label class="block text-xs font-bold text-slate-700 mb-1.5">رقم / رمز الحساب</label><input id="account-code" required maxlength="32" autocomplete="off" placeholder="مثال: 1104" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold tabular-nums focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"></div><div><label class="block text-xs font-bold text-slate-700 mb-1.5">طبيعة الحساب</label><select id="account-nature" required class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"><option value="debit">مدين (Debit)</option><option value="credit">دائن (Credit)</option></select></div></div>
+      <div><label class="block text-xs font-bold text-slate-700 mb-1.5">اسم الحساب</label><input id="account-name" required maxlength="120" autocomplete="off" placeholder="مثال: بنك الراجحي - حساب جاري" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"></div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5"><div><label class="block text-xs font-bold text-slate-700 mb-1.5">نوع الحساب في الشجرة</label><select id="account-group" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"><option value="false">حساب فرعي (يقبل قيود وحركات)</option><option value="true">حساب رئيسي تجميعي (مجلد)</option></select></div><div id="opening-balance-wrapper"><label class="block text-xs font-bold text-slate-700 mb-1.5">رصيد افتتاحي (اختياري)</label><input id="account-opening" type="number" step="0.01" min="0" value="0" class="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"></div></div>
+      <p id="opening-balance-hint" class="text-xs text-slate-500 bg-slate-50 p-2.5 rounded-xl border border-slate-100"><i class="fa-solid fa-circle-info text-indigo-500 ml-1"></i> عند إدخال رصيد افتتاحي، سيقوم النظام بإنشاء قيد افتتاحي متوازن مقابل حساب الأرصدة الافتتاحية للتسوية.</p>
+      <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-100"><button type="button" data-close="account-modal" class="px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">إلغاء</button><button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition shadow-sm">حفظ الحساب</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- نافذة قيد مزدوج بنفس تنسيق المستخدم -->
+<div id="journal-modal" class="ct-modal-layer fixed inset-0 bg-slate-900/50 z-[9999] items-center justify-center p-3 sm:p-4" hidden>
+  <div class="ct-journal-modal-panel bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden">
+    <div class="px-5 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0"><h3 class="text-base font-extrabold text-slate-800 flex items-center gap-2"><i class="fa-solid fa-file-invoice-dollar text-indigo-600"></i><span>إضافة قيد محاسبي جديد (القيد المزدوج)</span></h3><button type="button" data-close="journal-modal" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg transition"><i class="fa-solid fa-xmark text-lg"></i></button></div>
+    <div class="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
+      <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/70"><div class="sm:col-span-3"><label class="block text-xs font-bold text-slate-700 mb-1">رقم القيد</label><input id="je-number" readonly class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-sm font-extrabold text-indigo-700 tabular-nums"></div><div class="sm:col-span-3"><label class="block text-xs font-bold text-slate-700 mb-1">تاريخ القيد</label><input type="date" id="je-date" required class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:border-indigo-500"></div><div class="sm:col-span-6"><label class="block text-xs font-bold text-slate-700 mb-1">البيان العام للقيد</label><input id="je-description" required maxlength="220" placeholder="مثال: سداد إيجار المكتب لشهر نوفمبر بشيك..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500"></div></div>
+      <div class="border border-slate-200 rounded-xl overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-right border-collapse"><thead><tr class="bg-slate-100 border-b border-slate-200 text-slate-600 text-xs font-bold"><th class="py-2.5 px-3 min-w-[220px]">الحساب الفرعي</th><th class="py-2.5 px-3 w-36 text-center">مدين (Debit)</th><th class="py-2.5 px-3 w-36 text-center">دائن (Credit)</th><th class="py-2.5 px-3 min-w-[160px]">ملاحظة السطر</th><th class="py-2.5 px-2 w-10 text-center"></th></tr></thead><tbody id="je-lines" class="divide-y divide-slate-100 text-sm"></tbody></table></div><div class="p-2.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between"><button type="button" id="add-je-line" class="px-3 py-1.5 bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold transition flex items-center gap-1.5"><i class="fa-solid fa-plus"></i> إضافة سطر جديد</button><span class="text-xs text-slate-500">ملاحظة: يمكن اختيار الحسابات الفرعية فقط في القيود</span></div></div>
+      <div id="je-balance-banner" class="p-3.5 rounded-xl border flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50 border-slate-200"><div class="flex items-center gap-6"><div><span class="text-xs text-slate-500 block">إجمالي المدين</span><span id="je-debit" class="text-base font-extrabold text-emerald-700 tabular-nums">0.00</span></div><div class="h-8 w-px bg-slate-200"></div><div><span class="text-xs text-slate-500 block">إجمالي الدائن</span><span id="je-credit" class="text-base font-extrabold text-indigo-700 tabular-nums">0.00</span></div><div class="h-8 w-px bg-slate-200"></div><div><span class="text-xs text-slate-500 block">الفرق</span><span id="je-diff" class="text-base font-extrabold text-slate-800 tabular-nums">0.00</span></div></div><div id="je-status" class="px-3.5 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 bg-slate-200 text-slate-700"><i class="fa-solid fa-circle-info"></i> أدخل المبالغ للتحقق</div></div>
+    </div>
+    <div class="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2 shrink-0"><button type="button" data-close="journal-modal" class="px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-200/70 rounded-xl transition">إلغاء</button><button type="button" id="save-je" disabled class="px-6 py-2.5 bg-indigo-600 disabled:bg-slate-300 disabled:cursor-not-allowed hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition shadow-sm flex items-center gap-2"><i class="fa-solid fa-check"></i> ترحيل وحفظ القيد</button></div>
+  </div>
+</div>
+
+<div id="toast-container" class="fixed bottom-4 left-4 z-50 flex flex-col gap-2 pointer-events-none" role="status" aria-live="polite"></div><div id="toast" hidden></div>
+<div id="confirm-modal" class="ct-modal-layer fixed inset-0 bg-slate-900/50 z-[10000] items-center justify-center p-3 sm:p-4" hidden>
+  <div class="ct-confirm-modal-panel bg-white rounded-2xl shadow-xl border border-slate-200 max-w-sm w-full p-5 space-y-4"><div class="flex items-start gap-3"><div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 text-lg"><i class="fa-solid fa-triangle-exclamation"></i></div><div><h4 id="confirm-title" class="text-sm font-extrabold text-slate-900">تأكيد الإجراء</h4><p id="confirm-message" class="text-xs text-slate-600 mt-1 leading-relaxed">هل أنت متأكد من المتابعة؟</p></div></div><div class="flex items-center justify-end gap-2 pt-2"><button type="button" id="confirm-cancel-btn" class="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition">تراجع</button><button type="button" id="confirm-ok-btn" class="px-4 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-xl transition">نعم، متأكد</button></div></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,855 @@
+/* Cash Top 3 screen theme, based on the supplied Windows 10 UI kit. */
+@layer cash-top-win10 {
+  @media screen {
+    html.theme-win10 {
+      --win-font: "Segoe UI", Cairo, Tahoma, Geneva, Verdana, sans-serif;
+      --win-desktop: linear-gradient(135deg, #004e8c, #0078d7);
+      --win-window: #f0f0f0;
+      --win-surface: #fff;
+      --win-hover: #e5f1fb;
+      --win-active: #cce4f7;
+      --win-border: #adadad;
+      --win-divider: #d9d9d9;
+      --win-text: #1a1a1a;
+      --win-muted: #5d5d5d;
+      --win-disabled: #a0a0a0;
+      --win-accent: #0078d7;
+      --win-accent-hover: #106ebe;
+      --win-accent-active: #005a9e;
+      --win-window-shadow: 0 12px 32px rgb(0 0 0 / 35%), 0 0 0 1px var(--win-accent);
+      --win-menu-shadow: 0 4px 10px rgb(0 0 0 / 18%), 0 0 0 1px var(--win-border);
+      --color-violet-50: #f3f8fc !important;
+      --color-violet-100: #e5f1fb !important;
+      --color-violet-200: #cce4f7 !important;
+      --color-violet-300: #99c9ef !important;
+      --color-violet-400: #59a6e2 !important;
+      --color-violet-500: #0078d7 !important;
+      --color-violet-600: #0078d7 !important;
+      --color-violet-700: #005a9e !important;
+      --color-violet-800: #004e8c !important;
+      --color-violet-900: #003e70 !important;
+      --color-violet-950: #002d53 !important;
+      --app-primary: var(--win-accent) !important;
+      --app-primary-2: var(--win-accent-hover) !important;
+      --app-primary-soft: var(--win-hover) !important;
+      --app-border: var(--win-border) !important;
+      --app-text: var(--win-text) !important;
+      --app-muted: var(--win-muted) !important;
+      --ct-primary: var(--win-accent) !important;
+      --ct-ink: var(--win-text) !important;
+      --ct-paper: var(--win-window) !important;
+      --ct-border: var(--win-divider) !important;
+      color-scheme: light;
+      background: var(--win-window);
+    }
+
+    .theme-win10 :is(body, button, input, select, textarea, .searchable-dropdown-panel, .cash-action-menu,
+      .dist-root, .dist-modal, .auth2-view, .osd-root, .ct-startup-screen, .win10-ledger) {
+      font-family: var(--win-font) !important;
+    }
+    .theme-win10 body {
+      background: var(--win-window) !important;
+      color: var(--win-text);
+      scrollbar-color: #cdcdcd #f0f0f0;
+    }
+    .theme-win10 :is(.auth2-view, .ct-startup-screen, body.win10-support) {
+      background: var(--win-desktop) !important;
+    }
+    .theme-win10 :is(.auth2-card, body.win10-support > .card) {
+      background: var(--win-surface) !important;
+      box-shadow: var(--win-window-shadow) !important;
+    }
+    .theme-win10 .ct-loading-status {
+      background: var(--win-surface) !important;
+      color: var(--win-text) !important;
+      border-radius: 0 !important;
+    }
+    .theme-win10 .ct-loading-ring { border-top-color: var(--win-accent) !important; }
+
+    /* Window chrome and page surfaces. */
+    .theme-win10 :is(#main-header, body > .top, .win10-portal > header, .win10-portal main > header,
+      .win10-support .head, .win10-portal .top, body.win10-ledger > header) {
+      background: var(--win-surface) !important;
+      color: var(--win-text) !important;
+      box-shadow: none !important;
+      border-bottom: 1px solid #e0e0e0 !important;
+    }
+    .theme-win10 :is(#main-header .ct-page-heading, #main-header .oscar-header-title, #main-header .oscar-header-icon,
+      #main-header .ct-nav-group > button, .win10-support .head h1, .win10-portal .top h1) {
+      color: var(--win-text) !important;
+    }
+    .theme-win10 #main-header .ct-page-heading > svg { color: var(--win-accent) !important; }
+    .theme-win10 #main-header .oscar-header-icon { background: transparent !important; border: 0 !important; }
+    .theme-win10 #main-header .oscar-header-icon:is(:hover, .is-active) { background: var(--win-hover) !important; }
+    .theme-win10 #main-header .oscar-header-icon.is-offline { color: #875b00 !important; }
+    .theme-win10 #main-header .oscar-header-badge { box-shadow: 0 0 0 2px #fff !important; color: #1a1a1a; }
+    .theme-win10 :is(#main-header + main, #ct-pos-workspace, .osd-root, .waiter-v2-root) {
+      background: var(--win-window) !important;
+    }
+    .theme-win10 :is(.card, .osd-kpi, .osd-action, .oscar-product-card, .ct-checkout-rail, .ct-products-cart,
+      .ct-invoice-card, .dist-card, .dist-panel, .dist-table-wrap, .waiter-v2-product, .summary-card, .support-card) {
+      background: var(--win-surface) !important;
+      border-color: var(--win-divider) !important;
+      box-shadow: none !important;
+    }
+    .theme-win10 :is(.osd-icon-tile, .ct-cart-columns, .dist-table th) {
+      background: var(--win-hover) !important;
+      color: var(--win-accent-active) !important;
+    }
+    .theme-win10 :is(.osd-kpi-value, .ct-section-title, .ct-cart-row b, .dist-context > div, .ct-empty-state,
+      .ct-record-filter-trigger) { color: var(--win-accent-active) !important; }
+    .theme-win10 :is(.osd-action, .oscar-product-card, .ct-cart-row):hover { background: var(--win-hover) !important; }
+    .theme-win10 .ct-row-selected {
+      background: var(--win-active) !important;
+      box-shadow: inset -3px 0 var(--win-accent) !important;
+    }
+    .theme-win10 :is(.ct-mobile-sale-head, .cash-bottom-center.active .cash-bottom-center-icon) {
+      background: var(--win-accent) !important;
+      color: #fff !important;
+    }
+    .theme-win10 :is(.cash-bottom-item.active, .cash-bottom-center-icon, .ct-drawer-item.is-active) {
+      background: var(--win-hover) !important;
+      color: var(--win-accent-active) !important;
+      box-shadow: none !important;
+    }
+    .theme-win10 #mobile-bottom-nav.cash-bottom-nav {
+      background: var(--win-window) !important;
+      border-color: #e0e0e0 !important;
+      box-shadow: none !important;
+    }
+    .theme-win10 :is(.card, .panel, .balance-card, .summary-card, .support-card, .auth2-card, .auth2-logo,
+      .auth2-dropzone, .osd-icon-tile, .osd-action, .osd-company-logo, .oscar-product-card, .ct-checkout-rail,
+      .ct-products-cart, .ct-invoice-card, .dist-card, .dist-panel, .dist-table-wrap, .dist-tabs, .dist-quick button,
+      .mobile-sidebar-panel, .cash-bottom-center-icon, .ct-scan-preview, .oscar-toast, .toast,
+      #products-table-container, #customers-table-card,
+      :is(main, #root, [role="dialog"]) :is([class^="rounded-"], [class*=" rounded-"]):not(.rounded-full, svg, .customer-editor-modal-panel, .product-editor-modal-panel)) {
+      border-radius: 0 !important;
+    }
+    .theme-win10 :is(.ct-cart-columns, .dist-table th, .osd-table th, main thead, .modal-foot) {
+      border-color: var(--win-divider) !important;
+    }
+
+    /* TextBox, ComboBox and standard button states. */
+    .theme-win10 :is(button, input[type="submit"], input[type="button"], input[type="reset"], .btn, .pay-btn) {
+      border-radius: 0 !important;
+      transition: background-color .1s, border-color .1s, color .1s !important;
+    }
+    .theme-win10 :is(button, input[type="submit"], input[type="button"], input[type="reset"], .btn, .pay-btn):focus-visible {
+      outline: 2px solid #000 !important;
+      outline-offset: 2px !important;
+    }
+    .theme-win10 :is(button, input[type="submit"], input[type="button"], input[type="reset"]):disabled {
+      background: #f5f5f5 !important;
+      color: var(--win-disabled) !important;
+      border-color: #e0e0e0 !important;
+      cursor: not-allowed !important;
+      box-shadow: none !important;
+      opacity: 1 !important;
+    }
+    .theme-win10 :is(input:not([type]), input[type="text"], input[type="search"], input[type="number"],
+      input[type="email"], input[type="password"], input[type="tel"], input[type="url"], input[type="date"],
+      input[type="time"], input[type="month"], input[type="week"], input[type="datetime-local"], textarea, select,
+      .searchable-dropdown-root > button, .auth2-select-trigger):not(.sr-only) {
+      border: 1px solid var(--win-border) !important;
+      background-color: var(--win-surface) !important;
+      color: var(--win-text) !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      outline-offset: 0;
+    }
+    .theme-win10 :is(input:not([type]), input[type="text"], input[type="search"], input[type="number"],
+      input[type="email"], input[type="password"], input[type="tel"], input[type="url"], input[type="date"],
+      input[type="time"], input[type="month"], input[type="week"], input[type="datetime-local"], textarea,
+      select, .searchable-dropdown-root > button, .auth2-select-trigger):hover:not(:disabled) {
+      background-color: var(--win-hover) !important;
+    }
+    .theme-win10 :is(input:not([type]), input[type="text"], input[type="search"], input[type="number"],
+      input[type="email"], input[type="password"], input[type="tel"], input[type="url"], input[type="date"],
+      input[type="time"], input[type="month"], input[type="week"], input[type="datetime-local"], textarea,
+      select, .searchable-dropdown-root > button, .auth2-select-trigger):is(:focus, [aria-expanded="true"]) {
+      border-color: var(--win-accent) !important;
+      outline: none !important;
+      background-color: var(--win-surface) !important;
+    }
+    .theme-win10 input:is([type=checkbox], [type=radio], [type=range]) { accent-color: var(--win-accent) !important; }
+    .theme-win10 input[type=file]::file-selector-button {
+      border: 1px solid var(--win-border);
+      border-radius: 0;
+      background: #fff;
+      color: var(--win-text);
+      padding: 5px 10px;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .theme-win10 select:not([multiple]):not([size]), .theme-win10 select[size="1"] {
+      appearance: none !important;
+      padding-inline-end: 26px !important;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='m2.5 4.5 3.5 3.5 3.5-3.5' fill='none' stroke='%235d5d5d' stroke-width='1.25'/%3E%3C/svg%3E") !important;
+      background-repeat: no-repeat !important;
+      background-position: right 8px center !important;
+    }
+    .theme-win10 select:dir(rtl):is(:not([multiple]):not([size]), [size="1"]) {
+      background-position: left 8px center !important;
+    }
+    .theme-win10 :is(.searchable-dropdown-root .ct-dropdown-label, #main-header .ct-dropdown-label,
+      .ct-dropdown-label, #main-header .searchable-dropdown-root > button :is(span, svg)) {
+      color: var(--win-muted) !important;
+    }
+    .theme-win10 .ct-dropdown-label { background: var(--win-surface) !important; border-radius: 0 !important; }
+    .theme-win10 :is(input, textarea, select, .searchable-dropdown-root > button, .auth2-select-trigger):disabled:not([type=checkbox], [type=radio]) {
+      background-color: #f5f5f5 !important;
+      color: var(--win-disabled) !important;
+      border-color: #e0e0e0 !important;
+    }
+    .theme-win10 :is(.btn:not(.danger, .red), .ct-operation-actions > button, .ct-controls button,
+      .ct-record-filter-cancel, .ct-record-filter-trigger, .dist-secondary, .price-group-card-actions button,
+      .auth2-outline, .auth2-file-button, .ct-login-code-icon, .amount-btn,
+      button[class~="bg-white"][class~="border"]):not(:disabled) {
+      border: 1px solid var(--win-border) !important;
+      background: var(--win-surface) !important;
+      color: var(--win-text) !important;
+      box-shadow: none !important;
+    }
+    .theme-win10 :is(.btn:not(.danger, .red), .ct-operation-actions > button, .ct-controls button,
+      .ct-record-filter-cancel, .ct-record-filter-trigger, .dist-secondary, .price-group-card-actions button,
+      .auth2-outline, .auth2-file-button, .ct-login-code-icon, .amount-btn, button[class~="bg-white"][class~="border"]):hover:not(:disabled) {
+      border-color: var(--win-accent) !important;
+      background: var(--win-hover) !important;
+    }
+    .theme-win10 :is(.btn:not(.danger, .red), .ct-operation-actions > button, .ct-record-filter-cancel,
+      .dist-secondary, .amount-btn, button[class~="bg-white"][class~="border"]):active:not(:disabled) {
+      border-color: #005499 !important;
+      background: var(--win-active) !important;
+    }
+    .theme-win10 :is([data-ct-sell], .ct-apply-payment, .ct-record-filter-apply, .auth2-primary,
+      .dist-btn:not(.dist-secondary), .btn.primary, button.primary, .pay-btn, .ct-login-code button:first-of-type,
+      button[class~="bg-violet-600"], button[class~="bg-violet-700"], button[class~="bg-blue-600"],
+      button[class~="bg-indigo-600"], input[type="submit"]):not(:disabled) {
+      background: var(--win-accent) !important;
+      border: 1px solid var(--win-accent) !important;
+      color: #fff !important;
+      box-shadow: none !important;
+    }
+    .theme-win10 :is([data-ct-sell], .ct-apply-payment, .ct-record-filter-apply, .auth2-primary,
+      .dist-btn:not(.dist-secondary), .btn.primary, button.primary, .pay-btn,
+      button[class~="bg-violet-600"], button[class~="bg-violet-700"], button[class~="bg-blue-600"],
+      button[class~="bg-indigo-600"], input[type="submit"]):hover:not(:disabled) {
+      background: var(--win-accent-hover) !important;
+      border-color: var(--win-accent-hover) !important;
+    }
+    .theme-win10 :is([data-ct-sell], .ct-apply-payment, .ct-record-filter-apply, .auth2-primary,
+      .dist-btn:not(.dist-secondary), .btn.primary, button.primary, .pay-btn,
+      button[class~="bg-violet-600"], button[class~="bg-violet-700"], button[class~="bg-blue-600"],
+      button[class~="bg-indigo-600"], input[type="submit"]):active:not(:disabled) {
+      background: var(--win-accent-active) !important;
+      border-color: var(--win-accent-active) !important;
+    }
+
+    /* Menus and the existing searchable ComboBox popup. */
+    .theme-win10 :is(.ct-nav-menu, .searchable-dropdown-panel, .auth2-select-menu, .cash-action-menu, .ct-language-panel, [role="menu"]) {
+      border: 1px solid var(--win-border) !important;
+      border-radius: 0 !important;
+      padding: 2px !important;
+      box-shadow: var(--win-menu-shadow) !important;
+      background: var(--win-surface) !important;
+      color: var(--win-text) !important;
+    }
+    .theme-win10 .searchable-dropdown-panel { border-color: var(--win-accent) !important; }
+    .theme-win10 :is(.ct-nav-menu > button, [id^="dropdown-opt-"], .auth2-select-options > button,
+      .cash-action-menu > button, .ct-language-panel > button, [role="menuitem"], [role="option"]) {
+      border: 0 !important;
+      padding: 6px 10px !important;
+      font-size: 13px !important;
+      font-weight: 400 !important;
+      background: var(--win-surface) !important;
+      color: var(--win-text) !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+    }
+    .theme-win10 :is(.ct-nav-menu .ct-selected, [id^="dropdown-opt-"].bg-violet-600,
+      .auth2-select-options > [aria-selected="true"], .ct-language-panel > [aria-pressed="true"], [role="option"][aria-selected="true"]) {
+      background: var(--win-active) !important;
+      color: var(--win-text) !important;
+    }
+    .theme-win10 .searchable-dropdown-panel [id^="dropdown-opt-"] { margin-block-start: 0 !important; }
+    .theme-win10 .cash-action-menu > button.danger { color: #a4262c !important; }
+    .theme-win10 :is(.ct-nav-menu > button, [id^="dropdown-opt-"], .auth2-select-options > button,
+      .cash-action-menu > button, .ct-language-panel > button, [role="menuitem"], [role="option"]):is(:hover, :focus-visible):not(:disabled) {
+      background: var(--win-accent) !important;
+      color: #fff !important;
+    }
+    .theme-win10 [id^="dropdown-opt-"].bg-violet-600 .text-violet-100 { color: var(--win-muted) !important; }
+    .theme-win10 :is(.ct-nav-menu > button, [id^="dropdown-opt-"], .auth2-select-options > button,
+      .cash-action-menu > button):is(:hover, :focus-visible) :is(small, svg, .text-violet-100, .text-slate-400) {
+      color: #fff !important;
+    }
+
+    /* Dialog backdrops, frames and action bars. Existing dialog layouts provide their own scrolling. */
+    .theme-win10.ct-win-desktop :is(body > .fixed.inset-0[class*="bg-black/"]:not(.barcode-camera-overlay):not(:has(> .mobile-sidebar-panel)),
+      .ct-modal-layer:not(.barcode-camera-overlay), .oscar-employee-modal-overlay,
+      .product-editor-modal-overlay, .oscar-form-modal-overlay, .expense-entry-overlay, .expense-types-overlay,
+      .dist-overlay, .price-group-modal-overlay, .ct-payment-dialog-layer, .ct-record-filter-overlay,
+      .ct-filter-overlay, .cash-more-backdrop, .ct-login-code, .waiter-confirm-overlay,
+      .modal-root, .modal-back, #full-cart-modal-backdrop, #modal-sync-backdrop) {
+      background: rgb(0 0 0 / 35%) !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      align-items: center !important;
+    }
+    .theme-win10.ct-win-desktop :is(.ct-modal-layer:not(.barcode-camera-overlay) > :is(div, section, form),
+      body > .fixed.inset-0[class*="bg-black/"]:not(.barcode-camera-overlay) > :is(div, section, form)[class*="rounded-"]:not(.mobile-sidebar-panel),
+      .oscar-employee-modal-panel, .expense-entry-modal, .expense-types-modal-panel, .dist-modal,
+      .price-group-modal-panel, .ct-payment-dialog, .ct-record-filter-dialog, .ct-filter-sheet, .cash-more-sheet,
+      .ct-login-code > section, .waiter-order-dialog, .waiter-confirm-dialog, .modal-root > .modal, .modal-back > .modal,
+      dialog.modal, #full-cart-modal-box, #modal-sync-box) {
+      background: var(--win-surface) !important;
+      color: var(--win-text) !important;
+      border-radius: 0 !important;
+      box-shadow: var(--win-window-shadow) !important;
+      border-color: var(--win-border) !important;
+    }
+    .theme-win10.ct-win-desktop dialog.modal::backdrop { background: rgb(0 0 0 / 35%) !important; }
+    .theme-win10.ct-win-desktop :is(.ct-filter-sheet, .cash-more-sheet) {
+      width: min(100%, 540px) !important;
+      max-height: calc(100dvh - 24px) !important;
+      margin-inline: auto !important;
+    }
+    .theme-win10.ct-win-desktop .ct-filter-overlay { padding: 12px !important; }
+    .theme-win10.ct-win-desktop :is(.ct-payment-dialog > header, .ct-record-filter-dialog > header, .price-group-modal-head,
+      .dist-modal-head, .waiter-dialog-header, .modal-head) {
+      background: var(--win-surface) !important;
+      color: var(--win-text) !important;
+      border-color: #e0e0e0 !important;
+    }
+    .theme-win10.ct-win-desktop :is(.ct-payment-dialog > footer, .ct-record-filter-dialog > footer, .ct-employee-footer,
+      .dist-footer, .modal-foot, .modal-actions, .waiter-dialog-footer, .ct-modal-layer > :is(div, form) > footer) {
+      background: var(--win-window) !important;
+      border-color: #e0e0e0 !important;
+    }
+    .theme-win10.ct-win-desktop :is(.ct-payment-dialog > header button, .ct-record-filter-dialog > header > button,
+      .price-group-modal-head > button, .dist-modal-head > button, .modal-head > button):hover {
+      background: #c42b1c !important;
+      color: #fff !important;
+    }
+    .theme-win10 :is(.ct-drawer-brand > div, .ct-drawer-close, .ct-drawer-icon, .auth2-dropzone, .auth2-drop-icon,
+      .auth2-logo-upload, .ct-payment-box > div:last-child, .dist-filter-bar) {
+      background: var(--win-window) !important;
+      color: var(--win-text) !important;
+      border-color: var(--win-divider) !important;
+      box-shadow: none !important;
+      border-radius: 0 !important;
+    }
+    .theme-win10 :is(.ct-drawer-item:hover, .auth2-dropzone:hover, .auth2-dropzone.dragging) {
+      background: var(--win-hover) !important;
+      border-color: var(--win-accent) !important;
+    }
+    .theme-win10 :is(.auth2-section-title .icon, .ct-drawer-icon > svg, .auth2-drop-icon .icon) {
+      color: var(--win-accent) !important;
+    }
+    .theme-win10 :is(.win10-portal .top, .auth2-file-button, .ct-financial-close-dialog, .auth2-logo-preview) { border-radius: 0 !important; }
+    .theme-win10 .win10-portal .top :is(p, small) { color: var(--win-muted) !important; }
+    .theme-win10 :is(.custom-scrollbar, .searchable-dropdown-panel, .ct-nav-menu, .ct-record-filter-content,
+      .auth2-select-options, .ct-cart-rows) { scrollbar-color: #cdcdcd #f0f0f0; }
+    .theme-win10 :is(.custom-scrollbar, .ct-nav-menu)::-webkit-scrollbar { width: 14px; height: 10px; }
+    .theme-win10 :is(.custom-scrollbar, .ct-nav-menu)::-webkit-scrollbar-track { background: #f0f0f0; }
+    .theme-win10 :is(.custom-scrollbar, .ct-nav-menu)::-webkit-scrollbar-thumb {
+      background: #cdcdcd;
+      border: 2px solid #f0f0f0;
+      border-radius: 0;
+    }
+  }
+
+  @media screen and (min-width: 1024px) {
+    .theme-win10 #main-header {
+      height: 56px !important;
+      min-height: 56px !important;
+      flex-wrap: nowrap;
+      justify-content: space-between !important;
+      gap: 0 8px !important;
+      padding-inline: 12px !important;
+    }
+    .theme-win10 #main-header > div:first-child {
+      flex: 0 1 auto;
+      min-width: 0;
+    }
+    .theme-win10 #main-header .ct-page-heading { min-width: 0; }
+    .theme-win10 #main-header .ct-page-heading > svg { flex-shrink: 0; }
+    .theme-win10 #main-header > .ct-desktop-nav {
+      display: flex !important;
+      flex: 1 0 auto;
+      align-self: stretch;
+      align-items: center;
+      gap: 2px;
+    }
+    .theme-win10 #main-header .ct-nav-group { flex-shrink: 0; }
+    .theme-win10 #main-header .ct-nav-group > button { white-space: nowrap; }
+    .theme-win10 #main-header .ct-nav-menu {
+      max-width: calc(100vw - 12px);
+      inset-inline-start: 0;
+      inset-inline-end: auto;
+      right: auto;
+    }
+    .theme-win10 #main-header .ct-nav-group > button {
+      min-height: 27px;
+      padding: 3px 9px !important;
+      font-size: 13px !important;
+      font-weight: 400 !important;
+      border: 1px solid transparent !important;
+    }
+    .theme-win10 #main-header .ct-nav-group > button:is(:hover, [aria-expanded="true"], .ct-nav-active) {
+      border-color: var(--win-active) !important;
+      background: var(--win-hover) !important;
+    }
+    .theme-win10 .ct-nav-menu { top: 100% !important; }
+  }
+
+  @media screen and (hover: none) {
+    .theme-win10 :is(.searchable-dropdown-panel [id^="dropdown-opt-"], .auth2-select-options > button) {
+      min-height: 38px;
+    }
+  }
+}
+
+@layer cash-top-win10 {
+  @media screen {
+    .theme-win10 .ct-startup-screen :is(h2, p, .ct-progress-person > b) {
+      color: #fff !important;
+    }
+    .theme-win10 .ct-progress-person svg > circle:first-child { stroke: rgb(255 255 255 / 36%); }
+    .theme-win10 .ct-progress-person svg > circle:nth-child(2) { stroke: #fff; }
+    .theme-win10 .searchable-dropdown-panel button[id^="dropdown-opt-"].bg-violet-600,
+    .theme-win10 .searchable-dropdown-panel button[id^="dropdown-opt-"]:is(:hover, :focus-visible) {
+      background: var(--win-accent-active) !important;
+      color: #fff !important;
+    }
+    .theme-win10 .searchable-dropdown-panel button[id^="dropdown-opt-"].bg-violet-600 *,
+    .theme-win10 .searchable-dropdown-panel button[id^="dropdown-opt-"]:is(:hover, :focus-visible) * {
+      color: #fff !important;
+    }
+
+    /* Field captions straddle the upper border and leave the value below them. */
+    .theme-win10 .searchable-dropdown-root:has(> button > .ct-dropdown-label) {
+      padding-block-start: 7px !important;
+    }
+    .theme-win10 :is(.ct-header-warehouse, .ct-header-price-group) { padding-block-start: 0 !important; }
+    .theme-win10 .searchable-dropdown-root > button:has(> .ct-dropdown-label) {
+      box-sizing: border-box;
+      height: auto !important;
+      min-height: 34px !important;
+      padding-block: 6px 2px !important;
+      overflow: visible !important;
+    }
+    .theme-win10 .searchable-dropdown-root > button > .ct-dropdown-label {
+      inset: 0 auto auto !important;
+      inset-inline-start: 8px !important;
+      transform: translateY(-50%) !important;
+      width: max-content;
+      padding: 0 4px !important;
+      background: var(--win-surface) !important;
+      line-height: 11px !important;
+      font-size: 9px !important;
+      text-align: start;
+    }
+
+    .theme-win10 :is(.auth2-field, div, label):has(> :is(label, span):first-child + :is(
+      input:not([type=hidden], [type=checkbox], [type=radio], [type=file], [type=range], .hidden), select, textarea,
+      div:has(> input:not([type=hidden], [type=checkbox], [type=radio], [type=file], [type=range], .hidden))
+    )):is(
+      :has(> label:first-child:not(.sr-only, .hidden)), label:has(> span:first-child)
+    ) {
+      position: relative !important;
+      padding-block-start: 7px !important;
+    }
+    .theme-win10 :is(div > label:first-child, label > span:first-child):not(.sr-only, .hidden):has(+ :is(
+      input:not([type=hidden], [type=checkbox], [type=radio], [type=file], [type=range], .hidden), select, textarea,
+      div:has(> input:not([type=hidden], [type=checkbox], [type=radio], [type=file], [type=range], .hidden))
+    )) {
+      position: absolute !important;
+      inset: 7px auto auto !important;
+      inset-inline-start: 8px !important;
+      transform: translateY(-50%) !important;
+      z-index: 4 !important;
+      width: max-content !important;
+      max-width: calc(100% - 16px) !important;
+      margin: 0 !important;
+      padding: 0 4px !important;
+      overflow: hidden;
+      background: var(--win-surface) !important;
+      color: var(--win-muted) !important;
+      font-size: 10px !important;
+      line-height: 12px !important;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      pointer-events: none;
+    }
+    .theme-win10 :is(div > label:first-child, label > span:first-child):not(.sr-only, .hidden) + :is(
+      input:not([type=hidden], [type=checkbox], [type=radio], [type=file], [type=range], .hidden), select, textarea
+    ),
+    .theme-win10 div > label:first-child:not(.sr-only, .hidden) + div > input:not(
+      [type=hidden], [type=checkbox], [type=radio], [type=file], [type=range], .hidden
+    ) {
+      padding-block-start: 7px !important;
+      padding-block-end: 3px !important;
+      min-height: 39px !important;
+      box-sizing: border-box;
+    }
+    .theme-win10 .auth2-field:has(> .auth2-picker, > .auth2-phone-row, > .auth2-logo-upload) { position: relative; padding-block-start: 7px; }
+    .theme-win10 .auth2-field:has(> .auth2-picker, > .auth2-phone-row, > .auth2-logo-upload) > label {
+      position: absolute;
+      z-index: 4;
+      inset: 7px auto auto;
+      inset-inline-start: 8px;
+      transform: translateY(-50%);
+      padding-inline: 4px;
+      background: var(--win-surface);
+      margin: 0;
+      font-size: 10px;
+      line-height: 12px;
+      color: var(--win-muted);
+      pointer-events: none;
+    }
+    .theme-win10 .auth2-field > :is(.auth2-picker, .auth2-phone-row) :is(.auth2-select-trigger, .auth2-phone-input),
+    .theme-win10 .auth2-field > .auth2-logo-upload { padding-block-start: 7px !important; }
+    .theme-win10 .auth2-phone-icon { top: 19px; }
+    .theme-win10 .ct-record-date-field {
+      padding: 7px 0 0 !important;
+      border: 0 !important;
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+    .theme-win10 .ct-record-date-field > input { padding-inline: 8px !important; }
+    .theme-win10 .ct-item-fields label:has(> .ct-quantity-stepper) .ct-quantity-stepper {
+      border: 1px solid var(--win-border);
+      padding: 6px 2px 1px;
+      background: #fff;
+    }
+    .theme-win10 .ct-item-fields label:has(> .ct-quantity-stepper) > span { inset-inline-start: 4px !important; }
+    .theme-win10 .ct-item-fields .ct-quantity-stepper input {
+      border: 0 !important;
+      min-height: 20px !important;
+    }
+    .theme-win10 .dist-field:has(> .searchable-dropdown-root > button:not(:has(> .ct-dropdown-label))) {
+      position: relative;
+      padding-block-start: 7px;
+    }
+    .theme-win10 .dist-field:has(> .searchable-dropdown-root > button:not(:has(> .ct-dropdown-label))) > span {
+      position: absolute;
+      inset: 7px auto auto;
+      inset-inline-start: 8px;
+      transform: translateY(-50%);
+      padding-inline: 4px;
+      background: var(--win-surface);
+      z-index: 2;
+      pointer-events: none;
+      font-size: 10px;
+    }
+    .theme-win10 .dist-field > .searchable-dropdown-root > button:not(:has(> .ct-dropdown-label)) {
+      padding-top: 7px !important;
+    }
+
+    /* The desktop toolbar sits above the panel and stays in place during scrolling. */
+    .theme-win10 .ct-win-caption-controls {
+      position: fixed;
+      left: var(--ct-win-left, 6px);
+      top: var(--ct-win-top, 6px);
+      width: var(--ct-win-width, 96px);
+      height: 32px;
+      direction: ltr;
+      display: flex;
+      justify-content: flex-start;
+      align-items: stretch;
+      z-index: 12;
+      background: #fff !important;
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+      user-select: none;
+    }
+    .theme-win10[dir="ltr"] .ct-win-caption-controls { justify-content: flex-end; }
+    .theme-win10 .ct-win-native > .ct-win-caption-controls {
+      position: sticky;
+      top: 0;
+      left: auto;
+      width: 100%;
+    }
+    .theme-win10.ct-win-desktop .ct-win-legacy-close { display: none !important; }
+    .theme-win10 .ct-win-drag-title {
+      touch-action: none;
+      cursor: move;
+    }
+    .theme-win10 .ct-win-caption-controls > button {
+      display: grid;
+      place-items: center;
+      width: 32px;
+      height: 100%;
+      min-height: 0;
+      padding: 0;
+      border: 0 !important;
+      background: transparent !important;
+      color: #1a1a1a !important;
+      box-shadow: none !important;
+      cursor: pointer;
+    }
+    .theme-win10 .ct-win-caption-controls > button:hover { background: #e5e5e5 !important; }
+    .theme-win10 .ct-win-caption-controls > button.ct-win-caption-close:hover {
+      background: #c42b1c !important;
+      color: #fff !important;
+    }
+    .theme-win10 .ct-win-caption-controls svg {
+      width: 12px;
+      height: 12px;
+      fill: none;
+      stroke: currentColor;
+    }
+    .theme-win10 .ct-win-window {
+      max-height: calc(100dvh - 54px) !important;
+      animation: none !important;
+      border-radius: 0 !important;
+    }
+    .theme-win10 .ct-win-window:not(.ct-win-native, .ct-win-positioned)[data-ct-win-state="normal"] {
+      translate: 0 var(--ct-win-offset, 0px);
+    }
+    .theme-win10 .ct-win-window.ct-win-positioned:not([data-ct-win-state="minimized"]),
+    .theme-win10 .ct-win-window[data-ct-win-state="maximized"],
+    .theme-win10 .ct-win-window.ct-win-native[data-ct-win-state="minimized"] {
+      position: fixed !important;
+      inset: auto !important;
+      left: var(--ct-win-left) !important;
+      top: var(--ct-win-top) !important;
+      width: var(--ct-win-width) !important;
+      height: var(--ct-win-height) !important;
+      max-width: none !important;
+      max-height: none !important;
+      min-width: 0 !important;
+      min-height: 0 !important;
+      margin: 0 !important;
+      transform: none !important;
+      translate: none !important;
+    }
+    .theme-win10 .ct-win-window[data-ct-win-state="minimized"]:not(.ct-win-native) {
+      visibility: hidden !important;
+    }
+    .theme-win10 .ct-win-window[data-ct-win-state="minimized"] > :not(.ct-win-caption-controls) {
+      display: none !important;
+    }
+    .theme-win10 .ct-win-overlay-minimized:not(dialog) { background: transparent !important; }
+    .theme-win10 .ct-win-native.ct-win-overlay-minimized::backdrop { background: transparent !important; }
+
+  }
+
+  @media screen and (min-width: 1024px) {
+    .theme-win10 #ct-pos-workspace .ct-catalog-pane .oscar-pos-product-grid {
+      grid-template-columns: repeat(auto-fill, minmax(115px, 1fr)) !important;
+      gap: 5px !important;
+      align-items: start;
+    }
+    .theme-win10 #ct-pos-workspace .oscar-product-card {
+      display: grid !important;
+      grid-template-columns: 29px minmax(0, 1fr);
+      grid-template-rows: auto auto;
+      align-items: center;
+      column-gap: 5px;
+      min-height: 48px !important;
+      padding: 4px 5px !important;
+      border: 1px solid var(--win-border) !important;
+      transform: none !important;
+    }
+    .theme-win10 #ct-pos-workspace .oscar-product-card:hover { border-color: var(--win-accent) !important; }
+    .theme-win10 #ct-pos-workspace .ct-product-body { display: contents; }
+    .theme-win10 #ct-pos-workspace .ct-catalog-thumb {
+      grid-column: 1;
+      grid-row: 1 / span 2;
+      width: 29px;
+      height: 29px;
+      aspect-ratio: 1;
+      margin: 0 !important;
+      border-radius: 0 !important;
+    }
+    .theme-win10 #ct-pos-workspace .ct-catalog-thumb :is(img, svg) {
+      width: 100% !important;
+      height: 100% !important;
+      aspect-ratio: 1 !important;
+      object-fit: contain;
+    }
+    .theme-win10 #ct-pos-workspace .ct-product-body > h4 {
+      grid-column: 2;
+      min-height: 0;
+      text-align: start;
+      font-size: 11px !important;
+      line-height: 1.2 !important;
+    }
+    .theme-win10 #ct-pos-workspace .ct-catalog-desktop-meta {
+      grid-column: 2;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      column-gap: 4px;
+      padding: 0;
+      margin: 0;
+      min-width: 0;
+    }
+    .theme-win10 #ct-pos-workspace .ct-catalog-desktop-meta > strong {
+      font-size: 11px;
+      line-height: 1.2;
+      white-space: nowrap;
+      color: var(--win-accent-active);
+    }
+    .theme-win10 #ct-pos-workspace .ct-catalog-desktop-meta > div {
+      min-width: 0;
+      margin: 0;
+      line-height: 1.2;
+      font-size: 8px;
+      color: var(--win-muted);
+    }
+    .theme-win10 #ct-pos-workspace .ct-catalog-desktop-meta button {
+      padding: 1px 2px;
+      background: var(--win-hover);
+      color: var(--win-accent-active);
+      font-size: 8px;
+    }
+  }
+}
+
+@layer cash-top-win10 {
+  @media screen {
+    .theme-win10 .oscar-page-stage[data-ct-parked] {
+      position: absolute;
+      inset: 0;
+      visibility: hidden;
+      pointer-events: none;
+      overflow: visible !important;
+      animation: none !important;
+      transition: none !important;
+      transform: none !important;
+      will-change: auto !important;
+    }
+    .theme-win10 .oscar-page-stage:has(.ct-win-modeless) {
+      animation: none !important;
+      transform: none !important;
+      will-change: auto !important;
+    }
+    .theme-win10 :is(#modal-sync-backdrop, #full-cart-modal-backdrop, .ct-win-modeless).ct-win-modeless {
+      z-index: var(--ct-win-stack, 1600) !important;
+      visibility: visible;
+    }
+    .theme-win10 :is(#modal-sync-backdrop, #full-cart-modal-backdrop, .ct-win-modeless).ct-win-modeless:not(dialog) {
+      background: transparent !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      pointer-events: none !important;
+    }
+    .theme-win10 .ct-modal-layer.ct-win-modeless {
+      overflow: visible !important;
+      animation: none !important;
+      transform: none !important;
+    }
+    .theme-win10 .ct-win-modeless .ct-win-caption-controls { visibility: visible !important; }
+    .theme-win10 .ct-win-modeless :is(.ct-win-window:not([data-ct-win-state="minimized"]),
+      .ct-win-caption-controls, .ct-win-resize-grip), .theme-win10 dialog.ct-win-modeless {
+      pointer-events: auto !important;
+    }
+    .theme-win10 dialog.ct-win-modeless[data-ct-win-state="normal"]:not(.ct-win-positioned) {
+      position: fixed;
+      inset: 0;
+      margin: auto;
+    }
+    .theme-win10 :is(#modal-sync-box, #full-cart-modal-box, .ct-win-window).ct-win-window {
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: 0 2px 6px rgb(0 0 0 / 16%) !important;
+    }
+    .theme-win10 .ct-win-window[data-ct-win-state="minimized"]:not(dialog) {
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+    .theme-win10 .ct-win-resize-grip {
+      position: fixed;
+      left: var(--ct-win-left);
+      top: var(--ct-win-top);
+      width: var(--ct-win-width, 20px);
+      height: 20px;
+      touch-action: none;
+      user-select: none;
+      background: transparent !important;
+      border: 0 !important;
+      outline: 0 !important;
+      box-shadow: none !important;
+      z-index: 16;
+    }
+    .theme-win10 .ct-win-resize-grip[hidden] { display: none !important; }
+    .theme-win10 .ct-win-resize-grip:is([data-corner="nw"], [data-corner="se"]) { cursor: nwse-resize; }
+    .theme-win10 .ct-win-resize-grip:is([data-corner="ne"], [data-corner="sw"]) { cursor: nesw-resize; }
+    .theme-win10 #cashier-unit {
+      display: flex !important;
+      flex-flow: row nowrap !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 4px !important;
+    }
+    .theme-win10 #cashier-unit > div { flex: 1 1 auto; min-width: 0; }
+    .theme-win10 #cashier-unit > svg { flex: 0 0 13px; width: 13px; height: 13px; }
+    .theme-win10 .ct-inventory-count-toolbar {
+      display: grid;
+      grid-template-columns: minmax(0, .8fr) auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 6px;
+    }
+    .theme-win10 .ct-inventory-count-toolbar :is(input, .ct-inventory-scan, .ct-inventory-approve) {
+      height: 38px !important;
+      min-height: 38px !important;
+      min-width: 0;
+    }
+    .theme-win10 .ct-inventory-count-toolbar :is(.ct-inventory-scan, .ct-inventory-approve) {
+      padding-inline: 8px;
+      white-space: nowrap;
+    }
+    .theme-win10 .ct-inventory-search input { padding-inline: 28px 23px; }
+    .theme-win10 .ct-inventory-search > svg { inset-inline-start: 7px; }
+    .theme-win10 .ct-inventory-search > button { inset-inline-end: 1px; width: 22px; }
+    .theme-win10 .ct-inventory-notes::placeholder, .theme-win10 .ct-inventory-search input::placeholder {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+  @media screen and (max-width: 600px) {
+    .theme-win10 .ct-inventory-scan-caption { display: none; }
+    .theme-win10 .ct-inventory-count-toolbar { gap: 4px; }
+    .theme-win10 .ct-inventory-search input { padding-inline-start: 24px; }
+  }
+}
+
+/* R14: Professional branch SVG and inline free-item control. */
+.theme-win10 .ct-header-branch-link{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border:1px solid #cbd7e2;border-radius:3px;background:#f9fcff;color:#0068b8;cursor:pointer;font-weight:700;font-size:11px;white-space:nowrap}
+.theme-win10 .ct-header-branch-link:hover{border-color:#0078d7;background:#eaf5ff}
+.theme-win10 .ct-header-branch-link svg{width:18px;height:18px;flex-shrink:0}
+.ct-pos-free-item-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;flex-shrink:0;background:#0078d7;color:white;border:1px solid #006abb;border-radius:4px;font-weight:700;font-size:11px;padding:7px 10px;cursor:pointer}
+.ct-pos-free-item-btn:hover{background:#0069bc}
+.ct-nonstock-modal{border-radius:4px;max-height:min(90dvh,720px);display:flex;flex-direction:column;overflow:hidden;direction:rtl;box-sizing:border-box}
+.ct-nonstock-form{overflow-y:auto;min-height:0;flex:1}
+.ct-nonstock-titlebar{flex-shrink:0;background:#f5f5f5;color:#222;min-height:42px}
+.ct-nonstock-field{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:700;color:#334155}
+.ct-nonstock-field input{padding:9px 10px;border:1px solid #bdc9d4;border-radius:3px;background:white;color:#111;max-width:100%;width:100%;box-sizing:border-box}
+.ct-nonstock-field input:focus{outline:1px solid #0078d7;border-color:#0078d7}
+.ct-nonstock-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.ct-nonstock-profit{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;background:#eef7ff;color:#16456d;border:1px solid #cfe5f7;font-size:12px;border-radius:3px}
+.ct-nonstock-profit strong{font-size:17px;font-variant-numeric:tabular-nums}
+.ct-nonstock-actions button{border:1px solid #cbd5e1;padding:9px 16px;font-size:12px;font-weight:700;background:white;border-radius:3px}
+.ct-nonstock-actions button[type="submit"]{background:#0078d7;border-color:#0078d7;color:white}
+.ct-nonstock-overlay{z-index:9990!important}
+.theme-win10 .ct-win-caption-controls{touch-action:none;cursor:move}
+.theme-win10 .ct-win-caption-controls button{cursor:pointer}
+@media(max-width:640px){.ct-nonstock-overlay{padding:10px!important;align-items:center!important}.ct-nonstock-modal{max-height:calc(100dvh - 80px);width:100%;border-radius:8px}.ct-nonstock-grid{gap:8px}.ct-pos-free-item-btn{padding:6px 8px;font-size:10px}.ct-pos-free-item-btn span{display:none}.ct-nonstock-form{padding:12px!important}}
+
+/* Altamam Pro R17: brand and desktop-only branch control */
+.theme-win10 .ct-r11-header-logo{display:block!important;width:40px;height:34px;object-fit:contain;object-position:center;background:white;border:1px solid #dfe6ee;padding:1px;flex-shrink:0}
+@media(min-width:1024px){.theme-win10 .ct-r11-header-logo{width:50px;height:38px}}
+@media(max-width:1023px){.theme-win10 .ct-header-branch-link,.theme-win10 .ct-header-branch-label{display:none!important}.theme-win10 .ct-r11-header-logo{width:34px;height:29px}}
+
+/* R18: hide the desktop brand picture in mobile app header, but keep login logo. */
+@media(max-width:1023px){html.theme-win10 .ct-r11-header-logo{display:none!important}}
+
+/* R19: The non-stock quick-add action is a desktop POS control only. */
+@media screen and (max-width: 1023px) {
+  #btn-pos-free-item.ct-pos-free-item-btn { display: none !important; }
+}

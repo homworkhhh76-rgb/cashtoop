@@ -1,0 +1,89 @@
+/* Cash Top 3 — Branches. Native Windows 10 light UI, responsive RTL. */
+.theme-win10 .ct-branches-root{box-sizing:border-box;max-width:1300px;margin:auto;padding:17px 20px 45px;color:#202020;font-family:"Segoe UI","Cairo",Tahoma,sans-serif;direction:rtl;font-size:13px}
+.theme-win10 .ct-branches-root *{box-sizing:border-box}
+.theme-win10 .ct-branches-root button,.theme-win10 .ct-branches-root input,.theme-win10 .ct-branches-root select,.theme-win10 .ct-branches-root textarea{font-family:inherit}
+.theme-win10 .ct-br-page-header{display:flex;gap:15px;justify-content:space-between;align-items:center;background:white;border:1px solid #d5d5d5;padding:16px;margin-bottom:12px}
+.theme-win10 .ct-br-page-header h2{font-weight:800;font-size:20px;margin:0 0 4px;color:#17273b}
+.theme-win10 .ct-br-page-header p{color:#666;font-size:12px;margin:0;line-height:1.8}
+.theme-win10 .ct-br-btn{border:1px solid #b9b9b9;color:#272727;background:white;border-radius:0;min-height:35px;padding:8px 13px;font-size:12px;font-weight:700;cursor:pointer;transition:background .12s}
+.theme-win10 .ct-br-btn:hover{background:#e6f2fd;border-color:#0078d7}
+.theme-win10 .ct-br-btn.blue{background:#0078d7!important;border-color:#0078d7!important;color:#fff!important}
+.theme-win10 .ct-br-btn.blue:hover{background:#106ebe!important}
+.theme-win10 .ct-br-btn.selected{background:#e5f2ff;border-color:#0078d7;color:#005a9e}
+.theme-win10 .ct-br-btn.danger{color:#bf261a;background:#fff;border-color:#d9bab8}
+.theme-win10 .ct-br-btn.close{background:transparent;border:0;font-size:24px;padding:0 9px;min-height:32px}
+.theme-win10 .ct-br-btn.close:hover{background:#c42b1c;color:white}
+.theme-win10 .ct-br-btn:disabled{opacity:.47;cursor:not-allowed}
+.theme-win10 .ct-br-current{display:flex;align-items:center;gap:9px;border-right:3px solid #0078d7;background:#eaf4ff;padding:12px 14px;margin-bottom:13px;font-size:13px;flex-wrap:wrap}
+.theme-win10 .ct-br-current strong{color:#005a9e;font-weight:800}
+.theme-win10 .ct-br-current small{color:#566980;font-size:11px;margin-right:auto}
+.theme-win10 .ct-br-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;border-bottom:1px solid #cfcfcf;padding-bottom:10px}
+.theme-win10 .ct-br-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:12px}
+.theme-win10 .ct-br-card{background:#fff;border:1px solid #d1d1d1;padding:18px;min-height:170px}
+.theme-win10 .ct-br-card-top{display:flex;align-items:flex-start;gap:12px}
+.theme-win10 .ct-br-card-icon{background:#dbefff;color:#0063b1;width:43px;height:43px;display:grid;place-items:center;font-size:20px;flex-shrink:0}
+.theme-win10 .ct-br-card-title{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.theme-win10 .ct-br-card-title strong{font-size:15px;font-weight:800;color:#1c2937}
+.theme-win10 .ct-br-card-title small{color:#64748b;font-size:11px}
+.theme-win10 .ct-br-card-sub{font-size:12px;color:#64748b;margin-top:4px;overflow-wrap:anywhere}
+.theme-win10 .ct-br-status{border:1px solid #e6d2a3;color:#997112;padding:4px 6px;background:#fff9e9;font-size:10px;white-space:nowrap}
+.theme-win10 .ct-br-status.current{background:#e6f7ef;border-color:#a5dcc2;color:#15714b}
+.theme-win10 .ct-br-card-info{margin-top:17px;padding:12px 0;border-top:1px solid #ededed;display:flex;gap:24px;color:#535353;font-size:12px}
+.theme-win10 .ct-br-actions{display:flex;flex-wrap:wrap;gap:6px}
+.theme-win10 .ct-br-surface{background:#fff;border:1px solid #d5d5d5;padding:20px;margin-bottom:15px}
+.theme-win10 .ct-br-surface h3{font-size:16px;font-weight:800;color:#192b3f;margin:0 0 15px}
+.theme-win10 .ct-br-surface h4{font-size:13px;font-weight:800;margin:20px 0 10px}
+.theme-win10 .ct-br-note{font-size:12px;color:#455b77;line-height:1.8;background:#ecf4fc;padding:10px 12px;border-right:3px solid #0078d7;margin-bottom:15px}
+.theme-win10 .ct-br-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:14px}
+.theme-win10 .ct-br-field{display:flex;flex-direction:column;gap:6px;min-width:0;margin-bottom:10px;color:#334155;font-size:12px;font-weight:700}
+.theme-win10 .ct-br-input{min-width:0;width:100%;background:#fff;color:#222;border:1px solid #ababab!important;border-radius:0!important;height:38px;padding:7px 11px;font-size:13px!important;outline:none}
+.theme-win10 textarea.ct-br-input{height:auto;min-height:66px;resize:vertical}
+.theme-win10 .ct-br-input:focus{outline:1px solid #0078d7!important;border-color:#0078d7!important}
+.theme-win10 .ct-br-permissions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:18px}
+.theme-win10 .ct-br-check{display:flex;align-items:center;gap:9px;min-height:36px;padding:7px 10px;border:1px solid #e2e8f0;background:#fbfcfd;font-size:12px;font-weight:600}
+.theme-win10 .ct-br-check input{width:16px;height:16px;accent-color:#0078d7}
+.theme-win10 .ct-br-lines-header{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:17px 0 10px;padding:9px 0;border-top:1px solid #e7e7e7}
+.theme-win10 .ct-br-transfer-line{display:grid;grid-template-columns:28px minmax(180px,2fr) minmax(140px,1.4fr) minmax(100px,1fr) minmax(120px,1fr) auto;gap:9px;align-items:end;background:#f8f8f8;border:1px solid #dedede;padding:11px;margin-bottom:9px}
+.theme-win10 .ct-br-transfer-line .ct-br-field{margin:0}
+.theme-win10 .ct-br-row-num{align-self:center;display:grid;place-items:center;border:1px solid #c9dceb;background:#e8f2fb;color:#07518b;width:25px;height:26px;font-weight:700}
+.theme-win10 .ct-br-stats{display:flex;flex-direction:column;gap:4px;align-self:center;color:#536273;font-size:11px}
+.theme-win10 .ct-br-actionbar{display:flex;gap:8px;justify-content:flex-end;border-top:1px solid #e6e6e6;padding-top:12px;margin-top:16px}
+.theme-win10 .ct-br-table-scroll{overflow:auto;max-height:60vh}
+.theme-win10 .ct-br-table{border-collapse:collapse;width:100%;min-width:770px;text-align:right;font-size:12px}
+.theme-win10 .ct-br-table th{background:#edf1f5;text-align:right;color:#455263;padding:11px;border-bottom:1px solid #cbd5e1}
+.theme-win10 .ct-br-table td{padding:11px;border-bottom:1px solid #eee;vertical-align:top}
+.theme-win10 .ct-br-empty{text-align:center;color:#8a98aa;padding:30px!important}
+.theme-win10 .ct-br-modal-backdrop{position:fixed!important;inset:0!important;z-index:200000!important;display:flex!important;justify-content:center;align-items:center;background:rgba(0,0,0,.48);padding:12px}
+.theme-win10 .ct-br-modal{background:#fff!important;border:1px solid #919191!important;box-shadow:0 14px 40px #0004!important;width:min(96vw,550px);max-height:90dvh;display:flex;flex-direction:column;border-radius:0!important;overflow:hidden}
+.theme-win10 .ct-br-modal-head{background:#f0f0f0;min-height:43px;padding:0 13px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #d2d2d2}
+.theme-win10 .ct-br-modal-head strong{font-size:14px;font-weight:800}
+.theme-win10 .ct-br-modal-body{padding:18px;overflow-y:auto;min-height:0;flex:1}
+.theme-win10 .ct-br-modal-foot{padding:11px 18px;border-top:1px solid #dedede;display:flex;justify-content:flex-end;gap:8px;background:#f9f9f9}
+.theme-win10 .ct-header-branch-label{font-size:11px;font-weight:800;color:#0062a9;background:#e4f2ff;border:1px solid #badcf7;white-space:nowrap;padding:5px 8px}
+@media(max-width:900px){.theme-win10 .ct-br-transfer-line{grid-template-columns:28px minmax(130px,1fr) minmax(130px,1fr)}.theme-win10 .ct-br-transfer-line .ct-br-stats{align-self:center}.theme-win10 .ct-br-permissions{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){.theme-win10 .ct-branches-root{padding:12px 10px 90px}.theme-win10 .ct-br-page-header{padding:12px;align-items:flex-start;flex-wrap:wrap}.theme-win10 .ct-br-page-header h2{font-size:17px}.theme-win10 .ct-br-grid{grid-template-columns:1fr;gap:4px}.theme-win10 .ct-br-transfer-line{grid-template-columns:1fr 1fr;gap:10px;padding:10px}.theme-win10 .ct-br-row-num{display:none}.theme-win10 .ct-br-transfer-line .ct-br-field:first-of-type{grid-column:1/-1}.theme-win10 .ct-br-permissions{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.theme-win10 .ct-br-surface{padding:12px}.theme-win10 .ct-br-tabs .ct-br-btn{flex:1;min-width:140px}.theme-win10 .ct-br-current small{width:100%;margin:0}.theme-win10 .ct-header-branch-label{display:none}.theme-win10 .ct-br-modal{max-height:calc(100dvh - 25px)}}
+
+/* R11 Windows 10 branch searchable selectors and dashboard compact metrics */
+.theme-win10 .ct-br-transfer-line .searchable-dropdown-panel{z-index:600 !important}
+.theme-win10 .ct-br-transfer-line .searchable-dropdown-trigger{min-height:39px;width:100%;border-radius:0 !important}
+.theme-win10 .ct-r11-header-logo{display:none;width:46px;height:34px;object-fit:contain;background:#fff;border:1px solid #e5e7eb;padding:2px;flex-shrink:0}
+@media(min-width:1024px){.theme-win10 .ct-r11-header-logo{display:block}}
+.theme-win10 .ct-r11-kpi{min-width:0}
+.theme-win10 .ct-r11-kpi .osd-kpi-top h2{font-size:12px !important;white-space:normal;line-height:1.5}
+.theme-win10 .ct-r11-icon{width:29px;height:29px;display:grid;place-items:center;background:#e8f3ff;color:#0078d7;font-weight:900;font-size:17px}
+@media(max-width:700px){.theme-win10 .ct-r11-kpi .osd-kpi-value{font-size:18px !important}}
+
+
+/* R13 — in-page creation panel. No overlays, portals or reloading. */
+.theme-win10 .ct-br-inline-create{margin:0 0 16px;background:#fff;border:1px solid #b9d3ea;border-top:3px solid #0078d7;box-shadow:0 2px 5px rgb(0 0 0 / 6%);scroll-margin-top:14px}
+.theme-win10 .ct-br-inline-form{padding:0;margin:0;width:100%;max-width:none;display:block}
+.theme-win10 .ct-br-inline-head{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#f2f7fc;border-bottom:1px solid #dbe6ef;padding:14px 17px}
+.theme-win10 .ct-br-inline-head h3{margin:0;color:#123b60;font-size:16px;font-weight:800}
+.theme-win10 .ct-br-inline-head p{margin:4px 0 0;color:#60778e;font-size:11px}
+.theme-win10 .ct-br-inline-fields{padding:18px 17px 6px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:15px;row-gap:6px}
+.theme-win10 .ct-br-inline-actions{padding:11px 17px;background:#fafcfe;border-top:1px solid #e1e9ef;display:flex;gap:9px;justify-content:flex-end}
+@media(max-width:620px){.theme-win10 .ct-br-inline-fields{grid-template-columns:1fr;row-gap:0;padding:14px 12px 4px}.theme-win10 .ct-br-inline-head{padding:12px;align-items:flex-start;flex-wrap:wrap}.theme-win10 .ct-br-inline-actions{padding:10px 12px}}
+
+/* R14: branch SVG stays accessible in mobile header; compact icon-only on small screens. */
+.theme-win10 .ct-header-branch-link{display:inline-flex !important}
+@media(max-width:620px){.theme-win10 .ct-header-branch-link{padding:6px !important;min-width:33px !important;justify-content:center}.theme-win10 .ct-header-branch-name{display:none!important}}

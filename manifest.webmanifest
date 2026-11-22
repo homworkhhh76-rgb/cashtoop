@@ -1,27 +1,27 @@
 {
-  "name": "كاش توب 3",
-  "short_name": "كاش توب 3",
+  "name": "كاش توب",
+  "short_name": "كاش توب",
   "description": "نظام نقاط بيع وإدارة مخزون احترافي",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f8fafc",
-  "theme_color": "#7C3AED",
+  "background_color": "#f0f0f0",
+  "theme_color": "#0078d7",
   "lang": "ar",
   "dir": "rtl",
   "icons": [
     {
-      "src": "./icon-192.png?v=7.9.4.148-distribution",
+      "src": "./icon-192.png?v=7.9.4.194-r21-embedded-boot",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "./app-icon.png?v=7.9.4.148-distribution",
+      "src": "./app-icon.png?v=7.9.4.194-r21-embedded-boot",
       "sizes": "512x512",
       "type": "image/png"
     },
     {
-      "src": "./icon-maskable-512.png?v=7.9.4.148-distribution",
+      "src": "./icon-maskable-512.png?v=7.9.4.194-r21-embedded-boot",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
