@@ -1,4 +1,4 @@
-const BUILD = '7.9.4.196-r22-mobile-count-compact';
+const BUILD = '7.9.4.198-r24-purchase-exports';
 const CACHE = 'oscar-accounting-' + BUILD;
 const BASE = new URL('./', self.location.href);
 const LOCAL = ["./ct-google-translate.js", "./ct-google-translate.css", "./cash-top-header-logo.jpg", "./altamam-pro-logo.png", "./branches.css", "./accounting.js", "./accounting-windows10.css", "./accounting-icons.js", "./accounting-theme.css", "./accounting.css", "./accounting.html", "./admin.html", "./app-icon.png", "./app.css", "./windows10.css", "./windows10-dialogs.js", "./brand-logo.webp", "./customer-portal.js", "./customer.html", "./icon-192.png", "./icon-maskable-512.png", "./index.html", "./manifest.webmanifest", "./notification-badge.png", "./offline-fonts.css", "./oscar-activation-runtime.js", "./oscar-cloud-sync.js", "./oscar-ledger.html", "./p2p-bank-palestine.jpg", "./p2p-jawwal-pay.png", "./p2p-palpay.jpg", "./shared-17a3c04d5aba.jpg", "./shared-c50d51a1a3c0.jpg", "./support.html", "./trial-admin.html", "./trial-payment.html", "./معتمد.html"];
@@ -6,68 +6,121 @@ const allowed = new Set(LOCAL.map(path => new URL(path, BASE).href));
 const indexURL = new URL('./index.html', BASE).href;
 const readyURL = new URL('./__offline_ready', BASE).href;
 const cleanUrl = url => {const out=new URL(url);out.search='';out.hash='';if(out.href===BASE.href)return indexURL;return out.href;};
-async function fetchFresh(req){
-  return fetch(req,{cache:'no-store'});
+const fontsURL = new URL('./offline-fonts.css', BASE).href;
+const MAX_NETWORK_WAIT = 12000;
+let shellRefresh;
+let assetsWarmup;
+
+function fetchWithDeadline(req, options = {}) {
+  return fetch(req, {...options, signal:AbortSignal.timeout(MAX_NETWORK_WAIT)});
 }
-self.addEventListener('install', event => event.waitUntil((async () => {
-  const cache=await caches.open(CACHE);
-  // index.html includes the app logic and styles; other files are optional for boot.
-  // Only the index is required for activating the new worker.
-  const indexResponse=await fetchFresh(indexURL);
-  if(!indexResponse.ok)throw new Error('Offline index not reachable: '+indexURL);
-  await cache.put(indexURL,indexResponse.clone());
-  const extras=LOCAL.filter(path=>path!=='./index.html');
-  let n=0;
-  async function downloadOptional(){
-    while(n<extras.length){
-      const url=new URL(extras[n++],BASE).href;
-      try{
-        const r=await fetchFresh(url);
-        if(r.ok && !r.redirected && new URL(r.url).origin===BASE.origin){await cache.put(url,r.clone());}
-      }catch(error){/* optional resources never prevent installing a working shell */}
-    }
+
+function refreshShell(cache) {
+  if (!shellRefresh) {
+    shellRefresh = (async () => {
+      const response = await fetchWithDeadline(indexURL, {cache:'no-cache'});
+      if (response.ok && !response.redirected &&
+          response.headers.get('content-type')?.includes('text/html')) {
+        await cache.put(indexURL, response);
+      }
+    })().catch(() => {}).finally(() => { shellRefresh = null; });
   }
-  await Promise.all(Array.from({length:4},downloadOptional));
-  await cache.put(readyURL,new Response(BUILD));
+  return shellRefresh;
+}
+
+self.addEventListener('install', event => event.waitUntil((async () => {
+  const cache = await caches.open(CACHE);
+  // A slow first download can retry on the next navigation. Leave the previous
+  // worker active unless we have a complete, usable shell.
+  const response = await fetch(indexURL, {cache:'no-cache'});
+  if (!response.ok || response.redirected ||
+      !response.headers.get('content-type')?.includes('text/html')) {
+    throw new Error('Offline index not reachable: '+indexURL);
+  }
+  await cache.put(indexURL, response);
   await self.skipWaiting();
 })()));
-self.addEventListener('activate', event => event.waitUntil((async()=>{
-  // Remove outdated static shell versions only; never touch IndexedDB or unrelated caches.
-  const keys=await caches.keys();
-  await Promise.all(keys.filter(key=>key.startsWith('oscar-accounting-')&&key!==CACHE).map(key=>caches.delete(key)));
-  await self.clients.claim();
-})()));
-self.addEventListener('fetch',event=>{
-  const req=event.request;
-  if(req.method!=='GET')return;
-  const url=new URL(req.url);
-  if(url.origin!==BASE.origin || !url.pathname.startsWith(BASE.pathname))return;
-  const key=cleanUrl(url.href);
-  if(!allowed.has(key))return;
-  event.respondWith((async()=>{
-    const cache=await caches.open(CACHE);
-    const preferFresh=req.mode==='navigate' || key===indexURL || /\.(?:js|css|webmanifest|html)$/.test(new URL(key).pathname);
-    if(preferFresh){
-      try{
-        const res=await fetchFresh(req);
-        if(res.ok && !res.redirected){await cache.put(key,res.clone());return res;}
-      }catch(_){}
-      const hit=await cache.match(key);
-      if(hit)return hit;
-      return fetch(req);
+
+self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
+
+async function warmAssets() {
+  const cache = await caches.open(CACHE);
+  if (await cache.match(readyURL)) return;
+  const remaining = [...allowed].filter(url => url !== indexURL);
+  let complete = true;
+  async function downloadOptional() {
+    while (remaining.length) {
+      const url = remaining.shift();
+      try {
+        if (await cache.match(url)) continue;
+        const response = await fetchWithDeadline(url);
+        if (!response.ok || response.redirected) {
+          complete = false;
+          continue;
+        }
+        await cache.put(url, response);
+      } catch (_) {
+        complete = false;
+      }
     }
-    const hit=await cache.match(key);
-    if(hit)return hit;
-    const response=await fetch(req);
-    if(response.ok && !response.redirected)await cache.put(key,response.clone());
-    return response;
+  }
+  await Promise.all(Array.from({length:4}, downloadOptional));
+  if (complete) {
+    await cache.put(readyURL, new Response(BUILD));
+    const keys = await caches.keys();
+    // Keep fallback assets from the preceding version while this cache fills.
+    await Promise.all(keys.filter(key => key.startsWith('oscar-accounting-') &&
+      key !== CACHE).map(key => caches.delete(key)));
+  }
+}
+
+self.addEventListener('fetch', event => {
+  const req = event.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  if (url.origin !== BASE.origin || !url.pathname.startsWith(BASE.pathname)) return;
+  const key = cleanUrl(url.href);
+  if (!allowed.has(key)) return;
+
+  const cachePromise = caches.open(CACHE);
+  if (key === indexURL && req.mode === 'navigate') {
+    const cached = cachePromise.then(cache => cache.match(indexURL));
+    event.respondWith(cached.then(hit => hit || fetch(req)));
+    event.waitUntil(Promise.all([cachePromise, cached]).then(([cache, hit]) =>
+      hit ? refreshShell(cache) : undefined));
+    return;
+  }
+
+  event.respondWith((async () => {
+    const cache = await cachePromise;
+    const hit = await cache.match(key);
+    const preferFresh = key !== fontsURL &&
+      (req.mode === 'navigate' || /\.(?:js|css|webmanifest|html)$/.test(url.pathname));
+    if (hit && !preferFresh) return hit;
+    const fallback = hit || await caches.match(key);
+    try {
+      const response = fallback ? await fetchWithDeadline(req) : await fetch(req);
+      if (response.ok && !response.redirected) {
+        // Cache writes must complete without delaying the browser's response.
+        event.waitUntil(cache.put(key, response.clone()).catch(() => {}));
+      }
+      return !response.ok && fallback ? fallback : response;
+    } catch (error) {
+      if (fallback) return fallback;
+      throw error;
+    }
   })());
 });
-self.addEventListener('message',event=>{
-  if(event.data==='SKIP_WAITING')event.waitUntil(self.skipWaiting());
-  if(event.data?.type==='CT_OFFLINE_STATUS')event.waitUntil((async()=>{
-    const cache=await caches.open(CACHE);
-    const complete=!!(await cache.match(readyURL));
+
+self.addEventListener('message', event => {
+  if (event.data === 'SKIP_WAITING') event.waitUntil(self.skipWaiting());
+  if (event.data?.type === 'CT_PRECACHE_ASSETS') {
+    if (!assetsWarmup) assetsWarmup = warmAssets().catch(() => {}).finally(() => { assetsWarmup = null; });
+    event.waitUntil(assetsWarmup);
+  }
+  if (event.data?.type === 'CT_OFFLINE_STATUS') event.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+    const complete = !!(await cache.match(readyURL));
     event.ports[0]?.postMessage({ready:complete,build:BUILD});
   })());
 });
