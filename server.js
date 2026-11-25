@@ -847,8 +847,35 @@ ${contextText}` }, ...history, { role: "user", content: message }];
   }
 }
 var notificationService = require_server_notifications()({ dataDir: TELEGRAM_DATA_DIR, readBody, sendJson });
+const trialApi = require("./trial-service").createTrialService();
+const trialRegistrationRates = new Map();
+async function serveTrial(req, res, origin) {
+  if (req.method !== "POST") return sendJson(res, 405, { error:"POST فقط" }, origin);
+  if (origin) {
+    const host = req.headers.host;
+    if (origin !== "https://" + host && origin !== "http://" + host)
+      return sendJson(res, 403, { error:"عنوان التسجيل غير مسموح" }, "");
+  }
+  try {
+    const data = await readBody(req, 12 * 1024 * 1024);
+    if (data.action === "create") {
+      const now = Date.now();
+      for (const [address, entry] of trialRegistrationRates) if (entry.until <= now) trialRegistrationRates.delete(address);
+      const address = req.socket.remoteAddress || "";
+      const entry = trialRegistrationRates.get(address) || {until:now + 60000, count:0};
+      if (entry.count >= 15) return sendJson(res, 429, { error:"حاول مجددًا بعد دقيقة" }, origin);
+      entry.count++;
+      trialRegistrationRates.set(address, entry);
+    }
+    return sendJson(res, 200, {ok:true, ...await trialApi(data)}, origin);
+  } catch (error) {
+    return sendJson(res, error.status || 502, {ok:false, code:error.code,
+      error:error.status ? error.message : "تعذّر الاتصال بخدمة الشركات التجريبية"}, origin);
+  }
+}
 var server = http.createServer(async (req, res) => {
   const origin = String(req.headers.origin || "");
+  if (req.url.split("?")[0] === "/api/cash-top-trial") return serveTrial(req, res, origin);
   if (req.url.split("?")[0] === "/api/notifications") return notificationService.route(req, res, origin);
   if (req.method === "OPTIONS" && (req.url.startsWith("/api/oscar-ai") || req.url.startsWith("/api/oscar-telegram") || req.url.startsWith("/api/telegram") || req.url.startsWith("/api/oscar-product-image") || req.url.startsWith("/api/customer-short-link"))) {
     const headers = { "Access-Control-Allow-Methods": "GET, POST, HEAD, OPTIONS", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Max-Age": "86400" };

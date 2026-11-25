@@ -2,7 +2,7 @@
 (() => {
 'use strict';
 const $=id=>document.getElementById(id);
-const tableNames=['invoices','purchases','expenses','vouchers','accounts','customers','suppliers','products','warehouses','stock','settings','accounting_coa','accounting_journal'];
+const tableNames=['invoices','purchases','expenses','vouchers','accounts','customers','suppliers','products','warehouses','stock','transfers','settings','accounting_coa','accounting_journal'];
 const CATEGORIES={asset:'الأصول',liability:'الخصوم',equity:'حقوق الملكية',revenue:'الإيرادات',expense:'المصروفات'};
 const base=[
  ['1','الأصول',null,'asset','debit',1],['11','الأصول المتداولة','1','asset','debit',1],
@@ -36,11 +36,14 @@ const base=[
 ].map(([id,name,parentId,category,nature,isGroup])=>({id,code:id,name,parentId:parentId||null,category,nature,isGroup:!!isGroup,system:true}));
 function currentBranch(){try{return String(parent.__CT_ACTIVE_BRANCH__||'main')}catch{return'main'}}
 function normalizeBranch(record){const name=String(record?.branchId||'main');return ['main','الرئيسي','الفرع الرئيسي'].includes(name)?'main':name}
-function scopeAccounting(raw){
- const id=currentBranch(),whs=new Set((raw.warehouses||[]).filter(w=>normalizeBranch(w)===id).map(w=>w.id));
+function scopeAccounting(raw,id=currentBranch()){
+ const whs=new Set((raw.warehouses||[]).filter(w=>normalizeBranch(w)===id).map(w=>w.id));
  const stockedProducts=new Set((raw.stock||[]).filter(s=>whs.has(s.warehouseId)).map(s=>s.productId));
  const filter=(name)=>{raw[name]=(raw[name]||[]).filter(row=>normalizeBranch(row)===id)};
  for(const name of ['invoices','purchases','expenses','vouchers','accounts','customers','suppliers','accounting_journal','accounting_coa'])filter(name);
+ const accountIds=new Set(raw.accounts.map(row=>row.id));
+ raw.transfers=(raw.transfers||[]).filter(row=>row.branchId?normalizeBranch(row)===id:
+  accountIds.has(row.fromAccountId)||accountIds.has(row.toAccountId));
  raw.products=(raw.products||[]).filter(p=>normalizeBranch(p)===id||stockedProducts.has(p.id));
  return raw;
 }
@@ -63,7 +66,10 @@ function openDB(){return new Promise((res,rej)=>{const rq=indexedDB.open(dbName(
   for(const [name,defs] of Object.entries(indexes)){if(!db.objectStoreNames.contains(name))continue;const store=rq.transaction.objectStore(name);for(const [index,path] of defs)if(!store.indexNames.contains(index))store.createIndex(index,path,{unique:false})}
  };rq.onsuccess=()=>{const db=rq.result;db.onversionchange=()=>db.close();res(db)};rq.onerror=()=>rej(rq.error);rq.onblocked=()=>showToast('أغلق أي نسخة أخرى من البرنامج لإتمام تحديث قاعدة البيانات',true)})}
 function readStore(db,name){return new Promise((res,rej)=>{if(!db.objectStoreNames.contains(name)){res([]);return}const tx=db.transaction(name,'readonly');const r=tx.objectStore(name).getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=()=>rej(r.error)})}
-async function writeRecord(store,row){if(!S.db)throw Error('قاعدة البيانات غير متصلة');if(['accounting_coa','accounting_journal'].includes(store)&&!row.branchId)row={...row,branchId:currentBranch()};await new Promise((res,rej)=>{const tx=S.db.transaction(store,'readwrite');tx.objectStore(store).put(row);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error||Error('فشل حفظ البيانات'))});try{const cloud=parent.OscarCloudSync;if(cloud?.captureStoreChange){const ok=await cloud.captureStoreChange(store,row,{localUserWrite:true});if(!ok&&companyId()!=='local')S.warnings.push('تُحفظ تعديلات المحاسبة محلياً؛ تحقق من تهيئة مزامنة الشركة.')}}catch(e){showToast('حُفظ محلياً، والمزامنة ستحتاج لإعادة المحاولة',true)}try{parent.dispatchEvent(new CustomEvent('oscar:db-mutation',{detail:{storeName:store,value:row,action:'update'}}))}catch{}}
+async function writeRecord(store,row){if(!S.db)throw Error('قاعدة البيانات غير متصلة');if(['accounting_coa','accounting_journal'].includes(store)&&!row.branchId)row={...row,branchId:currentBranch()};await new Promise((res,rej)=>{const tx=S.db.transaction(store,'readwrite');const write=()=>tx.objectStore(store).put(row);
+ if(parent.CashTopTrialValidateWrites)parent.CashTopTrialValidateWrites(tx,[{storeName:store,type:'put',value:row}],write,rej);
+ else write();
+ tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error||Error('فشل حفظ البيانات'))});try{const cloud=parent.OscarCloudSync;if(cloud?.captureStoreChange){const ok=await cloud.captureStoreChange(store,row,{localUserWrite:true});if(!ok&&companyId()!=='local')S.warnings.push('تُحفظ تعديلات المحاسبة محلياً؛ تحقق من تهيئة مزامنة الشركة.')}}catch(e){showToast('حُفظ محلياً، والمزامنة ستحتاج لإعادة المحاولة',true)}try{parent.dispatchEvent(new CustomEvent('oscar:db-mutation',{detail:{storeName:store,value:row,action:'update'}}))}catch{}}
 function accountById(id){return S.accounts.find(a=>a.id===id)}
 function applyAccounts(){
  const byId=new Map(base.map(a=>[a.id,{...a}]));
@@ -82,11 +88,12 @@ function makeEntry(source,rec,description,lines,ref='',manual=false){
  const clean=lines.map(l=>({accountId:l.accountId,debit:Math.round(l.debit||0),credit:Math.round(l.credit||0),note:String(l.note||'')})).filter(l=>l.debit||l.credit),d=clean.reduce((x,l)=>x+l.debit,0),c=clean.reduce((x,l)=>x+l.credit,0);
  if(!clean.length)return null;
  if(d!==c||d<=0||clean.some(l=>l.debit<0||l.credit<0||(l.debit&&l.credit)||!accountById(l.accountId))){S.warnings.push('تعذر تكوين قيد متوازن من المصدر '+source+': '+(rec.id||''));return null}
- return {id:source+':'+rec.id,number:String(ref||rec.invoiceNumber||rec.voucherNumber||rec.id||''),date:date10(rec.date||rec.createdAt)||nowDay(),financialYearId:rec.financialYearId||'',description,lines:clean,source,manual,sourceRecordId:String(rec.id||'')}
+ return {id:source+':'+rec.id,number:String(ref||rec.invoiceNumber||rec.voucherNumber||rec.id||''),date:date10(rec.date||rec.createdAt)||nowDay(),financialYearId:rec.financialYearId||'',branchId:normalizeBranch(rec),description,lines:clean,source,manual,sourceRecordId:String(rec.id||'')}
 }
 const dr=(accountId,amount,note)=>({accountId,debit:amount,credit:0,note});const cr=(accountId,amount,note)=>({accountId,debit:0,credit:amount,note});
 function distributePayments(raw,target,kind='debit'){
  const rows=[],pays=(Array.isArray(raw.payments)?raw.payments:[]).filter(x=>cents(x.amount)>0),isDebit=kind==='debit';let used=0;
+ if(!pays.length&&raw.accountId)pays.push({accountId:raw.accountId,amount:target/100});
  for(const p of pays){if(used>=target)break;const amount=Math.min(target-used,cents(p.amount));if(amount>0){rows.push((isDebit?dr:cr)(accountCash(p.accountId),amount,p.method||''));used+=amount}}
  if(used<target)rows.push((isDebit?dr:cr)('110199',target-used,'الدفعة بدون حساب مالي محدد'));
  return rows;
@@ -108,15 +115,35 @@ function buildAutomaticEntries(){
  const lines=[dr('1104',total-tax,'توريد بضاعة'),...(tax?[dr('1106',tax,'ضريبة مدخلات')]:[])];if(due)lines.push(cr(accountSupplier(p.supplierId),due,'مستحق للمورد'));lines.push(...distributePayments(p,paid,'credit'));
  push(makeEntry('purchases',p,'فاتورة مشتريات '+(p.invoiceNumber||''),lines,p.invoiceNumber))}
  for(const x of S.raw.expenses||[]){if(!isActive(x))continue;const amount=Math.abs(cents(x.amount));if(!amount)continue;
- push(makeEntry('expenses',x,'مصروف: '+(x.category||x.notes||'بدون تصنيف'),[dr(expenseCode(x.category),amount),cr(accountCash(x.accountId),amount)],'EXP-'+String(x.id||'').slice(-9)))}
+ push(makeEntry('expenses',x,'مصروف: '+(x.category||x.notes||'بدون تصنيف'),[dr(x.ledgerAccountId&&accountById(x.ledgerAccountId)?.category==='expense'?x.ledgerAccountId:expenseCode(x.category),amount),cr(accountCash(x.accountId),amount)],'EXP-'+String(x.id||'').slice(-9)))}
  for(const v of S.raw.vouchers||[]){if(!isActive(v)||v.distributionManaged)continue;const amount=Math.abs(cents(v.amount));if(!amount)continue;
- const isReceipt=v.type==='receipt',cash=accountCash(v.accountId);let other='2104';if(v.partyType==='customer')other=accountCustomer(v.partyId);else if(v.partyType==='supplier')other=accountSupplier(v.partyId);
+ const isReceipt=v.type==='receipt';let other='2104';if(v.partyType==='customer')other=accountCustomer(v.partyId);else if(v.partyType==='supplier')other=accountSupplier(v.partyId);else if(v.ledgerAccountId&&accountById(v.ledgerAccountId))other=v.ledgerAccountId;
  // Customer receipt: DR cash/CR receivable; supplier payment: DR payable/CR cash.
- const lines=isReceipt?[dr(cash,amount),cr(other,amount)]:[dr(other,amount),cr(cash,amount)];
+ const paymentSide=isReceipt?'debit':'credit';
+ const liquid=v.sourceType==='debt_without_account'?[(isReceipt?dr:cr)('2104',amount)]:distributePayments(v,amount,paymentSide);
+ const lines=[...liquid,(isReceipt?cr:dr)(other,amount)];
  push(makeEntry('vouchers',v,(isReceipt?'سند قبض ':'سند صرف ')+(v.voucherNumber||'')+(v.partyName?' — '+v.partyName:''),lines,v.voucherNumber||('V-'+String(v.id).slice(-8))))}
- // Registered original opening balances only; never infer from changing current balances.
+ // Registered opening balances are paired with equity only when source records provide them explicitly.
+ for(const [store,type,normalSide] of [['customers','customer','debit'],['suppliers','supplier','credit']]){
+  for(const row of S.raw[store]||[]){
+   if(!isActive(row)||row.fiscalOpeningMigratedAt||!cents(row.openingBalanceAmount))continue;
+   const amount=Math.abs(cents(row.openingBalanceAmount));
+   const increase=(row.openingBalanceSide|| (type==='customer'?'ours':'theirs'))===(type==='customer'?'ours':'theirs');
+   const account=type+':'+row.id;
+   const debit=(normalSide==='debit')===increase;
+   push(makeEntry('opening',row,'رصيد افتتاحي — '+row.name,
+    [dr(debit?account:'3105',amount),cr(debit?'3105':account,amount)],'OB-'+String(row.id).slice(-8)));
+  }
+ }
+ for(const row of S.raw.transfers||[]){
+  const {fromAccountId,toAccountId}=row;
+  const amount=cents(row.amount);
+  if(!isActive(row)||!fromAccountId||!toAccountId||fromAccountId===toAccountId||amount<=0)continue;
+  push(makeEntry('transfer',row,'تحويل بين الحسابات المالية',
+   [dr(accountCash(toAccountId),amount),cr(accountCash(fromAccountId),amount)],row.referenceNumber||'TR-'+String(row.id).slice(-8)));
+ }
  // Manual journals are independent and never duplicated into operational source records.
- for(const raw of S.raw.accounting_journal||[]){if(raw.deletedAt||!Array.isArray(raw.lines))continue;const lines=raw.lines.map(l=>({accountId:l.accountId,debit:cents(l.debit),credit:cents(l.credit),note:l.note}));push(makeEntry('manual',raw,raw.description,lines,raw.number,true))}
+ for(const raw of S.raw.accounting_journal||[]){if(!isActive(raw)||!Array.isArray(raw.lines))continue;const lines=raw.lines.map(l=>({accountId:l.accountId,debit:cents(l.debit),credit:cents(l.credit),note:l.note}));push(makeEntry('manual',raw,raw.description,lines,raw.number,true))}
  return out.sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id));
 }
 function selectedEntries(){const end=$('as-of').value||nowDay(),fy=$('fiscal-filter').value;return S.entries.filter(e=>e.date<=end&&(fy==='all'||e.financialYearId===fy))}
@@ -132,12 +159,13 @@ function sortedChildren(parentId){return S.accounts.filter(a=>a.parentId===paren
 function setTab(tab){
  S.tab=tab;
  document.querySelectorAll('[data-tab]').forEach(b=>{const active=b.dataset.tab===tab;b.className='tab-btn flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm '+(active?'font-bold transition-all bg-white text-indigo-700 shadow-sm':'font-semibold text-slate-600 hover:text-slate-900 transition-all')});
- for(const id of ['coa','journal','balance','trial'])$('panel-'+id).hidden=id!==tab;
+ for(const id of ['coa','journal','balance','trial','reports'])$('panel-'+id).hidden=id!==tab;
  document.body.classList.remove('print-balance','print-trial');render();
 }
 function render(){
  const f=calculate();S.balances=f.balances;
  $('entry-count').textContent=f.entries.length;$('kpi-assets').textContent=moneyC(f.assets);$('kpi-right').textContent=moneyC(f.right);$('kpi-profit').textContent=moneyC(f.profit);
+ $('kpi-profit').parentElement.parentElement.hidden=reportContext().showProfit===false;
  $('kpi-profit').className='text-lg sm:text-xl font-extrabold tabular-nums mt-0.5 '+(f.profit>=0?'text-emerald-600':'text-rose-600');
  const ok=f.diff===0&&f.journalDebit===f.journalCredit;
  $('kpi-balanced').innerHTML=ok?'<i class="fa-solid fa-circle-check"></i> متوازنة 100%':'<i class="fa-solid fa-triangle-exclamation"></i> فرق: '+moneyC(Math.abs(f.diff));
@@ -149,18 +177,20 @@ function render(){
  $('balance-status').className='px-3.5 py-2 rounded-xl text-xs font-extrabold border flex items-center gap-1.5 '+(ok?'bg-emerald-50 text-emerald-700 border-emerald-200':'bg-rose-50 text-rose-700 border-rose-200');
  $('balance-status').innerHTML=ok?'<i class="fa-solid fa-check-circle"></i> الميزانية متوازنة (الأصول = الخصوم + حقوق الملكية)':'<i class="fa-solid fa-triangle-exclamation"></i> يوجد فرق غير متوازن: '+moneyC(Math.abs(f.diff));
  $('balance-total-assets').textContent=moneyC(f.assets);$('balance-total-right').textContent=moneyC(f.right);
- if(S.tab==='coa')renderCoa(f);if(S.tab==='journal')renderJournal(f);if(S.tab==='balance')renderBalance(f);if(S.tab==='trial')renderTrial(f);
+ if(S.tab==='coa')renderCoa(f);if(S.tab==='journal')renderJournal(f);if(S.tab==='balance')renderBalance(f);if(S.tab==='trial')renderTrial(f);if(S.tab==='reports'){renderReports();refreshReportHistory();}
 }
 function renderCoa(f){
- const search=$('coa-search').value.trim().toLowerCase();let html='';
+ const search=$('coa-search').value.trim().toLowerCase(),hideZero=$('coa-hide-zero').checked;let html='';
+ const visible=new Map();const hasBalance=account=>{if(!visible.has(account.id))visible.set(account.id,!!f.balances[account.id]||sortedChildren(account.id).some(hasBalance));return visible.get(account.id)};
  const badges={asset:'bg-emerald-50 text-emerald-700 border-emerald-200',liability:'bg-amber-50 text-amber-700 border-amber-200',equity:'bg-purple-50 text-purple-700 border-purple-200',revenue:'bg-sky-50 text-sky-700 border-sky-200',expense:'bg-rose-50 text-rose-700 border-rose-200'};
  const row=(a,depth,isSearch=false)=>{
+  if(hideZero&&!hasBalance(a))return;
   const kids=sortedChildren(a.id),isOpen=S.expanded.has(a.id),bal=f.balances[a.id]||0,isRoot=!a.parentId&&!isSearch,isGroup=a.isGroup;
   const rowBg=isRoot?'bg-slate-50/90 font-extrabold':isGroup?'bg-white font-bold':'bg-white hover:bg-indigo-50/30';
   const countMov=S.entries.some(e=>e.lines.some(l=>l.accountId===a.id));
-  const canDelete=!a.system&&!a.dynamic&&!kids.length&&!countMov;
+  const canDelete=!a.system&&!a.dynamic&&!kids.length&&!countMov&&!bal;
   const cssNature=a.nature==='debit'?'bg-emerald-50 text-emerald-700':'bg-indigo-50 text-indigo-700';
-  html+=`<tr class="${rowBg} transition-colors group"><td class="py-3 px-4 tabular-nums"><span class="inline-block px-2 py-0.5 rounded-md text-xs font-extrabold ${isRoot?'bg-slate-800 text-white':'bg-slate-100 text-slate-700'}">${escapeHtml(a.code)}</span></td><td class="py-3 px-4"><div class="flex items-center gap-2" style="padding-right:${isSearch?0:Math.min(depth*22,176)}px">${!isSearch?(kids.length?`<button type="button" data-toggle="${escapeHtml(a.id)}" class="w-6 h-6 rounded-lg hover:bg-slate-200/70 text-slate-500 flex items-center justify-center transition"><i class="fa-solid ${isOpen?'fa-chevron-down':'fa-chevron-left'} text-xs"></i></button>`:'<span class="w-6 inline-flex justify-center text-slate-300"><i class="fa-solid fa-turn-up fa-rotate-270 text-xs"></i></span>'):''}<span class="w-7 h-7 rounded-lg flex items-center justify-center text-xs ${isGroup?'bg-amber-50 text-amber-600':'bg-indigo-50 text-indigo-600'}"><i class="fa-solid ${isGroup?'fa-folder-open':'fa-file-lines'}"></i></span><div><span class="text-slate-800 ${isRoot?'text-base':'text-sm'}">${escapeHtml(a.name)}</span>${isRoot?`<span class="mr-2 text-xs px-2 py-0.5 rounded-full border ${badges[a.category]||badges.asset}">${CATEGORIES[a.category]||''}</span>`:''}</div></div></td><td class="py-3 px-4 text-center"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${cssNature}">${a.nature==='debit'?'مدين':'دائن'}</span></td><td class="py-3 px-4 text-center hidden md:table-cell"><span class="text-xs text-slate-500">${isGroup?'حساب رئيسي':'حساب فرعي'}</span></td><td class="py-3 px-4 text-left tabular-nums font-extrabold ${bal===0?'text-slate-400':((a.nature==='credit'?-bal:bal)<0?'text-rose-600':'text-slate-900')}">${moneyC(a.nature==='credit'?-bal:bal)}</td><td class="py-3 px-4 text-center no-print"><div class="inline-flex items-center justify-center gap-1">${isGroup?`<button type="button" data-addchild="${escapeHtml(a.id)}" title="إضافة حساب فرعي" class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition text-xs font-bold flex items-center gap-1"><i class="fa-solid fa-plus-circle"></i><span class="hidden sm:inline">فرعي</span></button>`:`<button type="button" data-withaccount="${escapeHtml(a.id)}" title="إنشاء قيد على الحساب" class="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition text-xs"><i class="fa-solid fa-pen-to-square"></i></button>`}${!a.system&&!a.dynamic?`<button type="button" data-editaccount="${escapeHtml(a.id)}" title="تعديل الحساب" class="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition text-xs"><i class="fa-solid fa-sliders"></i></button>`:''}${canDelete?`<button type="button" data-deleteaccount="${escapeHtml(a.id)}" title="حذف الحساب" class="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition text-xs"><i class="fa-solid fa-trash-can"></i></button>`:''}</div></td></tr>`;
+  html+=`<tr class="${rowBg} transition-colors group"><td class="py-3 px-4 tabular-nums"><span class="inline-block px-2 py-0.5 rounded-md text-xs font-extrabold ${isRoot?'bg-slate-800 text-white':'bg-slate-100 text-slate-700'}">${escapeHtml(a.code)}</span></td><td class="py-3 px-4"><div class="flex items-center gap-2" style="padding-right:${isSearch?0:Math.min(depth*22,176)}px">${!isSearch?(kids.length?`<button type="button" data-toggle="${escapeHtml(a.id)}" class="w-6 h-6 rounded-lg hover:bg-slate-200/70 text-slate-500 flex items-center justify-center transition"><i class="fa-solid ${isOpen?'fa-chevron-down':'fa-chevron-left'} text-xs"></i></button>`:'<span class="w-6 inline-flex justify-center text-slate-300"><i class="fa-solid fa-turn-up fa-rotate-270 text-xs"></i></span>'):''}<span class="w-7 h-7 rounded-lg flex items-center justify-center text-xs ${isGroup?'bg-amber-50 text-amber-600':'bg-indigo-50 text-indigo-600'}"><i class="fa-solid ${isGroup?'fa-folder-open':'fa-file-lines'}"></i></span><div><span class="text-slate-800 ${isRoot?'text-base':'text-sm'}">${escapeHtml(a.name)}</span>${isRoot?`<span class="mr-2 text-xs px-2 py-0.5 rounded-full border ${badges[a.category]||badges.asset}">${CATEGORIES[a.category]||''}</span>`:''}</div></div></td><td class="py-3 px-4 text-center"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${cssNature}">${a.nature==='debit'?'مدين':'دائن'}</span></td><td class="py-3 px-4 text-center hidden md:table-cell"><span class="text-xs text-slate-500">${isGroup?'حساب رئيسي':'حساب فرعي'}</span></td><td class="py-3 px-4 text-left tabular-nums font-extrabold ${bal===0?'text-slate-400':((a.nature==='credit'?-bal:bal)<0?'text-rose-600':'text-slate-900')}"><button type="button" class="ct-ledger-link" data-movement="${escapeHtml(a.id)}" aria-label="عرض حركات ${escapeHtml(a.name)}">${moneyC(a.nature==='credit'?-bal:bal)}</button></td><td class="py-3 px-4 text-center no-print"><div class="inline-flex items-center justify-center gap-1">${isGroup?`<button type="button" data-addchild="${escapeHtml(a.id)}" title="إضافة حساب فرعي" class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition text-xs font-bold flex items-center gap-1"><i class="fa-solid fa-plus-circle"></i><span class="hidden sm:inline">فرعي</span></button>`:`<button type="button" data-withaccount="${escapeHtml(a.id)}" title="إنشاء قيد على الحساب" class="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition text-xs"><i class="fa-solid fa-pen-to-square"></i></button>`}${!a.system&&!a.dynamic?`<button type="button" data-editaccount="${escapeHtml(a.id)}" title="تعديل الحساب" class="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition text-xs"><i class="fa-solid fa-sliders"></i></button>`:''}${canDelete?`<button type="button" data-deleteaccount="${escapeHtml(a.id)}" title="حذف الحساب" class="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition text-xs"><i class="fa-solid fa-trash-can"></i></button>`:''}</div></td></tr>`;
   if(!isSearch&&isOpen)kids.forEach(ch=>row(ch,depth+1));
  };
  if(search){for(const a of S.accounts.filter(a=>a.name.toLowerCase().includes(search)||String(a.code).toLowerCase().includes(search)).sort((a,b)=>a.code.localeCompare(b.code,undefined,{numeric:true})))row(a,0,true)}else sortedChildren(null).forEach(a=>row(a,0));
@@ -198,7 +228,7 @@ function showCoverage(){
  $('live-status').textContent=`${S.entries.filter(x=>!x.manual).length} قيد تلقائي + ${S.entries.filter(x=>x.manual).length} قيد يدوي من بيانات الشركة الحالية.`;
 }
 
-async function loadAll(){if(S.loading)return;S.loading=true;$('live-status').textContent='جارٍ تحميل السجلات الفعلية للشركة…';try{S.db?.close();S.db=await openDB();const pairs=await Promise.all(tableNames.map(async name=>[name,await readStore(S.db,name)]));S.raw=scopeAccounting(Object.fromEntries(pairs));S.warnings=[];applyAccounts();S.entries=buildAutomaticEntries();fillFiscalYears();showCoverage();render()}catch(e){console.error('[CashTop accounting]',e);showToast('خطأ في قراءة بيانات المحاسبة: '+e.message,true);$('live-status').textContent='تعذر قراءة قاعدة البيانات'}finally{S.loading=false}}
+async function loadAll(){if(S.loading)return;S.loading=true;$('live-status').textContent='جارٍ تحميل السجلات الفعلية للشركة…';try{S.db?.close();S.db=await openDB();const pairs=await Promise.all(tableNames.map(async name=>[name,await readStore(S.db,name)]));S.companyRaw=Object.fromEntries(pairs);S.raw=scopeAccounting({...S.companyRaw});S.warnings=[];applyAccounts();S.entries=buildAutomaticEntries();fillFiscalYears();showCoverage();render()}catch(e){console.error('[CashTop accounting]',e);showToast('خطأ في قراءة بيانات المحاسبة: '+e.message,true);$('live-status').textContent='تعذر قراءة قاعدة البيانات'}finally{S.loading=false}}
 function parentOptions(except=''){const banned=new Set([except]);const walk=id=>{for(const child of sortedChildren(id)){banned.add(child.id);walk(child.id)}};if(except)walk(except);return S.accounts.filter(a=>a.isGroup&&!a.dynamic&&!banned.has(a.id)).sort((a,b)=>a.code.localeCompare(b.code,undefined,{numeric:true})).map(a=>`<option value="${escapeHtml(a.id)}">${escapeHtml(a.code+' — '+a.name)}</option>`).join('')}
 function suggestCode(parentId){const p=accountById(parentId);if(!p)return'';const used=new Set(S.accounts.map(a=>a.code));for(let i=1;i<1000;i++){const code=p.code+(i<10?'0':'')+i;if(!used.has(code))return code}return p.code+'-'+uuid().slice(0,7)}
 function openAccount(parentId='11',edit=''){
@@ -215,7 +245,11 @@ function openAccount(parentId='11',edit=''){
 function hasMovements(id){return S.entries.some(e=>e.lines.some(l=>l.accountId===id))}
 async function writeAccountAndOpening(record,entry){
  if(!S.db)throw Error('قاعدة البيانات غير متصلة');
- await new Promise((resolve,reject)=>{const tx=S.db.transaction(['accounting_coa','accounting_journal'],'readwrite');tx.objectStore('accounting_coa').put(record);tx.objectStore('accounting_journal').put(entry);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('فشل الترحيل المتوازن'))});
+ await new Promise((resolve,reject)=>{const tx=S.db.transaction(['accounting_coa','accounting_journal'],'readwrite');const operations=[{storeName:'accounting_coa',type:'put',value:record},{storeName:'accounting_journal',type:'put',value:entry}];
+ const write=()=>operations.forEach(op=>tx.objectStore(op.storeName).put(op.value));
+ if(parent.CashTopTrialValidateWrites)parent.CashTopTrialValidateWrites(tx,operations,write,reject);
+ else write();
+ tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('فشل الترحيل المتوازن'))});
  for(const [store,row] of [['accounting_coa',record],['accounting_journal',entry]]){try{const cloud=parent.OscarCloudSync;if(cloud?.captureStoreChange){const ok=await cloud.captureStoreChange(store,row,{localUserWrite:true});if(!ok)S.warnings.push('قيد افتتاحي محفوظ محلياً؛ المزامنة تحتاج إلى مراجعة')}}catch(e){S.warnings.push('قيد افتتاحي محفوظ محلياً؛ قد تتطلب المزامنة إعادة محاولة')}try{parent.dispatchEvent(new CustomEvent('oscar:db-mutation',{detail:{storeName:store,value:row,action:'update'}}))}catch{}}
 }
 async function saveAccount(ev){
@@ -242,7 +276,10 @@ async function deleteAccount(id){
  const a=accountById(id);if(!a||a.system||a.dynamic)return;
  if(sortedChildren(id).length||hasMovements(id))return showToast('لا يمكن حذف حساب مرتبط بأبناء أو قيود محاسبية',true);
  if(!await askConfirm('حذف حساب من الشجرة','هل أنت متأكد من حذف الحساب '+a.code+' - '+a.name+'؟'))return;
- try{await writeRecord('accounting_coa',{...a,deletedAt:new Date().toISOString(),updatedAt:new Date().toISOString()});await loadAll();showToast('تم تعطيل الحساب بنجاح')}catch(e){showToast(e.message,true)}
+ try{
+  const latest=Object.fromEntries(await Promise.all(['accounting_coa','accounting_journal','expenses','vouchers'].map(async name=>[name,await readStore(S.db,name)])));
+  if((latest.accounting_coa||[]).some(row=>!row.deletedAt&&row.parentId===id)||(latest.accounting_journal||[]).some(row=>(row.lines||[]).some(line=>line.accountId===id))||[...latest.expenses,...latest.vouchers].some(row=>row.ledgerAccountId===id))throw Error('الحساب مرتبط بحركات أو حسابات فرعية');
+  await writeRecord('accounting_coa',{...a,deletedAt:new Date().toISOString(),updatedAt:new Date().toISOString()});await loadAll();showToast('تم حذف الحساب من شجرة الحسابات')}catch(e){showToast(e.message,true)}
 }
 function leafOptions(selected=''){return '<option value="">اختر الحساب الفرعي</option>'+S.accounts.filter(a=>!a.isGroup).sort((a,b)=>a.code.localeCompare(b.code,undefined,{numeric:true})).map(a=>`<option value="${escapeHtml(a.id)}" ${a.id===selected?'selected':''}>${escapeHtml(a.code+' — '+a.name)}</option>`).join('')}
 function addLine(accountId=''){
@@ -270,7 +307,7 @@ function bind(){
  $('new-account').addEventListener('click',()=>openAccount());$('new-journal').addEventListener('click',()=>newJournal());$('journal-add-inside').addEventListener('click',()=>newJournal());$('reload-data').addEventListener('click',loadAll);
  $('expand-all').addEventListener('click',()=>{S.expanded=new Set(S.accounts.filter(a=>a.isGroup).map(a=>a.id));render()});$('collapse-all').addEventListener('click',()=>{S.expanded.clear();render()});
  document.querySelectorAll('[data-close]').forEach(x=>x.addEventListener('click',()=>{const m=$(x.dataset.close);m.hidden=true;document.body.classList.remove('ct-modal-open')}));document.querySelectorAll('#account-modal,#journal-modal,#confirm-modal').forEach(x=>x.addEventListener('pointerdown',ev=>{if(ev.target===x){x.hidden=true;document.body.classList.remove('ct-modal-open')}}));
- $('coa-body').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;if(d.toggle){S.expanded.has(d.toggle)?S.expanded.delete(d.toggle):S.expanded.add(d.toggle);render()}else if(d.addchild)openAccount(d.addchild);else if(d.editaccount)openAccount('',d.editaccount);else if(d.deleteaccount)deleteAccount(d.deleteaccount);else if(d.withaccount)newJournal(d.withaccount)});
+ $('coa-body').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;if(d.movement)accountMovements(d.movement);else if(d.toggle){S.expanded.has(d.toggle)?S.expanded.delete(d.toggle):S.expanded.add(d.toggle);render()}else if(d.addchild)openAccount(d.addchild);else if(d.editaccount)openAccount('',d.editaccount);else if(d.deleteaccount)deleteAccount(d.deleteaccount);else if(d.withaccount)newJournal(d.withaccount)});
  $('account-parent').addEventListener('change',()=>{if(!$('account-edit-id').value){$('account-code').value=suggestCode($('account-parent').value);$('account-nature').value=accountById($('account-parent').value)?.nature||'debit'}});$('account-group').addEventListener('change',()=>{const hide=$('account-group').value==='true'||!!$('account-edit-id').value;$('account-opening').disabled=hide;$('opening-balance-wrapper').classList.toggle('opacity-40',hide);$('opening-balance-hint').hidden=hide});$('account-form').addEventListener('submit',saveAccount);
  $('add-je-line').addEventListener('click',()=>{addLine();recalcJournal()});$('je-lines').addEventListener('click',e=>{if(e.target.closest('[data-remove-line]')){if($('je-lines').children.length<3)return showToast('القيد يتطلب سطرين على الأقل',true);e.target.closest('tr').remove();recalcJournal()}});
  $('je-description').addEventListener('input',recalcJournal);$('je-date').addEventListener('change',recalcJournal);$('save-je').addEventListener('click',saveJournal);
@@ -278,9 +315,364 @@ function bind(){
  document.querySelectorAll('[data-print]').forEach(b=>b.addEventListener('click',()=>{document.body.classList.add(S.tab==='balance'?'print-balance':'print-trial');window.print()}));window.addEventListener('afterprint',()=>document.body.classList.remove('print-balance','print-trial'));
  $('data-menu-btn').addEventListener('click',()=>{$('data-menu-dropdown').hidden=!$('data-menu-dropdown').hidden});document.addEventListener('pointerdown',e=>{if(!$('data-menu-wrap').contains(e.target))$('data-menu-dropdown').hidden=true});
  document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.querySelectorAll('#account-modal,#journal-modal,#confirm-modal').forEach(m=>m.hidden=true);document.body.classList.remove('ct-modal-open')}});
- let timer=null;const schedule=()=>{clearTimeout(timer);timer=setTimeout(loadAll,750)};try{parent.addEventListener('oscar:sync-applied',schedule);parent.addEventListener('oscar:db-mutation',e=>{if(['invoices','purchases','expenses','vouchers','accounts','customers','suppliers','accounting_coa','accounting_journal'].includes(e.detail?.storeName))schedule()});parent.addEventListener('oscar:activation-loaded',schedule)}catch{};
+ let timer=null;const schedule=()=>{S.reportHistory=null;clearTimeout(timer);timer=setTimeout(loadAll,750)};try{parent.addEventListener('oscar:sync-applied',schedule);parent.addEventListener('oscar:db-mutation',e=>{if(['invoices','purchases','expenses','vouchers','accounts','customers','suppliers','transfers','accounting_coa','accounting_journal'].includes(e.detail?.storeName))schedule()});parent.addEventListener('oscar:activation-loaded',schedule)}catch{};
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')schedule()});
 }
-function init(){bind();loadAll()}
+const reportNames={
+ income:"قائمة الدخل",balance:"الميزانية العمومية",aging:"أعمار الذمم المدينة",
+ itemSales:"مجموع المبيعات حسب الصنف",customerSales:"مجموع المبيعات حسب الزبون",
+ itemProfit:"نسبة ربح كل صنف",customerProfit:"الربح من كل زبون",flow:"قائمة التدفقات النقدية"
+};
+
+function reportContext() {
+ try{return parent.__CT_REPORT_CONTEXT__||{}}catch{return {}}
+}
+
+function financialAccountsTree(root) {
+ const ids=new Set();
+ function visit(id){
+  if(ids.has(id))return;
+  ids.add(id);
+  for(const account of sortedChildren(id))visit(account.id);
+ }
+ visit(root);
+ return ids;
+}
+
+function accountMovements(id) {
+ const account=accountById(id);
+ if(!account)return;
+ const descendants=financialAccountsTree(id);
+ let running=0;
+ const rows=[];
+ for(const entry of selectedEntries()){
+  const moves=entry.lines.filter(line=>descendants.has(line.accountId));
+  if(!moves.length)continue;
+  const debit=moves.reduce((sum,line)=>sum+line.debit,0);
+  const credit=moves.reduce((sum,line)=>sum+line.credit,0);
+  running+=debit-credit;
+  rows.push([entry.date,entry.number,entry.description,debit/100,credit/100,(account.nature==="credit"?-running:running)/100]);
+ }
+ const title=account.code+" — "+account.name;
+ $("movement-title").textContent=title;
+ renderFinanceTable($("movement-table"),["التاريخ","المرجع","البيان","مدين","دائن","الرصيد"],rows);
+ $("account-movements").showModal();
+}
+
+function renderFinanceTable(target,headers,rows){
+ const cells=(row,tag)=>row.map(cell=>`<${tag}>${escapeHtml(typeof cell==="number"?cell.toLocaleString("en-US",{maximumFractionDigits:2}):cell)}</${tag}>`).join("");
+ target.innerHTML=`<table><thead><tr>${cells(headers,"th")}</tr></thead><tbody>${rows.length
+  ?rows.map(row=>`<tr>${cells(row,"td")}</tr>`).join("")
+  :`<tr><td colspan="${headers.length}">لا توجد حركات في الفترة المحددة</td></tr>`}</tbody></table>`;
+}
+
+function ledgerReportRows(raw,kind,selection) {
+ const posted=selection.entries.filter(row=>row.date<=selection.end);
+ const period=posted.filter(row=>!selection.start||row.date>=selection.start);
+ const accounts=new Map(selection.accounts.map(row=>[row.id,row]));
+ const totals=new Map();
+ for(const entry of kind==="balance"?posted:period){
+  for(const line of entry.lines)totals.set(line.accountId,(totals.get(line.accountId)||0)+line.debit-line.credit);
+ }
+ const byCategory=categories=>selection.accounts.filter(account=>!account.isGroup&&categories.includes(account.category))
+  .map(account=>[account,totals.get(account.id)||0]).filter(([,value])=>value!==0);
+ if(kind==="income"){
+  const lines=byCategory(["revenue","expense"]);
+  const revenue=-lines.filter(([account])=>account.category==="revenue").reduce((sum,[,amount])=>sum+amount,0);
+  const expenses=lines.filter(([account])=>account.category==="expense").reduce((sum,[,amount])=>sum+amount,0);
+  return {headers:["البند","المبلغ"],rows:[
+   ...lines.map(([account,amount])=>[account.code+" — "+account.name,(account.category==="revenue"?-amount:amount)/100]),
+   ["إجمالي الإيرادات",revenue/100],["إجمالي المصروفات",expenses/100],["صافي الدخل",(revenue-expenses)/100]
+  ]};
+ }
+ if(kind==="balance"){
+  const lines=byCategory(["asset","liability","equity"]);
+  const amounts=category=>lines.filter(([account])=>account.category===category).reduce((sum,[,value])=>sum+value,0);
+  const assets=amounts("asset"),liabilities=-amounts("liability"),equity=-amounts("equity");
+  const profit=-byCategory(["revenue","expense"]).reduce((sum,[,amount])=>sum+amount,0);
+  return {headers:["التصنيف","الحساب","الرصيد"],rows:[
+   ...lines.map(([account,amount])=>[CATEGORIES[account.category],account.code+" — "+account.name,(account.category==="asset"?amount:-amount)/100]),
+   ["الأصول","إجمالي الأصول",assets/100],["الخصوم","إجمالي الخصوم",liabilities/100],
+   ["حقوق الملكية","نتيجة الأعمال المتراكمة",profit/100],["حقوق الملكية","إجمالي حقوق الملكية",(equity+profit)/100],
+   ["","إجمالي الخصوم وحقوق الملكية",(liabilities+equity+profit)/100]
+  ]};
+ }
+ if(kind==="aging")return agingReport(raw,posted,selection.end);
+ if(kind==="flow")return cashFlowReport(accounts,posted,period);
+ return salesReport(raw.invoices||[],kind,selection.start,selection.end);
+}
+
+function agingReport(raw,entries,end) {
+ const dateByInvoice=new Map((raw.invoices||[]).map(row=>[row.id,date10(row.dueDate||row.paymentDueDate)]));
+ const parties=new Map((raw.customers||[]).map(row=>["customer:"+row.id,{name:row.name,bills:[],credits:0}]));
+ for(const entry of entries){
+  for(const line of entry.lines){
+   const party=parties.get(line.accountId);
+   if(!party)continue;
+   if(line.debit)party.bills.push({amount:line.debit,due:dateByInvoice.get(entry.sourceRecordId)||entry.date});
+   party.credits+=line.credit;
+  }
+ }
+ const rows=[];
+ for(const party of parties.values()){
+  const buckets=[0,0,0,0,0];
+  for(const bill of party.bills){
+   const paid=Math.min(bill.amount,party.credits);
+   party.credits-=paid;
+   const days=Math.floor((Date.parse(end)-Date.parse(bill.due))/86400000);
+   const bucket=days<=0?0:days<=30?1:days<=60?2:days<=90?3:4;
+   buckets[bucket]+=bill.amount-paid;
+  }
+  const total=buckets.reduce((sum,value)=>sum+value,0);
+  if(total)rows.push([party.name,...buckets.map(amount=>amount/100),total/100]);
+ }
+ return {headers:["العميل","غير مستحق","1–30 يومًا","31–60 يومًا","61–90 يومًا","أكثر من 90 يومًا","الإجمالي"],rows};
+}
+
+function cashFlowReport(accounts,posted,period) {
+ const isCash=id=>{
+  const account=accounts.get(id);
+  return account?.parentId==="1101"||account?.parentId==="1102";
+ };
+ const buckets=new Map([["تشغيلية",[0,0]],["استثمارية",[0,0]],["تمويلية",[0,0]],["غير مصنفة",[0,0]]]);
+ const kinds=account=>{
+  if(!account||["2104","3105"].includes(account.id))return "غير مصنفة";
+  if(account.parentId==="12"||account.id==="12")return "استثمارية";
+  if(account.category==="equity"||["2105","2201"].includes(account.id))return "تمويلية";
+  return "تشغيلية";
+ };
+ let delta=0;
+ for(const entry of period){
+  const cash=entry.lines.filter(line=>isCash(line.accountId)).reduce((sum,line)=>sum+line.debit-line.credit,0);
+  if(!cash)continue;
+  delta+=cash;
+  const links=new Map();
+  for(const line of entry.lines.filter(line=>!isCash(line.accountId))){
+   const label=kinds(accounts.get(line.accountId));
+   links.set(label,(links.get(label)||0)+line.credit-line.debit);
+  }
+  // The non-cash counterpart totals equal the net cash movement.
+  for(const [kind,amount] of links){
+   const bucket=buckets.get(kind);
+   bucket[amount<0?1:0]+=Math.abs(amount);
+  }
+ }
+ const closing=posted.reduce((sum,entry)=>sum+entry.lines.filter(line=>isCash(line.accountId))
+  .reduce((total,line)=>total+line.debit-line.credit,0),0);
+ return {headers:["النشاط","المقبوضات","المدفوعات","الصافي"],rows:[
+  ["رصيد افتتاحي حسب القيود","","",(closing-delta)/100],
+  ...[...buckets].map(([kind,[incoming,outgoing]])=>[kind,incoming/100,outgoing/100,(incoming-outgoing)/100]),
+  ["صافي التدفق خلال الفترة","","",delta/100],["الرصيد الختامي حسب القيود","","",closing/100]
+ ]};
+}
+
+function salesReport(invoices,kind,start,end) {
+ const byItem=kind.startsWith("item"),profit=kind.endsWith("Profit"),groups=new Map();
+ const add=(id,label,quantity,revenue,cost)=>{
+  const group=groups.get(id)||{label,quantity:0,revenue:0,cost:0};
+  group.quantity+=quantity;group.revenue+=revenue;group.cost+=cost;
+  groups.set(id,group);
+ };
+ for(const invoice of invoices){
+  const date=date10(invoice.date||invoice.createdAt);
+  if(invoice.deletedAt||invoice.isDeleted||["draft","cancelled","canceled"].includes(invoice.status)||!date||date>end||(start&&date<start))continue;
+  const sign=invoice.type==="return"||invoice.isReturn||num(invoice.grandTotal)<0?-1:1;
+  const lines=invoice.items||[];
+  const salesNet=Math.max(0,Math.abs(cents(invoice.grandTotal))-Math.abs(cents(invoice.taxTotal)));
+  if(!byItem){
+   add(invoice.customerId||"walkin",invoice.customerName||"زبون عام",1*sign,salesNet*sign,Math.abs(costs(lines))*sign);
+   continue;
+  }
+  const amounts=lines.map(row=>Math.max(0,Math.abs(cents(num(row.unitPrice)*num(row.quantity)))-Math.abs(cents(row.discount))));
+  const total=amounts.reduce((sum,amount)=>sum+amount,0);
+  const allocatable=Math.max(0,salesNet-Math.abs(cents(invoice.shippingCost))-Math.abs(cents(invoice.additionalCharges)));
+  let allocated=0,revenue=0;
+  lines.forEach((row,index)=>{
+   allocated+=amounts[index];
+   const next=total?Math.round(allocatable*allocated/total):0;
+   const key=(row.productId||row.productName||"غير محدد")+"|"+(row.unitId||row.unitName||"");
+   add(key,(row.productName||"صنف")+(row.unitName?" — "+row.unitName:""),Math.abs(num(row.quantity))*sign,(next-revenue)*sign,Math.abs(costs([row]))*sign);
+   revenue=next;
+  });
+ }
+ const items=[...groups.values()].sort((a,b)=>b.revenue-a.revenue||a.label.localeCompare(b.label,"ar"));
+ return {
+  headers:[byItem?"الصنف والوحدة":"الزبون",byItem?"صافي الكمية":"صافي عدد الفواتير","صافي المبيعات",...(profit?["التكلفة","مجمل الربح","الهامش %"]:[])],
+  rows:items.map(item=>[item.label,item.quantity,item.revenue/100,...(profit?[item.cost/100,(item.revenue-item.cost)/100,item.revenue>0?Math.round((item.revenue-item.cost)/item.revenue*10000)/100:0]:[])])
+ };
+}
+
+function projectForReport(raw) {
+ const original={raw:S.raw,accounts:S.accounts,warnings:S.warnings};
+ try{
+  S.raw=raw;S.warnings=[];
+  applyAccounts();
+  const entries=buildAutomaticEntries();
+  return {entries,accounts:S.accounts,warnings:[...new Set(S.warnings)]};
+ }finally{Object.assign(S,original)}
+}
+
+async function refreshReportHistory() {
+ const context=reportContext();
+ if(!context.hasCloud||S.historyLoading||S.reportHistory)return;
+ if(!navigator.onLine){S.historyStatus="عرض السجلات المتاحة على هذا الجهاز دون اتصال";renderReports();return}
+ S.historyLoading=true;
+ S.historyStatus="جارٍ تحميل السجلات من المزامنة…";
+ renderReports();
+ try{
+  const stores=["invoices","purchases","expenses","vouchers","transfers","accounting_journal"];
+  const rows=await Promise.all(stores.map(store=>context.loadHistory(store,context.companyWide)));
+  S.reportHistory=Object.fromEntries(stores.map((store,index)=>[store,rows[index]]));
+  S.historyStatus="";
+ }catch(error){S.historyStatus="تعذر تحميل كامل السجل من المزامنة. الأرقام المعروضة من البيانات المتاحة."}
+ finally{S.historyLoading=false;if(S.tab==="reports")renderReports()}
+}
+
+function renderReports() {
+ const context=reportContext();
+ const branch=$("report-branch").value||currentBranch();
+ const start=$("report-start").value,end=$("report-end").value||nowDay();
+ const kind=$("report-kind").value||"income";
+ $("report-note").textContent="";
+ S.report=null;
+ for(const button of document.querySelectorAll("[data-finance-export]"))button.disabled=true;
+ if(!S.companyRaw)return;
+ if(start&&start>end){$("report-note").textContent="تاريخ البداية بعد تاريخ النهاية";$("report-table").replaceChildren();return}
+ if(context.showProfit===false&&["income","balance","itemProfit","customerProfit"].includes(kind)){
+  $("report-note").textContent="هذا التقرير يتطلب صلاحية عرض الربح";$("report-table").replaceChildren();return;
+ }
+ const all=context.companyWide&&branch==="all";
+ const optionsSet=new Set((context.branches||[]).map(row=>row.id));
+ const scopeId=context.companyWide&&optionsSet.has(branch)?branch:currentBranch();
+ const available={...S.companyRaw,...S.reportHistory};
+ const raw=all?available:scopeAccounting({...available},scopeId);
+ const projected=projectForReport(raw);
+ const {headers,rows}=ledgerReportRows(raw,kind,{...projected,start,end});
+ const branchName=all?"كل الشركة":(context.branches||[]).find(row=>row.id===scopeId)?.name||"الفرع الرئيسي";
+ const period=kind==="balance"||kind==="aging"||!start?`حتى ${end}`:`${start} إلى ${end}`;
+ const reportNotes={
+  aging:"يُوزّع السداد على أقدم القيود أولًا. تُحتسب الأعمار من تاريخ الاستحقاق أو تاريخ الفاتورة عند غيابه.",
+  flow:"الطريقة المباشرة حسب القيود النقدية المتاحة. تُستبعد التحويلات الداخلية ويظهر الحساب المعلق ضمن الحركات غير المصنفة.",
+  itemProfit:"تُوزّع خصومات الفاتورة على البنود بنسبة قيمتها وتُحتسب التكلفة المسجلة وقت البيع.",
+  customerProfit:"مجمل الربح يطرح تكلفة الأصناف المسجلة وقت البيع من صافي المبيعات."
+ };
+ const notes=[S.historyStatus,reportNotes[kind],...projected.warnings.slice(0,2)].filter(Boolean);
+ $("report-note").textContent=notes.join(" • ");
+ renderFinanceTable($("report-table"),headers,rows);
+ S.report={title:reportNames[kind],subtitle:`${branchName} • ${period}`,headers,rows,
+  settings:S.companyRaw.settings?.find(row=>row.key==="store_config")||{}};
+ for(const button of document.querySelectorAll("[data-finance-export]"))button.disabled=!!S.historyLoading||typeof parent.CashTopFinanceExports!=="function";
+}
+
+function bindReports() {
+ const context=reportContext();
+ const branches=context.companyWide?(context.branches||[]):(context.branches||[]).filter(row=>row.id===currentBranch());
+ $("report-branch").replaceChildren(
+  ...(context.companyWide?[new Option("كل الشركة","all")]:[]),
+  ...(branches.length?branches.map(row=>new Option(row.name,row.id)):[new Option("الفرع الحالي",currentBranch())]));
+ $("report-branch").value=currentBranch();
+ $("report-kind").replaceChildren(...Object.entries(reportNames)
+  .filter(([key])=>context.showProfit!==false||!["income","balance","itemProfit","customerProfit"].includes(key))
+  .map(([id,label])=>new Option(label,id)));
+ $("report-end").value=nowDay();
+ const firstMonth=nowDay().slice(0,7)+"-01";
+ $("report-start").value=firstMonth;
+ const update=()=>{
+  $("report-start").disabled=["balance","aging"].includes($("report-kind").value);
+  renderReports();
+ };
+ $("report-refresh").addEventListener("click",()=>{S.reportHistory=null;loadAll()});
+ for(const id of ["report-kind","report-branch","report-start","report-end"])$(id).addEventListener("change",update);
+ $("close-account-movements").addEventListener("click",()=>$("account-movements").close());
+ $("coa-hide-zero").addEventListener("change",render);
+ document.querySelectorAll("[data-finance-export]").forEach(button=>button.addEventListener("click",async()=>{
+  if(!S.report)return;
+  button.disabled=true;
+  try{await parent.CashTopFinanceExports(button.dataset.financeExport,S.report)}
+  catch(error){showToast(error.message,true)}
+  finally{button.disabled=false}
+ }));
+ const open=()=>{if(parent.__CT_OPEN_FINANCE_REPORTS__){delete parent.__CT_OPEN_FINANCE_REPORTS__;setTab("reports")}};
+ try{parent.addEventListener("ct:open-finance-reports",open);open()}catch{}
+}
+
+function fiscalOpening(data,period,stamp){
+ const old={raw:S.raw,accounts:S.accounts,warnings:S.warnings};
+ try{
+  const unposted=new Set(['draft','held','pending','unposted','awaiting_approval','pending_approval','rejected']);
+  const source={...data};
+  for(const store of ['invoices','purchases','expenses','vouchers','transfers','accounting_journal']){
+   source[store]=(data[store]||[]).filter(row=>!unposted.has(String(row.status||'').toLowerCase()));
+  }
+  S.raw=source;S.warnings=[];applyAccounts();
+  const activity=buildAutomaticEntries();
+  if(S.warnings.length)throw Error('توجد حركات لم يتمكن دفتر الأستاذ من ترحيلها. راجع المحاسبة قبل إغلاق الفترة المالية.');
+  const categories=new Map(S.accounts.map(row=>[row.id,row.category]));
+  const byBranch=new Map();
+  const balances=branch=>{
+   if(!byBranch.has(branch))byBranch.set(branch,new Map());
+   return byBranch.get(branch);
+  };
+  const add=(rows,id,delta)=>rows.set(id,(rows.get(id)||0)+delta);
+  for(const entry of activity){
+   const rows=balances(entry.branchId||'main');
+   for(const line of entry.lines){
+    const category=categories.get(line.accountId);
+    add(rows,category==='expense'||category==='revenue'?'3102':line.accountId,line.debit-line.credit);
+   }
+  }
+  function matchControl(branch,id,amount) {
+    for(const [source,rows] of byBranch) {
+      const previous=rows.get(id)||0;
+      if(source===branch)continue;
+      if(previous){add(rows,id,-previous);add(rows,'3105',previous)}
+    }
+    const rows=balances(branch);
+    const delta=amount-(rows.get(id)||0);
+    add(rows,id,delta);
+    add(rows,'3105',-delta);
+  }
+  for(const row of data.accounts||[])if(!row.deletedAt&&!row.isDeleted&&accountById('financial:'+row.id))
+   matchControl(normalizeBranch(row),'financial:'+row.id,cents(row.balance));
+  for(const row of data.customers||[])if(!row.deletedAt&&!row.isDeleted&&accountById('customer:'+row.id))
+   matchControl(normalizeBranch(row),'customer:'+row.id,cents(row.balance));
+  for(const row of data.suppliers||[])if(!row.deletedAt&&!row.isDeleted&&accountById('supplier:'+row.id))
+   matchControl(normalizeBranch(row),'supplier:'+row.id,-cents(row.balance));
+  const warehouse=new Map((data.warehouses||[]).map(row=>[row.id,row]));
+  const products=new Map((data.products||[]).map(row=>[row.id,row]));
+  const inventory=new Map();
+  for(const position of data.stock||[]){
+   if(position.deletedAt)continue;
+   const branch=normalizeBranch(warehouse.get(position.warehouseId));
+   const product=products.get(position.productId);
+   const unitCost=position.averageCost??position.avgCost??product?.costPrice??0;
+   let quantity=num(position.baseQuantity),value=0;
+   const layers=(Array.isArray(product?.fifoBatches)?product.fifoBatches:[])
+    .filter(layer=>layer.warehouseId===position.warehouseId&&num(layer.remainingBaseQty)>0)
+    .sort((a,b)=>String(a.receivedAt||'').localeCompare(String(b.receivedAt||'')));
+   for(const layer of layers){
+    const used=Math.min(Math.max(quantity,0),num(layer.remainingBaseQty));
+    quantity-=used;value+=used*num(layer.unitCost??unitCost);
+   }
+   add(inventory,branch,cents(value+quantity*num(unitCost)));
+  }
+  for(const branch of new Set([...byBranch.keys(),...inventory.keys()])){
+   const rows=balances(branch);
+   const delta=(inventory.get(branch)||0)-(rows.get('1104')||0);
+   add(rows,'1104',delta);add(rows,'3105',-delta);
+  }
+  const entries=[];
+  for(const [branchId,rows] of byBranch){
+   if([...rows.values()].reduce((sum,n)=>sum+n,0)!==0)throw Error('رصيد افتتاحي غير متوازن.');
+   const lines=[...rows].filter(([,amount])=>amount).map(([accountId,amount])=>({accountId,debit:Math.max(0,amount)/100,credit:Math.max(0,-amount)/100}));
+   if(lines.length)entries.push({id:'journal-opening-'+period.id+'-'+branchId,date:period.startDate,number:'OB-'+period.id,
+    branchId,description:'الأرصدة الافتتاحية بعد إغلاق الفترة المالية',lines,financialYearId:period.id,createdAt:stamp,source:'fiscal_opening'});
+  }
+  return entries;
+ }finally{Object.assign(S,old)}
+}
+globalThis.CashTopPeriodLedger=fiscalOpening;
+
+function init(){if(!$('journal-body'))return;bind();bindReports();loadAll()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();

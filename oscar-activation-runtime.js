@@ -13,7 +13,7 @@
   const enc=new TextEncoder(), dec=new TextDecoder();
   const safe=v=>String(v??'').trim();
   const clone=v=>JSON.parse(JSON.stringify(v));
-  const b64=u8=>btoa(String.fromCharCode(...u8));
+  const b64=u8=>{let result='';for(let i=0;i<u8.length;i+=16384)result+=String.fromCharCode(...u8.subarray(i,i+16384));return btoa(result)};
   const unb64=s=>Uint8Array.from(atob(String(s||'')),c=>c.charCodeAt(0));
   const K=['AM','_8Q','2x','!m','7Z','b4','_r','9P','@k','5N'].join('');
   const mask=s=>enc.encode(String(s));
@@ -104,11 +104,94 @@
     if(!text){const raw=String(lastError?.message||lastError||'');if(/requested file|directory could not be found|notfound|not found/i.test(raw))throw new Error('تعذر الوصول إلى ملف التفعيل بعد اختياره من مدير الملفات. اختر الملف مرة أخرى من مجلد التنزيلات أو الملفات، وسيتم نسخه إلى الذاكرة فور اختياره.');throw new Error('تعذر قراءة ملف التفعيل أو أن الملف فارغ.');}
     activationFileTextCache.set(file,text);return text;
   }
+  const trialCodePattern=/^CTT1\.(trial-[a-f0-9-]{36})\.([a-f0-9]{64})$/;
+  async function trialRequest(action,credentials,extra={}){
+    const companyId=credentials.companyId,secret=credentials.companyKey||credentials.secret;
+    const cloud=globalThis.CashTopTrialCloud;
+    if(!cloud)throw Error('تعذّر تحميل إعداد الاتصال بقاعدة التجربة.');
+    return cloud.request({...extra,action,companyId,secret});
+  }
+  function trialPayload(credentials,access){
+    const companyKey=credentials.companyKey||credentials.secret;
+    return {app:APP_TAG,type:'company-manager',plan:'trial',trialApiVersion:1,status:'active',
+      companyId:access.companyId,tenantId:access.companyId,companyKey,activationKey:companyKey,companyName:access.trialProfile.companyName,
+      expiresAt:access.endAt,fileId:access.companyId+'-manager',account:access.manager,trialProfile:access.trialProfile,
+      trialLimits:{days:3,products:20,customers:20,warehouses:20,employees:20,categories:20,salesInvoices:20,purchaseInvoices:20}};
+  }
+  const LOCAL_TRIAL_VERSION=2;
+  const TRIAL_DURATION=3*86400000;
+  const trialIdPattern=/^local-trial-[a-f0-9-]{36}$/;
+  const isLocalTrial=payload=>payload?.trialApiVersion===LOCAL_TRIAL_VERSION;
+  function localTrialProfile(profile) {
+    const field=(name,limit)=>String(profile?.[name]||'').trim().slice(0,limit);
+    const clean={companyName:field('companyName',150),address:field('address',340),phone:field('phone',45),
+      phoneCode:field('phoneCode',10),currency:field('currency',3),currencySymbol:field('currencySymbol',8),
+      logo:field('logo',250000),createdAt:field('createdAt',30)};
+    if(!clean.companyName||!clean.address||!clean.phone||!(/^[A-Z]{3}$/).test(clean.currency))
+      throw Error('أكمل بيانات الشركة.');
+    if(clean.logo&&!(/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/).test(clean.logo))
+      throw Error('صيغة الشعار غير مدعومة.');
+    return clean;
+  }
+  function verifyLocalTrial(payload){
+    const id=payload?.companyId;
+    const created=Date.parse(payload?.trialProfile?.createdAt);
+    const expiry=Date.parse(payload?.expiresAt);
+    if(!isLocalTrial(payload)||payload.app!==APP_TAG||payload.plan!=='trial'||payload.type!=='company-manager'||
+       payload.status!=='active'||!trialIdPattern.test(id)||payload.tenantId!==id||
+       payload.fileId!==id+'-manager'||payload.account?.id!==id+'-manager'||
+       !(/^[a-f0-9]{64}$/).test(payload.companyKey)||payload.activationKey!==payload.companyKey||
+       !Number.isFinite(created)||created>Date.now()+60000||expiry!==created+TRIAL_DURATION)
+      throw Error('ملف الحساب التجريبي غير صالح.');
+    const profile=localTrialProfile(payload.trialProfile);
+    const name=profile.companyName;
+    return {
+      access:{status:'active',readOnly:expiry<=Date.now(),endAt:new Date(expiry).toISOString(),companyId:id,trialProfile:profile},
+      account:{id:id+'-manager',name:'مدير النظام',role:'admin',roleName:'مدير النظام',active:true,
+        authVersion:id,permissions:['*'],createdAt:profile.createdAt},
+      online:false,localOnly:true,companyName:name
+    };
+  }
+  async function createTrial(profile,credentials){
+    const {access}=await trialRequest('create',credentials,{profile});
+    const payload=trialPayload(credentials,access);
+    markVerified(payload,access);
+    const prepared=await prepareActivationDownload(payload);
+    return {prepared,code:'CTT1.'+credentials.companyId+'.'+credentials.secret};
+  }
+  const recentTrialChecks=new Map();
+  async function verifyTrial(payload){
+    const id=payload.companyId;
+    const cached=recentTrialChecks.get(id);
+    const now=Date.now();
+    let access;
+    if(cached?.secret===payload.companyKey&&cached.checked+15000>now&&Date.parse(cached.access.endAt)>now){
+      access=cached.access;
+    }else{
+      ({access}=await trialRequest('verify',payload));
+      if(recentTrialChecks.size>=12)recentTrialChecks.clear();
+      recentTrialChecks.set(id,{secret:payload.companyKey,access,checked:now});
+    }
+    if(access.manager.id!==payload.account?.id)throw Error('ملف المدير لا يطابق الحساب المسجل.');
+    markVerified(payload,access);
+    return {access,account:access.manager,online:true};
+  }
   async function primeActivationFile(file){
     if(!file)return null;if(!/\.mzauth$/i.test(file.name||''))throw new Error('امتداد الملف غير معتمد. استخدم ملف .mzauth');
-    const text=await readActivationFileText(file),payload=await unpackOpaque(text);activationFilePayloadCache.set(file,payload);return payload;
+    const text=await readActivationFileText(file);
+    const trial=trialCodePattern.exec(text);
+    let payload;
+    if(trial){
+      const credentials={companyId:trial[1],secret:trial[2]};
+      const {access}=await trialRequest('verify',credentials);
+      if(recentTrialChecks.size>=12)recentTrialChecks.clear();
+      recentTrialChecks.set(credentials.companyId,{secret:credentials.secret,access,checked:Date.now()});
+      payload=trialPayload(credentials,access);
+      markVerified(payload,access);
+    }else payload=await unpackOpaque(text);
+    activationFilePayloadCache.set(file,payload);return payload;
   }
-  async function parseActivationFile(file){if(!file)throw new Error('اختر ملف التفعيل أولاً.');if(!/\.mzauth$/i.test(file.name||''))throw new Error('امتداد الملف غير معتمد. استخدم ملف .mzauth');const p=activationFilePayloadCache.get(file)||await primeActivationFile(file);if(p.expiresAt&&Date.now()>=new Date(p.expiresAt).getTime())throw new Error('انتهت صلاحية ملف التفعيل.');return p}
+  async function parseActivationFile(file){if(!file)throw new Error('اختر ملف التفعيل أولاً.');if(!/\.mzauth$/i.test(file.name||''))throw new Error('امتداد الملف غير معتمد. استخدم ملف .mzauth');const p=activationFilePayloadCache.get(file)||await primeActivationFile(file);if(!p.trialApiVersion&&p.expiresAt&&Date.now()>=new Date(p.expiresAt).getTime())throw Object.assign(new Error('انتهت صلاحية ملف التفعيل.'),{code:p.trialApiVersion?'TRIAL_EXPIRED':undefined});return p}
 
   const scopedDbKey=id=>`${LOCAL_DB_ACCESS_KEY}::${encodeURIComponent(safe(id)||'current')}`;
   function saveDatabaseAccess(db,meta={}){const identity=safe(meta.companyId||meta.tenantId||readRuntime()?.companyId),cfg={databaseURL:safe(db?.databaseURL),authToken:safe(db?.authToken),table:safe(db?.table||'oscar_rtdb'),companyId:identity,tenantId:identity,savedAt:Date.now()};if(!cfg.databaseURL||!cfg.authToken)throw new Error('بيانات قاعدة الشركة غير مكتملة.');const wrapped=wrapText(JSON.stringify(cfg));localStorage.setItem(LOCAL_DB_ACCESS_KEY,wrapped);if(identity)localStorage.setItem(scopedDbKey(identity),wrapped);return cfg}
@@ -143,7 +226,12 @@
     if(!payload||payload.app!==APP_TAG)throw new Error('ملف التفعيل غير صالح.');
     const companyId=safe(payload.companyId||payload.tenantId),companyKey=safe(payload.companyKey||payload.activationKey);
     if(!companyId||!companyKey)throw new Error('ملف الشركة غير مكتمل.');
-    const cfg=payload.database||{},customerCfg=payload.customerDatabase||{},aiCfg=payload.ai||{},runtime={activationKey:payload.activationKey,fileId:payload.fileId,type:payload.type,companyId,tenantId:companyId,companyKey,companyName:payload.companyName,account:payload.account||null,permissions:payload.permissions||payload.account?.permissions||[],status:payload.status||'active',plan:payload.plan||'lifetime',expiresAt:payload.expiresAt||'',database:{databaseURL:safe(cfg.databaseURL),authToken:safe(cfg.authToken),table:safe(cfg.table||'oscar_rtdb')},customerDatabase:{databaseURL:safe(customerCfg.databaseURL||cfg.databaseURL),authToken:safe(customerCfg.authToken),table:safe(customerCfg.table||cfg.table||'oscar_rtdb')},trialProfile:clone(payload.trialProfile||{}),trialLimits:clone(payload.trialLimits||{}),ai:{provider:safe(aiCfg.provider||'openrouter')||'openrouter',apiKey:safe(aiCfg.apiKey),model:safe(aiCfg.model||'google/gemini-2.5-flash:free')||'google/gemini-2.5-flash:free'},rootPath:payload.rootPath||'oscar/companies',isTrialLink:!!payload.isTrialLink,appBaseUrl:normalizeAppUrl(payload.appBaseUrl),activatedAt:Date.now()};
+    if(isLocalTrial(payload)){
+      const verified=verifyLocalTrial(payload);
+      payload={...payload,companyName:verified.companyName,trialProfile:verified.access.trialProfile,account:verified.account,
+        permissions:verified.account.permissions,database:{},customerDatabase:{},ai:{}};
+    }
+    const cfg=payload.database||{},customerCfg=payload.customerDatabase||{},aiCfg=payload.ai||{},runtime={activationKey:payload.activationKey,fileId:payload.fileId,type:payload.type,companyId,tenantId:companyId,companyKey,companyName:payload.companyName,account:payload.account||null,permissions:payload.permissions||payload.account?.permissions||[],status:payload.status||'active',plan:payload.plan||'lifetime',trialApiVersion:isLocalTrial(payload)?LOCAL_TRIAL_VERSION:payload.trialApiVersion===1?1:0,expiresAt:payload.expiresAt||'',subscriptionStart:payload.subscriptionStart||payload.startAt||payload.issuedAt||'',database:{databaseURL:safe(cfg.databaseURL),authToken:safe(cfg.authToken),table:safe(cfg.table||'oscar_rtdb')},customerDatabase:{databaseURL:safe(customerCfg.databaseURL||cfg.databaseURL),authToken:safe(customerCfg.authToken),table:safe(customerCfg.table||cfg.table||'oscar_rtdb')},trialProfile:clone(payload.trialProfile||{}),trialLimits:clone(payload.trialLimits||{}),ai:{provider:safe(aiCfg.provider||'openrouter')||'openrouter',apiKey:safe(aiCfg.apiKey),model:safe(aiCfg.model||'google/gemini-2.5-flash:free')||'google/gemini-2.5-flash:free'},rootPath:payload.rootPath||'oscar/companies',isTrialLink:!!payload.isTrialLink,appBaseUrl:normalizeAppUrl(payload.appBaseUrl),activatedAt:Date.now()};
     localStorage.setItem(RUNTIME_KEY,wrapText(JSON.stringify(runtime)));
     if(runtime.database.databaseURL&&runtime.database.authToken)saveDatabaseAccess(runtime.database,{companyId});
     window.dispatchEvent(new CustomEvent('oscar:activation-loaded',{detail:{...runtime,database:{...runtime.database,authToken:''},customerDatabase:{...runtime.customerDatabase,authToken:runtime.customerDatabase?.authToken?'***':''},ai:{...runtime.ai,apiKey:runtime.ai.apiKey?'***':''}}}));
@@ -156,8 +244,8 @@
   function clearMasterConfig(){localStorage.removeItem(MASTER_KEY)}
 
   function verificationMap(){try{return JSON.parse(localStorage.getItem(VERIFIED_KEY)||'{}')}catch(_){return{}}}
-  function markVerified(payload,access){const all=verificationMap();all[payload.fileId]={fileId:payload.fileId,companyId:payload.companyId||payload.tenantId,companyKey:payload.companyKey||payload.activationKey,accountId:payload.account?.id||'',authVersion:payload.account?.authVersion||'',status:access?.status||'active',expiresAt:access?.endAt||payload.expiresAt||'',verifiedAt:Date.now()};localStorage.setItem(VERIFIED_KEY,JSON.stringify(all));return all[payload.fileId]}
-  function cachedVerification(payload){const v=verificationMap()[payload?.fileId];if(!v)return null;if(v.companyId!==String(payload.companyId||payload.tenantId||''))return null;if(v.companyKey!==String(payload.companyKey||payload.activationKey||''))return null;if(v.accountId!==String(payload.account?.id||''))return null;if(String(v.authVersion||'')!==String(payload.account?.authVersion||''))return null;if(v.status!=='active')return null;if(v.expiresAt&&Date.now()>=new Date(v.expiresAt).getTime())return null;return v}
+  function markVerified(payload,access){const all=verificationMap();all[payload.fileId]={fileId:payload.fileId,companyId:payload.companyId||payload.tenantId,companyKey:payload.companyKey||payload.activationKey,accountId:payload.account?.id||'',authVersion:payload.account?.authVersion||'',status:access?.status||'active',expiresAt:access?.endAt||payload.expiresAt||'',startAt:access?.startAt||payload.subscriptionStart||payload.startAt||payload.issuedAt||'',verifiedAt:Date.now()};localStorage.setItem(VERIFIED_KEY,JSON.stringify(all));return all[payload.fileId]}
+  function cachedVerification(payload){const v=verificationMap()[payload?.fileId];if(!v)return null;if(v.companyId!==String(payload.companyId||payload.tenantId||''))return null;if(v.companyKey!==String(payload.companyKey||payload.activationKey||''))return null;if(v.accountId!==String(payload.account?.id||''))return null;if(String(v.authVersion||'')!==String(payload.account?.authVersion||''))return null;if(v.status!=='active')return null;if(!payload.trialApiVersion&&v.expiresAt&&Date.now()>=new Date(v.expiresAt).getTime())return null;return v}
 
   function accountPath(payload){const companyId=encodeURIComponent(String(payload.companyId||payload.tenantId||''));const base=`oscar/companies/${companyId}`;if(payload.type==='company-manager')return `${base}/access/company`;return `${base}/d/employees/${encodeURIComponent(String(payload.account?.id||''))}`}
   function unwrapRecord(value){if(value&&typeof value==='object'&&Object.prototype.hasOwnProperty.call(value,'v'))return value.deleted?null:value.v;return value}
@@ -169,6 +257,8 @@
     throw new Error('تم إيقاف مفتاح الشركة من الإدارة العامة.');
   }
   async function verifyCompanyAccessRemote(payload){
+    if(isLocalTrial(payload))return verifyLocalTrial(payload);
+    if(payload?.trialApiVersion===1)return verifyTrial(payload);
     const db=payload?.database||readDatabaseAccess(payload?.companyId)||{},companyId=String(payload?.companyId||payload?.tenantId||'');
     if(!companyId||!db.databaseURL||!db.authToken)throw new Error('بيانات قاعدة الشركة غير متاحة.');
     const base=`oscar/companies/${encodeURIComponent(companyId)}`,access=unwrapRecord(await readExact(db,`${base}/access/company`,{ensureSchema:true}));
@@ -180,6 +270,8 @@
     return {access,online:true};
   }
   async function verifyPayloadRemote(payload){
+    if(isLocalTrial(payload))return verifyLocalTrial(payload);
+    if(payload?.trialApiVersion===1)return verifyTrial(payload);
     const db=payload.database||readDatabaseAccess(payload.companyId)||{},companyId=String(payload.companyId||payload.tenantId||'');if(!companyId||!db.databaseURL||!db.authToken)throw new Error('ملف التفعيل لا يحتوي على قاعدة شركة صالحة.');
     const base=`oscar/companies/${encodeURIComponent(companyId)}`,accessPath=`${base}/access/company`;let access=unwrapRecord(await readExact(db,accessPath,{ensureSchema:true}));
     if(!access)throw new Error('مفتاح الشركة غير مسجل في قاعدة الشركة.');if(String(access.companyKey||'').toUpperCase()!==String(payload.companyKey||payload.activationKey||'').toUpperCase())throw new Error('ملف التفعيل لا يطابق مفتاح الشركة.');assertCompanyAccessStatus(access);if(access.endAt&&Date.now()>=new Date(access.endAt).getTime())throw new Error('انتهت مدة تفعيل الشركة.');
@@ -221,6 +313,18 @@
     return {status:'active',endAt:payload.expiresAt||'',companyId,offlineLocal:true};
   }
   async function verifyPayload(payload,{allowOffline=true}={}){
+    if(isLocalTrial(payload))return verifyLocalTrial(payload);
+    if(payload?.trialApiVersion===1){
+      if(!Number.isFinite(Date.parse(payload.expiresAt)))throw Error('تاريخ الاشتراك التجريبي غير صالح.');
+      if(navigator.onLine!==false){
+        try{return await verifyTrial(payload)}catch(error){
+          if(!allowOffline||(error.status>=400&&error.status<500))throw error;
+        }
+      }
+      const cached=allowOffline?cachedVerification(payload):null;
+      if(!cached)throw Error('أول دخول للحساب التجريبي يحتاج إلى اتصال بالإنترنت.');
+      return {access:{status:'active',endAt:cached.expiresAt},online:false};
+    }
     if(payload?.expiresAt&&Date.now()>=Date.parse(payload.expiresAt))throw Error('انتهت مدة تفعيل الشركة.');
     if(navigator.onLine!==false){
       try{return await verifyPayloadRemote(payload)}
@@ -290,6 +394,19 @@
     await pipeline(db,[{sql:`INSERT INTO ${tursoTable(db)}(path,payload,deleted,updated_at) VALUES ${values} ON CONFLICT(path) DO NOTHING`,args}]);
   }
 
-  async function copyCurrentLoginLink(){const rt=readRuntime();if(!rt?.account)throw Error('سجّل الدخول أولاً.');const payload=buildRolePayload(rt.type||'employee',rt.account);const checked=await verifyPayloadRemote(payload);payload.account={...payload.account,...checked.account};payload.appBaseUrl=checked.access?.appBaseUrl||rt.appBaseUrl;payload.expiresAt=checked.access?.endAt||rt.expiresAt||'';payload.isTrialLink=!!rt.isTrialLink;return createActivationLink(payload);}
-  window.OscarActivation={copyCurrentLoginLink,normalizeAppUrl,createActivationLink,resolveActivationLink,writeInitialRecords,version:3,copyActivationFile,makeFile,prepareActivationDownload,triggerPreparedActivationDownload,downloadActivationFile,primeActivationFile,readActivationFileText,parseActivationFile,activatePayload,readRuntime,clearRuntime,saveDatabaseAccess,readDatabaseAccess,saveMasterConfig,readMasterConfig,clearMasterConfig,sealObject,openObject,tursoDirect,verifyPayload,verifyPayloadRemote,verifyCompanyAccessRemote,cachedVerification,markVerified,buildRolePayload,prepareVerifiedRoleFile,prepareCompanyManagerFileRotation,rotateCompanyManagerFile,constants:{APP_TAG,RUNTIME_KEY,MASTER_KEY,LOCAL_DB_ACCESS_KEY,VERIFIED_KEY}};
+  async function copyCurrentLoginLink(){const rt=readRuntime();if(!rt?.account)throw Error('سجّل الدخول أولاً.');
+    if(isLocalTrial(rt)){
+      const verified=verifyLocalTrial({...rt,app:APP_TAG});
+      const payload={...trialPayload(rt,{...verified.access,manager:verified.account}),trialApiVersion:LOCAL_TRIAL_VERSION};
+      const {opaque}=await makeFile(payload);
+      const url=new URL(location.href);
+      url.username='';url.password='';url.search='';url.hash='code='+encodeURIComponent(opaque);
+      await copyText(url.href);
+      return {url:url.href};
+    }
+    if(rt.trialApiVersion===1){
+      const url=new URL(location.href);url.search='';url.hash='code='+encodeURIComponent('CTT1.'+rt.companyId+'.'+rt.companyKey);
+      await copyText(url.href);return {url:url.href};
+    }const payload=buildRolePayload(rt.type||'employee',rt.account);const checked=await verifyPayloadRemote(payload);payload.account={...payload.account,...checked.account};payload.appBaseUrl=checked.access?.appBaseUrl||rt.appBaseUrl;payload.expiresAt=checked.access?.endAt||rt.expiresAt||'';payload.isTrialLink=!!rt.isTrialLink;return createActivationLink(payload);}
+  window.OscarActivation={createTrial,trialRequest,copyCurrentLoginLink,normalizeAppUrl,createActivationLink,resolveActivationLink,writeInitialRecords,version:3,copyActivationFile,makeFile,prepareActivationDownload,triggerPreparedActivationDownload,downloadActivationFile,primeActivationFile,readActivationFileText,parseActivationFile,activatePayload,readRuntime,clearRuntime,saveDatabaseAccess,readDatabaseAccess,saveMasterConfig,readMasterConfig,clearMasterConfig,sealObject,openObject,tursoDirect,verifyPayload,verifyPayloadRemote,verifyCompanyAccessRemote,cachedVerification,markVerified,buildRolePayload,prepareVerifiedRoleFile,prepareCompanyManagerFileRotation,rotateCompanyManagerFile,constants:{APP_TAG,RUNTIME_KEY,MASTER_KEY,LOCAL_DB_ACCESS_KEY,VERIFIED_KEY}};
 })();

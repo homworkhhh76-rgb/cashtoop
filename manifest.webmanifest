@@ -18,13 +18,8 @@
     {
       "src": "./app-icon.png?v=7.9.4.194-r21-embedded-boot",
       "sizes": "512x512",
-      "type": "image/png"
-    },
-    {
-      "src": "./icon-maskable-512.png?v=7.9.4.194-r21-embedded-boot",
-      "sizes": "512x512",
       "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     }
   ]
 }

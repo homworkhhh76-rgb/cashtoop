@@ -1,7 +1,7 @@
-const BUILD = '7.9.4.198-r24-purchase-exports';
+const BUILD = '7.9.4.209-r35-trial-customer-portal';
 const CACHE = 'oscar-accounting-' + BUILD;
 const BASE = new URL('./', self.location.href);
-const LOCAL = ["./ct-google-translate.js", "./ct-google-translate.css", "./cash-top-header-logo.jpg", "./altamam-pro-logo.png", "./branches.css", "./accounting.js", "./accounting-windows10.css", "./accounting-icons.js", "./accounting-theme.css", "./accounting.css", "./accounting.html", "./admin.html", "./app-icon.png", "./app.css", "./windows10.css", "./windows10-dialogs.js", "./brand-logo.webp", "./customer-portal.js", "./customer.html", "./icon-192.png", "./icon-maskable-512.png", "./index.html", "./manifest.webmanifest", "./notification-badge.png", "./offline-fonts.css", "./oscar-activation-runtime.js", "./oscar-cloud-sync.js", "./oscar-ledger.html", "./p2p-bank-palestine.jpg", "./p2p-jawwal-pay.png", "./p2p-palpay.jpg", "./shared-17a3c04d5aba.jpg", "./shared-c50d51a1a3c0.jpg", "./support.html", "./trial-admin.html", "./trial-payment.html", "./معتمد.html"];
+const LOCAL = ["./trial-direct.js", "./trial-cloud-config.js", "./ct-google-translate.js", "./ct-google-translate.css", "./accounting.js", "./accounting-windows10.css", "./accounting-icons.js", "./accounting-theme.css", "./accounting.html", "./admin.html", "./app-icon.png", "./windows10.css", "./windows10-dialogs.js", "./brand-logo.webp", "./customer-portal.js", "./customer.html", "./icon-192.png", "./index.html", "./manifest.webmanifest", "./notification-badge.png", "./offline-fonts.css", "./oscar-activation-runtime.js", "./oscar-ledger.html", "./p2p-bank-palestine.jpg", "./p2p-jawwal-pay.png", "./p2p-palpay.jpg", "./shared-17a3c04d5aba.jpg", "./support.html", "./trial-admin.html", "./trial-payment.html", "./معتمد.html"];
 const allowed = new Set(LOCAL.map(path => new URL(path, BASE).href));
 const indexURL = new URL('./index.html', BASE).href;
 const readyURL = new URL('./__offline_ready', BASE).href;
@@ -64,7 +64,7 @@ async function warmAssets() {
       }
     }
   }
-  await Promise.all(Array.from({length:4}, downloadOptional));
+  await Promise.all(Array.from({length:2}, downloadOptional));
   if (complete) {
     await cache.put(readyURL, new Response(BUILD));
     const keys = await caches.keys();

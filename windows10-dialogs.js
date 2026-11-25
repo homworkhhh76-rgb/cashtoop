@@ -151,12 +151,11 @@
     const edge = 6;
     const controlsWidth = 96;
     const controlsHeight = 32;
-    const rtl = document.documentElement.dir === 'rtl';
     const native = panel instanceof HTMLDialogElement;
     const insetTop = native ? 0 : controlsHeight;
     if (state !== 'normal') for (const grip of win.grips) grip.hidden = true;
     if (state === 'minimized') {
-      const left = rtl ? bounds.width - controlsWidth - edge : edge;
+      const left = edge;
       const top = bounds.height - controlsHeight - edge;
       place(controls, left, top, controlsWidth);
       if (native) place(panel, left, top, controlsWidth, controlsHeight);
@@ -285,7 +284,7 @@
       if (Math.hypot(dx,dy)<3 && !panel.classList.contains('ct-win-positioned')) return;
       panel.classList.add('ct-win-positioned');
       win.position = {x:drag.x+dx,y:drag.y+dy,width:drag.width,height:drag.height};
-      layout(win);
+      scheduleLayout();
     };
     const stop = () => {drag=null};
     const doubleClick = event => {
@@ -323,7 +322,7 @@
       const endY = corner.startsWith('s') ? clamp(bottom + dy, y + minHeight, bounds.height - 6) : bottom;
       win.position = {x, y, width:endX - x, height:endY - y};
       win.panel.classList.add('ct-win-positioned');
-      layout(win);
+      scheduleLayout();
     });
     grip.addEventListener('lostpointercapture', () => { start = null; });
   }
@@ -385,9 +384,24 @@
     });
   }
 
+  const windowContainerSelectors = '.ct-modal-layer,.modal-root,.modal-back,.fixed.inset-0,.oscar-bounded-modal,dialog';
+  function changesWindows(record) {
+    const target = record.target;
+    if (record.type === 'attributes') {
+      return record.attributeName === 'open' || target.matches(windowContainerSelectors) ||
+        (record.attributeName === 'hidden' && target.matches(panelSelectors));
+    }
+    if(target.closest?.('.ct-win-caption-controls'))return false;
+    if(target.closest?.('.ct-win-window')&&target.closest('header,.modal-head,.ct-win-drag-title'))return true;
+    return [...record.addedNodes, ...record.removedNodes].some(node =>
+      node.nodeType === Node.ELEMENT_NODE && (node.matches(panelSelectors) ||
+        node.matches(windowContainerSelectors) || !!node.querySelector(panelSelectors) ||
+        !!target.closest?.('.ct-win-window') && (node.matches('header,.modal-head,[data-close],button[aria-label*="إغلاق"]') ||
+          !!node.querySelector('header,.modal-head,[data-close],button[aria-label*="إغلاق"]'))));;
+  }
+
   new MutationObserver(records => {
-    if (records.some(record => record.type !== 'attributes' || record.attributeName !== 'class' ||
-      record.target.matches('.modal-root,.modal-back,.fixed.inset-0,.oscar-bounded-modal'))) scheduleRefresh();
+    if (isDesktop() && records.some(changesWindows)) scheduleRefresh();
   }).observe(document.body, {
     subtree:true, childList:true, attributes:true, attributeFilter:['open', 'hidden', 'class']
   });

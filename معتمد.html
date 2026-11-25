@@ -74,7 +74,9 @@ body.p2p-loading .portal-loading-screen{display:flex}
 </div><footer class="footer"><span id="footerStoreName"></span><span>توثيق دفعات العملاء</span></footer></main>
 <dialog class="modal qr-modal" id="qrModal" aria-labelledby="qrTitle"><button type="button" class="qr-close" data-close="qrModal" aria-label="إغلاق نافذة الباركود"><svg><use href="#close"/></svg></button><div class="qr-head"><span class="qr-badge"><svg><use href="#qr"/></svg>رمز الاستجابة السريعة QR</span><h2 id="qrTitle"></h2><p id="qrSubtitle"></p></div><div class="qr-frame" id="qrFrame" hidden><img id="bankQrImage" src="./shared-17a3c04d5aba.jpg" alt="رمز QR بنك فلسطين المرفق"><div class="qr-phone" dir="ltr">0597603119</div></div><div class="qr-empty" id="qrMissing" hidden><svg><use href="#qr"/></svg><strong>باركود بال باي غير مضاف بعد</strong><p>يمكنك التحويل باستخدام رقم المحفظة الموضح أدناه.</p></div><div class="qr-data" id="qrDetails"></div><button type="button" class="primary qr-copy-all" id="qrCopyAll"><svg><use href="#copy"/></svg>نسخ كافة بيانات التحويل</button><button type="button" class="qr-download" id="qrDownload"><svg><use href="#download"/></svg>تنزيل صورة الباركود</button></dialog><dialog class="modal" id="historyModal"><div class="modal-head"><h2>سجل الدفعات</h2><button class="ghost" data-close="historyModal" aria-label="إغلاق"><svg><use href="#close"/></svg></button></div><div class="modal-body"><input id="search" class="search" placeholder="ابحث بالاسم أو رقم الطلب أو طريقة الدفع" aria-label="بحث في الدفعات"><div class="hint" id="historySummary"></div><div id="historyList"></div></div></dialog>
 <dialog class="modal" id="detailModal"><div class="modal-head"><h2>تفاصيل الدفعة</h2><button class="ghost" data-close="detailModal" aria-label="إغلاق"><svg><use href="#close"/></svg></button></div><div class="modal-body" id="detailBody"></div></dialog><div class="toast" id="toast" role="status" hidden></div>
-<script src="./oscar-activation-runtime.js?v=7.9.4.177-scanner30"></script>
+<script src="./trial-direct.js?v=r32"></script>
+<script src="./trial-cloud-config.js?v=r35"></script>
+<script src="./oscar-activation-runtime.js?v=r32"></script>
 <script>"use strict";
 (() => {
   var __defProp = Object.defineProperty;
@@ -225,7 +227,7 @@ body.p2p-loading .portal-loading-screen{display:flex}
   var $$ = (s) => [...document.querySelectorAll(s)];
   var FIXED_METHOD_LOGOS = {
     "palpay": "./p2p-palpay.jpg",
-    "jawwal-pay": "./shared-c50d51a1a3c0.jpg",
+    "jawwal-pay": "./p2p-jawwal-pay.png",
     "bank-palestine": "./p2p-bank-palestine.jpg"
   };
   var METHOD_TYPES = /* @__PURE__ */ new Set(["palpay", "jawwal-pay", "bank-palestine", "bank", "wallet", "card", "transfer", "other"]);
@@ -371,7 +373,7 @@ body.p2p-loading .portal-loading-screen{display:flex}
     }
     return location.hash;
   }
-  async function loadPortalContext() {
+  async function readLegacyPortal() {
     const mod = await Promise.resolve().then(() => (init_customer_portal_codec(), customer_portal_codec_exports));
     const access = await mod.decodeCustomerPortalAccess(await resolvePortalAccessCode());
     const direct = window.OscarActivation?.tursoDirect;
@@ -385,6 +387,13 @@ body.p2p-loading .portal-loading-screen{display:flex}
     const company = unwrapPortal(companyRaw) || {}, customer = unwrapPortal(customerRaw), settings = unwrapPortal(settingsRaw) || {};
     if (!customer || customer.deletedAt) throw new Error("\u062D\u0633\u0627\u0628 \u0627\u0644\u0639\u0645\u064A\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F.");
     if (String(customer.portalNonce || "") !== String(access.n || "")) throw new Error("\u0631\u0627\u0628\u0637 \u0627\u0644\u0639\u0645\u064A\u0644 \u0642\u062F\u064A\u0645. \u0627\u0637\u0644\u0628 \u0631\u0627\u0628\u0637\u0627\u064B \u062C\u062F\u064A\u062F\u0627\u064B \u0645\u0646 \u0627\u0644\u0645\u062A\u062C\u0631.");
+    return {access,company,customer,settings};
+  }
+  async function loadPortalContext() {
+    const trial = window.CashTopTrialCloud.portalAccess();
+    const {access,company,customer,settings} = trial
+      ? {access:trial, ...await window.CashTopTrialCloud.portalData(trial)}
+      : await readLegacyPortal();
     const chatId = String(settings.p2pPaymentChatId || "").trim();
     const storeName = String(settings.storeName || company.companyName || initialStoreName || "").trim();
     const storeLogo = settings.logoSourceUrl || settings.logoUrl || "./brand-logo.webp";

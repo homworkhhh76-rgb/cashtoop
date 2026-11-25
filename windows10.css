@@ -556,7 +556,8 @@
       height: 32px;
       direction: ltr;
       display: flex;
-      justify-content: flex-start;
+      justify-content: flex-end;
+      flex-direction: row-reverse;
       align-items: stretch;
       z-index: 12;
       background: #fff !important;
@@ -565,7 +566,7 @@
       box-shadow: none !important;
       user-select: none;
     }
-    .theme-win10[dir="ltr"] .ct-win-caption-controls { justify-content: flex-end; }
+    .theme-win10[dir="ltr"] .ct-win-caption-controls { justify-content: flex-start; flex-direction: row; }
     .theme-win10 .ct-win-native > .ct-win-caption-controls {
       position: sticky;
       top: 0;
