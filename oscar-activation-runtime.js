@@ -174,6 +174,8 @@
     }
     if(access.manager.id!==payload.account?.id)throw Error('ملف المدير لا يطابق الحساب المسجل.');
     markVerified(payload,access);
+    const current=readRuntime();
+    if(current?.companyKey===payload.companyKey)updateTrialExpiry(id,access.endAt);
     return {access,account:access.manager,online:true};
   }
   async function primeActivationFile(file){
@@ -236,6 +238,15 @@
     if(runtime.database.databaseURL&&runtime.database.authToken)saveDatabaseAccess(runtime.database,{companyId});
     window.dispatchEvent(new CustomEvent('oscar:activation-loaded',{detail:{...runtime,database:{...runtime.database,authToken:''},customerDatabase:{...runtime.customerDatabase,authToken:runtime.customerDatabase?.authToken?'***':''},ai:{...runtime.ai,apiKey:runtime.ai.apiKey?'***':''}}}));
     return runtime
+  }
+  function updateTrialExpiry(companyId,expiresAt){
+    const current=readRuntime();
+    if(current?.trialApiVersion!==1||current.companyId!==companyId||current.expiresAt===expiresAt||!Number.isFinite(Date.parse(expiresAt)))return false;
+    current.expiresAt=expiresAt;
+    localStorage.setItem(RUNTIME_KEY,wrapText(JSON.stringify(current)));
+    markVerified(current,{endAt:expiresAt});
+    window.dispatchEvent(new Event('ct:trial-expiry-changed'));
+    return true;
   }
   function readRuntime(){try{const raw=localStorage.getItem(RUNTIME_KEY);return raw?JSON.parse(unwrapText(raw)):null}catch(_){return null}}
   function clearRuntime(){window.dispatchEvent(new Event('ct:logout'));localStorage.removeItem(RUNTIME_KEY)}
@@ -408,5 +419,5 @@
       const url=new URL(location.href);url.search='';url.hash='code='+encodeURIComponent('CTT1.'+rt.companyId+'.'+rt.companyKey);
       await copyText(url.href);return {url:url.href};
     }const payload=buildRolePayload(rt.type||'employee',rt.account);const checked=await verifyPayloadRemote(payload);payload.account={...payload.account,...checked.account};payload.appBaseUrl=checked.access?.appBaseUrl||rt.appBaseUrl;payload.expiresAt=checked.access?.endAt||rt.expiresAt||'';payload.isTrialLink=!!rt.isTrialLink;return createActivationLink(payload);}
-  window.OscarActivation={createTrial,trialRequest,copyCurrentLoginLink,normalizeAppUrl,createActivationLink,resolveActivationLink,writeInitialRecords,version:3,copyActivationFile,makeFile,prepareActivationDownload,triggerPreparedActivationDownload,downloadActivationFile,primeActivationFile,readActivationFileText,parseActivationFile,activatePayload,readRuntime,clearRuntime,saveDatabaseAccess,readDatabaseAccess,saveMasterConfig,readMasterConfig,clearMasterConfig,sealObject,openObject,tursoDirect,verifyPayload,verifyPayloadRemote,verifyCompanyAccessRemote,cachedVerification,markVerified,buildRolePayload,prepareVerifiedRoleFile,prepareCompanyManagerFileRotation,rotateCompanyManagerFile,constants:{APP_TAG,RUNTIME_KEY,MASTER_KEY,LOCAL_DB_ACCESS_KEY,VERIFIED_KEY}};
+  window.OscarActivation={updateTrialExpiry,createTrial,trialRequest,copyCurrentLoginLink,normalizeAppUrl,createActivationLink,resolveActivationLink,writeInitialRecords,version:3,copyActivationFile,makeFile,prepareActivationDownload,triggerPreparedActivationDownload,downloadActivationFile,primeActivationFile,readActivationFileText,parseActivationFile,activatePayload,readRuntime,clearRuntime,saveDatabaseAccess,readDatabaseAccess,saveMasterConfig,readMasterConfig,clearMasterConfig,sealObject,openObject,tursoDirect,verifyPayload,verifyPayloadRemote,verifyCompanyAccessRemote,cachedVerification,markVerified,buildRolePayload,prepareVerifiedRoleFile,prepareCompanyManagerFileRotation,rotateCompanyManagerFile,constants:{APP_TAG,RUNTIME_KEY,MASTER_KEY,LOCAL_DB_ACCESS_KEY,VERIFIED_KEY}};
 })();

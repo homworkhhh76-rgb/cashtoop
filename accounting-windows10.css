@@ -5,7 +5,7 @@
   .theme-win10 .win10-accounting-body {
     background:#f0f0f0 !important;
     color:#1a1a1a !important;
-    font-family:"Segoe UI","Cairo","Tajawal",Tahoma,sans-serif !important;
+    font-family:var(--ct-interface-font, "Segoe UI","Cairo","Tajawal",Tahoma,sans-serif)!important;
   }
   .theme-win10 .win10-accounting-body :is(button,input,textarea,select,table) {
     font-family:inherit !important;

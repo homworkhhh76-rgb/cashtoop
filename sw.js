@@ -1,7 +1,7 @@
-const BUILD = '7.9.4.209-r35-trial-customer-portal';
+const BUILD = '7.9.4.214-r40-receipt-layout';
 const CACHE = 'oscar-accounting-' + BUILD;
 const BASE = new URL('./', self.location.href);
-const LOCAL = ["./trial-direct.js", "./trial-cloud-config.js", "./ct-google-translate.js", "./ct-google-translate.css", "./accounting.js", "./accounting-windows10.css", "./accounting-icons.js", "./accounting-theme.css", "./accounting.html", "./admin.html", "./app-icon.png", "./windows10.css", "./windows10-dialogs.js", "./brand-logo.webp", "./customer-portal.js", "./customer.html", "./icon-192.png", "./index.html", "./manifest.webmanifest", "./notification-badge.png", "./offline-fonts.css", "./oscar-activation-runtime.js", "./oscar-ledger.html", "./p2p-bank-palestine.jpg", "./p2p-jawwal-pay.png", "./p2p-palpay.jpg", "./shared-17a3c04d5aba.jpg", "./support.html", "./trial-admin.html", "./trial-payment.html", "./معتمد.html"];
+const LOCAL = ["./type-ios.css", "./fonts/noto-arabic-bold.woff", "./fonts/noto-arabic-regular.woff", "./trial-direct.js", "./trial-cloud-config.js", "./ct-google-translate.js", "./ct-google-translate.css", "./accounting.js", "./accounting-windows10.css", "./accounting-icons.js", "./accounting-theme.css", "./accounting.html", "./admin.html", "./app-icon.png", "./windows10.css", "./windows10-dialogs.js", "./brand-logo.webp", "./customer-portal.js", "./customer.html", "./icon-192.png", "./index.html", "./manifest.webmanifest", "./notification-badge.png", "./offline-fonts.css", "./oscar-activation-runtime.js", "./oscar-ledger.html", "./p2p-bank-palestine.jpg", "./p2p-jawwal-pay.png", "./p2p-palpay.jpg", "./shared-17a3c04d5aba.jpg", "./support.html", "./trial-admin.html", "./trial-payment.html", "./معتمد.html"];
 const allowed = new Set(LOCAL.map(path => new URL(path, BASE).href));
 const indexURL = new URL('./index.html', BASE).href;
 const readyURL = new URL('./__offline_ready', BASE).href;

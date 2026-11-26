@@ -1,0 +1,52 @@
+/* Screen typography. Apple devices use their built-in UI font. */
+@font-face {
+  font-family: "Noto Sans Arabic";
+  src: url("./fonts/noto-arabic-regular.woff") format("woff");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  unicode-range: U+0600-08FF, U+FB50-FDFF, U+FE70-FEFF, U+1EE00-1EEFF;
+}
+
+@font-face {
+  font-family: "Noto Sans Arabic";
+  src: url("./fonts/noto-arabic-bold.woff") format("woff");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  unicode-range: U+0600-08FF, U+FB50-FDFF, U+FE70-FEFF, U+1EE00-1EEFF;
+}
+
+@media screen {
+  :root {
+    --ct-interface-font: -apple-system, BlinkMacSystemFont, "Noto Sans Arabic", system-ui, "Segoe UI", Tahoma, sans-serif;
+    --ct-interface-text-weight: 700;
+    --font-sans: var(--ct-interface-font);
+    --default-font-family: var(--ct-interface-font);
+  }
+
+  html,
+  html body,
+  html #root,
+  html :is(button, input, select, textarea) {
+    font-family: var(--ct-interface-font) !important;
+  }
+
+  html body,
+  html :is(button, input, select, textarea),
+  html :is(.font-normal, .font-medium, .font-semibold):not(:is(.receipt-paper, [data-paper], .voucher-paper) *) {
+    font-weight: var(--ct-interface-text-weight);
+  }
+
+  html :is(button, input, select, textarea) {
+    font-weight: var(--ct-interface-text-weight) !important;
+  }
+
+  html :is(h1, h2, h3, h4, h5, h6, th) {
+    font-weight: 800;
+  }
+
+  html :is(td, th, input, output, .amount, .balance, .font-mono) {
+    font-variant-numeric: tabular-nums;
+  }
+}

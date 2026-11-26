@@ -2,7 +2,7 @@
 @layer cash-top-win10 {
   @media screen {
     html.theme-win10 {
-      --win-font: "Segoe UI", Cairo, Tahoma, Geneva, Verdana, sans-serif;
+      --win-font: var(--ct-interface-font, "Segoe UI", Cairo, Tahoma, sans-serif);
       --win-desktop: linear-gradient(135deg, #004e8c, #0078d7);
       --win-window: #f0f0f0;
       --win-surface: #fff;
@@ -260,7 +260,7 @@
       border: 0 !important;
       padding: 6px 10px !important;
       font-size: 13px !important;
-      font-weight: 400 !important;
+      font-weight: var(--ct-interface-text-weight, 400) !important;
       background: var(--win-surface) !important;
       color: var(--win-text) !important;
       border-radius: 0 !important;
@@ -393,7 +393,7 @@
       min-height: 27px;
       padding: 3px 9px !important;
       font-size: 13px !important;
-      font-weight: 400 !important;
+      font-weight: var(--ct-interface-text-weight, 400) !important;
       border: 1px solid transparent !important;
     }
     .theme-win10 #main-header .ct-nav-group > button:is(:hover, [aria-expanded="true"], .ct-nav-active) {
